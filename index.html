@@ -597,11 +597,11 @@
    ⚙️  YAPILANDIRMA — Buraya kendi bilgilerinizi girin
    ================================================================ */
 const CONFIG = {
-  USERNAME    : 'admin',           // ← Kullanıcı adınızı değiştirin
-  PASSWORD    : 'oner2026',        // ← Şifrenizi değiştirin
-  JSONBIN_KEY : '$2a$10$q3gB/pBDvpjgyddzEdGRBu3z2cR9D/OlgtSs4NagGpuZcrLaYkTv2',  // ← jsonbin.io API anahtarınız
-  JSONBIN_BIN : '69ceaaa6856a682189f395c8',   // ← jsonbin.io Bin ID'niz
-  SESSION_MS  : 8 * 60 * 60 * 1000 // 8 saat oturum süresi
+  USERNAME_HASH: 'aa6e416d2a6f384524dce436c128dc924a5c68be7247383cfff81ba2c117ad29',
+  PASSWORD_HASH: '77b942acb043a711b6e1da16b1fc5588307e611b12160ab8574f66b6f999ae56',
+  JSONBIN_KEY  : 'BURAYA_API_KEY',  // ← jsonbin.io API anahtarınız
+  JSONBIN_BIN  : 'BURAYA_BIN_ID',   // ← jsonbin.io Bin ID'niz
+  SESSION_MS   : 8 * 60 * 60 * 1000 // 8 saat oturum süresi
 };
 
 /* ---- DURUM ---- */
@@ -621,12 +621,19 @@ function checkAuth() {
   }
 }
 
-function doLogin() {
+async function doLogin() {
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
   const errEl = document.getElementById('login-error');
 
-  if (user === CONFIG.USERNAME && pass === CONFIG.PASSWORD) {
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  const [userHash, passHash] = await Promise.all([sha256(user), sha256(pass)]);
+
+  if (userHash === CONFIG.USERNAME_HASH && passHash === CONFIG.PASSWORD_HASH) {
     localStorage.setItem('filo_auth', JSON.stringify({ exp: Date.now() + CONFIG.SESSION_MS }));
     document.getElementById('login-overlay').classList.add('hidden');
     errEl.textContent = '';
