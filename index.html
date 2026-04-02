@@ -12,388 +12,573 @@
        BÖLÜM 1: STIL / CSS
        ========================================================= -->
   <style>
-    :root {
-      --bg:        #0d1117;
-      --surface:   #161b22;
-      --surface2:  #1e2530;
-      --border:    #2d333b;
-      --accent:    #f97316;
-      --accent2:   #fb923c;
-      --text:      #e6edf3;
-      --muted:     #8b949e;
-      --green:     #22c55e;
-      --yellow:    #eab308;
-      --red:       #ef4444;
-      --blue:      #3b82f6;
-    }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #080c10;
+    --bg2:       #0d1118;
+    --surface:   #111820;
+    --surface2:  #18202c;
+    --surface3:  #1e2836;
+    --border:    #252f3e;
+    --border2:   #2e3c50;
+    --accent:    #f97316;
+    --accent2:   #fb923c;
+    --accent-dim:#7c3810;
+    --text:      #e2eaf3;
+    --text2:     #a8b8cc;
+    --muted:     #526070;
+    --green:     #22c55e;
+    --green-dim: #14532d;
+    --yellow:    #f59e0b;
+    --yellow-dim:#713f12;
+    --red:       #ef4444;
+    --red-dim:   #7f1d1d;
+    --blue:      #38bdf8;
+    --blue-dim:  #0c4a6e;
+    --purple:    #a78bfa;
+    --radius:    12px;
+    --radius-lg: 16px;
+  }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      min-height: 100vh;
-    }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    h1, h2, h3, .font-display { font-family: 'Syne', sans-serif; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
 
-    /* ---- SCROLLBAR ---- */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(249,115,22,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(249,115,22,.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
 
-    /* ---- GİRİŞ EKRANI ---- */
-    #login-overlay {
-      position: fixed; inset: 0; z-index: 1000;
-      background: var(--bg);
-      display: flex; align-items: center; justify-content: center;
-    }
-    #login-overlay.hidden { display: none; }
+  #login-overlay, header, main { position: relative; z-index: 1; }
 
-    .login-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 48px 40px;
-      width: 100%;
-      max-width: 400px;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,.6);
-    }
-    .login-logo {
-      width: 64px; height: 64px; margin: 0 auto 24px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 28px;
-    }
-    .login-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; }
-    .login-sub   { color: var(--muted); margin-bottom: 32px; font-size: 13px; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
 
-    .inp {
-      width: 100%;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      outline: none;
-      transition: border-color .2s;
-      margin-bottom: 12px;
-    }
-    .inp:focus { border-color: var(--accent); }
+  /* ── GİRİŞ ──────────────────────────────────────────────── */
+  #login-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #login-overlay.hidden { display: none; }
 
-    .btn-primary {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff;
-      border: none; cursor: pointer;
-      border-radius: 10px;
-      padding: 12px 24px;
-      font-family: 'Syne', sans-serif;
-      font-size: 14px; font-weight: 700;
-      width: 100%;
-      transition: opacity .2s, transform .15s;
-    }
-    .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
-    .btn-primary:active { transform: translateY(0); }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 52px 44px;
+    width: 100%; max-width: 400px;
+    text-align: center;
+    box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(249,115,22,.08);
+  }
 
-    .login-error {
-      color: var(--red); font-size: 12px; margin-top: 8px;
-      min-height: 18px;
-    }
+  .login-logo {
+    width: 68px; height: 68px; margin: 0 auto 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    box-shadow: 0 8px 24px rgba(249,115,22,.35);
+  }
 
-    /* ---- HEADER ---- */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      height: 64px;
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 100;
-    }
-    .header-logo {
-      display: flex; align-items: center; gap: 12px;
-      font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800;
-    }
-    .header-logo-icon {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-    }
-    .header-actions { display: flex; gap: 10px; align-items: center; }
+  .login-title {
+    font-size: 22px; font-weight: 700; margin-bottom: 4px;
+    letter-spacing: -.3px;
+  }
+  .login-sub { color: var(--muted); margin-bottom: 36px; font-size: 13px; }
 
-    .btn-sm {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 14px; border-radius: 8px;
-      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--text); cursor: pointer;
-      transition: border-color .2s, background .2s;
-    }
-    .btn-sm:hover { border-color: var(--accent); background: var(--surface); }
-    .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
-    .btn-sm.accent {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border: none; color: #fff; font-weight: 600;
-    }
-    .btn-sm.accent:hover { opacity: .88; }
+  .inp {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    margin-bottom: 10px;
+  }
+  .inp:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+  }
 
-    /* ---- ANA İÇERİK ---- */
-    main { padding: 28px 24px; max-width: 1600px; margin: 0 auto; }
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; border: none; cursor: pointer;
+    border-radius: 10px; padding: 12px 24px;
+    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+    width: 100%; letter-spacing: .01em;
+    transition: opacity .2s, transform .15s;
+    box-shadow: 0 4px 16px rgba(249,115,22,.3);
+  }
+  .btn-primary:hover { opacity: .92; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
 
-    /* ---- ÖZET KARTLAR ---- */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      position: relative; overflow: hidden;
-      transition: border-color .2s;
-    }
-    .stat-card:hover { border-color: var(--accent); }
-    .stat-card .icon {
-      font-size: 24px; margin-bottom: 12px;
-    }
-    .stat-card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-    .stat-card .value { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; }
-    .stat-card.warn  .value { color: var(--yellow); }
-    .stat-card.alert .value { color: var(--red); }
-    .stat-card::after {
-      content: ''; position: absolute; right: -16px; bottom: -16px;
-      width: 72px; height: 72px; border-radius: 50%;
-      background: rgba(255,255,255,.03);
-    }
+  .login-error { color: var(--red); font-size: 12px; margin-top: 8px; min-height: 18px; }
 
-    /* ---- UYARI BÖLÜMÜ ---- */
-    .alerts-section { margin-bottom: 24px; }
-    .alerts-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 12px;
-    }
-    .section-title {
-      font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .alert-list { display: flex; flex-direction: column; gap: 8px; }
-    .alert-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px; border-radius: 10px;
-      border-left: 4px solid transparent;
-      background: var(--surface);
-    }
-    .alert-item.red  { border-color: var(--red);    background: rgba(239,68,68,.08); }
-    .alert-item.yellow { border-color: var(--yellow); background: rgba(234,179,8,.08); }
-    .alert-item .plate {
-      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
-      min-width: 90px;
-    }
-    .alert-item .info { flex: 1; font-size: 13px; color: var(--muted); }
-    .badge {
-      padding: 3px 10px; border-radius: 20px;
-      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
-    }
-    .badge.red    { background: rgba(239,68,68,.2);  color: var(--red); }
-    .badge.yellow { background: rgba(234,179,8,.2);  color: var(--yellow); }
-    .badge.green  { background: rgba(34,197,94,.2);  color: var(--green); }
-    .badge.blue   { background: rgba(59,130,246,.2); color: var(--blue); }
-    .badge.gray   { background: rgba(139,148,158,.15); color: var(--muted); }
+  /* ── HEADER ──────────────────────────────────────────────── */
+  header {
+    background: rgba(17,24,32,.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
 
-    /* ---- ARAÇ TABLOSU ---- */
-    .table-section { }
-    .table-toolbar {
-      display: flex; align-items: center; gap: 12px;
-      margin-bottom: 16px; flex-wrap: wrap;
-    }
-    .search-wrap {
-      position: relative; flex: 1; min-width: 200px;
-    }
-    .search-wrap .icon-search {
-      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-      color: var(--muted); font-size: 14px; pointer-events: none;
-    }
-    .search-wrap input {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px 10px 36px;
-      color: var(--text); outline: none;
-      font-family: 'DM Sans', sans-serif; font-size: 13px;
-      transition: border-color .2s;
-    }
-    .search-wrap input:focus { border-color: var(--accent); }
+  .header-left { display: flex; align-items: center; gap: 20px; }
 
-    .filter-tabs {
-      display: flex; gap: 6px;
-    }
-    .tab {
-      padding: 8px 14px; border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--muted); font-size: 12px; font-weight: 500;
-      cursor: pointer; transition: all .2s; white-space: nowrap;
-    }
-    .tab.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
+  .header-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 15px; font-weight: 700; letter-spacing: -.2px;
+  }
+  .header-logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    box-shadow: 0 2px 8px rgba(249,115,22,.3);
+  }
 
-    .table-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    table { width: 100%; border-collapse: collapse; }
-    thead { background: var(--surface2); }
-    th {
-      padding: 12px 14px;
-      text-align: left;
-      font-family: 'Syne', sans-serif;
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .07em;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-      cursor: pointer; white-space: nowrap;
-      user-select: none;
-    }
-    th:hover { color: var(--text); }
-    th .sort-icon { margin-left: 4px; opacity: .4; }
-    th.sorted .sort-icon { opacity: 1; color: var(--accent); }
+  .header-divider {
+    width: 1px; height: 24px; background: var(--border2);
+  }
 
-    td {
-      padding: 11px 14px;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px; white-space: nowrap;
-    }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(255,255,255,.025); }
+  .header-subtitle {
+    font-size: 11.5px; font-weight: 500; color: var(--muted);
+    letter-spacing: .04em; text-transform: uppercase;
+  }
 
-    .plate-cell {
-      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
-      color: var(--text);
-    }
-    .days-cell { font-weight: 600; }
-    .days-cell.red    { color: var(--red); }
-    .days-cell.yellow { color: var(--yellow); }
-    .days-cell.green  { color: var(--green); }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
 
-    .action-btns { display: flex; gap: 6px; }
-    .icon-btn {
-      width: 30px; height: 30px; border-radius: 7px;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--muted); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; transition: all .2s;
-    }
-    .icon-btn.edit:hover  { border-color: var(--blue);  color: var(--blue);  background: rgba(59,130,246,.1); }
-    .icon-btn.del:hover   { border-color: var(--red);   color: var(--red);   background: rgba(239,68,68,.1); }
+  .btn-sm {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 7px 13px; border-radius: 8px;
+    font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 500;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2); cursor: pointer;
+    transition: border-color .2s, background .2s, color .2s;
+    white-space: nowrap;
+  }
+  .btn-sm:hover { border-color: var(--border2); background: var(--surface3); color: var(--text); }
+  .btn-sm.danger { color: var(--text2); }
+  .btn-sm.danger:hover { border-color: var(--red); color: var(--red); background: rgba(239,68,68,.06); }
+  .btn-sm.accent {
+    background: var(--accent); border-color: var(--accent);
+    color: #fff; font-weight: 600;
+  }
+  .btn-sm.accent:hover { background: var(--accent2); border-color: var(--accent2); }
 
-    .empty-state {
-      padding: 60px 20px; text-align: center;
-      color: var(--muted);
-    }
-    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
-    .empty-state p { font-size: 14px; }
+  /* ── ANA İÇERİK ─────────────────────────────────────────── */
+  main { padding: 24px 28px; max-width: 1680px; margin: 0 auto; }
 
-    /* ---- MODAL ---- */
-    .modal-backdrop {
-      position: fixed; inset: 0; z-index: 500;
-      background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
-      display: flex; align-items: center; justify-content: center;
-      padding: 16px;
-    }
-    .modal-backdrop.hidden { display: none; }
+  /* ── ÖZET KARTLAR ───────────────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
 
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      width: 100%; max-width: 640px;
-      max-height: 90vh; overflow-y: auto;
-      box-shadow: 0 24px 80px rgba(0,0,0,.7);
-    }
-    .modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; background: var(--surface); z-index: 1;
-    }
-    .modal-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; }
-    .modal-close {
-      width: 32px; height: 32px; border-radius: 8px;
-      border: 1px solid var(--border); background: var(--surface2);
-      color: var(--muted); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px; transition: all .2s;
-    }
-    .modal-close:hover { border-color: var(--red); color: var(--red); }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    position: relative; overflow: hidden;
+    transition: border-color .2s, transform .2s;
+    cursor: default;
+  }
+  .stat-card:hover { border-color: var(--border2); transform: translateY(-1px); }
 
-    .modal-body { padding: 24px; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+  .stat-card-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .stat-icon {
+    width: 36px; height: 36px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .stat-icon.orange { background: rgba(249,115,22,.12); }
+  .stat-icon.blue   { background: rgba(56,189,248,.12); }
+  .stat-icon.green  { background: rgba(34,197,94,.12);  }
+  .stat-icon.yellow { background: rgba(245,158,11,.12); }
+  .stat-icon.red    { background: rgba(239,68,68,.12);  }
+  .stat-icon.purple { background: rgba(167,139,250,.12);}
 
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group.full { grid-column: 1 / -1; }
-    label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .stat-trend {
+    font-size: 10.5px; font-weight: 600; padding: 3px 7px;
+    border-radius: 99px; letter-spacing: .02em;
+  }
+  .stat-trend.ok   { background: var(--green-dim); color: var(--green); }
+  .stat-trend.warn { background: var(--yellow-dim); color: var(--yellow); }
+  .stat-trend.bad  { background: var(--red-dim);   color: var(--red); }
 
-    select.inp { appearance: none; cursor: pointer; }
-    textarea.inp { resize: vertical; min-height: 72px; }
+  .stat-value {
+    font-size: 30px; font-weight: 700; letter-spacing: -1px;
+    line-height: 1; margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .stat-value.orange { color: var(--accent); }
+  .stat-value.blue   { color: var(--blue); }
+  .stat-value.green  { color: var(--green); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-value.red    { color: var(--red); }
+  .stat-value.purple { color: var(--purple); }
+  .stat-value.white  { color: var(--text); }
 
-    .modal-footer {
-      padding: 16px 24px;
-      border-top: 1px solid var(--border);
-      display: flex; justify-content: flex-end; gap: 10px;
-    }
+  .stat-label {
+    font-size: 11.5px; color: var(--muted); font-weight: 500;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
 
-    /* ---- TOAST ---- */
-    #toast-container {
-      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .toast {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-size: 13px; max-width: 300px;
-      display: flex; align-items: center; gap: 10px;
-      animation: slideIn .3s ease;
-      box-shadow: 0 8px 24px rgba(0,0,0,.4);
-    }
-    .toast.success { border-color: var(--green); }
-    .toast.error   { border-color: var(--red); }
-    .toast.info    { border-color: var(--blue); }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
+  .stat-card::after {
+    content: ''; position: absolute; right: -20px; bottom: -20px;
+    width: 80px; height: 80px; border-radius: 50%;
+    background: rgba(255,255,255,.015);
+  }
 
-    /* ---- RESPONSIVE ---- */
-    @media (max-width: 768px) {
-      header { padding: 0 16px; }
-      main   { padding: 16px; }
-      .table-wrap { overflow-x: auto; }
-      table  { min-width: 900px; }
-      .header-logo span:last-child { display: none; }
-    }
-  </style>
+  /* ── PANEL SATIRI ───────────────────────────────────────── */
+  .panel-row {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 1100px) {
+    .panel-row { grid-template-columns: 1fr; }
+  }
+
+  /* ── UYARILER PANELİ ────────────────────────────────────── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .panel-title {
+    font-size: 12.5px; font-weight: 600; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--text2);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-title .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+  }
+  .dot-red    { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+  .dot-yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .dot-green  { background: var(--green);  box-shadow: 0 0 6px var(--green); }
+  .dot-orange { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  .alert-count-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 99px;
+    background: var(--red-dim); color: var(--red);
+  }
+
+  .panel-body { padding: 10px; max-height: 320px; overflow-y: auto; }
+
+  .alert-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 9px;
+    border-left: 3px solid transparent;
+    margin-bottom: 6px; transition: background .15s;
+  }
+  .alert-item:last-child { margin-bottom: 0; }
+  .alert-item.red    { border-color: var(--red);    background: rgba(239,68,68,.06); }
+  .alert-item.yellow { border-color: var(--yellow); background: rgba(245,158,11,.06); }
+  .alert-item.red:hover    { background: rgba(239,68,68,.1); }
+  .alert-item.yellow:hover { background: rgba(245,158,11,.1); }
+
+  .alert-item .plate {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600; font-size: 12px;
+    min-width: 80px; color: var(--text);
+  }
+  .alert-item .info { flex: 1; font-size: 12px; color: var(--text2); }
+
+  /* ── DURUM PANELİ ───────────────────────────────────────── */
+  .status-panel .panel-body { padding: 0; }
+
+  .status-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .status-row:last-child { border-bottom: none; }
+  .status-row-label {
+    font-size: 12px; color: var(--text2); font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .status-row-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 600;
+  }
+
+  /* ── BADGE ──────────────────────────────────────────────── */
+  .badge {
+    padding: 3px 9px; border-radius: 99px;
+    font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .badge.red    { background: var(--red-dim);    color: var(--red); }
+  .badge.yellow { background: var(--yellow-dim); color: var(--yellow); }
+  .badge.green  { background: var(--green-dim);  color: var(--green); }
+  .badge.blue   { background: var(--blue-dim);   color: var(--blue); }
+  .badge.gray   { background: rgba(82,96,112,.2); color: var(--muted); }
+  .badge.orange { background: var(--accent-dim); color: var(--accent); }
+
+  /* ── TABLO ──────────────────────────────────────────────── */
+  .table-section { }
+
+  .table-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px; flex-wrap: wrap;
+  }
+
+  .toolbar-left { display: flex; align-items: center; gap: 10px; flex: 1; flex-wrap: wrap; }
+  .toolbar-right { display: flex; align-items: center; gap: 8px; }
+
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 12.5px; font-weight: 600; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--text2);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .search-wrap {
+    position: relative; min-width: 220px;
+  }
+  .search-wrap .icon-search {
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); font-size: 13px; pointer-events: none;
+  }
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 9px;
+    padding: 8px 12px 8px 34px;
+    color: var(--text); outline: none;
+    font-family: 'Inter', sans-serif; font-size: 13px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .search-wrap input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(249,115,22,.1);
+  }
+
+  .filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tab {
+    padding: 7px 13px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted); font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: all .2s; white-space: nowrap;
+  }
+  .tab:hover { border-color: var(--border2); color: var(--text2); }
+  .tab.active {
+    background: rgba(249,115,22,.12);
+    border-color: rgba(249,115,22,.35);
+    color: var(--accent); font-weight: 600;
+  }
+
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); }
+  th {
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; white-space: nowrap;
+    user-select: none; transition: color .15s;
+  }
+  th:hover { color: var(--text2); }
+  th .sort-icon { margin-left: 4px; opacity: .3; font-size: 10px; }
+  th.sorted .sort-icon { opacity: 1; color: var(--accent); }
+
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; white-space: nowrap;
+    color: var(--text2);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.018); color: var(--text); }
+
+  .plate-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600; font-size: 12.5px; color: var(--text);
+  }
+
+  .tip-cell { font-size: 12px; }
+
+  .esleme-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px; color: var(--muted);
+  }
+
+  .date-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .date-cell.expired { color: var(--red); }
+  .date-cell.warn    { color: var(--yellow); }
+  .date-cell.ok      { color: var(--text2); }
+
+  .days-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600; font-size: 12.5px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .days-cell.red    { color: var(--red); }
+  .days-cell.yellow { color: var(--yellow); }
+  .days-cell.green  { color: var(--green); }
+
+  .action-btns { display: flex; gap: 5px; }
+  .icon-btn {
+    width: 28px; height: 28px; border-radius: 7px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; transition: all .15s;
+  }
+  .icon-btn.edit:hover { border-color: var(--blue);  color: var(--blue);  background: var(--blue-dim); }
+  .icon-btn.del:hover  { border-color: var(--red);   color: var(--red);   background: var(--red-dim); }
+
+  .empty-state {
+    padding: 56px 20px; text-align: center; color: var(--muted);
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; opacity: .5; }
+  .empty-state p { font-size: 13px; }
+
+  /* ── MODAL ──────────────────────────────────────────────── */
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,.75); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-backdrop.hidden { display: none; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 18px;
+    width: 100%; max-width: 620px;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 32px 80px rgba(0,0,0,.8);
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; letter-spacing: -.2px; }
+  .modal-close {
+    width: 30px; height: 30px; border-radius: 8px;
+    border: 1px solid var(--border2); background: var(--surface2);
+    color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all .2s;
+  }
+  .modal-close:hover { border-color: var(--red); color: var(--red); }
+
+  .modal-body { padding: 22px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  select.inp { appearance: none; cursor: pointer; }
+  textarea.inp { resize: vertical; min-height: 70px; }
+
+  .modal-footer {
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+
+  /* ── TOAST ──────────────────────────────────────────────── */
+  #toast-container {
+    position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 11px 16px;
+    font-size: 13px; max-width: 280px;
+    display: flex; align-items: center; gap: 10px;
+    animation: slideIn .25s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  }
+  .toast.success { border-color: rgba(34,197,94,.4); }
+  .toast.error   { border-color: rgba(239,68,68,.4); }
+  .toast.info    { border-color: rgba(56,189,248,.4); }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ── RESPONSIVE ─────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    header { padding: 0 16px; }
+    main   { padding: 16px; }
+    .table-wrap { overflow-x: auto; }
+    table  { min-width: 860px; }
+    .header-subtitle { display: none; }
+    .header-divider  { display: none; }
+  }
+</style>
 </head>
 <body>
 
@@ -416,19 +601,22 @@
      BÖLÜM 3: HEADER
      ========================================================= -->
 <header>
-  <div class="header-logo">
-    <div class="header-logo-icon">🚛</div>
-    <span>Araç Filosu</span>
-    <span style="color:var(--muted);font-weight:400;font-size:14px;">Takip Sistemi</span>
+  <div class="header-left">
+    <div class="header-logo">
+      <div class="header-logo-icon">🚛</div>
+      <span>Filo Takip</span>
+    </div>
+    <div class="header-divider"></div>
+    <span class="header-subtitle">Araç Yönetim Sistemi</span>
   </div>
   <div class="header-actions">
     <button class="btn-sm" onclick="exportJSON()" title="JSON olarak dışa aktar">⬇ Dışa Aktar</button>
     <label class="btn-sm" style="cursor:pointer" title="JSON dosyası yükle">
       ⬆ İçe Aktar<input type="file" accept=".json" style="display:none" onchange="importJSON(this)" />
     </label>
-    <button class="btn-sm danger" onclick="confirmReset()" title="Tüm verileri sil">🗑 Sıfırla</button>
-    <button class="btn-sm accent" onclick="openModal()">＋ Araç Ekle</button>
-    <button class="btn-sm danger" onclick="doLogout()" title="Çıkış Yap">🚪 Çıkış</button>
+    <button class="btn-sm danger" onclick="confirmReset()" title="Tüm verileri sil">⊘ Sıfırla</button>
+    <button class="btn-sm accent" onclick="openModal()">+ Araç Ekle</button>
+    <button class="btn-sm danger" onclick="doLogout()" title="Çıkış Yap">Çıkış</button>
   </div>
 </header>
 
@@ -440,52 +628,126 @@
   <!-- 4a. ÖZET KARTLAR -->
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
-      <div class="icon">🚛</div>
-      <div class="label">Toplam Çekici</div>
-      <div class="value" id="stat-cekici">0</div>
+      <div class="stat-card-top">
+        <div class="stat-icon orange">🚛</div>
+        <span class="stat-trend ok" id="trend-cekici">Aktif</span>
+      </div>
+      <div class="stat-value orange" id="stat-cekici">0</div>
+      <div class="stat-label">Toplam Çekici</div>
     </div>
     <div class="stat-card">
-      <div class="icon">🚚</div>
-      <div class="label">Toplam Dorse</div>
-      <div class="value" id="stat-dorse">0</div>
+      <div class="stat-card-top">
+        <div class="stat-icon blue">🚚</div>
+        <span class="stat-trend ok" id="trend-dorse">Aktif</span>
+      </div>
+      <div class="stat-value blue" id="stat-dorse">0</div>
+      <div class="stat-label">Toplam Dorse</div>
     </div>
-    <div class="stat-card warn">
-      <div class="icon">🔍</div>
-      <div class="label">Yaklaşan Muayene <span style="font-size:10px">(30 gün)</span></div>
-      <div class="value" id="stat-muayene">0</div>
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <div class="stat-icon purple">🚐</div>
+        <span class="stat-trend ok">Aktif</span>
+      </div>
+      <div class="stat-value purple" id="stat-diger">0</div>
+      <div class="stat-label">Diğer Araçlar</div>
     </div>
-    <div class="stat-card warn">
-      <div class="icon">🛡</div>
-      <div class="label">Yaklaşan Sigorta <span style="font-size:10px">(30 gün)</span></div>
-      <div class="value" id="stat-sigorta">0</div>
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <div class="stat-icon green">🔗</div>
+      </div>
+      <div class="stat-value white" id="stat-toplam">0</div>
+      <div class="stat-label">Toplam Araç</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <div class="stat-icon yellow">🔍</div>
+        <span class="stat-trend warn" id="trend-muayene" style="display:none">!</span>
+      </div>
+      <div class="stat-value yellow" id="stat-muayene">0</div>
+      <div class="stat-label">Muayene Yaklaşan</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <div class="stat-icon red">🛡</div>
+        <span class="stat-trend warn" id="trend-sigorta" style="display:none">!</span>
+      </div>
+      <div class="stat-value red" id="stat-sigorta">0</div>
+      <div class="stat-label">Sigorta Yaklaşan</div>
     </div>
   </div>
 
-  <!-- 4b. ACİL DURUMLAR -->
-  <div class="alerts-section" id="alerts-section">
-    <div class="alerts-header">
-      <div class="section-title">🚨 Acil Durumlar</div>
+  <!-- 4b. PANEL SATIRI: Uyarılar + Durum -->
+  <div class="panel-row">
+    <!-- Acil Durumlar -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="dot dot-red"></span>
+          Acil Durumlar
+        </div>
+        <span class="alert-count-badge" id="alert-count-badge" style="display:none">0</span>
+      </div>
+      <div class="panel-body">
+        <div class="alert-list" id="alert-list">
+          <div class="empty-state"><div class="icon">✅</div><p>Acil durum yok</p></div>
+        </div>
+      </div>
     </div>
-    <div class="alert-list" id="alert-list">
-      <div class="empty-state"><div class="icon">✅</div><p>Acil durum yok</p></div>
+
+    <!-- Filo Özet -->
+    <div class="panel status-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="dot dot-green"></span>
+          Filo Özeti
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="status-row">
+          <div class="status-row-label">🚛 Çekici</div>
+          <div class="status-row-value" id="sum-cekici" style="color:var(--accent)">—</div>
+        </div>
+        <div class="status-row">
+          <div class="status-row-label">🚚 Dorse</div>
+          <div class="status-row-value" id="sum-dorse" style="color:var(--blue)">—</div>
+        </div>
+        <div class="status-row">
+          <div class="status-row-label">🚐 Diğer</div>
+          <div class="status-row-value" id="sum-diger" style="color:var(--purple)">—</div>
+        </div>
+        <div class="status-row">
+          <div class="status-row-label">✅ Aktif</div>
+          <div class="status-row-value" id="sum-aktif" style="color:var(--green)">—</div>
+        </div>
+        <div class="status-row">
+          <div class="status-row-label">🔧 Bakımda</div>
+          <div class="status-row-value" id="sum-bakim" style="color:var(--yellow)">—</div>
+        </div>
+        <div class="status-row">
+          <div class="status-row-label">⏸ Pasif</div>
+          <div class="status-row-value" id="sum-pasif" style="color:var(--muted)">—</div>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- 4c. ARAÇ TABLOSU -->
   <div class="table-section">
-    <div class="alerts-header" style="margin-bottom:16px">
-      <div class="section-title">🚗 Araç Listesi</div>
-    </div>
     <div class="table-toolbar">
-      <div class="search-wrap">
-        <span class="icon-search">🔎</span>
-        <input type="text" id="search-input" placeholder="Plaka veya şoför ara…" oninput="renderTable()" />
+      <div class="toolbar-left">
+        <div class="search-wrap">
+          <span class="icon-search">🔎</span>
+          <input type="text" id="search-input" placeholder="Plaka veya şoför ara…" oninput="renderTable()" />
+        </div>
+        <div class="filter-tabs">
+          <div class="tab active" data-filter="all" onclick="setFilter('all',this)">Tümü</div>
+          <div class="tab" data-filter="Çekici" onclick="setFilter('Çekici',this)">Çekici</div>
+          <div class="tab" data-filter="Dorse" onclick="setFilter('Dorse',this)">Dorse</div>
+          <div class="tab" data-filter="yaklasan" onclick="setFilter('yaklasan',this)">⚠ Yaklaşanlar</div>
+        </div>
       </div>
-      <div class="filter-tabs">
-        <div class="tab active" data-filter="all" onclick="setFilter('all',this)">Tümü</div>
-        <div class="tab" data-filter="Çekici" onclick="setFilter('Çekici',this)">Çekici</div>
-        <div class="tab" data-filter="Dorse" onclick="setFilter('Dorse',this)">Dorse</div>
-        <div class="tab" data-filter="yaklasan" onclick="setFilter('yaklasan',this)">⚠ Yaklaşanlar</div>
+      <div class="toolbar-right">
+        <span id="table-count" style="font-size:12px;color:var(--muted)"></span>
       </div>
     </div>
     <div class="table-wrap">
@@ -497,7 +759,7 @@
             <th>Eşleşme</th>
             <th>Şoför</th>
             <th>Telefon</th>
-            <th onclick="sortBy('muayene')">Son Muayene <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('muayene')">Muayene Bitiş <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('sigorta')">Sigorta Bitiş <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('takograf')">Takograf <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('kalanGun')">Gün Kalan <span class="sort-icon">↕</span></th>
@@ -509,7 +771,7 @@
         <tbody id="table-body"></tbody>
       </table>
     </div>
-  </div>
+  </div><!-- /table-section -->
 </main>
 
 <!-- =========================================================
@@ -536,6 +798,7 @@
             <option value="Kamyonet">Kamyonet</option>
             <option value="Minivan">Minivan</option>
             <option value="Kamyon">Kamyon</option>
+            <option value="Binek Araç">Binek Araç</option>
             <option value="Diğer">Diğer</option>
           </select>
         </div>
@@ -822,15 +1085,27 @@ function minDaysLeft(v) {
 
 function colorClass(days) {
   if (days === null) return '';
-  if (days < 0)   return 'red';
+  if (days < 0)   return 'red expired';
   if (days <= 30) return 'red';
   if (days <= 60) return 'yellow';
-  return 'green';
+  return 'ok';
 }
 
 function statusBadge(durum) {
   const map = { 'Aktif': 'green', 'Bakımda': 'yellow', 'Pasif': 'gray' };
   return `<span class="badge ${map[durum] || 'gray'}">${durum || 'Aktif'}</span>`;
+}
+
+function tipBadge(tip) {
+  const map = {
+    'Çekici'    : 'orange',
+    'Dorse'     : 'blue',
+    'Kamyonet'  : 'green',
+    'Kamyon'    : 'green',
+    'Minivan'   : 'purple',
+    'Binek Araç': 'gray',
+  };
+  return `<span class="badge ${map[tip] || 'gray'}">${tip || '—'}</span>`;
 }
 
 /* ================================================================
@@ -839,8 +1114,14 @@ function statusBadge(durum) {
 function updateStats() {
   const cekici  = vehicles.filter(v => v.tip === 'Çekici').length;
   const dorse   = vehicles.filter(v => v.tip === 'Dorse').length;
-  const today   = new Date(); today.setHours(0,0,0,0);
-  const in30    = new Date(today); in30.setDate(in30.getDate() + 30);
+  const diger   = vehicles.filter(v => v.tip !== 'Çekici' && v.tip !== 'Dorse').length;
+  const toplam  = vehicles.length;
+  const aktif   = vehicles.filter(v => v.durum === 'Aktif').length;
+  const bakim   = vehicles.filter(v => v.durum === 'Bakımda').length;
+  const pasif   = vehicles.filter(v => v.durum === 'Pasif').length;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in30  = new Date(today); in30.setDate(in30.getDate() + 30);
 
   function near(iso) {
     if (!iso) return false;
@@ -848,17 +1129,32 @@ function updateStats() {
     return d <= in30;
   }
 
-  const muayeneCnt = vehicles.filter(v => {
-    if (!v.muayene) return false;
-    const d = new Date(v.muayene); d.setHours(0,0,0,0);
-    return d <= in30;
-  }).length;
+  const muayeneCnt = vehicles.filter(v => near(v.muayene)).length;
   const sigortaCnt = vehicles.filter(v => near(v.sigorta)).length;
 
+  // Stat kartlar
   document.getElementById('stat-cekici').textContent  = cekici;
   document.getElementById('stat-dorse').textContent   = dorse;
+  document.getElementById('stat-diger').textContent   = diger;
+  document.getElementById('stat-toplam').textContent  = toplam;
   document.getElementById('stat-muayene').textContent = muayeneCnt;
   document.getElementById('stat-sigorta').textContent = sigortaCnt;
+
+  // Trend badges
+  const tm = document.getElementById('trend-muayene');
+  const ts = document.getElementById('trend-sigorta');
+  tm.style.display = muayeneCnt > 0 ? 'inline-flex' : 'none';
+  ts.style.display = sigortaCnt > 0 ? 'inline-flex' : 'none';
+  tm.textContent = muayeneCnt + ' araç';
+  ts.textContent = sigortaCnt + ' araç';
+
+  // Filo özeti paneli
+  document.getElementById('sum-cekici').textContent = cekici;
+  document.getElementById('sum-dorse').textContent  = dorse;
+  document.getElementById('sum-diger').textContent  = diger;
+  document.getElementById('sum-aktif').textContent  = aktif;
+  document.getElementById('sum-bakim').textContent  = bakim;
+  document.getElementById('sum-pasif').textContent  = pasif;
 }
 
 /* ================================================================
@@ -900,10 +1196,13 @@ function updateAlerts() {
 
   items.sort((a, b) => a.days - b.days);
 
+  const badge = document.getElementById('alert-count-badge');
   if (items.length === 0) {
     list.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>Acil durum yok</p></div>';
+    if (badge) { badge.style.display = 'none'; badge.textContent = '0'; }
     return;
   }
+  if (badge) { badge.style.display = 'inline-flex'; badge.textContent = items.length; }
 
   list.innerHTML = items.map(it => `
     <div class="alert-item ${it.cls}">
@@ -972,6 +1271,9 @@ function renderTable() {
   const tbody = document.getElementById('table-body');
   const list  = getFilteredSorted();
 
+  const countEl = document.getElementById('table-count');
+  if (countEl) countEl.textContent = list.length + ' araç';
+
   if (list.length === 0) {
     tbody.innerHTML = `<tr><td colspan="12">
       <div class="empty-state"><div class="icon">🔍</div><p>Sonuç bulunamadı</p></div>
@@ -983,23 +1285,25 @@ function renderTable() {
     const md   = minDaysLeft(v);
     const cls  = colorClass(md);
     const days = md === null ? '—' : (md < 0 ? `${Math.abs(md)} gün geçti` : `${md} gün`);
+    const muayeneCls = v.muayene ? colorClass(daysLeft(v.muayene)) : '';
+    const sigortaCls  = v.sigorta  ? colorClass(daysLeft(v.sigorta))  : '';
     return `
     <tr>
       <td class="plate-cell">${v.plaka || '—'}</td>
-      <td>${v.tip || '—'}</td>
-      <td style="color:var(--muted)">${v.esleme || '—'}</td>
-      <td>${v.sofor || '—'}</td>
-      <td>${v.telefon || '—'}</td>
-      <td>${fmtDate(v.muayene)}</td>
-      <td>${fmtDate(v.sigorta)}</td>
-      <td>${fmtDate(v.takograf)}</td>
-      <td class="days-cell ${cls}">${days}</td>
+      <td class="tip-cell">${tipBadge(v.tip)}</td>
+      <td class="esleme-cell">${v.esleme || '—'}</td>
+      <td>${v.sofor || '<span style="color:var(--muted)">Boşta</span>'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${v.telefon || '—'}</td>
+      <td class="date-cell ${muayeneCls}">${fmtDate(v.muayene)}</td>
+      <td class="date-cell ${sigortaCls}">${fmtDate(v.sigorta)}</td>
+      <td class="date-cell">${fmtDate(v.takograf)}</td>
+      <td><div class="days-cell ${cls}">${days}</div></td>
       <td>${statusBadge(v.durum)}</td>
-      <td style="max-width:140px;white-space:normal;font-size:12px;color:var(--muted)">${v.notlar || ''}</td>
+      <td style="max-width:130px;white-space:normal;font-size:12px;color:var(--muted)">${v.notlar || ''}</td>
       <td>
         <div class="action-btns">
-          <button class="icon-btn edit" title="Düzenle" onclick="openModal('${v.id}')">✏️</button>
-          <button class="icon-btn del"  title="Sil"     onclick="deleteVehicle('${v.id}')">🗑</button>
+          <button class="icon-btn edit" title="Düzenle" onclick="openModal('${v.id}')">✎</button>
+          <button class="icon-btn del"  title="Sil"     onclick="deleteVehicle('${v.id}')">✕</button>
         </div>
       </td>
     </tr>`;
