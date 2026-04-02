@@ -1036,6 +1036,7 @@ function deleteVehicle(id) {
 function confirmReset() {
   if (confirm('TÜM araç verileri silinecek! Bu işlem geri alınamaz. Devam etmek istiyor musunuz?')) {
     vehicles = [];
+    localStorage.setItem('filo_seeded', 'true'); // sıfırlandı, demo bir daha çıkmasın
     saveVehicles();
     refresh();
     showToast('Tüm veriler sıfırlandı.', 'error');
@@ -1104,7 +1105,12 @@ function refresh() {
    DEMO VERİSİ
    ================================================================ */
 function seedDemo() {
-  if (vehicles.length > 0) return;
+  // Kullanıcı daha önce sıfırladıysa veya veri varsa demo ekleme
+  if (localStorage.getItem('filo_seeded') === 'true') return;
+  if (vehicles.length > 0) {
+    localStorage.setItem('filo_seeded', 'true');
+    return;
+  }
   const today = new Date();
   function addDays(d, n) {
     const x = new Date(d); x.setDate(x.getDate() + n);
@@ -1144,6 +1150,7 @@ function seedDemo() {
       takograf: '', notlar: 'Depoda bekliyor'
     },
   ];
+  localStorage.setItem('filo_seeded', 'true');
   saveVehicles();
 }
 
