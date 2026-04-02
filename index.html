@@ -597,11 +597,11 @@
    ⚙️  YAPILANDIRMA — Buraya kendi bilgilerinizi girin
    ================================================================ */
 const CONFIG = {
-  USERNAME_HASH: 'aa6e416d2a6f384524dce436c128dc924a5c68be7247383cfff81ba2c117ad29',
-  PASSWORD_HASH: '77b942acb043a711b6e1da16b1fc5588307e611b12160ab8574f66b6f999ae56',
-  JSONBIN_KEY  : 'BURAYA_API_KEY',  // ← jsonbin.io API anahtarınız
-  JSONBIN_BIN  : 'BURAYA_BIN_ID',   // ← jsonbin.io Bin ID'niz
-  SESSION_MS   : 8 * 60 * 60 * 1000 // 8 saat oturum süresi
+  USERNAME_HASH   : 'aa6e416d2a6f384524dce436c128dc924a5c68be7247383cfff81ba2c117ad29',
+  PASSWORD_HASH   : '77b942acb043a711b6e1da16b1fc5588307e611b12160ab8574f66b6f999ae56',
+  SUPABASE_URL    : 'https://fjetoktgzpubegpvhhng.supabase.co',   // ← Supabase proje URL'niz
+  SUPABASE_ANON   : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqZXRva3RnenB1YmVncHZoaG5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNTYwMjMsImV4cCI6MjA5MDczMjAyM30.WSTtAwD9vtm4fgJsa6K4DyLHFD4iUyGuF6qkR-0Uop0',       // ← Supabase anon/public key
+  SESSION_MS      : 8 * 60 * 60 * 1000       // 8 saat oturum süresi
 };
 
 /* ---- DURUM ---- */
@@ -657,11 +657,26 @@ document.getElementById('login-user').addEventListener('keydown', e => {
 });
 
 /* ================================================================
-   BULUT VERİ (JSONBin.io)
+   BULUT VERİ (Supabase)
    ================================================================ */
+
+// Supabase REST API yardımcıları
+function sbHeaders() {
+  return {
+    'Content-Type' : 'application/json',
+    'apikey'       : CONFIG.SUPABASE_ANON,
+    'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON,
+    'Prefer'       : 'return=representation'
+  };
+}
+
+function sbUrl(path) {
+  return CONFIG.SUPABASE_URL + '/rest/v1/' + path;
+}
+
 async function loadVehicles() {
-  // API key girilmemişse localStorage'a geri dön
-  if (CONFIG.JSONBIN_KEY === 'BURAYA_API_KEY') {
+  // Supabase URL girilmemişse localStorage'a geri dön
+  if (CONFIG.SUPABASE_URL === 'BURAYA_SUPABASE_URL') {
     vehicles = JSON.parse(localStorage.getItem('filo_araclar') || '[]');
     seedDemo();
     refresh();
@@ -670,12 +685,26 @@ async function loadVehicles() {
 
   showToast('Veriler yükleniyor…', 'info');
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.JSONBIN_BIN}/latest`, {
-      headers: { 'X-Master-Key': CONFIG.JSONBIN_KEY }
+    const res = await fetch(sbUrl('araclar?select=*&order=created_at.asc'), {
+      headers: sbHeaders()
     });
     if (!res.ok) throw new Error('Sunucu hatası: ' + res.status);
-    const json = await res.json();
-    vehicles = Array.isArray(json.record) ? json.record : [];
+    const rows = await res.json();
+    // Supabase satırlarını uygulama formatına dönüştür
+    vehicles = rows.map(r => ({
+      id      : r.id,
+      plaka   : r.plaka,
+      tip     : r.tip,
+      esleme  : r.esleme   || '',
+      sofor   : r.sofor    || '',
+      telefon : r.telefon  || '',
+      durum   : r.durum    || 'Aktif',
+      muayene : r.muayene  || '',
+      sigorta : r.sigorta  || '',
+      takograf: r.takograf || '',
+      notlar  : r.notlar   || '',
+    }));
+    localStorage.setItem('filo_araclar', JSON.stringify(vehicles));
     showToast('Veriler buluttan yüklendi ✓', 'success');
   } catch (err) {
     console.error(err);
@@ -690,21 +719,63 @@ async function saveVehicles() {
   // Yerel yedek her zaman al
   localStorage.setItem('filo_araclar', JSON.stringify(vehicles));
 
-  if (CONFIG.JSONBIN_KEY === 'BURAYA_API_KEY') return;
+  if (CONFIG.SUPABASE_URL === 'BURAYA_SUPABASE_URL') return;
 
+  // Supabase'e tüm tabloyu upsert ile yaz (id üzerinden çakışma çözümü)
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.JSONBIN_BIN}`, {
-      method : 'PUT',
-      headers: {
-        'Content-Type' : 'application/json',
-        'X-Master-Key' : CONFIG.JSONBIN_KEY
-      },
-      body: JSON.stringify(vehicles)
+    const rows = vehicles.map(v => ({
+      id      : v.id,
+      plaka   : v.plaka,
+      tip     : v.tip,
+      esleme  : v.esleme   || null,
+      sofor   : v.sofor    || null,
+      telefon : v.telefon  || null,
+      durum   : v.durum    || 'Aktif',
+      muayene : v.muayene  || null,
+      sigorta : v.sigorta  || null,
+      takograf: v.takograf || null,
+      notlar  : v.notlar   || null,
+    }));
+
+    const res = await fetch(sbUrl('araclar'), {
+      method : 'POST',
+      headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body   : JSON.stringify(rows)
     });
-    if (!res.ok) throw new Error('Kaydetme hatası: ' + res.status);
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err);
+    }
   } catch (err) {
     console.error(err);
     showToast('Buluta kaydedilemedi — yerel yedek alındı.', 'error');
+  }
+}
+
+// Tek araç sil (Supabase'den de kaldır)
+async function deleteFromCloud(id) {
+  if (CONFIG.SUPABASE_URL === 'BURAYA_SUPABASE_URL') return;
+  try {
+    await fetch(sbUrl(`araclar?id=eq.${id}`), {
+      method : 'DELETE',
+      headers: sbHeaders()
+    });
+  } catch (err) {
+    console.error('Buluttan silinemedi:', err);
+  }
+}
+
+// Tüm araçları buluttan sil
+async function deleteAllFromCloud() {
+  if (CONFIG.SUPABASE_URL === 'BURAYA_SUPABASE_URL') return;
+  try {
+    // Tüm satırları sil (id boş olmayan = hepsi)
+    await fetch(sbUrl('araclar?id=neq.null'), {
+      method : 'DELETE',
+      headers: sbHeaders()
+    });
+  } catch (err) {
+    console.error('Buluttan toplu silinemedi:', err);
   }
 }
 
@@ -1025,7 +1096,8 @@ function deleteVehicle(id) {
   const v = vehicles.find(x => x.id === id);
   if (!confirm(`"${v?.plaka}" plakalı aracı silmek istediğinize emin misiniz?`)) return;
   vehicles = vehicles.filter(x => x.id !== id);
-  saveVehicles();
+  localStorage.setItem('filo_araclar', JSON.stringify(vehicles));
+  deleteFromCloud(id);
   refresh();
   showToast('Araç silindi.', 'error');
 }
@@ -1037,7 +1109,8 @@ function confirmReset() {
   if (confirm('TÜM araç verileri silinecek! Bu işlem geri alınamaz. Devam etmek istiyor musunuz?')) {
     vehicles = [];
     localStorage.setItem('filo_seeded', 'true'); // sıfırlandı, demo bir daha çıkmasın
-    saveVehicles();
+    localStorage.setItem('filo_araclar', '[]');
+    deleteAllFromCloud();
     refresh();
     showToast('Tüm veriler sıfırlandı.', 'error');
   }
