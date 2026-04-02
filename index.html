@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Araç Filosu Takip Sistemi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- =========================================================
+       BÖLÜM 1: STIL / CSS
+       ========================================================= -->
+  <style>
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --surface2:  #1e2530;
+      --border:    #2d333b;
+      --accent:    #f97316;
+      --accent2:   #fb923c;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --green:     #22c55e;
+      --yellow:    #eab308;
+      --red:       #ef4444;
+      --blue:      #3b82f6;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    h1, h2, h3, .font-display { font-family: 'Syne', sans-serif; }
+
+    /* ---- SCROLLBAR ---- */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ---- GİRİŞ EKRANI ---- */
+    #login-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #login-overlay.hidden { display: none; }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    }
+    .login-logo {
+      width: 64px; height: 64px; margin: 0 auto 24px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+    }
+    .login-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+    .login-sub   { color: var(--muted); margin-bottom: 32px; font-size: 13px; }
+
+    .inp {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s;
+      margin-bottom: 12px;
+    }
+    .inp:focus { border-color: var(--accent); }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      border: none; cursor: pointer;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px; font-weight: 700;
+      width: 100%;
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .login-error {
+      color: var(--red); font-size: 12px; margin-top: 8px;
+      min-height: 18px;
+    }
+
+    /* ---- HEADER ---- */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-logo {
+      display: flex; align-items: center; gap: 12px;
+      font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800;
+    }
+    .header-logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+
+    .btn-sm {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text); cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .btn-sm:hover { border-color: var(--accent); background: var(--surface); }
+    .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+    .btn-sm.accent {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; color: #fff; font-weight: 600;
+    }
+    .btn-sm.accent:hover { opacity: .88; }
+
+    /* ---- ANA İÇERİK ---- */
+    main { padding: 28px 24px; max-width: 1600px; margin: 0 auto; }
+
+    /* ---- ÖZET KARTLAR ---- */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      position: relative; overflow: hidden;
+      transition: border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--accent); }
+    .stat-card .icon {
+      font-size: 24px; margin-bottom: 12px;
+    }
+    .stat-card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .stat-card .value { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; }
+    .stat-card.warn  .value { color: var(--yellow); }
+    .stat-card.alert .value { color: var(--red); }
+    .stat-card::after {
+      content: ''; position: absolute; right: -16px; bottom: -16px;
+      width: 72px; height: 72px; border-radius: 50%;
+      background: rgba(255,255,255,.03);
+    }
+
+    /* ---- UYARI BÖLÜMÜ ---- */
+    .alerts-section { margin-bottom: 24px; }
+    .alerts-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .alert-list { display: flex; flex-direction: column; gap: 8px; }
+    .alert-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; border-radius: 10px;
+      border-left: 4px solid transparent;
+      background: var(--surface);
+    }
+    .alert-item.red  { border-color: var(--red);    background: rgba(239,68,68,.08); }
+    .alert-item.yellow { border-color: var(--yellow); background: rgba(234,179,8,.08); }
+    .alert-item .plate {
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
+      min-width: 90px;
+    }
+    .alert-item .info { flex: 1; font-size: 13px; color: var(--muted); }
+    .badge {
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .badge.red    { background: rgba(239,68,68,.2);  color: var(--red); }
+    .badge.yellow { background: rgba(234,179,8,.2);  color: var(--yellow); }
+    .badge.green  { background: rgba(34,197,94,.2);  color: var(--green); }
+    .badge.blue   { background: rgba(59,130,246,.2); color: var(--blue); }
+    .badge.gray   { background: rgba(139,148,158,.15); color: var(--muted); }
+
+    /* ---- ARAÇ TABLOSU ---- */
+    .table-section { }
+    .table-toolbar {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .search-wrap {
+      position: relative; flex: 1; min-width: 200px;
+    }
+    .search-wrap .icon-search {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); font-size: 14px; pointer-events: none;
+    }
+    .search-wrap input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px 10px 36px;
+      color: var(--text); outline: none;
+      font-family: 'DM Sans', sans-serif; font-size: 13px;
+      transition: border-color .2s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+
+    .filter-tabs {
+      display: flex; gap: 6px;
+    }
+    .tab {
+      padding: 8px 14px; border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted); font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all .2s; white-space: nowrap;
+    }
+    .tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--surface2); }
+    th {
+      padding: 12px 14px;
+      text-align: left;
+      font-family: 'Syne', sans-serif;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .07em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer; white-space: nowrap;
+      user-select: none;
+    }
+    th:hover { color: var(--text); }
+    th .sort-icon { margin-left: 4px; opacity: .4; }
+    th.sorted .sort-icon { opacity: 1; color: var(--accent); }
+
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px; white-space: nowrap;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.025); }
+
+    .plate-cell {
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
+      color: var(--text);
+    }
+    .days-cell { font-weight: 600; }
+    .days-cell.red    { color: var(--red); }
+    .days-cell.yellow { color: var(--yellow); }
+    .days-cell.green  { color: var(--green); }
+
+    .action-btns { display: flex; gap: 6px; }
+    .icon-btn {
+      width: 30px; height: 30px; border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; transition: all .2s;
+    }
+    .icon-btn.edit:hover  { border-color: var(--blue);  color: var(--blue);  background: rgba(59,130,246,.1); }
+    .icon-btn.del:hover   { border-color: var(--red);   color: var(--red);   background: rgba(239,68,68,.1); }
+
+    .empty-state {
+      padding: 60px 20px; text-align: center;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ---- MODAL ---- */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.hidden { display: none; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%; max-width: 640px;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 24px 80px rgba(0,0,0,.7);
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: var(--surface); z-index: 1;
+    }
+    .modal-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; }
+    .modal-close {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface2);
+      color: var(--muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; transition: all .2s;
+    }
+    .modal-close:hover { border-color: var(--red); color: var(--red); }
+
+    .modal-body { padding: 24px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+    select.inp { appearance: none; cursor: pointer; }
+    textarea.inp { resize: vertical; min-height: 72px; }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+
+    /* ---- TOAST ---- */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px; max-width: 300px;
+      display: flex; align-items: center; gap: 10px;
+      animation: slideIn .3s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    }
+    .toast.success { border-color: var(--green); }
+    .toast.error   { border-color: var(--red); }
+    .toast.info    { border-color: var(--blue); }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ---- RESPONSIVE ---- */
+    @media (max-width: 768px) {
+      header { padding: 0 16px; }
+      main   { padding: 16px; }
+      .table-wrap { overflow-x: auto; }
+      table  { min-width: 900px; }
+      .header-logo span:last-child { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- =========================================================
+     BÖLÜM 2: GİRİŞ EKRANI
+     ========================================================= -->
+<div id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">🚛</div>
+    <h1 class="login-title">Filo Takip</h1>
+    <p class="login-sub">Sisteme giriş yapın</p>
+    <input id="login-user" class="inp" type="text" placeholder="Kullanıcı Adı" autocomplete="username" />
+    <input id="login-pass" class="inp" type="password" placeholder="Şifre" autocomplete="current-password" />
+    <button class="btn-primary" onclick="doLogin()">🔓 Giriş Yap</button>
+    <p class="login-error" id="login-error"></p>
+  </div>
+</div>
+
+<!-- =========================================================
+     BÖLÜM 3: HEADER
+     ========================================================= -->
+<header>
+  <div class="header-logo">
+    <div class="header-logo-icon">🚛</div>
+    <span>Araç Filosu</span>
+    <span style="color:var(--muted);font-weight:400;font-size:14px;">Takip Sistemi</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-sm" onclick="exportJSON()" title="JSON olarak dışa aktar">⬇ Dışa Aktar</button>
+    <label class="btn-sm" style="cursor:pointer" title="JSON dosyası yükle">
+      ⬆ İçe Aktar<input type="file" accept=".json" style="display:none" onchange="importJSON(this)" />
+    </label>
+    <button class="btn-sm danger" onclick="confirmReset()" title="Tüm verileri sil">🗑 Sıfırla</button>
+    <button class="btn-sm accent" onclick="openModal()">＋ Araç Ekle</button>
+    <button class="btn-sm danger" onclick="doLogout()" title="Çıkış Yap">🚪 Çıkış</button>
+  </div>
+</header>
+
+<!-- =========================================================
+     BÖLÜM 4: ANA İÇERİK
+     ========================================================= -->
+<main>
+
+  <!-- 4a. ÖZET KARTLAR -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card">
+      <div class="icon">🚛</div>
+      <div class="label">Toplam Çekici</div>
+      <div class="value" id="stat-cekici">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">🚚</div>
+      <div class="label">Toplam Dorse</div>
+      <div class="value" id="stat-dorse">0</div>
+    </div>
+    <div class="stat-card warn">
+      <div class="icon">🔍</div>
+      <div class="label">Yaklaşan Muayene <span style="font-size:10px">(30 gün)</span></div>
+      <div class="value" id="stat-muayene">0</div>
+    </div>
+    <div class="stat-card warn">
+      <div class="icon">🛡</div>
+      <div class="label">Yaklaşan Sigorta <span style="font-size:10px">(30 gün)</span></div>
+      <div class="value" id="stat-sigorta">0</div>
+    </div>
+  </div>
+
+  <!-- 4b. ACİL DURUMLAR -->
+  <div class="alerts-section" id="alerts-section">
+    <div class="alerts-header">
+      <div class="section-title">🚨 Acil Durumlar</div>
+    </div>
+    <div class="alert-list" id="alert-list">
+      <div class="empty-state"><div class="icon">✅</div><p>Acil durum yok</p></div>
+    </div>
+  </div>
+
+  <!-- 4c. ARAÇ TABLOSU -->
+  <div class="table-section">
+    <div class="alerts-header" style="margin-bottom:16px">
+      <div class="section-title">🚗 Araç Listesi</div>
+    </div>
+    <div class="table-toolbar">
+      <div class="search-wrap">
+        <span class="icon-search">🔎</span>
+        <input type="text" id="search-input" placeholder="Plaka veya şoför ara…" oninput="renderTable()" />
+      </div>
+      <div class="filter-tabs">
+        <div class="tab active" data-filter="all" onclick="setFilter('all',this)">Tümü</div>
+        <div class="tab" data-filter="Çekici" onclick="setFilter('Çekici',this)">Çekici</div>
+        <div class="tab" data-filter="Dorse" onclick="setFilter('Dorse',this)">Dorse</div>
+        <div class="tab" data-filter="yaklasan" onclick="setFilter('yaklasan',this)">⚠ Yaklaşanlar</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('plaka')">Plaka / Kod <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('tip')">Tip <span class="sort-icon">↕</span></th>
+            <th>Eşleşme</th>
+            <th>Şoför</th>
+            <th>Telefon</th>
+            <th onclick="sortBy('muayene')">Son Muayene <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('sigorta')">Sigorta Bitiş <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('takograf')">Takograf <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('kalanGun')">Gün Kalan <span class="sort-icon">↕</span></th>
+            <th>Durum</th>
+            <th>Notlar</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- =========================================================
+     BÖLÜM 5: ARAÇ EKLE / DÜZENLE MODAL
+     ========================================================= -->
+<div class="modal-backdrop hidden" id="modal-backdrop" onclick="closeModalBackdrop(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Yeni Araç Ekle</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Plaka / Kod *</label>
+          <input class="inp" id="f-plaka" type="text" placeholder="ör. 15PS475" />
+        </div>
+        <div class="form-group">
+          <label>Araç Tipi *</label>
+          <select class="inp" id="f-tip">
+            <option value="">— Seçin —</option>
+            <option value="Çekici">Çekici</option>
+            <option value="Dorse">Dorse</option>
+            <option value="Kamyonet">Kamyonet</option>
+            <option value="Minivan">Minivan</option>
+            <option value="Kamyon">Kamyon</option>
+            <option value="Diğer">Diğer</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Eşleştiği Araç</label>
+          <input class="inp" id="f-esleme" type="text" placeholder="ör. Dorse: 06ABC123" />
+        </div>
+        <div class="form-group">
+          <label>Şoför Adı</label>
+          <input class="inp" id="f-sofor" type="text" placeholder="Ad Soyad" />
+        </div>
+        <div class="form-group">
+          <label>Şoför Telefon</label>
+          <input class="inp" id="f-telefon" type="tel" placeholder="05xx xxx xx xx" />
+        </div>
+        <div class="form-group">
+          <label>Durum</label>
+          <select class="inp" id="f-durum">
+            <option value="Aktif">Aktif</option>
+            <option value="Bakımda">Bakımda</option>
+            <option value="Pasif">Pasif</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Son Muayene Tarihi</label>
+          <input class="inp" id="f-muayene" type="date" />
+        </div>
+        <div class="form-group">
+          <label>Sigorta Bitiş Tarihi</label>
+          <input class="inp" id="f-sigorta" type="date" />
+        </div>
+        <div class="form-group">
+          <label>Takograf Tarihi</label>
+          <input class="inp" id="f-takograf" type="date" />
+        </div>
+        <div class="form-group full">
+          <label>Notlar</label>
+          <textarea class="inp" id="f-notlar" placeholder="Serbest not…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeModal()">İptal</button>
+      <button class="btn-sm accent" onclick="saveVehicle()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     BÖLÜM 6: TOAST BİLDİRİMLERİ
+     ========================================================= -->
+<div id="toast-container"></div>
+
+<!-- =========================================================
+     BÖLÜM 7: JAVASCRIPT
+     ========================================================= -->
+<script>
+/* ================================================================
+   ⚙️  YAPILANDIRMA — Buraya kendi bilgilerinizi girin
+   ================================================================ */
+const CONFIG = {
+  USERNAME    : 'admin',           // ← Kullanıcı adınızı değiştirin
+  PASSWORD    : 'oner2026',        // ← Şifrenizi değiştirin
+  JSONBIN_KEY : '$2a$10$q3gB/pBDvpjgyddzEdGRBu3z2cR9D/OlgtSs4NagGpuZcrLaYkTv2',  // ← jsonbin.io API anahtarınız
+  JSONBIN_BIN : '69ceaaa6856a682189f395c8',   // ← jsonbin.io Bin ID'niz
+  SESSION_MS  : 8 * 60 * 60 * 1000 // 8 saat oturum süresi
+};
+
+/* ---- DURUM ---- */
+let vehicles    = [];
+let editingId   = null;
+let activeFilter= 'all';
+let sortField   = null;
+let sortAsc     = true;
+
+/* ================================================================
+   GİRİŞ / ÇIKIŞ
+   ================================================================ */
+function checkAuth() {
+  const record = JSON.parse(localStorage.getItem('filo_auth') || 'null');
+  if (record && Date.now() < record.exp) {
+    document.getElementById('login-overlay').classList.add('hidden');
+  }
+}
+
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+
+  if (user === CONFIG.USERNAME && pass === CONFIG.PASSWORD) {
+    localStorage.setItem('filo_auth', JSON.stringify({ exp: Date.now() + CONFIG.SESSION_MS }));
+    document.getElementById('login-overlay').classList.add('hidden');
+    errEl.textContent = '';
+    loadVehicles();
+  } else {
+    errEl.textContent = '❌ Kullanıcı adı veya şifre hatalı.';
+    document.getElementById('login-pass').value = '';
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('filo_auth');
+  location.reload();
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('login-user').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('login-pass').focus();
+});
+
+/* ================================================================
+   BULUT VERİ (JSONBin.io)
+   ================================================================ */
+async function loadVehicles() {
+  // API key girilmemişse localStorage'a geri dön
+  if (CONFIG.JSONBIN_KEY === 'BURAYA_API_KEY') {
+    vehicles = JSON.parse(localStorage.getItem('filo_araclar') || '[]');
+    seedDemo();
+    refresh();
+    return;
+  }
+
+  showToast('Veriler yükleniyor…', 'info');
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.JSONBIN_BIN}/latest`, {
+      headers: { 'X-Master-Key': CONFIG.JSONBIN_KEY }
+    });
+    if (!res.ok) throw new Error('Sunucu hatası: ' + res.status);
+    const json = await res.json();
+    vehicles = Array.isArray(json.record) ? json.record : [];
+    showToast('Veriler buluttan yüklendi ✓', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Bulut bağlantısı kurulamadı, yerel veriler kullanılıyor.', 'error');
+    vehicles = JSON.parse(localStorage.getItem('filo_araclar') || '[]');
+  }
+  seedDemo();
+  refresh();
+}
+
+async function saveVehicles() {
+  // Yerel yedek her zaman al
+  localStorage.setItem('filo_araclar', JSON.stringify(vehicles));
+
+  if (CONFIG.JSONBIN_KEY === 'BURAYA_API_KEY') return;
+
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.JSONBIN_BIN}`, {
+      method : 'PUT',
+      headers: {
+        'Content-Type' : 'application/json',
+        'X-Master-Key' : CONFIG.JSONBIN_KEY
+      },
+      body: JSON.stringify(vehicles)
+    });
+    if (!res.ok) throw new Error('Kaydetme hatası: ' + res.status);
+  } catch (err) {
+    console.error(err);
+    showToast('Buluta kaydedilemedi — yerel yedek alındı.', 'error');
+  }
+}
+
+/* ================================================================
+   YARDIMCI FONKSİYONLAR
+   ================================================================ */
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// ISO tarih → GG.AA.YYYY
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+// GG.AA.YYYY → ISO
+function dmyToISO(s) {
+  if (!s || !s.includes('.')) return s;
+  const [d, m, y] = s.split('.');
+  return `${y}-${m}-${d}`;
+}
+
+// ISO tarih → kalan gün (sigorta veya takograf veya muayene + 1 yıl)
+// Burada "gün kalan" = sigorta bitiş - bugün (en kritik)
+function daysLeft(iso) {
+  if (!iso) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(iso); d.setHours(0,0,0,0);
+  return Math.round((d - today) / 86400000);
+}
+
+// En kritik tarihi al (sigorta / takograf / muayene+1 yıl) ve en az kalan günü döndür
+function minDaysLeft(v) {
+  const dates = [];
+  if (v.sigorta)  dates.push(daysLeft(v.sigorta));
+  if (v.takograf) dates.push(daysLeft(v.takograf));
+  if (v.muayene) {
+    // Muayene genellikle yıllık; son muayene + 1 yıl = sonraki muayene
+    const nxt = new Date(v.muayene);
+    nxt.setFullYear(nxt.getFullYear() + 1);
+    dates.push(daysLeft(nxt.toISOString().split('T')[0]));
+  }
+  if (dates.length === 0) return null;
+  return Math.min(...dates.filter(d => d !== null));
+}
+
+function colorClass(days) {
+  if (days === null) return '';
+  if (days < 0)   return 'red';
+  if (days <= 30) return 'red';
+  if (days <= 60) return 'yellow';
+  return 'green';
+}
+
+function statusBadge(durum) {
+  const map = { 'Aktif': 'green', 'Bakımda': 'yellow', 'Pasif': 'gray' };
+  return `<span class="badge ${map[durum] || 'gray'}">${durum || 'Aktif'}</span>`;
+}
+
+/* ================================================================
+   ÖZET KARTLAR
+   ================================================================ */
+function updateStats() {
+  const cekici  = vehicles.filter(v => v.tip === 'Çekici').length;
+  const dorse   = vehicles.filter(v => v.tip === 'Dorse').length;
+  const today   = new Date(); today.setHours(0,0,0,0);
+  const in30    = new Date(today); in30.setDate(in30.getDate() + 30);
+
+  function near(iso) {
+    if (!iso) return false;
+    const d = new Date(iso); d.setHours(0,0,0,0);
+    return d <= in30;
+  }
+
+  const muayeneCnt = vehicles.filter(v => {
+    if (!v.muayene) return false;
+    const nxt = new Date(v.muayene); nxt.setFullYear(nxt.getFullYear() + 1);
+    return nxt <= in30;
+  }).length;
+  const sigortaCnt = vehicles.filter(v => near(v.sigorta)).length;
+
+  document.getElementById('stat-cekici').textContent  = cekici;
+  document.getElementById('stat-dorse').textContent   = dorse;
+  document.getElementById('stat-muayene').textContent = muayeneCnt;
+  document.getElementById('stat-sigorta').textContent = sigortaCnt;
+}
+
+/* ================================================================
+   ACİL DURUMLAR
+   ================================================================ */
+function updateAlerts() {
+  const list = document.getElementById('alert-list');
+  const items = [];
+
+  vehicles.forEach(v => {
+    // Sigorta
+    if (v.sigorta) {
+      const dl = daysLeft(v.sigorta);
+      if (dl !== null && dl <= 30) {
+        const cls = dl < 0 ? 'red' : 'yellow';
+        const txt = dl < 0 ? `Sigorta ${Math.abs(dl)} gün önce bitti` : `Sigorta ${dl} gün içinde bitiyor`;
+        items.push({ cls, plate: v.plaka, info: txt, days: dl });
+      }
+    }
+    // Takograf
+    if (v.takograf) {
+      const dl = daysLeft(v.takograf);
+      if (dl !== null && dl <= 30) {
+        const cls = dl < 0 ? 'red' : 'yellow';
+        const txt = dl < 0 ? `Takograf ${Math.abs(dl)} gün önce bitti` : `Takograf ${dl} gün içinde bitiyor`;
+        items.push({ cls, plate: v.plaka, info: txt, days: dl });
+      }
+    }
+    // Muayene (son muayene + 1 yıl)
+    if (v.muayene) {
+      const nxt = new Date(v.muayene); nxt.setFullYear(nxt.getFullYear() + 1);
+      const dl = daysLeft(nxt.toISOString().split('T')[0]);
+      if (dl !== null && dl <= 30) {
+        const cls = dl < 0 ? 'red' : 'yellow';
+        const txt = dl < 0 ? `Muayene ${Math.abs(dl)} gün önce geçti` : `Muayene ${dl} gün içinde`;
+        items.push({ cls, plate: v.plaka, info: txt, days: dl });
+      }
+    }
+  });
+
+  items.sort((a, b) => a.days - b.days);
+
+  if (items.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>Acil durum yok</p></div>';
+    return;
+  }
+
+  list.innerHTML = items.map(it => `
+    <div class="alert-item ${it.cls}">
+      <div class="plate">${it.plate}</div>
+      <div class="info">${it.info}</div>
+      <span class="badge ${it.cls}">${it.days < 0 ? 'GEÇMİŞ' : it.days + ' GÜN'}</span>
+    </div>
+  `).join('');
+}
+
+/* ================================================================
+   FİLTRE / SIRALAMA
+   ================================================================ */
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function sortBy(field) {
+  if (sortField === field) sortAsc = !sortAsc;
+  else { sortField = field; sortAsc = true; }
+  document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
+  const thEls = document.querySelectorAll('th');
+  // map field to column index
+  const fieldMap = { plaka:0, tip:1, muayene:5, sigorta:6, takograf:7, kalanGun:8 };
+  if (fieldMap[field] !== undefined) thEls[fieldMap[field]].classList.add('sorted');
+  renderTable();
+}
+
+function getFilteredSorted() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  let list = vehicles.filter(v => {
+    if (q && !v.plaka?.toLowerCase().includes(q) && !v.sofor?.toLowerCase().includes(q)) return false;
+    if (activeFilter === 'Çekici' && v.tip !== 'Çekici') return false;
+    if (activeFilter === 'Dorse'  && v.tip !== 'Dorse')  return false;
+    if (activeFilter === 'yaklasan') {
+      const md = minDaysLeft(v);
+      if (md === null || md > 60) return false;
+    }
+    return true;
+  });
+
+  if (sortField) {
+    list = list.slice().sort((a, b) => {
+      let av, bv;
+      if      (sortField === 'plaka')    { av = a.plaka || ''; bv = b.plaka || ''; }
+      else if (sortField === 'tip')      { av = a.tip   || ''; bv = b.tip   || ''; }
+      else if (sortField === 'muayene')  { av = a.muayene  || ''; bv = b.muayene  || ''; }
+      else if (sortField === 'sigorta')  { av = a.sigorta  || ''; bv = b.sigorta  || ''; }
+      else if (sortField === 'takograf') { av = a.takograf || ''; bv = b.takograf || ''; }
+      else if (sortField === 'kalanGun') { av = minDaysLeft(a) ?? 9999; bv = minDaysLeft(b) ?? 9999; }
+      if (av < bv) return sortAsc ? -1 : 1;
+      if (av > bv) return sortAsc ?  1 : -1;
+      return 0;
+    });
+  }
+  return list;
+}
+
+/* ================================================================
+   TABLO RENDER
+   ================================================================ */
+function renderTable() {
+  const tbody = document.getElementById('table-body');
+  const list  = getFilteredSorted();
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="12">
+      <div class="empty-state"><div class="icon">🔍</div><p>Sonuç bulunamadı</p></div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(v => {
+    const md   = minDaysLeft(v);
+    const cls  = colorClass(md);
+    const days = md === null ? '—' : (md < 0 ? `${Math.abs(md)} gün geçti` : `${md} gün`);
+    return `
+    <tr>
+      <td class="plate-cell">${v.plaka || '—'}</td>
+      <td>${v.tip || '—'}</td>
+      <td style="color:var(--muted)">${v.esleme || '—'}</td>
+      <td>${v.sofor || '—'}</td>
+      <td>${v.telefon || '—'}</td>
+      <td>${fmtDate(v.muayene)}</td>
+      <td>${fmtDate(v.sigorta)}</td>
+      <td>${fmtDate(v.takograf)}</td>
+      <td class="days-cell ${cls}">${days}</td>
+      <td>${statusBadge(v.durum)}</td>
+      <td style="max-width:140px;white-space:normal;font-size:12px;color:var(--muted)">${v.notlar || ''}</td>
+      <td>
+        <div class="action-btns">
+          <button class="icon-btn edit" title="Düzenle" onclick="openModal('${v.id}')">✏️</button>
+          <button class="icon-btn del"  title="Sil"     onclick="deleteVehicle('${v.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ================================================================
+   MODAL
+   ================================================================ */
+function openModal(id) {
+  editingId = id || null;
+  const modal = document.getElementById('modal-backdrop');
+  document.getElementById('modal-title').textContent = id ? 'Araç Düzenle' : 'Yeni Araç Ekle';
+  clearForm();
+  if (id) {
+    const v = vehicles.find(x => x.id === id);
+    if (v) populateForm(v);
+  }
+  modal.classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.add('hidden');
+  editingId = null;
+}
+
+function closeModalBackdrop(e) {
+  if (e.target === document.getElementById('modal-backdrop')) closeModal();
+}
+
+function clearForm() {
+  ['f-plaka','f-esleme','f-sofor','f-telefon','f-muayene','f-sigorta','f-takograf','f-notlar'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-tip').value   = '';
+  document.getElementById('f-durum').value = 'Aktif';
+}
+
+function populateForm(v) {
+  document.getElementById('f-plaka').value    = v.plaka    || '';
+  document.getElementById('f-tip').value      = v.tip      || '';
+  document.getElementById('f-esleme').value   = v.esleme   || '';
+  document.getElementById('f-sofor').value    = v.sofor    || '';
+  document.getElementById('f-telefon').value  = v.telefon  || '';
+  document.getElementById('f-durum').value    = v.durum    || 'Aktif';
+  document.getElementById('f-muayene').value  = v.muayene  || '';
+  document.getElementById('f-sigorta').value  = v.sigorta  || '';
+  document.getElementById('f-takograf').value = v.takograf || '';
+  document.getElementById('f-notlar').value   = v.notlar   || '';
+}
+
+function saveVehicle() {
+  const plaka = document.getElementById('f-plaka').value.trim().toUpperCase();
+  const tip   = document.getElementById('f-tip').value;
+  if (!plaka) { showToast('Plaka / Kod zorunludur.', 'error'); return; }
+  if (!tip)   { showToast('Araç tipi seçiniz.', 'error'); return; }
+
+  const data = {
+    plaka,
+    tip,
+    esleme:   document.getElementById('f-esleme').value.trim(),
+    sofor:    document.getElementById('f-sofor').value.trim(),
+    telefon:  document.getElementById('f-telefon').value.trim(),
+    durum:    document.getElementById('f-durum').value,
+    muayene:  document.getElementById('f-muayene').value,
+    sigorta:  document.getElementById('f-sigorta').value,
+    takograf: document.getElementById('f-takograf').value,
+    notlar:   document.getElementById('f-notlar').value.trim(),
+  };
+
+  if (editingId) {
+    const idx = vehicles.findIndex(v => v.id === editingId);
+    if (idx !== -1) vehicles[idx] = { ...vehicles[idx], ...data };
+    showToast('Araç güncellendi ✓', 'success');
+  } else {
+    vehicles.push({ id: uid(), ...data });
+    showToast('Araç eklendi ✓', 'success');
+  }
+
+  saveVehicles();
+  closeModal();
+  refresh();
+}
+
+/* ================================================================
+   SİL
+   ================================================================ */
+function deleteVehicle(id) {
+  const v = vehicles.find(x => x.id === id);
+  if (!confirm(`"${v?.plaka}" plakalı aracı silmek istediğinize emin misiniz?`)) return;
+  vehicles = vehicles.filter(x => x.id !== id);
+  saveVehicles();
+  refresh();
+  showToast('Araç silindi.', 'error');
+}
+
+/* ================================================================
+   VERİLERİ SIFIRLA
+   ================================================================ */
+function confirmReset() {
+  if (confirm('TÜM araç verileri silinecek! Bu işlem geri alınamaz. Devam etmek istiyor musunuz?')) {
+    vehicles = [];
+    saveVehicles();
+    refresh();
+    showToast('Tüm veriler sıfırlandı.', 'error');
+  }
+}
+
+/* ================================================================
+   JSON EXPORT / IMPORT
+   ================================================================ */
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(vehicles, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `filo_yedek_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast('Veriler dışa aktarıldı ✓', 'success');
+}
+
+function importJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error();
+      if (!confirm(`${data.length} araç içe aktarılacak. Mevcut veriler korunacak. Devam edilsin mi?`)) return;
+      const existingIds = new Set(vehicles.map(v => v.id));
+      data.forEach(v => {
+        if (!existingIds.has(v.id)) vehicles.push(v);
+      });
+      saveVehicles();
+      refresh();
+      showToast(`${data.length} araç içe aktarıldı ✓`, 'success');
+    } catch {
+      showToast('Geçersiz dosya formatı.', 'error');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ================================================================
+   TOAST
+   ================================================================ */
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icon = type === 'success' ? '✅' : type === 'info' ? 'ℹ️' : '❌';
+  el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+/* ================================================================
+   ANA YENİLE
+   ================================================================ */
+function refresh() {
+  updateStats();
+  updateAlerts();
+  renderTable();
+}
+
+/* ================================================================
+   DEMO VERİSİ
+   ================================================================ */
+function seedDemo() {
+  if (vehicles.length > 0) return;
+  const today = new Date();
+  function addDays(d, n) {
+    const x = new Date(d); x.setDate(x.getDate() + n);
+    return x.toISOString().split('T')[0];
+  }
+  function subDays(d, n) { return addDays(d, -n); }
+
+  vehicles = [
+    {
+      id: uid(), plaka: '15PS475', tip: 'Çekici', esleme: 'Dorse: 06ZZZ001',
+      sofor: 'Ahmet Yılmaz', telefon: '0532 111 22 33', durum: 'Aktif',
+      muayene: subDays(today, 320), sigorta: addDays(today, 18),
+      takograf: addDays(today, 45), notlar: 'Motor revizyonu yapıldı'
+    },
+    {
+      id: uid(), plaka: '06ZZZ001', tip: 'Dorse', esleme: 'Çekici: 15PS475',
+      sofor: 'Ahmet Yılmaz', telefon: '0532 111 22 33', durum: 'Aktif',
+      muayene: subDays(today, 200), sigorta: addDays(today, 90),
+      takograf: '', notlar: 'Soğutmalı kasa'
+    },
+    {
+      id: uid(), plaka: '34KK8834', tip: 'Çekici', esleme: '',
+      sofor: 'Mehmet Demir', telefon: '0541 999 00 11', durum: 'Bakımda',
+      muayene: subDays(today, 10), sigorta: subDays(today, 5),
+      takograf: addDays(today, 120), notlar: 'Fren sistemi arızalı'
+    },
+    {
+      id: uid(), plaka: '35AA1234', tip: 'Kamyonet', esleme: '',
+      sofor: 'Ali Koç', telefon: '0555 444 33 22', durum: 'Aktif',
+      muayene: subDays(today, 180), sigorta: addDays(today, 200),
+      takograf: '', notlar: ''
+    },
+    {
+      id: uid(), plaka: '07BB5678', tip: 'Dorse', esleme: '',
+      sofor: '', telefon: '', durum: 'Pasif',
+      muayene: subDays(today, 400), sigorta: addDays(today, 25),
+      takograf: '', notlar: 'Depoda bekliyor'
+    },
+  ];
+  saveVehicles();
+}
+
+/* ================================================================
+   BAŞLATMA
+   ================================================================ */
+checkAuth();
+// loadVehicles() oturum açıldıktan sonra doLogin() tarafından çağrılır.
+// Eğer oturum zaten aktifse burada çağırıyoruz:
+(function(){
+  const record = JSON.parse(localStorage.getItem('filo_auth') || 'null');
+  if (record && Date.now() < record.exp) {
+    loadVehicles();
+  }
+})();
+</script>
+</body>
+</html>
