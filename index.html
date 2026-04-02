@@ -599,8 +599,8 @@
 const CONFIG = {
   USERNAME_HASH   : 'aa6e416d2a6f384524dce436c128dc924a5c68be7247383cfff81ba2c117ad29',
   PASSWORD_HASH   : '77b942acb043a711b6e1da16b1fc5588307e611b12160ab8574f66b6f999ae56',
-  SUPABASE_URL    : 'https://fjetoktgzpubegpvhhng.supabase.co',   // ← Supabase proje URL'niz
-  SUPABASE_ANON   : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqZXRva3RnenB1YmVncHZoaG5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNTYwMjMsImV4cCI6MjA5MDczMjAyM30.WSTtAwD9vtm4fgJsa6K4DyLHFD4iUyGuF6qkR-0Uop0',       // ← Supabase anon/public key
+  SUPABASE_URL    : 'BURAYA_SUPABASE_URL',   // ← Supabase proje URL'niz
+  SUPABASE_ANON   : 'BURAYA_ANON_KEY',       // ← Supabase anon/public key
   SESSION_MS      : 8 * 60 * 60 * 1000       // 8 saat oturum süresi
 };
 
@@ -809,17 +809,13 @@ function daysLeft(iso) {
   return Math.round((d - today) / 86400000);
 }
 
-// En kritik tarihi al (sigorta / takograf / muayene+1 yıl) ve en az kalan günü döndür
+// En kritik tarihi al (sigorta / takograf / muayene) ve en az kalan günü döndür
+// Muayene alanı doğrudan muayenenin biteceği tarihi tutar
 function minDaysLeft(v) {
   const dates = [];
   if (v.sigorta)  dates.push(daysLeft(v.sigorta));
   if (v.takograf) dates.push(daysLeft(v.takograf));
-  if (v.muayene) {
-    // Muayene genellikle yıllık; son muayene + 1 yıl = sonraki muayene
-    const nxt = new Date(v.muayene);
-    nxt.setFullYear(nxt.getFullYear() + 1);
-    dates.push(daysLeft(nxt.toISOString().split('T')[0]));
-  }
+  if (v.muayene)  dates.push(daysLeft(v.muayene));
   if (dates.length === 0) return null;
   return Math.min(...dates.filter(d => d !== null));
 }
@@ -854,8 +850,8 @@ function updateStats() {
 
   const muayeneCnt = vehicles.filter(v => {
     if (!v.muayene) return false;
-    const nxt = new Date(v.muayene); nxt.setFullYear(nxt.getFullYear() + 1);
-    return nxt <= in30;
+    const d = new Date(v.muayene); d.setHours(0,0,0,0);
+    return d <= in30;
   }).length;
   const sigortaCnt = vehicles.filter(v => near(v.sigorta)).length;
 
@@ -891,13 +887,12 @@ function updateAlerts() {
         items.push({ cls, plate: v.plaka, info: txt, days: dl });
       }
     }
-    // Muayene (son muayene + 1 yıl)
+    // Muayene (bitiş tarihi doğrudan alanda saklanır)
     if (v.muayene) {
-      const nxt = new Date(v.muayene); nxt.setFullYear(nxt.getFullYear() + 1);
-      const dl = daysLeft(nxt.toISOString().split('T')[0]);
+      const dl = daysLeft(v.muayene);
       if (dl !== null && dl <= 30) {
         const cls = dl < 0 ? 'red' : 'yellow';
-        const txt = dl < 0 ? `Muayene ${Math.abs(dl)} gün önce geçti` : `Muayene ${dl} gün içinde`;
+        const txt = dl < 0 ? `Muayene ${Math.abs(dl)} gün önce geçti` : `Muayene ${dl} gün içinde bitiyor`;
         items.push({ cls, plate: v.plaka, info: txt, days: dl });
       }
     }
