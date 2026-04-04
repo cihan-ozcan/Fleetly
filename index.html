@@ -1765,6 +1765,7 @@
             <th onclick="sortBy('takograf')">Takograf <span class="sort-icon">↕</span></th>
             <th onclick="sortBy('kalanGun')">Gün Kalan <span class="sort-icon">↕</span></th>
             <th>Durum</th>
+            <th onclick="sortBy('tuketim')" title="Ortalama yakıt tüketimi (L/100km)">L/100km <span class="sort-icon">↕</span></th>
             <th>Notlar</th>
             <th></th>
           </tr>
@@ -1945,7 +1946,7 @@
           </div>
           <div class="maint-form-group">
             <label>Servis / Tamirci</label>
-            <input class="maint-inp" type="text" id="f-maint-servis" placeholder="örn. Cihan Tır Servis" />
+            <input class="maint-inp" type="text" id="f-maint-servis" placeholder="örn. Özcan Oto Servis" />
           </div>
           <div class="maint-form-group" style="align-self:end">
             <button class="maint-add-btn" onclick="addMaintEntry()">🔧 + Kayıt Ekle</button>
@@ -2701,9 +2702,27 @@ function sortBy(field) {
   document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
   const thEls = document.querySelectorAll('th');
   // map field to column index
-  const fieldMap = { plaka:0, tip:1, muayene:5, sigorta:6, takograf:7, kalanGun:8 };
+  const fieldMap = { plaka:0, tip:1, muayene:5, sigorta:6, takograf:7, kalanGun:8, tuketim:10 };
   if (fieldMap[field] !== undefined) thEls[fieldMap[field]].classList.add('sorted');
   renderTable();
+}
+
+/* L/100km hesapla — km sıralamalı girişlerden ardışık dolumların ortalaması */
+function calcTuketim(vehicleId) {
+  const entries = (fuelData[vehicleId] || [])
+    .filter(e => e.km > 0 && e.litre > 0)
+    .slice().sort((a, b) => a.km - b.km);
+  if (entries.length < 2) return null;
+  let totalL = 0, totalKm = 0;
+  for (let i = 1; i < entries.length; i++) {
+    const km = entries[i].km - entries[i-1].km;
+    if (km > 0 && km < 5000) { // aşırı uç değerleri ele
+      totalL  += entries[i].litre;
+      totalKm += km;
+    }
+  }
+  if (totalKm < 1) return null;
+  return (totalL / totalKm) * 100;
 }
 
 function getFilteredSorted() {
@@ -2728,6 +2747,7 @@ function getFilteredSorted() {
       else if (sortField === 'sigorta')  { av = a.sigorta  || ''; bv = b.sigorta  || ''; }
       else if (sortField === 'takograf') { av = a.takograf || ''; bv = b.takograf || ''; }
       else if (sortField === 'kalanGun') { av = minDaysLeft(a) ?? 9999; bv = minDaysLeft(b) ?? 9999; }
+      else if (sortField === 'tuketim')  { av = calcTuketim(a.id) ?? 9999; bv = calcTuketim(b.id) ?? 9999; }
       if (av < bv) return sortAsc ? -1 : 1;
       if (av > bv) return sortAsc ?  1 : -1;
       return 0;
@@ -2758,6 +2778,8 @@ function renderTable() {
         const days = md === null ? '—' : (md < 0 ? Math.abs(md) + ' gün geçti' : md + ' gün kaldı');
         const muayeneCls = v.muayene ? colorClass(daysLeft(v.muayene)) : '';
         const sigortaCls = v.sigorta ? colorClass(daysLeft(v.sigorta)) : '';
+        const tuketim = calcTuketim(v.id);
+        const tuketimColor = tuketim === null ? 'var(--muted)' : (tuketim <= 25 ? 'var(--green)' : tuketim <= 35 ? 'var(--yellow)' : 'var(--red)');
         return `
         <div class="mob-card">
           <div class="mob-card-header">
@@ -2775,6 +2797,7 @@ function renderTable() {
             <div class="mob-card-field"><span class="mob-card-label">Muayene</span><span class="mob-card-value mono ${muayeneCls}">${fmtDate(v.muayene)}</span></div>
             <div class="mob-card-field"><span class="mob-card-label">Sigorta</span><span class="mob-card-value mono ${sigortaCls}">${fmtDate(v.sigorta)}</span></div>
             <div class="mob-card-field"><span class="mob-card-label">Takograf</span><span class="mob-card-value mono">${fmtDate(v.takograf)}</span></div>
+            <div class="mob-card-field"><span class="mob-card-label">Tüketim</span><span class="mob-card-value mono" style="color:${tuketimColor};font-weight:700">${tuketim !== null ? tuketim.toFixed(1) + ' L/100km' : '—'}</span></div>
             ${v.notlar ? `<div class="mob-card-field" style="grid-column:1/-1"><span class="mob-card-label">Not</span><span class="mob-card-value" style="white-space:normal">${v.notlar}</span></div>` : ''}
           </div>
           <div class="mob-card-actions">
@@ -2801,6 +2824,10 @@ function renderTable() {
     const days = md === null ? '—' : (md < 0 ? `${Math.abs(md)} gün geçti` : `${md} gün`);
     const muayeneCls = v.muayene ? colorClass(daysLeft(v.muayene)) : '';
     const sigortaCls  = v.sigorta  ? colorClass(daysLeft(v.sigorta))  : '';
+    const tuketim = calcTuketim(v.id);
+    const tuketimVal = tuketim === null ? '—' : tuketim.toFixed(1);
+    const tuketimCls = tuketim === null ? 'muted' : (tuketim <= 25 ? 'green' : tuketim <= 35 ? 'yellow' : 'red');
+    const tuketimColor = tuketim === null ? 'var(--muted)' : (tuketim <= 25 ? 'var(--green)' : tuketim <= 35 ? 'var(--yellow)' : 'var(--red)');
     return `
     <tr>
       <td class="plate-cell">${v.plaka || '—'}</td>
@@ -2813,6 +2840,7 @@ function renderTable() {
       <td class="date-cell">${fmtDate(v.takograf)}</td>
       <td><div class="days-cell ${cls}">${days}</div></td>
       <td>${statusBadge(v.durum)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700;color:${tuketimColor};text-align:center" title="${tuketim === null ? 'Hesaplamak için en az 2 km girişi gerekli' : tuketim.toFixed(2) + ' L/100km'}">${tuketimVal}${tuketim !== null ? '<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:2px">L</span>' : ''}</td>
       <td style="max-width:130px;white-space:normal;font-size:12px;color:var(--muted)">${v.notlar || ''}</td>
       <td>
         <div class="action-btns">
