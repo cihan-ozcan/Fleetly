@@ -1362,6 +1362,11 @@
     background: rgba(249,115,22,.06);
     transform: translateY(-1px);
   }
+  .vs-vehicle-item.blue-hover:hover {
+    border-color: var(--blue);
+    background: rgba(56,189,248,.06);
+  }
+  .vs-vehicle-item.blue-hover:hover .vs-arrow { color: var(--blue); }
   .vs-vehicle-icon {
     width: 38px; height: 38px; border-radius: 10px;
     background: var(--surface3);
@@ -2141,8 +2146,98 @@
 </div>
 
 <!-- =========================================================
-     YAKIT TAKİP MODALİ
+     BAKIM ARAÇ SEÇİM MODALİ
      ========================================================= -->
+<div class="vehicle-select-backdrop hidden" id="maint-select-backdrop" onclick="closeMaintSelectBackdrop(event)">
+  <div class="vehicle-select-modal" style="max-width:620px">
+    <div class="vehicle-select-header" style="border-bottom-color:var(--border)">
+      <div class="vehicle-select-title">
+        <span class="icon">🔧</span>
+        Bakım / Arıza Yönetimi
+      </div>
+      <button class="modal-close" onclick="closeMaintSelect()">✕</button>
+    </div>
+    <div class="vehicle-select-body">
+
+      <!-- Sekme Navigasyonu -->
+      <div class="vs-tabs">
+        <button class="vs-tab active" id="ms-tab-araclar" onclick="switchMsTab('araclar')">🚛 Araç Seçimi</button>
+        <button class="vs-tab" id="ms-tab-ozet" onclick="switchMsTab('ozet')">📊 Genel Özet</button>
+        <button class="vs-tab" id="ms-tab-ayarlar" onclick="switchMsTab('ayarlar')">⚙️ Yönetim</button>
+      </div>
+
+      <!-- SEKME 1: Araç Seçimi -->
+      <div class="vs-tab-panel active" id="mspanel-araclar">
+        <div class="vehicle-select-search">
+          <span class="srch-icon">🔎</span>
+          <input type="text" id="msvs-search" placeholder="Plaka veya şoför ara…" oninput="renderMsVehicleList()" style="border-color:var(--border2)" onfocus="this.style.borderColor='var(--blue)';this.style.boxShadow='0 0 0 3px rgba(56,189,248,.12)'" onblur="this.style.borderColor='var(--border2)';this.style.boxShadow='none'" />
+        </div>
+        <div id="ms-vehicle-list"></div>
+      </div>
+
+      <!-- SEKME 2: Genel Özet -->
+      <div class="vs-tab-panel" id="mspanel-ozet">
+        <div class="vs-summary-panel">
+          <div class="vs-summary-title" style="color:var(--blue)">🔧 Tüm Filo — Bakım İstatistikleri</div>
+          <!-- Ay Filtresi -->
+          <div class="vs-month-tabs" id="ms-month-tabs"></div>
+          <!-- İstatistik Kartları -->
+          <div class="vs-summary-grid" style="grid-template-columns:repeat(3,1fr)">
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--blue)" id="ms-s-kayit">—</div>
+              <div class="vs-summary-lbl">Toplam Kayıt</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--red)" id="ms-s-ariza">—</div>
+              <div class="vs-summary-lbl">Arıza / Onarım</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--green)" id="ms-s-maliyet">—</div>
+              <div class="vs-summary-lbl">Toplam Maliyet</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--blue)" id="ms-s-bakim">—</div>
+              <div class="vs-summary-lbl">Periyodik Bakım</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--red)" id="ms-s-gecikme">—</div>
+              <div class="vs-summary-lbl">Gecikmiş Bakım</div>
+            </div>
+          </div>
+          <!-- En Yüksek Maliyetli Araçlar -->
+          <div style="margin-top:14px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">💰 En Yüksek Bakım Maliyeti</div>
+            <div class="vs-top-vehicles" id="ms-top-vehicles"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEKME 3: Yönetim -->
+      <div class="vs-tab-panel" id="mspanel-ayarlar">
+        <!-- PDF Rapor -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">📄 Bakım / Arıza PDF Raporu</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Tüm araçların bakım ve arıza geçmişini detaylı PDF raporu olarak indirin.</div>
+          <button class="maint-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none" onclick="closeMaintSelect();downloadMaintPDF()">⬇ PDF Rapor İndir</button>
+        </div>
+        <!-- Tehlike Bölgesi -->
+        <div class="vs-danger-zone">
+          <div class="vs-danger-info">
+            <div class="vs-danger-title">⚠ Tüm Bakım Kayıtlarını Sil</div>
+            <div class="vs-danger-sub">Bu işlem geri alınamaz. Tüm araçlara ait bakım geçmişi silinir.</div>
+          </div>
+          <button class="vs-danger-btn" onclick="confirmDeleteAllMaint()">🗑 Tümünü Sil</button>
+        </div>
+        <!-- Araç bazlı silme -->
+        <div style="border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:12px 14px;background:rgba(239,68,68,.04);margin-top:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">🚛 Araç Bazlı Bakım Kaydı Sil</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" id="ms-per-vehicle-delete"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
 <div class="fuel-modal-backdrop hidden" id="fuel-modal-backdrop" onclick="closeFuelModalBackdrop(event)">
   <div class="fuel-modal">
     <div class="fuel-modal-header">
@@ -4883,14 +4978,196 @@ function updateMaintStat() {
 // ── Bakım özeti modalını aç (tüm araçlar) ──
 function openMaintSummaryModal() {
   if (vehicles.length === 0) { showToast('Önce araç ekleyin.', 'error'); return; }
-  // Eğer tek araç varsa direkt o aracın modalını aç
-  if (vehicles.length === 1) {
-    openMaintModal(vehicles[0].id);
+  loadMaintData();
+  document.getElementById('msvs-search').value = '';
+  switchMsTab('araclar');
+  renderMsVehicleList();
+  renderMsSummary();
+  renderMsManagement();
+  document.getElementById('maint-select-backdrop').classList.remove('hidden');
+}
+
+function closeMaintSelect() {
+  document.getElementById('maint-select-backdrop').classList.add('hidden');
+}
+function closeMaintSelectBackdrop(e) {
+  if (e.target === document.getElementById('maint-select-backdrop')) closeMaintSelect();
+}
+
+function switchMsTab(name) {
+  ['araclar','ozet','ayarlar'].forEach(t => {
+    document.getElementById('ms-tab-' + t)?.classList.toggle('active', t === name);
+    document.getElementById('mspanel-' + t)?.classList.toggle('active', t === name);
+  });
+  if (name === 'ozet') renderMsSummary();
+  if (name === 'ayarlar') renderMsManagement();
+}
+
+let msSummaryMonth = null;
+
+function setMsSummaryMonth(m) {
+  msSummaryMonth = m;
+  renderMsSummary();
+}
+
+function renderMsVehicleList() {
+  const q = (document.getElementById('msvs-search').value || '').toLowerCase().trim();
+  const list = document.getElementById('ms-vehicle-list');
+  const tipIcon = { 'Çekici':'🚛','Dorse':'🚚','Kamyon':'🚚','Kamyonet':'🛻','Minivan':'🚐','Binek Araç':'🚗' };
+  const turLabel = { bakim:'Bakım', ariza:'Arıza', parca:'Parça', muayene:'Muayene', diger:'Diğer' };
+  const turColor = { bakim:'var(--blue)', ariza:'var(--red)', parca:'var(--yellow)', muayene:'var(--green)', diger:'var(--muted)' };
+
+  const filtered = vehicles.filter(v => {
+    if (!q) return true;
+    return (v.plaka||'').toLowerCase().includes(q) || (v.sofor||'').toLowerCase().includes(q);
+  });
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="vs-empty"><div class="icon">🔍</div><p>Araç bulunamadı.</p></div>`;
     return;
   }
-  // Araç seçim diyaloğu
-  const v = vehicles.find(vv => (maintData[vv.id]||[]).length > 0) || vehicles[0];
-  openMaintModal(v.id);
+
+  list.innerHTML = filtered.map(v => {
+    const entries = maintData[v.id] || [];
+    const toplam  = entries.length;
+    const maliyet = entries.reduce((s,e) => s+(e.maliyet||0), 0);
+    const icon    = tipIcon[v.tip] || '🚗';
+    // Son kayıt türü
+    const sonKayit = entries.length > 0 ? entries.slice().sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''))[0] : null;
+    // Sonraki yakın bakım
+    const planlı  = entries.filter(e=>e.sonraki_tarih).sort((a,b)=>a.sonraki_tarih.localeCompare(b.sonraki_tarih));
+    const sonraki = planlı.length>0 ? planlı[0] : null;
+    const dl      = sonraki ? daysLeft(sonraki.sonraki_tarih) : null;
+    const dlTxt   = dl===null ? '' : (dl<0 ? `<span style="color:var(--red);font-size:10.5px;font-weight:700">${Math.abs(dl)} gün gecikmiş ⚠</span>` : dl===0 ? `<span style="color:var(--yellow);font-size:10.5px;font-weight:700">Bugün!</span>` : `<span style="color:${dl<=30?'var(--yellow)':'var(--green)'};font-size:10.5px">${dl} gün kaldı</span>`);
+
+    return `<button class="vs-vehicle-item blue-hover" style="border-color:${dl!==null&&dl<0?'rgba(239,68,68,.3)':'var(--border)'}" onclick="selectVehicleForMaint('${v.id}')">
+      <div class="vs-vehicle-icon">${icon}</div>
+      <div class="vs-vehicle-info">
+        <div class="vs-vehicle-plaka" style="color:var(--blue)">${v.plaka||'—'}</div>
+        <div class="vs-vehicle-meta">${v.tip||''}${v.sofor?' · '+v.sofor:''}</div>
+        ${sonraki ? `<div style="margin-top:3px">${dlTxt}</div>` : ''}
+      </div>
+      <div class="vs-vehicle-fuel">
+        <span class="vs-fuel-count" style="color:var(--blue)">${toplam>0?toplam+' kayıt':'Kayıt yok'}</span>
+        ${maliyet>0 ? `<span class="vs-fuel-total" style="color:var(--green)">${maliyet.toLocaleString('tr-TR',{maximumFractionDigits:0})} ₺</span>` : ''}
+        ${sonKayit ? `<span style="font-size:10px;color:${turColor[sonKayit.tur]||'var(--muted)'}">${turLabel[sonKayit.tur]||sonKayit.tur}</span>` : ''}
+      </div>
+      <span class="vs-arrow" style="${dl!==null&&dl<0?'color:var(--red)':''}">›</span>
+    </button>`;
+  }).join('');
+}
+
+function selectVehicleForMaint(vehicleId) {
+  closeMaintSelect();
+  openMaintModal(vehicleId);
+}
+
+function renderMsSummary() {
+  // Ay sekmeleri
+  const allMonths = new Set();
+  Object.values(maintData).forEach(entries => {
+    entries.forEach(e => { if (e.tarih) allMonths.add(e.tarih.slice(0,7)); });
+  });
+  const sortedMonths = Array.from(allMonths).sort().reverse().slice(0,12);
+  const tabsEl = document.getElementById('ms-month-tabs');
+  if (tabsEl) {
+    tabsEl.innerHTML = `<button class="vs-month-tab ${msSummaryMonth===null?'active':''}" onclick="setMsSummaryMonth(null)">Tümü</button>` +
+      sortedMonths.map(m => {
+        const [y,mo] = m.split('-');
+        return `<button class="vs-month-tab ${msSummaryMonth===m?'active':''}" onclick="setMsSummaryMonth('${m}')">${mo}/${y}</button>`;
+      }).join('');
+  }
+
+  // İstatistik hesapla
+  let totalKayit=0, totalAriza=0, totalBakim=0, totalMaliyet=0, toplamGecikme=0;
+  let maliyetByVehicle = {};
+
+  vehicles.forEach(v => {
+    const entries = (maintData[v.id]||[]).filter(e => !msSummaryMonth || (e.tarih&&e.tarih.startsWith(msSummaryMonth)));
+    const maliyet = entries.reduce((s,e)=>s+(e.maliyet||0),0);
+    totalKayit  += entries.length;
+    totalAriza  += entries.filter(e=>e.tur==='ariza').length;
+    totalBakim  += entries.filter(e=>e.tur==='bakim').length;
+    totalMaliyet+= maliyet;
+    // Gecikmiş bakımlar (ay filtresine bakılmaksızın)
+    const allEntries = maintData[v.id]||[];
+    allEntries.filter(e=>e.sonraki_tarih).forEach(e=>{
+      const dl=daysLeft(e.sonraki_tarih);
+      if(dl!==null&&dl<0) toplamGecikme++;
+    });
+    if (maliyet>0) maliyetByVehicle[v.id]={plaka:v.plaka,maliyet};
+  });
+  // gecikme sayısını sadece bir kez say (tüm araç-entry çiftleri, filtreden bağımsız)
+  // Already calculated above per-vehicle
+
+  const set = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  set('ms-s-kayit',  totalKayit.toLocaleString('tr-TR'));
+  set('ms-s-ariza',  totalAriza.toString());
+  set('ms-s-bakim',  totalBakim.toString());
+  set('ms-s-maliyet', totalMaliyet>0?totalMaliyet.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺':'—');
+  set('ms-s-gecikme', toplamGecikme.toString());
+  const gecEl = document.getElementById('ms-s-gecikme');
+  if (gecEl) gecEl.style.color = toplamGecikme>0?'var(--red)':'var(--green)';
+
+  // En yüksek maliyetli araçlar
+  const topEl = document.getElementById('ms-top-vehicles');
+  if (topEl) {
+    const sorted = Object.entries(maliyetByVehicle).sort((a,b)=>b[1].maliyet-a[1].maliyet).slice(0,5);
+    const maxM = sorted.length>0?sorted[0][1].maliyet:1;
+    topEl.innerHTML = sorted.length===0
+      ? `<div style="color:var(--muted);font-size:12px">Bu dönemde maliyet kaydı yok.</div>`
+      : sorted.map(([,info])=>{
+          const pct = Math.max(4,Math.round((info.maliyet/maxM)*100));
+          return `<div class="vs-top-row">
+            <div class="vs-top-plaka" style="color:var(--blue)">${info.plaka}</div>
+            <div class="vs-top-bar-wrap"><div class="vs-top-bar" style="width:${pct}%;background:linear-gradient(90deg,var(--blue),#7dd3fc)"></div></div>
+            <div class="vs-top-val">${info.maliyet.toLocaleString('tr-TR',{maximumFractionDigits:0})} ₺</div>
+          </div>`;
+        }).join('');
+  }
+}
+
+function renderMsManagement() {
+  const el = document.getElementById('ms-per-vehicle-delete');
+  if (!el) return;
+  const btns = vehicles.map(v => {
+    const cnt = (maintData[v.id]||[]).length;
+    if (cnt===0) return '';
+    return `<button class="vs-danger-btn" style="font-size:11px;padding:5px 11px" onclick="confirmDeleteVehicleMaint('${v.id}','${v.plaka}')">
+      ${v.plaka} <span style="opacity:.6;font-weight:400">(${cnt})</span>
+    </button>`;
+  }).join('');
+  el.innerHTML = btns || '<span style="color:var(--muted);font-size:12px">Henüz bakım kaydı yok.</span>';
+}
+
+async function confirmDeleteAllMaint() {
+  const total = Object.values(maintData).reduce((s,a)=>s+a.length,0);
+  if (total===0) { showToast('Silinecek bakım kaydı yok.','error'); return; }
+  if (!confirm(`Tüm ${total} bakım kaydı silinecek. Bu işlem geri alınamaz!\n\nDevam edilsin mi?`)) return;
+  if (!isLocalMode()) {
+    try { await fetch(sbUrl('bakim_girisleri?id=neq.null'),{method:'DELETE',headers:sbHeaders()}); } catch(e){console.error(e);}
+  }
+  maintData = {};
+  saveMaintDataLocal();
+  updateMaintStat();
+  renderMsSummary();
+  renderMsManagement();
+  showToast('Tüm bakım kayıtları silindi.','error');
+}
+
+async function confirmDeleteVehicleMaint(vehicleId, plaka) {
+  const cnt = (maintData[vehicleId]||[]).length;
+  if (cnt===0) { showToast('Bu araçta kayıt yok.','error'); return; }
+  if (!confirm(`"${plaka}" aracına ait ${cnt} bakım kaydı silinecek.\n\nDevam edilsin mi?`)) return;
+  if (!isLocalMode()) {
+    try { await fetch(sbUrl('bakim_girisleri?arac_id=eq.'+vehicleId),{method:'DELETE',headers:sbHeaders()}); } catch(e){console.error(e);}
+  }
+  delete maintData[vehicleId];
+  saveMaintDataLocal();
+  updateMaintStat();
+  renderMsSummary();
+  renderMsManagement();
+  showToast(`${plaka} bakım kayıtları silindi.`,'error');
 }
 
 // ── Tür label yardımcısı ──
