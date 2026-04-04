@@ -6039,9 +6039,21 @@ async function loadDriverData() {
   loadDriverDataLocal(); // önce lokali yükle (hızlı görünüm)
   if (isLocalMode()) { driverLoaded = true; return; }
   try {
-    const res = await fetch(sbUrl('surucu_belgeler?select=*&order=ad.asc'), { headers: sbHeaders() });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const { data: { user } } = await getSB().auth.getUser();
+    if (!user) { driverLoaded = true; return; }
+
+    // user_id filtresi ile çek; firma_id varsa onu da ekle
+    let query = 'surucu_belgeler?select=*&order=ad.asc&user_id=eq.' + user.id;
+    if (currentFirmaId) query += '&firma_id=eq.' + currentFirmaId;
+
+    const res = await fetch(sbUrl(query), { headers: sbHeaders() });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('Sürücü yükle HTTP hatası:', res.status, errText);
+      throw new Error('HTTP ' + res.status);
+    }
     const rows = await res.json();
+    console.log('Sürücü verisi geldi:', rows.length, 'kayıt');
     driverData = rows.map(r => ({
       id      : r.id,
       ad      : r.ad,
@@ -6049,8 +6061,8 @@ async function loadDriverData() {
       plaka   : r.arac_id  || '',
       ehliyet : r.ehliyet  || '',
       src     : r.src      || '',
-      psiko    : r.psiko    || '',
-      takograf : r.takograf || ''
+      psiko   : r.psiko    || '',
+      takograf: r.takograf || ''
     }));
     saveDriverDataLocal();
     driverLoaded = true;
