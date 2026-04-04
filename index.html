@@ -7275,7 +7275,6 @@ async function downloadMasrafPDF() {
    KAPSAMLI YÖNETİM RAPORU PDF (Raporlar modalındaki)
    ================================================================ */
 async function downloadRaporPDF() {
-  try {
   const donem   = document.getElementById('rapor-donem')?.value||'all';
   const flt     = e => !donem||donem==='all'||!e.tarih||e.tarih.startsWith(donem);
 
@@ -7499,13 +7498,8 @@ async function downloadRaporPDF() {
   });
 
   addFooter();
-  try {
   _pdfSave(doc, 'yonetim_raporu_'+new Date().toISOString().slice(0,10)+'.pdf');
   showToast('Yonetim Raporu PDF indirildi!','success');
-  } catch(err) {
-    console.error('Rapor PDF hatası:', err);
-    showToast('PDF oluşturulamadı: ' + err.message, 'error');
-  }
 }
 // ── Ayarlar dropdown ──
 function toggleSettings() {
