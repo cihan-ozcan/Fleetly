@@ -823,7 +823,7 @@
   /* ── ÖZET KARTLAR ───────────────────────────────────────── */
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 12px;
     margin-bottom: 20px;
   }
@@ -1754,36 +1754,48 @@
 
   <!-- 4a. ÖZET KARTLAR -->
   <div class="stats-grid" id="stats-grid">
-    <div class="stat-card">
+    <!-- BİRLEŞİK FİLO ÖZET KARTI -->
+    <div class="stat-card" style="grid-column:span 2">
       <div class="stat-card-top">
-        <div class="stat-icon orange">🚛</div>
-        <span class="stat-trend ok" id="trend-cekici">Aktif</span>
+        <div class="stat-icon green">🚛</div>
+        <span class="stat-trend ok">Filo Özeti</span>
       </div>
-      <div class="stat-value orange" id="stat-cekici">0</div>
-      <div class="stat-label">Toplam Çekici</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-top">
-        <div class="stat-icon blue">🚚</div>
-        <span class="stat-trend ok" id="trend-dorse">Aktif</span>
+      <div style="display:flex;align-items:flex-end;gap:0;margin-bottom:10px">
+        <div style="flex:1;text-align:center;padding:0 8px">
+          <div class="stat-value white" id="stat-toplam" style="font-size:30px;line-height:1">0</div>
+          <div class="stat-label" style="margin-top:3px">Toplam Araç</div>
+        </div>
+        <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;margin-bottom:14px"></div>
+        <div style="flex:1;text-align:center;padding:0 8px">
+          <div class="stat-value orange" id="stat-cekici" style="font-size:30px;line-height:1">0</div>
+          <div class="stat-label" style="margin-top:3px">🚛 Çekici</div>
+        </div>
+        <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;margin-bottom:14px"></div>
+        <div style="flex:1;text-align:center;padding:0 8px">
+          <div class="stat-value blue" id="stat-dorse" style="font-size:30px;line-height:1">0</div>
+          <div class="stat-label" style="margin-top:3px">🚚 Dorse</div>
+        </div>
+        <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;margin-bottom:14px"></div>
+        <div style="flex:1;text-align:center;padding:0 8px">
+          <div class="stat-value purple" id="stat-diger" style="font-size:30px;line-height:1">0</div>
+          <div class="stat-label" style="margin-top:3px">🚐 Diğer</div>
+        </div>
       </div>
-      <div class="stat-value blue" id="stat-dorse">0</div>
-      <div class="stat-label">Toplam Dorse</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-top">
-        <div class="stat-icon purple">🚐</div>
-        <span class="stat-trend ok">Aktif</span>
+      <div style="display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <span id="trend-cekici" style="display:none"></span>
+        <span id="trend-dorse" style="display:none"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--orange, var(--accent));flex-shrink:0;display:inline-block"></span>
+        <span style="color:var(--text2);font-size:11px">Çekici</span>
+        <span style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px" id="_cekici-mini"></span>
+        <span style="color:var(--border);font-size:11px">·</span>
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;display:inline-block"></span>
+        <span style="color:var(--text2);font-size:11px">Dorse</span>
+        <span style="color:var(--blue);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px" id="_dorse-mini"></span>
+        <span style="color:var(--border);font-size:11px">·</span>
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0;display:inline-block"></span>
+        <span style="color:var(--text2);font-size:11px">Diğer</span>
+        <span style="color:var(--purple);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px" id="_diger-mini"></span>
       </div>
-      <div class="stat-value purple" id="stat-diger">0</div>
-      <div class="stat-label">Diğer Araçlar</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-top">
-        <div class="stat-icon green">🔗</div>
-      </div>
-      <div class="stat-value white" id="stat-toplam">0</div>
-      <div class="stat-label">Toplam Araç</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-top">
@@ -3047,6 +3059,10 @@ function updateStats() {
   document.getElementById('stat-dorse').textContent   = dorse;
   document.getElementById('stat-diger').textContent   = diger;
   document.getElementById('stat-toplam').textContent  = toplam;
+  // Birleşik kart mini sayaçlar
+  const mc = document.getElementById('_cekici-mini'); if(mc) mc.textContent = cekici;
+  const md = document.getElementById('_dorse-mini');  if(md) md.textContent = dorse;
+  const mg = document.getElementById('_diger-mini');  if(mg) mg.textContent = diger;
   document.getElementById('stat-muayene').textContent = muayeneCnt;
   document.getElementById('stat-sigorta').textContent = sigortaCnt;
 
