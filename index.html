@@ -1635,11 +1635,11 @@
           </div>
           <div class="fuel-form-group">
             <label>Birim Fiyat (₺/L)</label>
-            <input class="fuel-inp" type="number" id="f-fuel-fiyat" placeholder="ör. 42.50" step="0.01" min="0" />
+            <input class="fuel-inp" type="number" id="f-fuel-fiyat" placeholder="ör. 72.50" step="0.01" min="0" />
           </div>
           <div class="fuel-form-group">
             <label>İstasyon / Not</label>
-            <input class="fuel-inp" type="text" id="f-fuel-not" placeholder="ör. Shell Ankara" />
+            <input class="fuel-inp" type="text" id="f-fuel-not" placeholder="ör. ABC Opet" />
           </div>
           <div class="fuel-form-group" style="justify-content:flex-end">
             <button class="fuel-add-btn" onclick="addFuelEntry()">+ Ekle</button>
@@ -1682,11 +1682,7 @@
      BÖLÜM 7: JAVASCRIPT
      ========================================================= -->
 <script>
-/* ================================================================
-   ⚙️  YAPILANDIRMA — config.js dosyasından okunur (.gitignore'da)
-   ================================================================ */
 
-// config.js yüklenmemişse kullanıcıyı bilgilendir
 if (!window.FILO_CONFIG) {
   document.addEventListener('DOMContentLoaded', () => {
     const err = document.getElementById('login-error');
@@ -1696,7 +1692,6 @@ if (!window.FILO_CONFIG) {
 
 const CFG = window.FILO_CONFIG || { SUPABASE_URL: '', SUPABASE_ANON: '' };
 
-// Supabase istemcisi (SDK ile)
 let _sb = null;
 function getSB() {
   if (!_sb && CFG.SUPABASE_URL && CFG.SUPABASE_ANON) {
@@ -1705,21 +1700,14 @@ function getSB() {
   return _sb;
 }
 
-// Oturumdaki kullanıcı JWT token'ı — RLS için
 let _authToken = null;
 
-/* ---- DURUM ---- */
 let vehicles    = [];
 let editingId   = null;
 let activeFilter= 'all';
 let sortField   = null;
 let sortAsc     = true;
 
-/* ================================================================
-   GİRİŞ / ÇIKIŞ — Supabase Auth
-   ================================================================ */
-
-// Brute-force koruması
 const _loginAttempts = { count: 0, lockedUntil: 0 };
 
 async function checkAuth() {
@@ -1735,7 +1723,6 @@ async function checkAuth() {
     showLoginOverlay();
   }
 
-  // Oturum değişikliklerini dinle (token yenileme, çıkış vb.)
   sb.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) {
       _authToken = session.access_token;
@@ -1757,7 +1744,6 @@ function hideLoginOverlay() {
 }
 
 async function doLogin() {
-  // Brute-force kilidi kontrolü
   if (Date.now() < _loginAttempts.lockedUntil) {
     const kalan = Math.ceil((_loginAttempts.lockedUntil - Date.now()) / 1000);
     document.getElementById('login-error').textContent = `⏳ Çok fazla deneme. ${kalan} saniye bekleyin.`;
@@ -1789,7 +1775,7 @@ async function doLogin() {
   if (error) {
     _loginAttempts.count++;
     if (_loginAttempts.count >= 5) {
-      _loginAttempts.lockedUntil = Date.now() + 60_000; // 60 sn kilit
+      _loginAttempts.lockedUntil = Date.now() + 60_000;
       _loginAttempts.count = 0;
       errEl.textContent = '🔒 Çok fazla hatalı deneme. 60 saniye beklemeniz gerekiyor.';
     } else {
@@ -1799,7 +1785,6 @@ async function doLogin() {
     return;
   }
 
-  // Başarılı giriş
   _loginAttempts.count = 0;
   _authToken = data.session.access_token;
   errEl.textContent = '';
@@ -1842,11 +1827,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-/* ================================================================
-   BULUT VERİ (Supabase REST — kullanıcı JWT token ile)
-   ================================================================ */
-
-// Supabase REST API yardımcıları — artık anon key değil, kullanıcı JWT kullanır
 function sbHeaders() {
   return {
     'Content-Type' : 'application/json',
@@ -1860,13 +1840,11 @@ function sbUrl(path) {
   return CFG.SUPABASE_URL + '/rest/v1/' + path;
 }
 
-// localStorage yedeği kullanılıyor mu? (URL girilmemişse)
 function isLocalMode() {
   return !CFG.SUPABASE_URL || CFG.SUPABASE_URL.includes('PROJE_ID');
 }
 
 async function loadVehicles() {
-  // Supabase URL girilmemişse localStorage'a geri dön
   if (isLocalMode()) {
     vehicles = JSON.parse(localStorage.getItem('filo_araclar') || '[]');
     seedDemo();
@@ -1881,7 +1859,6 @@ async function loadVehicles() {
     });
     if (!res.ok) throw new Error('Sunucu hatası: ' + res.status);
     const rows = await res.json();
-    // Supabase satırlarını uygulama formatına dönüştür
     vehicles = rows.map(r => ({
       id      : r.id,
       plaka   : r.plaka,
@@ -1904,25 +1881,22 @@ async function loadVehicles() {
   }
   seedDemo();
   refresh();
-  // Araçlar yüklendikten sonra yakıt verilerini de çek
   await loadFuelData();
   updateFuelStat();
 }
 
 async function saveVehicles() {
-  // Yerel yedek her zaman al
   localStorage.setItem('filo_araclar', JSON.stringify(vehicles));
 
   if (isLocalMode()) return;
 
-  // Oturumdaki kullanıcının ID'sini al
   const { data: { user } } = await getSB().auth.getUser();
   if (!user) { showToast('Oturum süresi dolmuş, lütfen tekrar giriş yapın.', 'error'); return; }
 
   try {
     const rows = vehicles.map(v => ({
       id      : v.id,
-      user_id : user.id,          // ← RLS politikası için zorunlu
+      user_id : user.id,
       plaka   : v.plaka,
       tip     : v.tip,
       esleme  : v.esleme   || null,
@@ -1950,7 +1924,6 @@ async function saveVehicles() {
   }
 }
 
-// Tek araç sil (Supabase'den de kaldır)
 async function deleteFromCloud(id) {
   if (isLocalMode()) return;
   try {
@@ -1963,11 +1936,9 @@ async function deleteFromCloud(id) {
   }
 }
 
-// Tüm araçları buluttan sil (sadece oturumdaki kullanıcının verileri - RLS zaten korur)
 async function deleteAllFromCloud() {
   if (isLocalMode()) return;
   try {
-    // RLS sayesinde sadece auth.uid() == user_id olan satırlar silinir
     await fetch(sbUrl('araclar?id=neq.null'), { method: 'DELETE', headers: sbHeaders() });
     await fetch(sbUrl('yakit_girisleri?id=neq.null'), { method: 'DELETE', headers: sbHeaders() });
   } catch (err) {
@@ -1975,29 +1946,22 @@ async function deleteAllFromCloud() {
   }
 }
 
-/* ================================================================
-   YARDIMCI FONKSİYONLAR
-   ================================================================ */
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-// ISO tarih → GG.AA.YYYY
 function fmtDate(iso) {
   if (!iso) return '—';
   const [y, m, d] = iso.split('-');
   return `${d}.${m}.${y}`;
 }
 
-// GG.AA.YYYY → ISO
 function dmyToISO(s) {
   if (!s || !s.includes('.')) return s;
   const [d, m, y] = s.split('.');
   return `${y}-${m}-${d}`;
 }
 
-// ISO tarih → kalan gün (sigorta veya takograf veya muayene + 1 yıl)
-// Burada "gün kalan" = sigorta bitiş - bugün (en kritik)
 function daysLeft(iso) {
   if (!iso) return null;
   const today = new Date(); today.setHours(0,0,0,0);
@@ -2005,8 +1969,6 @@ function daysLeft(iso) {
   return Math.round((d - today) / 86400000);
 }
 
-// En kritik tarihi al (sigorta / takograf / muayene) ve en az kalan günü döndür
-// Muayene alanı doğrudan muayenenin biteceği tarihi tutar
 function minDaysLeft(v) {
   const dates = [];
   if (v.sigorta)  dates.push(daysLeft(v.sigorta));
@@ -2041,9 +2003,6 @@ function tipBadge(tip) {
   return `<span class="badge ${map[tip] || 'gray'}">${tip || '—'}</span>`;
 }
 
-/* ================================================================
-   ÖZET KARTLAR
-   ================================================================ */
 function updateStats() {
   const cekici  = vehicles.filter(v => v.tip === 'Çekici').length;
   const dorse   = vehicles.filter(v => v.tip === 'Dorse').length;
@@ -2065,7 +2024,6 @@ function updateStats() {
   const muayeneCnt = vehicles.filter(v => near(v.muayene)).length;
   const sigortaCnt = vehicles.filter(v => near(v.sigorta)).length;
 
-  // Stat kartlar
   document.getElementById('stat-cekici').textContent  = cekici;
   document.getElementById('stat-dorse').textContent   = dorse;
   document.getElementById('stat-diger').textContent   = diger;
@@ -2073,7 +2031,6 @@ function updateStats() {
   document.getElementById('stat-muayene').textContent = muayeneCnt;
   document.getElementById('stat-sigorta').textContent = sigortaCnt;
 
-  // Trend badges
   const tm = document.getElementById('trend-muayene');
   const ts = document.getElementById('trend-sigorta');
   tm.style.display = muayeneCnt > 0 ? 'inline-flex' : 'none';
@@ -2081,7 +2038,6 @@ function updateStats() {
   tm.textContent = muayeneCnt + ' araç';
   ts.textContent = sigortaCnt + ' araç';
 
-  // Filo özeti paneli
   document.getElementById('sum-cekici').textContent = cekici;
   document.getElementById('sum-dorse').textContent  = dorse;
   document.getElementById('sum-diger').textContent  = diger;
@@ -2089,7 +2045,6 @@ function updateStats() {
   document.getElementById('sum-bakim').textContent  = bakim;
   document.getElementById('sum-pasif').textContent  = pasif;
 
-  // Yakıt özetini Filo Özeti paneline de yaz
   loadFuelData();
   const fuelNow = new Date();
   const fuelThisMonth = `${fuelNow.getFullYear()}-${String(fuelNow.getMonth()+1).padStart(2,'0')}`;
@@ -2112,15 +2067,11 @@ function updateStats() {
   if (sbuay)  sbuay.textContent  = fuelThisMonthL > 0 ? fuelThisMonthL.toLocaleString('tr-TR', {maximumFractionDigits:0}) + ' L' : '—';
 }
 
-/* ================================================================
-   ACİL DURUMLAR
-   ================================================================ */
 function updateAlerts() {
   const list = document.getElementById('alert-list');
   const items = [];
 
   vehicles.forEach(v => {
-    // Sigorta
     if (v.sigorta) {
       const dl = daysLeft(v.sigorta);
       if (dl !== null && dl <= 30) {
@@ -2129,7 +2080,6 @@ function updateAlerts() {
         items.push({ cls, plate: v.plaka, info: txt, days: dl });
       }
     }
-    // Takograf
     if (v.takograf) {
       const dl = daysLeft(v.takograf);
       if (dl !== null && dl <= 30) {
@@ -2138,7 +2088,6 @@ function updateAlerts() {
         items.push({ cls, plate: v.plaka, info: txt, days: dl });
       }
     }
-    // Muayene (bitiş tarihi doğrudan alanda saklanır)
     if (v.muayene) {
       const dl = daysLeft(v.muayene);
       if (dl !== null && dl <= 30) {
@@ -2168,9 +2117,6 @@ function updateAlerts() {
   `).join('');
 }
 
-/* ================================================================
-   FİLTRE / SIRALAMA
-   ================================================================ */
 function setFilter(f, el) {
   activeFilter = f;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -2183,7 +2129,6 @@ function sortBy(field) {
   else { sortField = field; sortAsc = true; }
   document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
   const thEls = document.querySelectorAll('th');
-  // map field to column index
   const fieldMap = { plaka:0, tip:1, muayene:5, sigorta:6, takograf:7, kalanGun:8 };
   if (fieldMap[field] !== undefined) thEls[fieldMap[field]].classList.add('sorted');
   renderTable();
@@ -2219,9 +2164,6 @@ function getFilteredSorted() {
   return list;
 }
 
-/* ================================================================
-   TABLO RENDER
-   ================================================================ */
 function renderTable() {
   const tbody = document.getElementById('table-body');
   const list  = getFilteredSorted();
@@ -2266,9 +2208,6 @@ function renderTable() {
   }).join('');
 }
 
-/* ================================================================
-   AKTİVİTE LOGU — Supabase
-   ================================================================ */
 const MAX_ACTIVITY = 50;
 
 async function loadActivityLog() {
@@ -2281,7 +2220,6 @@ async function loadActivityLog() {
     if (error) throw error;
     return data || [];
   } catch (e) {
-    console.error('Aktivite logu yüklenemedi:', e);
     return [];
   }
 }
@@ -2296,9 +2234,7 @@ async function addActivity(type, plaka, detail) {
       ts: new Date().toISOString()
     }]);
     if (error) throw error;
-  } catch (e) {
-    console.error('Aktivite kaydedilemedi:', e);
-  }
+  } catch (e) {}
   renderActivityLog();
 }
 
@@ -2307,9 +2243,7 @@ async function clearActivityLog() {
   try {
     const { error } = await _sb.from('activity_log').delete().neq('id', '');
     if (error) throw error;
-  } catch (e) {
-    console.error('Aktivite silinemedi:', e);
-  }
+  } catch (e) {}
   renderActivityLog();
 }
 
@@ -2362,9 +2296,6 @@ async function renderActivityLog() {
   }).join('');
 }
 
-/* ================================================================
-   MODAL
-   ================================================================ */
 function openModal(id) {
   editingId = id || null;
   const modal = document.getElementById('modal-backdrop');
@@ -2442,16 +2373,12 @@ function saveVehicle() {
   refresh();
 }
 
-/* ================================================================
-   SİL
-   ================================================================ */
 function deleteVehicle(id) {
   const v = vehicles.find(x => x.id === id);
   if (!confirm(`"${v?.plaka}" plakalı aracı silmek istediğinize emin misiniz?`)) return;
   const plaka = v?.plaka || '—';
   vehicles = vehicles.filter(x => x.id !== id);
   localStorage.setItem('filo_araclar', JSON.stringify(vehicles));
-  // Yakıt verilerini de temizle
   if (fuelData[id]) {
     delete fuelData[id];
     saveFuelDataLocal();
@@ -2466,9 +2393,6 @@ function deleteVehicle(id) {
   showToast('Araç silindi.', 'error');
 }
 
-/* ================================================================
-   VERİLERİ SIFIRLA
-   ================================================================ */
 function confirmReset() {
   if (confirm('TÜM araç ve yakıt verileri silinecek! Bu işlem geri alınamaz. Devam etmek istiyor musunuz?')) {
     vehicles = [];
@@ -2482,9 +2406,6 @@ function confirmReset() {
   }
 }
 
-/* ================================================================
-   JSON EXPORT / IMPORT
-   ================================================================ */
 function exportJSON() {
   const blob = new Blob([JSON.stringify(vehicles, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -2518,9 +2439,6 @@ function importJSON(input) {
   reader.readAsText(file);
 }
 
-/* ================================================================
-   TOAST
-   ================================================================ */
 function showToast(msg, type = 'success') {
   const c = document.getElementById('toast-container');
   const el = document.createElement('div');
@@ -2531,9 +2449,6 @@ function showToast(msg, type = 'success') {
   setTimeout(() => el.remove(), 3000);
 }
 
-/* ================================================================
-   ANA YENİLE
-   ================================================================ */
 function refresh() {
   updateStats();
   updateAlerts();
@@ -2541,11 +2456,7 @@ function refresh() {
   updateFuelStat();
 }
 
-/* ================================================================
-   DEMO VERİSİ
-   ================================================================ */
 function seedDemo() {
-  // Kullanıcı daha önce sıfırladıysa veya veri varsa demo ekleme
   if (localStorage.getItem('filo_seeded') === 'true') return;
   if (vehicles.length > 0) {
     localStorage.setItem('filo_seeded', 'true');
@@ -2594,15 +2505,10 @@ function seedDemo() {
   saveVehicles();
 }
 
-/* ================================================================
-   YAKIT TAKİP SİSTEMİ
-   ================================================================ */
-
-let fuelData = {}; // { vehicleId: [ {id, tarih, km, litre, fiyat, not} ] }
+let fuelData = {};
 let activeFuelVehicleId = null;
-let fuelLoaded = false; // buluttan yüklenip yüklenmediği
+let fuelLoaded = false;
 
-// ── localStorage yedek ──
 function loadFuelDataLocal() {
   try { fuelData = JSON.parse(localStorage.getItem('filo_yakit') || '{}'); }
   catch { fuelData = {}; }
@@ -2612,15 +2518,13 @@ function saveFuelDataLocal() {
   localStorage.setItem('filo_yakit', JSON.stringify(fuelData));
 }
 
-// ── Supabase: tüm yakıt verilerini çek ──
 async function loadFuelData() {
-  loadFuelDataLocal(); // önce lokali yükle (hızlı görünüm)
+  loadFuelDataLocal();
   if (isLocalMode()) { fuelLoaded = true; return; }
   try {
     const res = await fetch(sbUrl('yakit_girisleri?select=*&order=tarih.asc,km.asc'), { headers: sbHeaders() });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const rows = await res.json();
-    // Satırları { vehicleId: [...] } yapısına dönüştür
     fuelData = {};
     rows.forEach(r => {
       if (!fuelData[r.arac_id]) fuelData[r.arac_id] = [];
@@ -2637,11 +2541,10 @@ async function loadFuelData() {
     fuelLoaded = true;
   } catch (err) {
     console.error('Yakıt verisi yüklenemedi:', err);
-    fuelLoaded = true; // lokali kullan
+    fuelLoaded = true;
   }
 }
 
-// ── Supabase: tek kayıt ekle / güncelle (upsert) ──
 async function saveFuelEntry(vehicleId, entry) {
   saveFuelDataLocal();
   if (isLocalMode()) return;
@@ -2652,7 +2555,7 @@ async function saveFuelEntry(vehicleId, entry) {
   try {
     const row = {
       id      : entry.id,
-      user_id : user.id,          // ← RLS politikası için zorunlu
+      user_id : user.id,
       arac_id : vehicleId,
       tarih   : entry.tarih,
       km      : entry.km,
@@ -2672,7 +2575,6 @@ async function saveFuelEntry(vehicleId, entry) {
   }
 }
 
-// ── Supabase: tek kayıt sil ──
 async function deleteFuelEntryCloud(entryId) {
   saveFuelDataLocal();
   if (isLocalMode()) return;
@@ -2684,18 +2586,15 @@ async function deleteFuelEntryCloud(entryId) {
   } catch (err) { console.error('Yakıt silme hatası:', err); }
 }
 
-// ── Eski arayüz uyumluluğu için sync saveFuelData (sadece local) ──
 function saveFuelData() { saveFuelDataLocal(); }
 
-// Ana sayfa yakıt stat kartını güncelle
 function updateFuelStat() {
   loadFuelDataLocal();
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  let totalL = 0;        // TÜM zamanlardaki toplam litre
-  let thisMonthL = 0;    // Bu ayki litre
+  let totalL = 0;
+  let thisMonthL = 0;
 
-  // Son 6 ay verisini topla
   const months = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -2706,7 +2605,7 @@ function updateFuelStat() {
 
   Object.values(fuelData).forEach(entries => {
     entries.forEach(e => {
-      totalL += (e.litre || 0); // Tüm zamanlardaki toplam
+      totalL += (e.litre || 0);
       if (e.tarih && e.tarih.startsWith(thisMonth)) thisMonthL += (e.litre || 0);
       const m = e.tarih ? e.tarih.slice(0,7) : '';
       if (m in monthTotals) monthTotals[m] += (e.litre || 0);
@@ -2716,7 +2615,6 @@ function updateFuelStat() {
   const statEl = document.getElementById('stat-yakit');
   if (statEl) statEl.textContent = totalL > 0 ? totalL.toLocaleString('tr-TR', {maximumFractionDigits:0}) + ' L' : '0 L';
 
-  // Trend badge - Bu ay kaç litre
   const trendEl = document.getElementById('trend-yakit');
   if (trendEl) {
     if (thisMonthL > 0) {
@@ -2728,11 +2626,8 @@ function updateFuelStat() {
     }
   }
 
-  // Stat label güncelle
   const statLabel = document.querySelector('#stats-grid .stat-card:last-child .stat-label');
-  // Yakıt kartının label'ı HTML'de "Toplam Yakıt" olarak kalsın
 
-  // Spark çubuğu
   const sparkWrap = document.getElementById('spark-wrap');
   if (sparkWrap) {
     const vals = months.map(m => monthTotals[m]);
@@ -2746,13 +2641,11 @@ function updateFuelStat() {
   }
 }
 
-// Yakıt modali aç
 async function openFuelModal(vehicleId) {
   activeFuelVehicleId = vehicleId;
   const v = vehicles.find(x => x.id === vehicleId);
   document.getElementById('fuel-modal-plate').textContent = v ? v.plaka : '—';
 
-  // Bugünü varsayılan yap
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('f-fuel-tarih').value = today;
   document.getElementById('f-fuel-km').value    = '';
@@ -2762,9 +2655,8 @@ async function openFuelModal(vehicleId) {
   document.getElementById('fuel-preview').textContent = '';
 
   document.getElementById('fuel-modal-backdrop').classList.remove('hidden');
-  renderFuelModal(); // önce mevcut veriyle göster
+  renderFuelModal();
 
-  // Supabase'den taze veri çek
   await loadFuelData();
   renderFuelModal();
 }
@@ -2778,7 +2670,6 @@ function closeFuelModalBackdrop(e) {
   if (e.target === document.getElementById('fuel-modal-backdrop')) closeFuelModal();
 }
 
-// Yakıt girişi ekle
 function addFuelEntry() {
   const km     = parseFloat(document.getElementById('f-fuel-km').value);
   const litre  = parseFloat(document.getElementById('f-fuel-litre').value);
@@ -2792,7 +2683,6 @@ function addFuelEntry() {
 
   if (!fuelData[activeFuelVehicleId]) fuelData[activeFuelVehicleId] = [];
 
-  // Km kontrolü: bir önceki kayıttan küçükse uyar ama devam et
   const entries = fuelData[activeFuelVehicleId];
   if (entries.length > 0) {
     const lastKm = Math.max(...entries.map(e => e.km));
@@ -2812,14 +2702,13 @@ function addFuelEntry() {
   fuelData[activeFuelVehicleId].push(entry);
   fuelData[activeFuelVehicleId].sort((a, b) => new Date(a.tarih) - new Date(b.tarih) || a.km - b.km);
   saveFuelDataLocal();
-  saveFuelEntry(activeFuelVehicleId, entry); // Supabase'e async kaydet
+  saveFuelEntry(activeFuelVehicleId, entry);
   updateFuelStat();
-  updateStats(); // Filo Özeti panelini de güncelle
+  updateStats();
   const _fuelV = vehicles.find(x => x.id === activeFuelVehicleId);
   addActivity('yakıt_ekle', _fuelV?.plaka || '—', litre.toLocaleString('tr-TR',{maximumFractionDigits:1}) + ' L · ' + tarih);
   renderFuelModal();
 
-  // Formu temizle
   document.getElementById('f-fuel-km').value    = '';
   document.getElementById('f-fuel-litre').value = '';
   document.getElementById('f-fuel-fiyat').value = '';
@@ -2829,28 +2718,25 @@ function addFuelEntry() {
   showToast('Yakıt kaydı eklendi ✓', 'success');
 }
 
-// Yakıt kaydı sil
 function deleteFuelEntry(vehicleId, entryId) {
   if (!fuelData[vehicleId]) return;
   if (!confirm('Bu yakıt kaydını silmek istediğinize emin misiniz?')) return;
   const _dv = vehicles.find(x => x.id === vehicleId);
   fuelData[vehicleId] = fuelData[vehicleId].filter(e => e.id !== entryId);
   saveFuelDataLocal();
-  deleteFuelEntryCloud(entryId); // Supabase'den async sil
+  deleteFuelEntryCloud(entryId);
   updateFuelStat();
   renderFuelModal();
-  updateStats(); // Filo Özeti panelini güncelle
+  updateStats();
   addActivity('yakıt_sil', _dv?.plaka || '—', '');
   showToast('Kayıt silindi.', 'error');
 }
 
-// Yakıt kaydı düzenle - formu doldur ve eski kaydı sil
 function editFuelEntry(vehicleId, entryId) {
   if (!fuelData[vehicleId]) return;
   const entry = fuelData[vehicleId].find(e => e.id === entryId);
   if (!entry) return;
 
-  // Formu doldur
   document.getElementById('f-fuel-tarih').value = entry.tarih || '';
   document.getElementById('f-fuel-km').value    = entry.km    || '';
   document.getElementById('f-fuel-litre').value = entry.litre || '';
@@ -2858,8 +2744,7 @@ function editFuelEntry(vehicleId, entryId) {
   document.getElementById('f-fuel-not').value   = entry.not   || '';
   updateFuelPreview();
 
-  // Eski kaydı sil (kaydet butonuyla yeniden eklenecek)
-  deleteFuelEntryCloud(entryId); // Supabase'den eski kaydı sil
+  deleteFuelEntryCloud(entryId);
   fuelData[vehicleId] = fuelData[vehicleId].filter(e => e.id !== entryId);
   saveFuelDataLocal();
   renderFuelModal();
@@ -2868,7 +2753,6 @@ function editFuelEntry(vehicleId, entryId) {
   showToast('Kaydı düzenleyip "+ Ekle" butonuna basın.', 'info');
 }
 
-// L/100km hesapla
 function calcConsumption(entries, idx) {
   if (idx === 0) return null;
   const curr = entries[idx];
@@ -2885,22 +2769,18 @@ function consumptionClass(l100) {
   return 'bad';
 }
 
-// Yakıt modalini render et
 function renderFuelModal() {
   const entries = (fuelData[activeFuelVehicleId] || []).slice().sort((a,b) => new Date(a.tarih)-new Date(b.tarih) || a.km-b.km);
 
-  // -- Özet kartlar --
   const totalL   = entries.reduce((s, e) => s + e.litre, 0);
   const totalTL  = entries.reduce((s, e) => s + (e.litre * e.fiyat), 0);
   const kmRange  = entries.length >= 2
     ? entries[entries.length-1].km - entries[0].km
     : 0;
 
-  // Ağırlıklı ortalama tüketim
   let avgCons = null;
   if (entries.length >= 2) {
     const totalKm = entries[entries.length-1].km - entries[0].km;
-    // İlk dolumu sayma (referans noktası)
     const usedL = entries.slice(1).reduce((s,e) => s + e.litre, 0);
     if (totalKm > 0) avgCons = (usedL / totalKm) * 100;
   }
@@ -2937,7 +2817,6 @@ function renderFuelModal() {
     </div>
   `;
 
-  // -- Verim çubuğu --
   const barSection = document.getElementById('fuel-eff-bar');
   const effVal     = document.getElementById('fuel-eff-val');
   const barFill    = document.getElementById('fuel-bar-fill');
@@ -2952,7 +2831,6 @@ function renderFuelModal() {
     barSection.style.display = 'none';
   }
 
-  // -- Geçmiş tablo --
   const countEl = document.getElementById('fuel-entry-count');
   if (countEl) countEl.textContent = dolumCnt + ' kayıt';
 
@@ -2962,16 +2840,14 @@ function renderFuelModal() {
     return;
   }
 
-  // Ters sırayla göster (en yeni üstte)
   const reversed = entries.slice().reverse();
   tbody.innerHTML = reversed.map((e, ri) => {
-    const origIdx = entries.indexOf(e); // Orijinal index (tüketim hesabı için)
+    const origIdx = entries.indexOf(e);
     const cons    = calcConsumption(entries, origIdx);
     const consCls = consumptionClass(cons);
     const tutar   = e.litre * e.fiyat;
     const kmFark  = origIdx > 0 ? e.km - entries[origIdx-1].km : null;
     const consTxt = cons !== null ? cons.toFixed(1) + ' L/100km' : '—';
-    // vehicleId'yi veri attribute olarak HTML'e gömdük — activeFuelVehicleId'ye bağımlılığı kaldırıyoruz
     const vid = activeFuelVehicleId;
     return `
       <tr>
@@ -2993,7 +2869,6 @@ function renderFuelModal() {
   }).join('');
 }
 
-// Canlı önizleme (form input değiştiğinde)
 function updateFuelPreview() {
   const km    = parseFloat(document.getElementById('f-fuel-km').value);
   const litre = parseFloat(document.getElementById('f-fuel-litre').value);
@@ -3006,7 +2881,6 @@ function updateFuelPreview() {
     parts.push(`💰 Tutar: <strong style="color:var(--green)">${tutar.toLocaleString('tr-TR',{maximumFractionDigits:2})} ₺</strong>`);
   }
 
-  // Tüketim tahmini (son km ile karşılaştır)
   if (km > 0 && litre > 0 && activeFuelVehicleId) {
     const entries = (fuelData[activeFuelVehicleId] || []).slice().sort((a,b) => a.km - b.km);
     if (entries.length > 0) {
@@ -3025,7 +2899,6 @@ function updateFuelPreview() {
   prev.innerHTML = parts.length > 0 ? parts.join('&nbsp;&nbsp;|&nbsp;&nbsp;') : '';
 }
 
-// Tüm araçlar yakıt özeti (ana stat kart tıklama) — Araç seçim modalını açar
 function openFuelSummary() {
   if (vehicles.length === 0) { showToast('Önce araç ekleyin.', 'error'); return; }
   if (vehicles.length === 1) {
@@ -3041,7 +2914,6 @@ function openFuelSummary() {
   document.getElementById('vehicle-select-backdrop').classList.remove('hidden');
 }
 
-// Sekme geçişi
 function switchVsTab(name) {
   ['araclar','ozet','ayarlar'].forEach(t => {
     document.getElementById('vs-tab-' + t)?.classList.toggle('active', t === name);
@@ -3051,10 +2923,8 @@ function switchVsTab(name) {
   if (name === 'ayarlar') renderVsManagement();
 }
 
-// Seçili ay filtresi (null = tüm zamanlar)
 let vsSummaryMonth = null;
 
-// Genel özet panelini render et
 function renderVsSummary() {
   const allMonths = new Set();
   Object.values(fuelData).forEach(entries => {
@@ -3140,7 +3010,6 @@ function setVsSummaryMonth(m) {
   renderVsSummary();
 }
 
-// Yönetim sekmesini render et
 function renderVsManagement() {
   const el = document.getElementById('vs-per-vehicle-delete');
   if (!el) return;
@@ -3154,7 +3023,6 @@ function renderVsManagement() {
   el.innerHTML = btns || '<span style="color:var(--muted);font-size:12px">Henüz yakıt kaydı yok.</span>';
 }
 
-// Tüm yakıt verilerini sil
 async function confirmDeleteAllFuel() {
   const total = Object.values(fuelData).reduce((s, a) => s + a.length, 0);
   if (total === 0) { showToast('Silinecek yakıt kaydı yok.', 'error'); return; }
@@ -3173,7 +3041,6 @@ async function confirmDeleteAllFuel() {
   showToast('Tüm yakıt kayıtları silindi.', 'error');
 }
 
-// Tek araç yakıt verilerini sil
 async function confirmDeleteVehicleFuel(vehicleId, plaka) {
   const cnt = (fuelData[vehicleId] || []).length;
   if (cnt === 0) { showToast('Bu araçta kayıt yok.', 'error'); return; }
@@ -3192,7 +3059,6 @@ async function confirmDeleteVehicleFuel(vehicleId, plaka) {
   showToast(`${plaka} yakıt kayıtları silindi.`, 'error');
 }
 
-// Yakıt verilerini JSON olarak indir
 function exportFuelJSON() {
   const out = { exportDate: new Date().toISOString(), vehicles: [] };
   vehicles.forEach(v => {
@@ -3255,221 +3121,160 @@ function selectVehicleForFuel(vehicleId) {
   openFuelModal(vehicleId);
 }
 
-// Form input event'leri bağla (modal açıldıktan sonra çalışır)
 document.addEventListener('DOMContentLoaded', function() {
   ['f-fuel-km','f-fuel-litre','f-fuel-fiyat'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', updateFuelPreview);
   });
 });
 
-// (Yakıt silme, deleteVehicle içine entegre edildi)
-
-
-/* ================================================================
-   TEK ARAÇ PDF RAPORU
-   ================================================================ */
 async function downloadSingleVehiclePDF() {
   const vehicleId = activeFuelVehicleId;
   const v = vehicles.find(x => x.id === vehicleId);
   if (!v) { showToast('Araç bulunamadı.', 'error'); return; }
-
   const ve = (fuelData[vehicleId] || []).slice().sort((a,b) => new Date(a.tarih)-new Date(b.tarih) || a.km-b.km);
   if (ve.length === 0) { showToast('Bu araca ait yakıt kaydı yok.', 'error'); return; }
-
   showToast('PDF hazırlanıyor…', 'info');
-
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const PW = 210, PH = 297, ML = 14, MR = 14, CW = PW - ML - MR;
-
   const C = {
     bg:[8,12,16], surface:[17,24,32], surface2:[24,32,44], border:[37,47,62],
     accent:[249,115,22], text:[226,234,243], text2:[168,184,204],
     muted:[82,96,112], green:[34,197,94], yellow:[245,158,11],
     red:[239,68,68], blue:[56,189,248], white:[255,255,255],
   };
-
-  function tr(s) {
+  function _tr(s) {
     if (!s) return '';
     return String(s)
       .replace(/ş/g,'s').replace(/Ş/g,'S').replace(/ğ/g,'g').replace(/Ğ/g,'G')
       .replace(/ü/g,'u').replace(/Ü/g,'U').replace(/ö/g,'o').replace(/Ö/g,'O')
       .replace(/ç/g,'c').replace(/Ç/g,'C').replace(/ı/g,'i').replace(/İ/g,'I');
   }
-  const LOGO_B64 = typeof window._LOGO_B64 !== 'undefined' ? window._LOGO_B64 : null;
-
-  function setFill(c)  { doc.setFillColor(...c); }
-  function setTxt(c)   { doc.setTextColor(...c); }
-  function rect(x,y,w,h,s='F') { doc.rect(x,y,w,h,s); }
-  function roundRect(x,y,w,h,r,s='F') { doc.roundedRect(x,y,w,h,r,r,s); }
-
-  let pageNum = 1;
-  function addPageNum() {
-    setTxt(C.muted);
-    doc.setFontSize(8);
-    doc.text(tr('Filo Takip - Yakit Raporu | ') + tr(v.plaka||''), ML, PH-8);
-    doc.text(tr('Sayfa ') + pageNum, PW-MR, PH-8, {align:'right'});
+  function sf(c) { doc.setFillColor(...c); }
+  function st(c) { doc.setTextColor(...c); }
+  function rc(x,y,w,h,s='F') { doc.rect(x,y,w,h,s); }
+  function rr(x,y,w,h,r,s='F') { doc.roundedRect(x,y,w,h,r,r,s); }
+  let pg = 1;
+  function footer() {
+    st(C.muted); doc.setFontSize(8);
+    doc.text(_tr('Filo Takip | ') + _tr(v.plaka||''), ML, PH-8);
+    doc.text(_tr('Sayfa ') + pg, PW-MR, PH-8, {align:'right'});
     doc.text(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH-8, {align:'center'});
     doc.setFontSize(6); doc.setTextColor(50,62,78);
     doc.text('created by cihanozcan app.', PW/2, PH-3, {align:'center'});
   }
-  function newPage() { addPageNum(); doc.addPage(); pageNum++; setFill(C.bg); rect(0,0,PW,PH); }
-
-  // ── ARKA PLAN ──
-  setFill(C.bg); rect(0,0,PW,PH);
-
-  // ── HEADER ──
-  setFill(C.surface); rect(0,0,PW,42);
-  setFill(C.accent); rect(0,0,4,42);
-  // Logo
-  if (LOGO_B64) {
-    doc.addImage(LOGO_B64, 'PNG', ML, 7, 28, 28);
-  } else {
-    setFill(C.accent); roundRect(ML,8,26,26,3);
-    setTxt(C.white); doc.setFontSize(16); doc.text('F', ML+13, 25, {align:'center'});
-  }
-  // Plaka & başlık
-  setTxt(C.white); doc.setFontSize(18); doc.setFont('helvetica','bold');
-  doc.text(tr(v.plaka||'—'), ML+32, 18);
-  doc.setFontSize(9); doc.setFont('helvetica','normal');
-  setTxt(C.text2);
-  const meta = tr([v.tip, v.sofor].filter(Boolean).join('  |  '));
-  doc.text(meta || tr('Filo Takip Sistemi'), ML+32, 26);
-  // Tarih badge
-  const dateStr = new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'});
-  setFill(C.surface2); roundRect(PW-ML-52,12,52,18,3);
-  setTxt(C.accent); doc.setFontSize(8); doc.setFont('helvetica','bold');
-  doc.text(tr(dateStr), PW-ML-26, 22, {align:'center'});
-
+  function newPage() { footer(); doc.addPage(); pg++; sf(C.bg); rc(0,0,PW,PH); }
+  sf(C.bg); rc(0,0,PW,PH);
+  sf(C.surface); rc(0,0,PW,42);
+  sf(C.accent); rc(0,0,4,42);
+  if (window._LOGO_B64) { doc.addImage(window._LOGO_B64,'PNG',ML,7,28,28); }
+  else { sf(C.accent); rr(ML,8,26,26,3); st(C.white); doc.setFontSize(16); doc.text('F',ML+13,25,{align:'center'}); }
+  st(C.white); doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.text(_tr(v.plaka||'—'), ML+32, 18);
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); st(C.text2);
+  doc.text(_tr([v.tip,v.sofor].filter(Boolean).join('  |  ')||'Filo Takip'), ML+32, 26);
+  sf(C.surface2); rr(PW-ML-52,12,52,18,3);
+  st(C.accent); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text(_tr(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})), PW-ML-26, 22, {align:'center'});
   let y = 52;
-
-  // ── ÖZET KARTLAR ──
-  const totalL   = ve.reduce((s,e)=>s+(e.litre||0),0);
-  const totalTL  = ve.reduce((s,e)=>s+((e.litre||0)*(e.fiyat||0)),0);
-  const kmRange  = ve.length>=2 ? ve[ve.length-1].km - ve[0].km : 0;
-  const usedL    = ve.slice(1).reduce((s,e)=>s+(e.litre||0),0);
-  const avgCons  = (kmRange>0) ? (usedL/kmRange)*100 : null;
-  const lastFiyat = ve[ve.length-1]?.fiyat || 0;
-
+  const totalL  = ve.reduce((s,e)=>s+(e.litre||0),0);
+  const totalTL = ve.reduce((s,e)=>s+((e.litre||0)*(e.fiyat||0)),0);
+  const kmRange = ve.length>=2 ? ve[ve.length-1].km-ve[0].km : 0;
+  const usedL   = ve.slice(1).reduce((s,e)=>s+(e.litre||0),0);
+  const avgC    = kmRange>0 ? (usedL/kmRange)*100 : null;
+  const lastFiy = ve[ve.length-1]?.fiyat||0;
   const cards = [
-    { label:tr('Toplam Dolum'),  value: ve.length+' kez',   color:C.blue  },
-    { label:tr('Toplam Litre'),  value: totalL.toLocaleString('tr-TR',{maximumFractionDigits:1})+' L', color:C.accent },
-    { label:tr('Toplam Maliyet'),value: totalTL>0 ? totalTL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'--', color:C.green },
-    { label:tr('Toplam Mesafe'), value: kmRange>0 ? kmRange.toLocaleString('tr-TR')+' km':'--', color:C.yellow },
-    { label:tr('Ort. L/100km'),  value: avgCons ? avgCons.toFixed(1)+' L/100km':'--', color:avgCons?(avgCons<25?C.green:avgCons<35?C.yellow:C.red):C.muted },
-    { label:tr('Son Fiyat'),     value: lastFiyat>0 ? lastFiyat.toFixed(2)+' TL':'--', color:[167,139,250] },
+    {l:_tr('Toplam Dolum'), v:ve.length+' kez', c:C.blue},
+    {l:_tr('Toplam Litre'), v:totalL.toLocaleString('tr-TR',{maximumFractionDigits:1})+' L', c:C.accent},
+    {l:_tr('Toplam Maliyet'), v:totalTL>0?totalTL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'--', c:C.green},
+    {l:_tr('Toplam Mesafe'), v:kmRange>0?kmRange.toLocaleString('tr-TR')+' km':'--', c:C.yellow},
+    {l:_tr('Ort. L/100km'), v:avgC?avgC.toFixed(1)+' L/100km':'--', c:avgC?(avgC<25?C.green:avgC<35?C.yellow:C.red):C.muted},
+    {l:_tr('Son Fiyat'), v:lastFiy>0?lastFiy.toFixed(2)+' TL':'--', c:[167,139,250]},
   ];
-  const cW = (CW-5*2)/6;
-  cards.forEach((c,i) => {
+  const cW = (CW-10)/6;
+  cards.forEach((card,i) => {
     const cx = ML+i*(cW+2);
-    setFill(C.surface); roundRect(cx,y,cW,22,2);
-    setFill(c.color); roundRect(cx,y,3,22,1);
-    setTxt(c.color); doc.setFontSize(9); doc.setFont('helvetica','bold');
-    doc.text(c.value, cx+cW/2, y+10, {align:'center'});
-    setTxt(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
-    doc.text(c.label.toUpperCase(), cx+cW/2, y+17, {align:'center'});
+    sf(C.surface); rr(cx,y,cW,22,2);
+    sf(card.c); rr(cx,y,3,22,1);
+    st(card.c); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(card.v, cx+cW/2, y+10, {align:'center'});
+    st(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(card.l.toUpperCase(), cx+cW/2, y+17, {align:'center'});
   });
   y += 30;
-
-  // ── AYLIK GRAFİK ──
   const now2 = new Date();
   const months12 = [];
   for (let i=11;i>=0;i--) {
     const d = new Date(now2.getFullYear(), now2.getMonth()-i, 1);
-    months12.push({ key: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), d });
+    months12.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), d});
   }
-  const monthL = {};
-  months12.forEach(m=>{ monthL[m.key]=0; });
-  ve.forEach(e=>{ const mk=e.tarih?e.tarih.slice(0,7):''; if(mk in monthL) monthL[mk]+=(e.litre||0); });
-  const labels = months12.map(m=>m.d.toLocaleDateString('tr-TR',{month:'short',year:'2-digit'}));
-  const litreData = months12.map(m=>+(monthL[m.key]||0).toFixed(1));
-
+  const mL = {}; months12.forEach(m=>{mL[m.key]=0;});
+  ve.forEach(e=>{const mk=e.tarih?e.tarih.slice(0,7):''; if(mk in mL) mL[mk]+=(e.litre||0);});
   const chartCanvas = document.createElement('canvas');
-  chartCanvas.width=900; chartCanvas.height=260;
-  document.body.appendChild(chartCanvas);
+  chartCanvas.width=900; chartCanvas.height=260; document.body.appendChild(chartCanvas);
   const chartInst = new Chart(chartCanvas, {
     type:'bar',
-    data:{ labels, datasets:[{ label:'Litre (L)', data:litreData,
-      backgroundColor:'rgba(249,115,22,0.75)', borderColor:'rgba(249,115,22,1)',
-      borderWidth:1.5, borderRadius:4 }] },
-    options:{ responsive:false, animation:false,
-      plugins:{ legend:{ labels:{ color:'#a8b8cc', font:{size:10} } } },
-      scales:{
-        x:{ ticks:{color:'#a8b8cc',font:{size:9}}, grid:{color:'rgba(255,255,255,0.06)'} },
-        y:{ ticks:{color:'#f97316',font:{size:9}}, grid:{color:'rgba(255,255,255,0.06)'},
-            title:{display:true,text:'Litre',color:'#f97316',font:{size:9}} }
-      }
-    }
+    data:{labels:months12.map(m=>m.d.toLocaleDateString('tr-TR',{month:'short',year:'2-digit'})),
+      datasets:[{label:'Litre (L)',data:months12.map(m=>+(mL[m.key]||0).toFixed(1)),
+        backgroundColor:'rgba(249,115,22,0.75)',borderColor:'rgba(249,115,22,1)',borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:false,animation:false,
+      plugins:{legend:{labels:{color:'#a8b8cc',font:{size:10}}}},
+      scales:{x:{ticks:{color:'#a8b8cc',font:{size:9}},grid:{color:'rgba(255,255,255,0.06)'}},
+        y:{ticks:{color:'#f97316',font:{size:9}},grid:{color:'rgba(255,255,255,0.06)'},
+           title:{display:true,text:'Litre',color:'#f97316',font:{size:9}}}}}
   });
   await new Promise(res=>setTimeout(res,200));
-  setTxt(C.accent); doc.setFontSize(10); doc.setFont('helvetica','bold');
-  doc.text(tr('Aylik Yakit Tuketimi (Son 12 Ay)'), ML, y); y+=4;
-  const chartImg = chartCanvas.toDataURL('image/png');
+  st(C.accent); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(_tr('Aylik Yakit Tuketimi (Son 12 Ay)'), ML, y); y+=4;
   const chartH = Math.min(60, PH-y-80);
-  doc.addImage(chartImg,'PNG',ML,y,CW,chartH);
-  y += chartH+10;
-  chartInst.destroy(); chartCanvas.remove();
-
-  // ── DETAY TABLO ──
+  doc.addImage(chartCanvas.toDataURL('image/png'),'PNG',ML,y,CW,chartH);
+  y += chartH+10; chartInst.destroy(); chartCanvas.remove();
   if (y > PH-50) { newPage(); y=18; }
-  setTxt(C.accent); doc.setFontSize(10); doc.setFont('helvetica','bold');
-  doc.text(tr('Yakit Giris Gecmisi'), ML, y); y+=6;
-
+  st(C.accent); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(_tr('Yakit Giris Gecmisi'), ML, y); y+=6;
   const dCols = [
-    {l:tr('Tarih'),w:24},{l:tr('KM Sayaci'),w:28},{l:tr('Litre'),w:20},
-    {l:tr('Birim Fiyat'),w:26},{l:tr('Tutar (TL)'),w:26},
-    {l:tr('L/100km'),w:24},{l:tr('KM Fark'),w:22},{l:tr('Not'),w:CW-170},
+    {l:_tr('Tarih'),w:24},{l:_tr('KM Sayaci'),w:28},{l:_tr('Litre'),w:20},
+    {l:_tr('Birim Fiyat'),w:26},{l:_tr('Tutar (TL)'),w:26},
+    {l:_tr('L/100km'),w:24},{l:_tr('KM Fark'),w:22},{l:_tr('Not'),w:CW-170},
   ];
-  function drawTableHeader(yy) {
-    setFill(C.surface2); rect(ML,yy,CW,7);
-    setFill(C.accent); rect(ML,yy,CW,0.7); rect(ML,yy+6.3,CW,0.7);
-    setTxt(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
-    let hx=ML+2;
-    dCols.forEach(dc=>{ doc.text(dc.l.toUpperCase(),hx,yy+4.8); hx+=dc.w; });
+  function drawHdr(yy) {
+    sf(C.surface2); rc(ML,yy,CW,7);
+    sf(C.accent); rc(ML,yy,CW,0.7); rc(ML,yy+6.3,CW,0.7);
+    st(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    let hx=ML+2; dCols.forEach(dc=>{doc.text(dc.l.toUpperCase(),hx,yy+4.8);hx+=dc.w;});
     return yy+8;
   }
-  y = drawTableHeader(y);
-
+  y = drawHdr(y);
   ve.forEach((e,ei) => {
-    if (y > PH-18) { newPage(); y=15; y=drawTableHeader(y); }
+    if (y > PH-18) { newPage(); y=15; y=drawHdr(y); }
     const prev = ei>0?ve[ei-1]:null;
     const kmFark = prev?e.km-prev.km:null;
     const cons = (kmFark&&kmFark>0)?(e.litre/kmFark)*100:null;
     const tutar = e.litre*(e.fiyat||0);
-
-    setFill(ei%2===0?C.surface:C.bg); rect(ML,y,CW,6.5);
+    sf(ei%2===0?C.surface:C.bg); rc(ML,y,CW,6.5);
     doc.setFontSize(7); doc.setFont('helvetica','normal');
     let rx=ML+2;
-    setTxt(C.text2); doc.text(e.tarih?e.tarih.split('-').reverse().join('.'):'—',rx,y+4.5); rx+=dCols[0].w;
-    setTxt(C.text);  doc.text(e.km?e.km.toLocaleString('tr-TR')+' km':'—',rx,y+4.5); rx+=dCols[1].w;
-    setTxt(C.accent);doc.text(e.litre?e.litre.toLocaleString('tr-TR',{minimumFractionDigits:1})+' L':'—',rx,y+4.5); rx+=dCols[2].w;
-    setTxt(C.text2); doc.text(e.fiyat?e.fiyat.toFixed(2)+' TL':'—',rx,y+4.5); rx+=dCols[3].w;
-    setTxt(C.green); doc.text(tutar>0?tutar.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—',rx,y+4.5); rx+=dCols[4].w;
-    if (cons!==null) {
-      setTxt(cons<25?C.green:cons<35?C.yellow:C.red);
-      doc.text(cons.toFixed(1)+' L',rx,y+4.5);
-    } else { setTxt(C.muted); doc.text(ei===0?'Ref.':'—',rx,y+4.5); }
+    st(C.text2); doc.text(e.tarih?e.tarih.split('-').reverse().join('.'):'—',rx,y+4.5); rx+=dCols[0].w;
+    st(C.text);  doc.text(e.km?e.km.toLocaleString('tr-TR')+' km':'—',rx,y+4.5); rx+=dCols[1].w;
+    st(C.accent);doc.text(e.litre?e.litre.toLocaleString('tr-TR',{minimumFractionDigits:1})+' L':'—',rx,y+4.5); rx+=dCols[2].w;
+    st(C.text2); doc.text(e.fiyat?e.fiyat.toFixed(2)+' TL':'—',rx,y+4.5); rx+=dCols[3].w;
+    st(C.green); doc.text(tutar>0?tutar.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—',rx,y+4.5); rx+=dCols[4].w;
+    if (cons!==null) { st(cons<25?C.green:cons<35?C.yellow:C.red); doc.text(cons.toFixed(1)+' L',rx,y+4.5); }
+    else { st(C.muted); doc.text(ei===0?'Ref.':'—',rx,y+4.5); }
     rx+=dCols[5].w;
-    setTxt(C.blue); doc.text(kmFark!==null?'+'+kmFark.toLocaleString('tr-TR')+' km':'—',rx,y+4.5); rx+=dCols[6].w;
-    setTxt(C.muted); doc.text(tr((e.not||'').slice(0,22)),rx,y+4.5);
+    st(C.blue); doc.text(kmFark!==null?'+'+kmFark.toLocaleString('tr-TR')+' km':'—',rx,y+4.5); rx+=dCols[6].w;
+    st(C.muted); doc.text(_tr((e.not||'').slice(0,22)),rx,y+4.5);
     y+=6.5;
   });
-
-  setFill(C.border); rect(ML,y,CW,0.5);
-  addPageNum();
-
-  const fname = 'yakit_' + (v.plaka||'arac').replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.pdf';
-  doc.save(fname);
+  sf(C.border); rc(ML,y,CW,0.5);
+  footer();
+  doc.save('yakit_' + (v.plaka||'arac').replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.pdf');
   showToast('PDF indirildi ✓', 'success');
 }
 
-/* ================================================================
-   YAKIT RAPORU PDF İNDİRME
-   ================================================================ */
 async function downloadFuelPDF() {
   loadFuelData();
 
-  // Veri kontrolü
   const allEntries = [];
   vehicles.forEach(v => {
     const entries = (fuelData[v.id] || []).map(e => ({ ...e, plaka: v.plaka, tip: v.tip || '' }));
@@ -3485,9 +3290,8 @@ async function downloadFuelPDF() {
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const PW = 210; // A4 width mm
+  const PW = 210;
 
-  // ── Türkçe karakter desteği (jsPDF built-in fontlar için) ──
   function tr(s) {
     if (!s) return '';
     return String(s)
@@ -3498,17 +3302,14 @@ async function downloadFuelPDF() {
       .replace(/ç/g,'c').replace(/Ç/g,'C')
       .replace(/ı/g,'i').replace(/İ/g,'I');
   }
-
-  // ── Logo base64 ──
-  const LOGO_B64 = 'data:image/png;base64,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';
+  const LOGO_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAABXFBMVEX
   window._LOGO_B64 = LOGO_B64;
 
-  const PH = 297; // A4 height mm
-  const ML = 14;  // margin left
-  const MR = 14;  // margin right
-  const CW = PW - ML - MR; // content width
+  const PH = 297;
+  const ML = 14;
+  const MR = 14;
+  const CW = PW - ML - MR;
 
-  // ── Renk paleti ──
   const C = {
     bg:       [8,  12, 16],
     surface:  [17, 24, 32],
@@ -3543,34 +3344,24 @@ async function downloadFuelPDF() {
     doc.text(tr('Filo Takip Sistemi - Yakit Raporu'), ML, PH - 8);
     doc.text(tr('Sayfa ') + pageNum, PW - MR, PH - 8, { align: 'right' });
     doc.text(new Date().toLocaleDateString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH - 8, {align:'center'});
-    // created by
-    doc.setFontSize(6);
-    doc.setTextColor(50, 62, 78);
-    doc.text('created by cihanozcan app.', PW/2, PH - 3, {align:'center'});
   }
 
   function newPage() {
     addPageNum();
     doc.addPage();
     pageNum++;
-    // Sayfa arka planı
     setFill(C.bg);
     rect(0, 0, PW, PH);
   }
 
-  // ── SAYFA 1 ARKA PLAN ──
   setFill(C.bg);
   rect(0, 0, PW, PH);
 
-  // ── HEADER BANDI ──
   setFill(C.surface);
   rect(0, 0, PW, 42);
-  // Accent şerit
   setFill(C.accent);
   rect(0, 0, 4, 42);
-  // Logo kutusu — gerçek logo resmi
   doc.addImage(LOGO_B64, 'PNG', ML, 7, 28, 28);
-  // Başlık
   setTxt(C.white);
   doc.setFontSize(18);
   doc.setFont('helvetica','bold');
@@ -3579,7 +3370,6 @@ async function downloadFuelPDF() {
   doc.setFont('helvetica','normal');
   setTxt(C.text2);
   doc.text(tr('Filo Takip Sistemi  |  Tum Araclar'), ML+32, 26);
-  // Tarih badge
   const dateStr = new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'});
   setFill(C.surface2);
   roundRect(PW-ML-52, 12, 52, 18, 3);
@@ -3590,14 +3380,12 @@ async function downloadFuelPDF() {
 
   let y = 52;
 
-  // ── ÖZET İSTATİSTİK KARTLARI ──
   const allSorted = allEntries.slice().sort((a,b) => new Date(a.tarih)-new Date(b.tarih)||a.km-b.km);
   const totalL   = allSorted.reduce((s,e)=>s+(e.litre||0),0);
   const totalTL  = allSorted.reduce((s,e)=>s+((e.litre||0)*(e.fiyat||0)),0);
   const vCount   = vehicles.length;
   const dCount   = allSorted.length;
 
-  // Ortalama tüketim (tüm araçlar için)
   let avgCons = null;
   const allByVehicle = {};
   vehicles.forEach(v => {
@@ -3612,10 +3400,10 @@ async function downloadFuelPDF() {
   if (consVals.length > 0) avgCons = consVals.reduce((a,b)=>a+b,0)/consVals.length;
 
   const cards = [
-    { label:tr('Toplam Dolum'), value: tr(dCount+' adet'),      color: C.blue,   icon:'D' },
-    { label:tr('Toplam Litre'), value: totalL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' L', color: C.accent, icon:'L' },
-    { label:tr('Toplam Maliyet'), value: totalTL > 0 ? totalTL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL' : '--', color: C.green, icon:'M' },
-    { label:tr('Ort. Tuketim'), value: avgCons ? avgCons.toFixed(1)+' L/100km' : '--', color: avgCons ? (avgCons<25?C.green:avgCons<35?C.yellow:C.red) : C.muted, icon:'T' },
+    { label:'Toplam Dolum', value: dCount+' adet',      color: C.blue,   icon:'D' },
+    { label:'Toplam Litre', value: totalL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' L', color: C.accent, icon:'L' },
+    { label:'Toplam Maliyet', value: totalTL > 0 ? totalTL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL' : '--', color: C.green, icon:'M' },
+    { label:'Ort. Tuketim', value: avgCons ? avgCons.toFixed(1)+' L/100km' : '--', color: avgCons ? (avgCons<25?C.green:avgCons<35?C.yellow:C.red) : C.muted, icon:'T' },
   ];
 
   const cardW = (CW - 9) / 4;
@@ -3623,22 +3411,18 @@ async function downloadFuelPDF() {
     const cx = ML + i*(cardW+3);
     setFill(C.surface);
     roundRect(cx, y, cardW, 26, 3);
-    // Sol şerit
     setFill(c.color);
     roundRect(cx, y, 3, 26, 1);
-    // İkon dairesi
     setFill(c.color.map(x=>Math.round(x*0.2)));
     roundRect(cx+5, y+5, 14, 16, 2);
     setTxt(c.color);
     doc.setFontSize(8);
     doc.setFont('helvetica','bold');
     doc.text(c.icon, cx+12, y+15, {align:'center'});
-    // Değer
     setTxt(C.white);
     doc.setFontSize(10);
     doc.setFont('helvetica','bold');
     doc.text(c.value, cx+22, y+12);
-    // Etiket
     setTxt(C.muted);
     doc.setFontSize(7.5);
     doc.setFont('helvetica','normal');
@@ -3646,22 +3430,20 @@ async function downloadFuelPDF() {
   });
   y += 34;
 
-  // ── ARAÇ BAZLI ÖZET TABLO ──
   setTxt(C.accent);
   doc.setFontSize(10);
   doc.setFont('helvetica','bold');
   doc.text(tr('Arac Bazli Ozet'), ML, y);
   y += 6;
 
-  // Tablo header
   const vCols = [
-    { label:tr('Plaka'), w:30 },
-    { label:tr('Tip'), w:25 },
-    { label:tr('Dolum'), w:20 },
-    { label:tr('Toplam L'), w:28 },
-    { label:tr('Toplam TL'), w:30 },
-    { label:tr('Ort. L/100km'), w:35 },
-    { label:tr('Son Tarih'), w:CW-168 },
+    { label:'Plaka', w:30 },
+    { label:'Tip', w:25 },
+    { label:'Dolum', w:20 },
+    { label:'Toplam L', w:28 },
+    { label:'Toplam TL', w:30 },
+    { label:'Ort. L/100km', w:35 },
+    { label:'Son Tarih', w:CW-168 },
   ];
   setFill(C.surface2);
   rect(ML, y, CW, 8);
@@ -3716,13 +3498,10 @@ async function downloadFuelPDF() {
     y += 7.5;
   });
 
-  // Alt border
   setFill(C.border);
   rect(ML, y, CW, 0.5);
   y += 10;
 
-  // ── AYLIK LİTRE GRAFİĞİ (Canvas ile çiz) ──
-  // Ay bazlı veri topla (son 12 ay)
   const now2 = new Date();
   const months12 = [];
   for (let i=11; i>=0; i--) {
@@ -3737,7 +3516,6 @@ async function downloadFuelPDF() {
     if (mk in monthL) { monthL[mk]+=(e.litre||0); monthTL[mk]+=((e.litre||0)*(e.fiyat||0)); }
   });
 
-  // Canvas grafiği çiz
   const chartCanvas = document.createElement('canvas');
   chartCanvas.width = 900; chartCanvas.height = 320;
   document.body.appendChild(chartCanvas);
@@ -3749,7 +3527,6 @@ async function downloadFuelPDF() {
   const litreData  = months12.map(m => +(monthL[m.key]||0).toFixed(1));
   const tutarData  = months12.map(m => +(monthTL[m.key]||0).toFixed(0));
 
-  // Chart.js ile canvas grafiği oluştur
   const chartInst = new Chart(chartCanvas, {
     type: 'bar',
     data: {
@@ -3787,13 +3564,12 @@ async function downloadFuelPDF() {
       },
       scales: {
         x: { ticks:{ color:'#a8b8cc', font:{size:9} }, grid:{ color:'rgba(255,255,255,0.06)' } },
-        y: { ticks:{ color:'#f97316', font:{size:9} }, grid:{ color:'rgba(255,255,255,0.06)' }, title:{display:true,text:tr('Litre'),color:'#f97316',font:{size:9}} },
+        y: { ticks:{ color:'#f97316', font:{size:9} }, grid:{ color:'rgba(255,255,255,0.06)' }, title:{display:true,text:'Litre',color:'#f97316',font:{size:9}} },
         y2:{ position:'right', ticks:{ color:'#22c55e', font:{size:9} }, grid:{drawOnChartArea:false}, title:{display:true,text:'Maliyet (TL)',color:'#22c55e',font:{size:9}} }
       }
     }
   });
 
-  // Grafik başlığı
   if (y + 75 > PH - 25) { newPage(); y = 20; }
   setTxt(C.accent);
   doc.setFontSize(10);
@@ -3801,8 +3577,7 @@ async function downloadFuelPDF() {
   doc.text(tr('Aylik Litre ve Maliyet Grafigi (Son 12 Ay)'), ML, y);
   y += 5;
 
-  // Canvas'ı PNG'ye dönüştür, PDF'e ekle
-  await new Promise(res => setTimeout(res, 200)); // Chart.js render bekle
+  await new Promise(res => setTimeout(res, 200));
   const chartImg = chartCanvas.toDataURL('image/png');
   const chartH = Math.min(65, PH - y - 30);
   doc.addImage(chartImg, 'PNG', ML, y, CW, chartH);
@@ -3810,16 +3585,13 @@ async function downloadFuelPDF() {
   chartInst.destroy();
   chartCanvas.remove();
 
-  // ── ARAÇ BAZLI DETAY TABLOLARI ──
   for (const v of vehicles) {
     const ve = (fuelData[v.id]||[]).slice().sort((a,b)=>new Date(a.tarih)-new Date(b.tarih)||a.km-b.km);
     if (ve.length === 0) continue;
 
-    // Yeni sayfa başlangıcı
     newPage();
     y = 18;
 
-    // Araç başlık bandı
     setFill(C.surface);
     roundRect(ML, y, CW, 14, 3);
     setFill(C.accent);
@@ -3834,7 +3606,6 @@ async function downloadFuelPDF() {
     const vMeta = tr([v.tip, v.sofor].filter(Boolean).join('  ·  '));
     doc.text(vMeta, ML+38, y+9.5);
 
-    // Araç özet kartları (mini)
     const ve2 = ve;
     const vTotalL  = ve2.reduce((s,e)=>s+(e.litre||0),0);
     const vTotalTL = ve2.reduce((s,e)=>s+((e.litre||0)*(e.fiyat||0)),0);
@@ -3844,12 +3615,12 @@ async function downloadFuelPDF() {
     y += 18;
 
     const mCards = [
-      { l:tr('Dolum'),   v:ve2.length+' kez',   c:C.blue },
-      { l:tr('Litre'),   v:vTotalL.toLocaleString('tr-TR',{maximumFractionDigits:1})+' L', c:C.accent },
-      { l:tr('Maliyet'), v:vTotalTL>0?vTotalTL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—', c:C.green },
-      { l:tr('Mesafe'),  v:vKmRange>0?vKmRange.toLocaleString('tr-TR')+' km':'—', c:C.yellow },
-      { l:tr('L/100km'), v:vCons?vCons.toFixed(1):'—', c:vCons?(vCons<25?C.green:vCons<35?C.yellow:C.red):C.muted },
-      { l:tr('Son Fiyat'), v:vLastFiyat>0?vLastFiyat.toFixed(2)+' TL':'—', c:C.purple||C.text2 },
+      { l:'Dolum',   v:ve2.length+' kez',   c:C.blue },
+      { l:'Litre',   v:vTotalL.toLocaleString('tr-TR',{maximumFractionDigits:1})+' L', c:C.accent },
+      { l:'Maliyet', v:vTotalTL>0?vTotalTL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—', c:C.green },
+      { l:'Mesafe',  v:vKmRange>0?vKmRange.toLocaleString('tr-TR')+' km':'—', c:C.yellow },
+      { l:'L/100km', v:vCons?vCons.toFixed(1):'—', c:vCons?(vCons<25?C.green:vCons<35?C.yellow:C.red):C.muted },
+      { l:'Son Fiyat', v:vLastFiyat>0?vLastFiyat.toFixed(2)+' TL':'—', c:C.purple||C.text2 },
     ];
     const mcW = (CW-5*2)/6;
     mCards.forEach((mc, mi) => {
@@ -3867,7 +3638,6 @@ async function downloadFuelPDF() {
     });
     y += 22;
 
-    // Araç için aylık grafik (canvas)
     const vMonthL = {};
     months12.forEach(m => { vMonthL[m.key]=0; });
     ve2.forEach(e => {
@@ -3897,7 +3667,7 @@ async function downloadFuelPDF() {
         scales:{
           x:{ticks:{color:'#a8b8cc',font:{size:8}},grid:{color:'rgba(255,255,255,0.06)'}},
           y:{ticks:{color:'#f97316',font:{size:8}},grid:{color:'rgba(255,255,255,0.06)'},
-             title:{display:true,text:tr('Litre'),color:'#f97316',font:{size:8}}}
+             title:{display:true,text:'Litre',color:'#f97316',font:{size:8}}}
         }
       }
     });
@@ -3912,22 +3682,20 @@ async function downloadFuelPDF() {
     y += vChH+8;
     vChart.destroy(); vCanvas.remove();
 
-    // Detay tablo başlığı
     setTxt(C.text2);
     doc.setFontSize(8.5);
     doc.setFont('helvetica','bold');
     doc.text(tr('Yakit Giris Gecmisi'), ML, y); y+=5;
 
-    // Tablo header
     const dCols = [
-      {l:tr('Tarih'), w:24},
-      {l:tr('KM Sayaci'), w:28},
-      {l:tr('Litre'), w:20},
-      {l:tr('Birim Fiyat'), w:26},
-      {l:tr('Tutar (TL)'), w:26},
-      {l:tr('L/100km'), w:24},
-      {l:tr('KM Fark'), w:22},
-      {l:tr('Not'), w:CW-170},
+      {l:'Tarih', w:24},
+      {l:'KM Sayaci', w:28},
+      {l:'Litre', w:20},
+      {l:'Birim Fiyat', w:26},
+      {l:'Tutar (TL)', w:26},
+      {l:'L/100km', w:24},
+      {l:'KM Fark', w:22},
+      {l:'Not', w:CW-170},
     ];
     setFill(C.surface2);
     rect(ML, y, CW, 7);
@@ -3941,14 +3709,12 @@ async function downloadFuelPDF() {
     dCols.forEach(dc => { doc.text(dc.l.toUpperCase(), dhx, y+4.8); dhx+=dc.w; });
     y+=8;
 
-    // Satırlar
     ve2.forEach((e, ei) => {
       if (y > PH-18) {
         addPageNum();
         doc.addPage(); pageNum++;
         setFill(C.bg); rect(0,0,PW,PH);
         y=15;
-        // Header tekrar
         setFill(C.surface2); rect(ML,y,CW,7);
         setFill(C.accent); rect(ML,y,CW,0.7); rect(ML,y+6.3,CW,0.7);
         setTxt(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
@@ -3968,58 +3734,43 @@ async function downloadFuelPDF() {
       setTxt(C.text2);
       doc.setFontSize(7); doc.setFont('helvetica','normal');
       let rx2=ML+2;
-      // Tarih
       doc.text(e.tarih?e.tarih.split('-').reverse().join('.'):'—', rx2, y+4.5); rx2+=dCols[0].w;
-      // KM
       setTxt(C.text);
       doc.text(e.km?e.km.toLocaleString('tr-TR')+' km':'—', rx2, y+4.5); rx2+=dCols[1].w;
-      // Litre
       setTxt(C.accent);
       doc.text(e.litre?e.litre.toLocaleString('tr-TR',{minimumFractionDigits:1})+' L':'—', rx2, y+4.5); rx2+=dCols[2].w;
-      // Birim Fiyat
       setTxt(C.text2);
       doc.text(e.fiyat?e.fiyat.toFixed(2)+' TL':'—', rx2, y+4.5); rx2+=dCols[3].w;
-      // Tutar
       setTxt(C.green);
       doc.text(tutar>0?tutar.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—', rx2, y+4.5); rx2+=dCols[4].w;
-      // Tüketim
       if (cons!==null) {
         setTxt(cons<25?C.green:cons<35?C.yellow:C.red);
         doc.text(cons.toFixed(1)+' L', rx2, y+4.5);
       } else {
-        setTxt(C.muted); doc.text(ei===0?tr('Ref.'):'—', rx2, y+4.5);
+        setTxt(C.muted); doc.text(ei===0?'Ref.':'—', rx2, y+4.5);
       }
       rx2+=dCols[5].w;
-      // KM Fark
       setTxt(C.blue);
       doc.text(kmFark!==null?'+'+kmFark.toLocaleString('tr-TR')+' km':'—', rx2, y+4.5); rx2+=dCols[6].w;
-      // Not
       setTxt(C.muted);
       const notTxt = tr((e.not||'').slice(0,22));
       doc.text(notTxt, rx2, y+4.5);
       y+=6.5;
     });
 
-    // Alt çizgi
     setFill(C.border); rect(ML,y,CW,0.5);
     y+=5;
   }
 
   addPageNum();
 
-  // İndir
   const fname = 'yakit_raporu_' + new Date().toISOString().slice(0,10) + '.pdf';
   doc.save(fname);
   showToast('PDF indirildi ✓', 'success');
 }
 
-/* ================================================================
-   BAŞLATMA
-   ================================================================ */
-// Supabase Auth oturumunu kontrol et — yüklü ise sayfayı göster
 checkAuth();
 
-// Başlangıçta yakıt verilerini yükle
 loadFuelData().then(() => { updateFuelStat(); });
 setTimeout(() => renderActivityLog(), 200);
 </script>
