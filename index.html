@@ -3179,6 +3179,8 @@ async function loadVehicles() {
   updateMaintStat();
   await loadDriverData();
   updateDriverStat();
+  await loadSeferData();
+  await loadMasrafData();
   await renderActivityLog();
 }
 
@@ -7523,12 +7525,12 @@ document.addEventListener('click', (e) => {
 // Supabase Auth oturumunu kontrol et — yüklü ise sayfayı göster
 checkAuth();
 
-// Başlangıçta yakıt verilerini yükle
-loadFuelData().then(() => { updateFuelStat(); updateFuelSummaryPanel(); renderActivityLog(); });
+// Başlangıçta yerel verilerden hızlı gösterim (auth sonrası loadVehicles içinde buluttan güncellenir)
+loadFuelData().then(() => { updateFuelStat(); updateFuelSummaryPanel(); });
 loadMaintData().then(() => { updateMaintStat(); });
 loadDriverData().then(() => { updateDriverStat(); });
-loadSeferData();
-loadMasrafData();
+loadSeferData();   // localStorage'dan hızlı yükle; bulut verisi loadVehicles içinde gelecek
+loadMasrafData();  // localStorage'dan hızlı yükle; bulut verisi loadVehicles içinde gelecek
 
 /* ================================================================
    SEFER TAKİBİ
@@ -7541,6 +7543,9 @@ async function loadSeferData() {
   catch { seferData = []; }
 
   if (isLocalMode()) { updateSeferStat(); return; }
+
+  // Auth token hazır değilse bulut isteği atma (RLS boş döndürür)
+  if (!_authToken) { updateSeferStat(); return; }
 
   try {
     const res = await fetch(sbUrl('seferler?select=*&order=tarih.desc'), { headers: sbHeaders() });
@@ -7758,6 +7763,9 @@ async function loadMasrafData() {
   catch { masrafData = []; }
 
   if (isLocalMode()) { updateMasrafStat(); return; }
+
+  // Auth token hazır değilse bulut isteği atma (RLS boş döndürür)
+  if (!_authToken) { updateMasrafStat(); return; }
 
   try {
     const res = await fetch(sbUrl('masraflar?select=*&order=tarih.desc'), { headers: sbHeaders() });
