@@ -2287,24 +2287,35 @@ async function loadActivityLog() {
 
 async function addActivity(type, plaka, detail) {
   try {
+    const { data: { user } } = await _sb.auth.getUser();
+    if (!user) return;
     const { error } = await _sb.from('activity_log').insert([{
       id: Date.now() + Math.random().toString(36).slice(2),
       type,
       plaka,
       detail,
-      ts: new Date().toISOString()
+      ts: new Date().toISOString(),
+      user_id: user.id
     }]);
     if (error) throw error;
-  } catch (e) {}
+  } catch (e) {
+    console.error('Activity log hatası:', e);
+  }
   renderActivityLog();
 }
 
 async function clearActivityLog() {
   if (!confirm('Aktivite geçmişi silinsin mi?')) return;
   try {
-    const { error } = await _sb.from('activity_log').delete().neq('id', '');
+    const { data: { user } } = await _sb.auth.getUser();
+    if (!user) return;
+    const { error } = await _sb.from('activity_log')
+      .delete()
+      .eq('user_id', user.id);
     if (error) throw error;
-  } catch (e) {}
+  } catch (e) {
+    console.error('Silme hatası:', e);
+  }
   renderActivityLog();
 }
 
