@@ -819,6 +819,78 @@
   }
   .btn-sm.accent:hover { background: var(--accent2); border-color: var(--accent2); }
 
+  /* ── SEFER / MASRAF / RAPOR MODALLERİ ────────────────────── */
+  .srm-backdrop {
+    position:fixed;inset:0;z-index:500;
+    background:rgba(0,0,0,.75);backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .srm-backdrop.hidden{display:none}
+  .srm-modal {
+    background:var(--surface);border:1px solid var(--border2);
+    border-radius:20px;width:100%;max-width:1100px;max-height:92vh;
+    display:flex;flex-direction:column;
+    box-shadow:0 40px 100px rgba(0,0,0,.8);
+  }
+  .srm-header {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 22px;border-bottom:1px solid var(--border);
+    background:var(--surface2);border-radius:20px 20px 0 0;flex-shrink:0;
+  }
+  .srm-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:10px}
+  .srm-body{padding:22px;overflow-y:auto;flex:1}
+  .srm-tabs{display:flex;gap:0;background:var(--surface3);border-radius:10px;padding:3px;margin-bottom:18px}
+  .srm-tab{flex:1;padding:7px 10px;border-radius:8px;border:none;background:transparent;
+    cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--muted);transition:all .2s}
+  .srm-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.4);font-weight:600}
+  .srm-panel{display:none}.srm-panel.active{display:block}
+
+  /* Stat satırı */
+  .srm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+  .srm-stat{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-align:center}
+  .srm-stat-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;margin-bottom:3px}
+  .srm-stat-lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:500}
+
+  /* Form */
+  .srm-form{background:var(--surface2);border:1px solid var(--border2);border-radius:14px;padding:18px;margin-bottom:18px}
+  .srm-form-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .srm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end}
+  .srm-group{display:flex;flex-direction:column;gap:5px}
+  .srm-group.full{grid-column:1/-1}
+  .srm-group label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  .srm-inp{background:var(--surface);border:1px solid var(--border2);border-radius:9px;
+    padding:9px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13.5px;
+    outline:none;transition:border-color .2s,box-shadow .2s;width:100%}
+  .srm-inp:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(167,139,250,.12)}
+  .srm-inp.yellow:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(245,158,11,.12)}
+
+  /* Tablo */
+  .srm-table-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:12px;overflow-x:auto}
+  .srm-table{width:100%;border-collapse:collapse;min-width:700px}
+  .srm-table th{padding:10px 12px;text-align:left;font-size:10px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    background:var(--surface3);border-bottom:1px solid var(--border);white-space:nowrap}
+  .srm-table td{padding:9px 12px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
+  .srm-table tr:last-child td{border-bottom:none}
+  .srm-table tr:hover td{background:rgba(255,255,255,.018)}
+  .srm-del-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;
+    padding:2px 6px;border-radius:5px;transition:color .15s,background .15s}
+  .srm-del-btn:hover{color:var(--red);background:rgba(239,68,68,.08)}
+
+  /* Rapor kartları */
+  .rapor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:20px}
+  .rapor-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:18px}
+  .rapor-card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .rapor-row{display:flex;align-items:center;justify-content:space-between;
+    padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px}
+  .rapor-row:last-child{border-bottom:none}
+  .rapor-row-label{color:var(--text2)}
+  .rapor-row-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px}
+  .rapor-bar-wrap{margin-top:6px}
+  .rapor-bar-track{height:6px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-top:4px}
+  .rapor-bar-fill{height:100%;border-radius:99px;transition:width .5s ease}
+
   /* ── AYARLAR DROPDOWN ───────────────────────────────────── */
   .settings-wrap { position: relative; }
   .settings-dropdown {
@@ -1754,6 +1826,10 @@
   </div>
   <div class="header-actions">
     <!-- Yönetim butonları -->
+    <button class="btn-sm" onclick="openSeferModal()" style="color:var(--purple);border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.06);font-weight:600" title="Sefer Takibi">🗺 Seferler</button>
+    <button class="btn-sm" onclick="openMasrafModal()" style="color:var(--yellow);border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06);font-weight:600" title="Masraf Takibi">💸 Masraflar</button>
+    <button class="btn-sm" onclick="openRaporModal()" style="color:#e879f9;border-color:rgba(232,121,249,.3);background:rgba(232,121,249,.06);font-weight:600" title="Raporlar">📊 Raporlar</button>
+    <div class="header-divider"></div>
     <button class="btn-sm" onclick="openFuelSummary()" style="color:var(--accent);border-color:rgba(249,115,22,.3);background:rgba(249,115,22,.06);font-weight:600" title="Yakıt Yönetimi">⛽ Yakıt</button>
     <button class="btn-sm" onclick="openMaintSummaryModal()" style="color:var(--blue);border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.06);font-weight:600" title="Bakım & Arıza Yönetimi">🔧 Bakım & Arıza</button>
     <button class="btn-sm" onclick="openDriverModal()" style="color:var(--green);border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.06);font-weight:600" title="Sürücü Belgelerini Yönet">👤 Sürücü Belgeleri</button>
@@ -2406,6 +2482,163 @@
 <!-- =========================================================
      BÖLÜM 6: TOAST BİLDİRİMLERİ
      ========================================================= -->
+<!-- =========================================================
+     SEFER TAKİBİ MODALİ
+     ========================================================= -->
+<div class="srm-backdrop hidden" id="sefer-backdrop" onclick="closeSeferModalBackdrop(event)">
+  <div class="srm-modal">
+    <div class="srm-header">
+      <div class="srm-title">🗺 Sefer Takibi</div>
+      <button class="modal-close" onclick="closeSeferModal()">✕</button>
+    </div>
+    <div class="srm-body">
+      <div class="srm-tabs">
+        <button class="srm-tab active" id="sefer-tab-liste" onclick="switchSeferTab('liste')">📋 Seferler</button>
+        <button class="srm-tab" id="sefer-tab-ekle" onclick="switchSeferTab('ekle')">➕ Yeni Sefer</button>
+        <button class="srm-tab" id="sefer-tab-ozet" onclick="switchSeferTab('ozet')">📊 Özet</button>
+      </div>
+
+      <!-- Liste -->
+      <div class="srm-panel active" id="sefer-panel-liste">
+        <div class="srm-stats" id="sefer-stats-row"></div>
+        <div class="srm-table-wrap">
+          <table class="srm-table">
+            <thead>
+              <tr>
+                <th>Tarih</th><th>Araç</th><th>Sürücü</th>
+                <th>Kalkış</th><th>Varış</th><th>Km</th>
+                <th>Yük / Müşteri</th><th>Ücret (TL)</th><th>Notlar</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="sefer-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Yeni Sefer Formu -->
+      <div class="srm-panel" id="sefer-panel-ekle">
+        <div class="srm-form">
+          <div class="srm-form-title" style="color:var(--purple)">🗺 Yeni Sefer Ekle</div>
+          <div class="srm-grid">
+            <div class="srm-group"><label>Tarih *</label><input class="srm-inp" type="date" id="f-sefer-tarih"/></div>
+            <div class="srm-group"><label>Araç *</label>
+              <select class="srm-inp" id="f-sefer-arac"><option value="">— Araç Seçin —</option></select>
+            </div>
+            <div class="srm-group"><label>Sürücü</label><input class="srm-inp" type="text" id="f-sefer-sofor" placeholder="Ad Soyad"/></div>
+            <div class="srm-group"><label>Kalkış Noktası *</label><input class="srm-inp" type="text" id="f-sefer-kalkis" placeholder="İstanbul"/></div>
+            <div class="srm-group"><label>Varış Noktası *</label><input class="srm-inp" type="text" id="f-sefer-varis" placeholder="Ankara"/></div>
+            <div class="srm-group"><label>Mesafe (km)</label><input class="srm-inp" type="number" id="f-sefer-km" placeholder="450" min="0"/></div>
+            <div class="srm-group"><label>Yük / Müşteri</label><input class="srm-inp" type="text" id="f-sefer-yuk" placeholder="Tekstil — ABC A.Ş."/></div>
+            <div class="srm-group"><label>Sefer Ücreti (TL)</label><input class="srm-inp" type="number" id="f-sefer-ucret" placeholder="0" min="0" step="0.01"/></div>
+            <div class="srm-group full"><label>Notlar</label><input class="srm-inp" type="text" id="f-sefer-not" placeholder="Serbest not…"/></div>
+            <div class="srm-group" style="align-self:end">
+              <button onclick="saveSeferEntry()" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,var(--purple),#c4b5fd);color:#fff;border:none;cursor:pointer;border-radius:9px;padding:9px 18px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;transition:opacity .2s;box-shadow:0 3px 12px rgba(167,139,250,.3)">🗺 Kaydet</button>
+            </div>
+          </div>
+          <input type="hidden" id="f-sefer-id"/>
+        </div>
+      </div>
+
+      <!-- Özet -->
+      <div class="srm-panel" id="sefer-panel-ozet">
+        <div id="sefer-ozet-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     MASRAF TAKİBİ MODALİ
+     ========================================================= -->
+<div class="srm-backdrop hidden" id="masraf-backdrop" onclick="closeMasrafModalBackdrop(event)">
+  <div class="srm-modal">
+    <div class="srm-header">
+      <div class="srm-title">💸 Masraf Takibi</div>
+      <button class="modal-close" onclick="closeMasrafModal()">✕</button>
+    </div>
+    <div class="srm-body">
+      <div class="srm-tabs">
+        <button class="srm-tab active" id="masraf-tab-liste" onclick="switchMasrafTab('liste')">📋 Masraflar</button>
+        <button class="srm-tab" id="masraf-tab-ekle" onclick="switchMasrafTab('ekle')">➕ Yeni Masraf</button>
+        <button class="srm-tab" id="masraf-tab-ozet" onclick="switchMasrafTab('ozet')">📊 Araç Bazlı</button>
+      </div>
+
+      <!-- Liste -->
+      <div class="srm-panel active" id="masraf-panel-liste">
+        <div class="srm-stats" id="masraf-stats-row"></div>
+        <div class="srm-table-wrap">
+          <table class="srm-table">
+            <thead>
+              <tr>
+                <th>Tarih</th><th>Araç</th><th>Kategori</th>
+                <th>Açıklama</th><th>Tutar (TL)</th><th>Makbuz No</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="masraf-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Yeni Masraf Formu -->
+      <div class="srm-panel" id="masraf-panel-ekle">
+        <div class="srm-form">
+          <div class="srm-form-title" style="color:var(--yellow)">💸 Yeni Masraf Ekle</div>
+          <div class="srm-grid">
+            <div class="srm-group"><label>Tarih *</label><input class="srm-inp srm-inp yellow" type="date" id="f-masraf-tarih"/></div>
+            <div class="srm-group"><label>Araç</label>
+              <select class="srm-inp srm-inp yellow" id="f-masraf-arac"><option value="">— Tüm Filo —</option></select>
+            </div>
+            <div class="srm-group"><label>Kategori *</label>
+              <select class="srm-inp srm-inp yellow" id="f-masraf-kategori">
+                <option value="">— Seçin —</option>
+                <option value="Otoyol / Köprü">🛣 Otoyol / Köprü</option>
+                <option value="Lastik">🔄 Lastik</option>
+                <option value="Ceza">🚔 Ceza</option>
+                <option value="Hasar / Tamir">🔨 Hasar / Tamir</option>
+                <option value="Yıkama">🫧 Yıkama</option>
+                <option value="Konaklama">🏨 Konaklama</option>
+                <option value="Yemek / Gündelik">🍽 Yemek / Gündelik</option>
+                <option value="Diğer">📋 Diğer</option>
+              </select>
+            </div>
+            <div class="srm-group"><label>Tutar (TL) *</label><input class="srm-inp srm-inp yellow" type="number" id="f-masraf-tutar" placeholder="0" min="0" step="0.01"/></div>
+            <div class="srm-group"><label>Makbuz / Belge No</label><input class="srm-inp srm-inp yellow" type="text" id="f-masraf-makbuz" placeholder="MK-2024-001"/></div>
+            <div class="srm-group full"><label>Açıklama</label><input class="srm-inp srm-inp yellow" type="text" id="f-masraf-aciklama" placeholder="Serbest açıklama…"/></div>
+            <div class="srm-group" style="align-self:end">
+              <button onclick="saveMasrafEntry()" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,var(--yellow),#fcd34d);color:#1a1000;border:none;cursor:pointer;border-radius:9px;padding:9px 18px;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;transition:opacity .2s;box-shadow:0 3px 12px rgba(245,158,11,.3)">💸 Kaydet</button>
+            </div>
+          </div>
+          <input type="hidden" id="f-masraf-id"/>
+        </div>
+      </div>
+
+      <!-- Araç Bazlı Özet -->
+      <div class="srm-panel" id="masraf-panel-ozet">
+        <div id="masraf-ozet-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     RAPOR MODALİ
+     ========================================================= -->
+<div class="srm-backdrop hidden" id="rapor-backdrop" onclick="closeRaporModalBackdrop(event)">
+  <div class="srm-modal" style="max-width:1200px">
+    <div class="srm-header">
+      <div class="srm-title">📊 Raporlar & Analizler</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="rapor-donem" class="srm-inp" style="width:auto;font-size:12px;padding:6px 10px" onchange="renderRaporlar()">
+          <option value="all">Tüm Zamanlar</option>
+        </select>
+        <button class="modal-close" onclick="closeRaporModal()">✕</button>
+      </div>
+    </div>
+    <div class="srm-body" id="rapor-body">
+    </div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 
 <!-- =========================================================
@@ -6606,6 +6839,508 @@ checkAuth();
 loadFuelData().then(() => { updateFuelStat(); updateFuelSummaryPanel(); renderActivityLog(); });
 loadMaintData().then(() => { updateMaintStat(); });
 loadDriverData().then(() => { updateDriverStat(); });
+loadSeferData();
+loadMasrafData();
+
+/* ================================================================
+   SEFER TAKİBİ
+   ================================================================ */
+let seferData = [];
+
+function loadSeferData() {
+  try { seferData = JSON.parse(localStorage.getItem('filo_sefer') || '[]'); }
+  catch { seferData = []; }
+  updateSeferStat();
+}
+function saveSeferData() { localStorage.setItem('filo_sefer', JSON.stringify(seferData)); }
+
+function openSeferModal() {
+  _fillSeferAracSelect();
+  document.getElementById('f-sefer-tarih').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-sefer-id').value = '';
+  switchSeferTab('liste');
+  renderSeferTable();
+  renderSeferStats();
+  document.getElementById('sefer-backdrop').classList.remove('hidden');
+}
+function closeSeferModal() { document.getElementById('sefer-backdrop').classList.add('hidden'); }
+function closeSeferModalBackdrop(e) { if(e.target.id==='sefer-backdrop') closeSeferModal(); }
+
+function switchSeferTab(t) {
+  ['liste','ekle','ozet'].forEach(n => {
+    document.getElementById('sefer-tab-'+n)?.classList.toggle('active', n===t);
+    document.getElementById('sefer-panel-'+n)?.classList.toggle('active', n===t);
+  });
+  if(t==='ozet') renderSeferOzet();
+  if(t==='liste') renderSeferTable();
+}
+
+function _fillSeferAracSelect() {
+  const sel = document.getElementById('f-sefer-arac');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Araç Seçin —</option>' +
+    vehicles.map(v=>`<option value="${v.id}">${v.plaka}${v.sofor?' · '+v.sofor:''}</option>`).join('');
+}
+
+function saveSeferEntry() {
+  const tarih   = document.getElementById('f-sefer-tarih').value;
+  const aracId  = document.getElementById('f-sefer-arac').value;
+  const sofor   = document.getElementById('f-sefer-sofor').value.trim();
+  const kalkis  = document.getElementById('f-sefer-kalkis').value.trim();
+  const varis   = document.getElementById('f-sefer-varis').value.trim();
+  const km      = parseFloat(document.getElementById('f-sefer-km').value)||0;
+  const yuk     = document.getElementById('f-sefer-yuk').value.trim();
+  const ucret   = parseFloat(document.getElementById('f-sefer-ucret').value)||0;
+  const not     = document.getElementById('f-sefer-not').value.trim();
+  const eid     = document.getElementById('f-sefer-id').value;
+
+  if(!tarih||!kalkis||!varis){ showToast('Tarih, Kalkış ve Varış zorunludur.','error'); return; }
+
+  const veh = vehicles.find(v=>v.id===aracId);
+  const entry = { id: eid||uid(), tarih, aracId, plaka: veh?.plaka||'', sofor: sofor||(veh?.sofor||''), kalkis, varis, km, yuk, ucret, not };
+
+  if(eid) { const i=seferData.findIndex(s=>s.id===eid); if(i!==-1) seferData[i]=entry; }
+  else seferData.push(entry);
+
+  saveSeferData(); updateSeferStat();
+  document.getElementById('f-sefer-id').value='';
+  // formu sıfırla
+  ['f-sefer-arac','f-sefer-sofor','f-sefer-kalkis','f-sefer-varis','f-sefer-km','f-sefer-yuk','f-sefer-ucret','f-sefer-not'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  showToast('Sefer kaydedildi ✓','success');
+  switchSeferTab('liste');
+}
+
+function deleteSeferEntry(id) {
+  if(!confirm('Bu sefer kaydını silmek istiyor musunuz?')) return;
+  seferData = seferData.filter(s=>s.id!==id);
+  saveSeferData(); updateSeferStat(); renderSeferTable(); renderSeferStats();
+  showToast('Sefer silindi.','error');
+}
+
+function renderSeferTable() {
+  const tbody = document.getElementById('sefer-table-body');
+  if(!tbody) return;
+  const sorted = [...seferData].sort((a,b)=>b.tarih.localeCompare(a.tarih));
+  if(sorted.length===0){
+    tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--muted)">Henüz sefer kaydı yok. ➕ Yeni Sefer sekmesinden ekleyin.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sorted.map(s=>`
+    <tr>
+      <td>${fmtDate(s.tarih)}</td>
+      <td><span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${s.plaka||'—'}</span></td>
+      <td>${s.sofor||'—'}</td>
+      <td>${s.kalkis}</td>
+      <td>${s.varis}</td>
+      <td style="font-family:'JetBrains Mono',monospace;color:var(--blue)">${s.km?s.km.toLocaleString('tr')+' km':'—'}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${s.yuk||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;color:var(--green);font-weight:700">${s.ucret?'₺'+s.ucret.toLocaleString('tr',{minimumFractionDigits:0}):'—'}</td>
+      <td style="color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis">${s.not||''}</td>
+      <td><button class="srm-del-btn" onclick="deleteSeferEntry('${s.id}')">✕</button></td>
+    </tr>`).join('');
+}
+
+function renderSeferStats() {
+  const el = document.getElementById('sefer-stats-row');
+  if(!el) return;
+  const toplamSefer = seferData.length;
+  const toplamKm    = seferData.reduce((a,s)=>a+(s.km||0),0);
+  const toplamUcret = seferData.reduce((a,s)=>a+(s.ucret||0),0);
+  const buAy = new Date().toISOString().slice(0,7);
+  const buAySeferler = seferData.filter(s=>s.tarih&&s.tarih.startsWith(buAy));
+  const buAyUcret = buAySeferler.reduce((a,s)=>a+(s.ucret||0),0);
+  el.innerHTML = [
+    {val:toplamSefer, lbl:'Toplam Sefer', color:'var(--purple)'},
+    {val:toplamKm.toLocaleString('tr')+' km', lbl:'Toplam Mesafe', color:'var(--blue)'},
+    {val:'₺'+toplamUcret.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Toplam Ciro', color:'var(--green)'},
+    {val:'₺'+buAyUcret.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Bu Ay Ciro', color:'var(--accent)'},
+  ].map(s=>`<div class="srm-stat"><div class="srm-stat-val" style="color:${s.color}">${s.val}</div><div class="srm-stat-lbl">${s.lbl}</div></div>`).join('');
+}
+
+function renderSeferOzet() {
+  const el = document.getElementById('sefer-ozet-content');
+  if(!el) return;
+  // Araç bazlı özet
+  const byArac = {};
+  seferData.forEach(s=>{
+    if(!byArac[s.aracId]) byArac[s.aracId]={plaka:s.plaka||s.aracId,sefer:0,km:0,ucret:0};
+    byArac[s.aracId].sefer++;
+    byArac[s.aracId].km += s.km||0;
+    byArac[s.aracId].ucret += s.ucret||0;
+  });
+  const rows = Object.values(byArac).sort((a,b)=>b.ucret-a.ucret);
+  const maxUcret = rows[0]?.ucret||1;
+  el.innerHTML = `
+    <div class="rapor-card" style="margin-bottom:16px">
+      <div class="rapor-card-title" style="color:var(--purple)">🚛 Araç Bazlı Sefer Özeti</div>
+      ${rows.length===0?'<p style="color:var(--muted);font-size:13px">Henüz sefer kaydı yok.</p>':
+        rows.map(r=>`
+        <div class="rapor-row">
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);font-size:13px">${r.plaka}</div>
+            <div style="color:var(--muted);font-size:11px">${r.sefer} sefer · ${r.km.toLocaleString('tr')} km</div>
+            <div class="rapor-bar-track"><div class="rapor-bar-fill" style="width:${Math.round(r.ucret/maxUcret*100)}%;background:linear-gradient(90deg,var(--purple),#c4b5fd)"></div></div>
+          </div>
+          <div class="rapor-row-val" style="color:var(--green)">₺${r.ucret.toLocaleString('tr',{minimumFractionDigits:0})}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function updateSeferStat() {
+  // Header'daki stat kartlarını güncelle (opsiyonel - ilerisi için)
+}
+
+/* ================================================================
+   MASRAF TAKİBİ
+   ================================================================ */
+let masrafData = [];
+
+function loadMasrafData() {
+  try { masrafData = JSON.parse(localStorage.getItem('filo_masraf') || '[]'); }
+  catch { masrafData = []; }
+  updateMasrafStat();
+}
+function saveMasrafData() { localStorage.setItem('filo_masraf', JSON.stringify(masrafData)); }
+
+function openMasrafModal() {
+  _fillMasrafAracSelect();
+  document.getElementById('f-masraf-tarih').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-masraf-id').value = '';
+  switchMasrafTab('liste');
+  renderMasrafTable();
+  renderMasrafStats();
+  document.getElementById('masraf-backdrop').classList.remove('hidden');
+}
+function closeMasrafModal() { document.getElementById('masraf-backdrop').classList.add('hidden'); }
+function closeMasrafModalBackdrop(e) { if(e.target.id==='masraf-backdrop') closeMasrafModal(); }
+
+function switchMasrafTab(t) {
+  ['liste','ekle','ozet'].forEach(n=>{
+    document.getElementById('masraf-tab-'+n)?.classList.toggle('active',n===t);
+    document.getElementById('masraf-panel-'+n)?.classList.toggle('active',n===t);
+  });
+  if(t==='ozet') renderMasrafOzet();
+  if(t==='liste') renderMasrafTable();
+}
+
+function _fillMasrafAracSelect() {
+  const sel = document.getElementById('f-masraf-arac');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Tüm Filo —</option>' +
+    vehicles.map(v=>`<option value="${v.id}">${v.plaka}${v.sofor?' · '+v.sofor:''}</option>`).join('');
+}
+
+function saveMasrafEntry() {
+  const tarih     = document.getElementById('f-masraf-tarih').value;
+  const aracId    = document.getElementById('f-masraf-arac').value;
+  const kategori  = document.getElementById('f-masraf-kategori').value;
+  const tutar     = parseFloat(document.getElementById('f-masraf-tutar').value)||0;
+  const makbuz    = document.getElementById('f-masraf-makbuz').value.trim();
+  const aciklama  = document.getElementById('f-masraf-aciklama').value.trim();
+  const eid       = document.getElementById('f-masraf-id').value;
+
+  if(!tarih||!kategori||tutar<=0){ showToast('Tarih, Kategori ve Tutar zorunludur.','error'); return; }
+
+  const veh = vehicles.find(v=>v.id===aracId);
+  const entry = { id: eid||uid(), tarih, aracId, plaka: veh?.plaka||'Genel', kategori, tutar, makbuz, aciklama };
+
+  if(eid) { const i=masrafData.findIndex(m=>m.id===eid); if(i!==-1) masrafData[i]=entry; }
+  else masrafData.push(entry);
+
+  saveMasrafData(); updateMasrafStat();
+  document.getElementById('f-masraf-id').value='';
+  ['f-masraf-arac','f-masraf-kategori','f-masraf-tutar','f-masraf-makbuz','f-masraf-aciklama'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  showToast('Masraf kaydedildi ✓','success');
+  switchMasrafTab('liste');
+}
+
+function deleteMasrafEntry(id) {
+  if(!confirm('Bu masraf kaydını silmek istiyor musunuz?')) return;
+  masrafData = masrafData.filter(m=>m.id!==id);
+  saveMasrafData(); updateMasrafStat(); renderMasrafTable(); renderMasrafStats();
+  showToast('Masraf silindi.','error');
+}
+
+const MASRAF_ICONS = {
+  'Otoyol / Köprü':'🛣','Lastik':'🔄','Ceza':'🚔','Hasar / Tamir':'🔨',
+  'Yıkama':'🫧','Konaklama':'🏨','Yemek / Gündelik':'🍽','Diğer':'📋'
+};
+
+function renderMasrafTable() {
+  const tbody = document.getElementById('masraf-table-body');
+  if(!tbody) return;
+  const sorted = [...masrafData].sort((a,b)=>b.tarih.localeCompare(a.tarih));
+  if(sorted.length===0){
+    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">Henüz masraf kaydı yok. ➕ Yeni Masraf sekmesinden ekleyin.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sorted.map(m=>`
+    <tr>
+      <td>${fmtDate(m.tarih)}</td>
+      <td><span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${m.plaka||'Genel'}</span></td>
+      <td><span style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:11.5px">${(MASRAF_ICONS[m.kategori]||'📋')+' '+m.kategori}</span></td>
+      <td style="color:var(--text2)">${m.aciklama||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700">₺${m.tutar.toLocaleString('tr',{minimumFractionDigits:2})}</td>
+      <td style="color:var(--muted);font-size:12px">${m.makbuz||'—'}</td>
+      <td><button class="srm-del-btn" onclick="deleteMasrafEntry('${m.id}')">✕</button></td>
+    </tr>`).join('');
+}
+
+function renderMasrafStats() {
+  const el = document.getElementById('masraf-stats-row');
+  if(!el) return;
+  const toplam = masrafData.reduce((a,m)=>a+(m.tutar||0),0);
+  const buAy   = new Date().toISOString().slice(0,7);
+  const buAyT  = masrafData.filter(m=>m.tarih&&m.tarih.startsWith(buAy)).reduce((a,m)=>a+(m.tutar||0),0);
+  const byKat  = {};
+  masrafData.forEach(m=>{ byKat[m.kategori]=(byKat[m.kategori]||0)+(m.tutar||0); });
+  const topKat = Object.entries(byKat).sort((a,b)=>b[1]-a[1])[0];
+  el.innerHTML = [
+    {val:'₺'+toplam.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Toplam Masraf', color:'var(--red)'},
+    {val:'₺'+buAyT.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Bu Ay', color:'var(--yellow)'},
+    {val:masrafData.length, lbl:'Kayıt Sayısı', color:'var(--blue)'},
+    {val:topKat?(MASRAF_ICONS[topKat[0]]||'📋')+' '+topKat[0]:'—', lbl:'En Yüksek Kategori', color:'var(--text2)'},
+  ].map(s=>`<div class="srm-stat"><div class="srm-stat-val" style="color:${s.color};font-size:${s.val.toString().length>10?'14px':'22px'}">${s.val}</div><div class="srm-stat-lbl">${s.lbl}</div></div>`).join('');
+}
+
+function renderMasrafOzet() {
+  const el = document.getElementById('masraf-ozet-content');
+  if(!el) return;
+  // Araç bazlı masraf
+  const byArac = {};
+  masrafData.forEach(m=>{
+    const key = m.plaka||'Genel';
+    if(!byArac[key]) byArac[key]={plaka:key,tutar:0,count:0};
+    byArac[key].tutar += m.tutar||0;
+    byArac[key].count++;
+  });
+  const aracRows = Object.values(byArac).sort((a,b)=>b.tutar-a.tutar);
+  const maxArac  = aracRows[0]?.tutar||1;
+
+  // Kategori bazlı masraf
+  const byKat = {};
+  masrafData.forEach(m=>{
+    if(!byKat[m.kategori]) byKat[m.kategori]={kat:m.kategori,tutar:0,count:0};
+    byKat[m.kategori].tutar += m.tutar||0;
+    byKat[m.kategori].count++;
+  });
+  const katRows = Object.values(byKat).sort((a,b)=>b.tutar-a.tutar);
+  const maxKat  = katRows[0]?.tutar||1;
+
+  el.innerHTML = `
+  <div class="rapor-grid">
+    <div class="rapor-card">
+      <div class="rapor-card-title" style="color:var(--yellow)">🚛 Araç Bazlı Masraf</div>
+      ${aracRows.length===0?'<p style="color:var(--muted);font-size:13px">Veri yok.</p>':
+        aracRows.map(r=>`
+        <div class="rapor-row">
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${r.plaka}</div>
+            <div style="color:var(--muted);font-size:11px">${r.count} kayıt</div>
+            <div class="rapor-bar-track"><div class="rapor-bar-fill" style="width:${Math.round(r.tutar/maxArac*100)}%;background:linear-gradient(90deg,var(--yellow),#fcd34d)"></div></div>
+          </div>
+          <div class="rapor-row-val" style="color:var(--red)">₺${r.tutar.toLocaleString('tr',{minimumFractionDigits:0})}</div>
+        </div>`).join('')}
+    </div>
+    <div class="rapor-card">
+      <div class="rapor-card-title" style="color:var(--red)">📋 Kategori Bazlı Masraf</div>
+      ${katRows.length===0?'<p style="color:var(--muted);font-size:13px">Veri yok.</p>':
+        katRows.map(r=>`
+        <div class="rapor-row">
+          <div>
+            <div style="font-weight:600">${(MASRAF_ICONS[r.kat]||'📋')+' '+r.kat}</div>
+            <div style="color:var(--muted);font-size:11px">${r.count} kayıt</div>
+            <div class="rapor-bar-track"><div class="rapor-bar-fill" style="width:${Math.round(r.tutar/maxKat*100)}%;background:linear-gradient(90deg,var(--red),#f87171)"></div></div>
+          </div>
+          <div class="rapor-row-val" style="color:var(--red)">₺${r.tutar.toLocaleString('tr',{minimumFractionDigits:0})}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function updateMasrafStat() {}
+
+/* ================================================================
+   RAPORLAR
+   ================================================================ */
+function openRaporModal() {
+  _buildRaporDonemSelect();
+  renderRaporlar();
+  document.getElementById('rapor-backdrop').classList.remove('hidden');
+}
+function closeRaporModal() { document.getElementById('rapor-backdrop').classList.add('hidden'); }
+function closeRaporModalBackdrop(e) { if(e.target.id==='rapor-backdrop') closeRaporModal(); }
+
+function _buildRaporDonemSelect() {
+  const sel = document.getElementById('rapor-donem');
+  const months = new Set();
+  [...seferData,...masrafData].forEach(e=>{ if(e.tarih) months.add(e.tarih.slice(0,7)); });
+  Object.values(fuelData).flat().forEach(e=>{ if(e.tarih) months.add(e.tarih.slice(0,7)); });
+  Object.values(maintData).flat().forEach(e=>{ if(e.tarih) months.add(e.tarih.slice(0,7)); });
+  const sorted = [...months].sort().reverse();
+  sel.innerHTML = '<option value="all">Tüm Zamanlar</option>' +
+    sorted.map(m=>{
+      const [y,mo]=m.split('-');
+      const label=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'][parseInt(mo)-1]+' '+y;
+      return `<option value="${m}">${label}</option>`;
+    }).join('');
+}
+
+function renderRaporlar() {
+  const el = document.getElementById('rapor-body');
+  if(!el) return;
+  const donem = document.getElementById('rapor-donem')?.value||'all';
+  const flt = e => !donem||donem==='all'||!e.tarih||e.tarih.startsWith(donem);
+
+  // Veri topla
+  const seferler = seferData.filter(flt);
+  const masraflar = masrafData.filter(flt);
+  const yakitlar = Object.values(fuelData).flat().filter(flt);
+  const bakimlar = Object.values(maintData).flat().filter(flt);
+
+  const toplamCiro    = seferler.reduce((a,s)=>a+(s.ucret||0),0);
+  const toplamYakit   = yakitlar.reduce((a,e)=>a+(e.fiyat?e.fiyat*e.litre:0),0);
+  const toplamBakim   = bakimlar.reduce((a,e)=>a+(e.maliyet||0),0);
+  const toplamMasraf  = masraflar.reduce((a,m)=>a+(m.tutar||0),0);
+  const toplamGider   = toplamYakit + toplamBakim + toplamMasraf;
+  const netKar        = toplamCiro - toplamGider;
+  const toplamKm      = seferler.reduce((a,s)=>a+(s.km||0),0);
+  const kmBasiMaliyet = toplamKm>0 ? toplamGider/toplamKm : 0;
+
+  // Araç bazlı kârlılık
+  const byArac = {};
+  vehicles.forEach(v=>{ byArac[v.id]={plaka:v.plaka,ciro:0,yakit:0,bakim:0,masraf:0,km:0,sefer:0}; });
+  seferler.forEach(s=>{
+    if(!byArac[s.aracId]) byArac[s.aracId]={plaka:s.plaka||s.aracId,ciro:0,yakit:0,bakim:0,masraf:0,km:0,sefer:0};
+    byArac[s.aracId].ciro  += s.ucret||0;
+    byArac[s.aracId].km    += s.km||0;
+    byArac[s.aracId].sefer++;
+  });
+  (Object.entries(fuelData)).forEach(([vid,entries])=>{
+    if(!byArac[vid]) return;
+    entries.filter(flt).forEach(e=>{ byArac[vid].yakit += (e.fiyat?e.fiyat*e.litre:0); });
+  });
+  (Object.entries(maintData)).forEach(([vid,entries])=>{
+    if(!byArac[vid]) return;
+    entries.filter(flt).forEach(e=>{ byArac[vid].bakim += (e.maliyet||0); });
+  });
+  masraflar.forEach(m=>{
+    if(!byArac[m.aracId]) return;
+    byArac[m.aracId].masraf += m.tutar||0;
+  });
+
+  const aracRows = Object.values(byArac)
+    .map(a=>({...a, gider:a.yakit+a.bakim+a.masraf, kar:a.ciro-(a.yakit+a.bakim+a.masraf)}))
+    .filter(a=>a.ciro>0||a.gider>0)
+    .sort((a,b)=>b.kar-a.kar);
+
+  const karColor = n => n>=0?'var(--green)':'var(--red)';
+
+  el.innerHTML = `
+  <!-- KPI Satırı -->
+  <div class="srm-stats" style="margin-bottom:20px">
+    ${[
+      {val:'₺'+toplamCiro.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Toplam Ciro', color:'var(--green)'},
+      {val:'₺'+toplamGider.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Toplam Gider', color:'var(--red)'},
+      {val:'₺'+Math.abs(netKar).toLocaleString('tr',{minimumFractionDigits:0}), lbl:(netKar>=0?'Net Kâr':'Net Zarar'), color:karColor(netKar)},
+      {val:seferler.length, lbl:'Sefer Sayısı', color:'var(--purple)'},
+      {val:toplamKm.toLocaleString('tr')+' km', lbl:'Toplam Km', color:'var(--blue)'},
+      {val:'₺'+(kmBasiMaliyet>0?kmBasiMaliyet.toFixed(2):'—'), lbl:'Maliyet / Km', color:'var(--yellow)'},
+    ].map(s=>`<div class="srm-stat"><div class="srm-stat-val" style="color:${s.color};font-size:${s.val.toString().length>10?'14px':'22px'}">${s.val}</div><div class="srm-stat-lbl">${s.lbl}</div></div>`).join('')}
+  </div>
+
+  <!-- Gider Dağılımı + Araç Kârlılığı -->
+  <div class="rapor-grid">
+    <div class="rapor-card">
+      <div class="rapor-card-title">📉 Gider Dağılımı</div>
+      ${[
+        {lbl:'⛽ Yakıt', val:toplamYakit, color:'var(--accent)'},
+        {lbl:'🔧 Bakım', val:toplamBakim, color:'var(--blue)'},
+        {lbl:'💸 Diğer Masraf', val:toplamMasraf, color:'var(--yellow)'},
+      ].map(r=>{
+        const pct = toplamGider>0?Math.round(r.val/toplamGider*100):0;
+        return `<div class="rapor-row">
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span class="rapor-row-label">${r.lbl}</span>
+              <span class="rapor-row-val" style="color:${r.color}">₺${r.val.toLocaleString('tr',{minimumFractionDigits:0})} <span style="color:var(--muted);font-size:11px">(${pct}%)</span></span>
+            </div>
+            <div class="rapor-bar-track"><div class="rapor-bar-fill" style="width:${pct}%;background:${r.color}"></div></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="rapor-card">
+      <div class="rapor-card-title">🚛 Araç Bazlı Kârlılık</div>
+      ${aracRows.length===0?'<p style="color:var(--muted);font-size:13px">Sefer ve gider verisi girildikçe bu tablo dolacak.</p>':
+        aracRows.map(a=>`
+        <div class="rapor-row">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${a.plaka}</span>
+              <span style="font-size:11px;color:var(--muted)">${a.sefer} sefer · ${a.km.toLocaleString('tr')} km</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">
+              Ciro: <span style="color:var(--green)">₺${a.ciro.toLocaleString('tr',{minimumFractionDigits:0})}</span>
+              &nbsp;Gider: <span style="color:var(--red)">₺${a.gider.toLocaleString('tr',{minimumFractionDigits:0})}</span>
+            </div>
+          </div>
+          <div class="rapor-row-val" style="color:${karColor(a.kar)}">
+            ${a.kar>=0?'+':''}₺${Math.abs(a.kar).toLocaleString('tr',{minimumFractionDigits:0})}
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <!-- Aylık Trend -->
+  <div class="rapor-card" style="margin-top:0">
+    <div class="rapor-card-title">📅 Aylık Özet (Son 6 Ay)</div>
+    <div style="overflow-x:auto">
+      <table class="srm-table" style="min-width:500px">
+        <thead><tr>
+          <th>Dönem</th><th>Sefer</th><th>Ciro</th><th>Yakıt</th><th>Bakım</th><th>Masraf</th><th>Net</th>
+        </tr></thead>
+        <tbody>
+          ${(()=>{
+            const months = new Set();
+            [...seferData,...masrafData,...Object.values(fuelData).flat(),...Object.values(maintData).flat()]
+              .forEach(e=>{ if(e.tarih) months.add(e.tarih.slice(0,7)); });
+            const sorted = [...months].sort().reverse().slice(0,6);
+            if(sorted.length===0) return '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Veri yok</td></tr>';
+            return sorted.map(m=>{
+              const [y,mo]=m.split('-');
+              const label=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'][parseInt(mo)-1]+' '+y;
+              const sf = seferData.filter(s=>s.tarih&&s.tarih.startsWith(m));
+              const mf = masrafData.filter(x=>x.tarih&&x.tarih.startsWith(m));
+              const yf = Object.values(fuelData).flat().filter(x=>x.tarih&&x.tarih.startsWith(m));
+              const bf = Object.values(maintData).flat().filter(x=>x.tarih&&x.tarih.startsWith(m));
+              const ciro   = sf.reduce((a,s)=>a+(s.ucret||0),0);
+              const yakit  = yf.reduce((a,e)=>a+(e.fiyat?e.fiyat*e.litre:0),0);
+              const bakim  = bf.reduce((a,e)=>a+(e.maliyet||0),0);
+              const masraf = mf.reduce((a,x)=>a+(x.tutar||0),0);
+              const net    = ciro-(yakit+bakim+masraf);
+              const nc     = net>=0?'var(--green)':'var(--red)';
+              return `<tr>
+                <td style="font-weight:600">${label}</td>
+                <td style="color:var(--purple);font-family:'JetBrains Mono',monospace">${sf.length}</td>
+                <td style="color:var(--green);font-family:'JetBrains Mono',monospace">₺${ciro.toLocaleString('tr',{minimumFractionDigits:0})}</td>
+                <td style="color:var(--accent);font-family:'JetBrains Mono',monospace">₺${yakit.toLocaleString('tr',{minimumFractionDigits:0})}</td>
+                <td style="color:var(--blue);font-family:'JetBrains Mono',monospace">₺${bakim.toLocaleString('tr',{minimumFractionDigits:0})}</td>
+                <td style="color:var(--yellow);font-family:'JetBrains Mono',monospace">₺${masraf.toLocaleString('tr',{minimumFractionDigits:0})}</td>
+                <td style="color:${nc};font-family:'JetBrains Mono',monospace;font-weight:700">${net>=0?'+':''}₺${Math.abs(net).toLocaleString('tr',{minimumFractionDigits:0})}</td>
+              </tr>`;
+            }).join('');
+          })()}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
 </script>
 </body>
 </html>
