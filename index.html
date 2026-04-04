@@ -315,6 +315,175 @@
   }
   .icon-btn.fuel:hover { background: rgba(249,115,22,.15); border-color: var(--accent); }
 
+  /* Araç tablosuna bakım butonu */
+  .icon-btn.maint {
+    color: var(--blue);
+    border-color: rgba(56,189,248,.25);
+    background: rgba(56,189,248,.06);
+  }
+  .icon-btn.maint:hover { background: rgba(56,189,248,.15); border-color: var(--blue); }
+
+  /* ── BAKIM MODALİ ────────────────────────────────────────── */
+  .maint-modal-backdrop {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,.7);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .maint-modal-backdrop.hidden { display: none; }
+  .maint-modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    width: 100%; max-width: 1060px;
+    max-height: 92vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 40px 100px rgba(0,0,0,.8);
+  }
+  .maint-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    border-radius: 20px 20px 0 0;
+    flex-shrink: 0;
+  }
+  .maint-modal-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .maint-modal-plate {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px; font-weight: 700;
+    color: var(--blue); background: var(--blue-dim);
+    padding: 3px 10px; border-radius: 6px;
+  }
+  .maint-modal-body { padding: 20px 22px; overflow-y: auto; flex: 1; }
+  .maint-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px; margin-bottom: 20px;
+  }
+  .maint-stat {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; text-align: center;
+  }
+  .maint-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .maint-stat-lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 500; }
+  .maint-next-service {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 20px;
+  }
+  .maint-next-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .maint-next-title { font-size: 12px; color: var(--text2); font-weight: 600; }
+  .maint-next-value { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; }
+  .maint-bar-track { height: 8px; background: var(--surface3); border-radius: 99px; overflow: hidden; }
+  .maint-bar-fill { height: 100%; border-radius: 99px; transition: width .6s ease; }
+  .maint-bar-fill.ok     { background: linear-gradient(90deg, var(--green),  #4ade80); }
+  .maint-bar-fill.warn   { background: linear-gradient(90deg, var(--yellow), #fcd34d); }
+  .maint-bar-fill.overdue{ background: linear-gradient(90deg, var(--red),    #f87171); }
+  .maint-form {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 14px; padding: 18px; margin-bottom: 20px;
+  }
+  .maint-form-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--blue); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .maint-form-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; align-items: end;
+  }
+  .maint-form-group { display: flex; flex-direction: column; gap: 5px; }
+  .maint-form-group label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .maint-form-group.full { grid-column: 1 / -1; }
+  .maint-inp {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 9px; padding: 9px 12px; color: var(--text);
+    font-family: 'Inter', sans-serif; font-size: 13.5px; outline: none;
+    transition: border-color .2s, box-shadow .2s; width: 100%;
+  }
+  .maint-inp:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(56,189,248,.12); }
+  .maint-add-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: linear-gradient(135deg, var(--blue), #7dd3fc);
+    color: #0c1a27; border: none; cursor: pointer;
+    border-radius: 9px; padding: 9px 18px;
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+    transition: opacity .2s, transform .15s;
+    box-shadow: 0 3px 12px rgba(56,189,248,.25); white-space: nowrap;
+  }
+  .maint-add-btn:hover { opacity: .9; transform: translateY(-1px); }
+  .maint-history-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--text2); margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .maint-history-count {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
+    background: var(--surface3); padding: 2px 8px; border-radius: 99px;
+  }
+  .maint-table-wrap {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; overflow-x: auto;
+  }
+  .maint-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+  .maint-table th {
+    padding: 10px 12px; text-align: left; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+    background: var(--surface3); border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .maint-table td {
+    padding: 9px 12px; font-size: 12.5px; border-bottom: 1px solid var(--border);
+    vertical-align: middle; white-space: nowrap;
+  }
+  .maint-table tr:last-child td { border-bottom: none; }
+  .maint-table tr:hover td { background: rgba(255,255,255,.018); }
+  .maint-table .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; }
+  .maint-table th.col-islem, .maint-table td.col-islem {
+    position: sticky; right: 0; background: var(--surface3);
+    box-shadow: -3px 0 8px rgba(0,0,0,.25); z-index: 2; min-width: 72px;
+  }
+  .maint-table td.col-islem { background: var(--surface2); }
+  .maint-table tr:hover td.col-islem { background: var(--surface3); }
+  .maint-type-badge { padding: 3px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+  .maint-type-badge.bakim   { background: rgba(56,189,248,.12);  color: var(--blue); }
+  .maint-type-badge.ariza   { background: var(--red-dim);         color: var(--red); }
+  .maint-type-badge.parca   { background: rgba(167,139,250,.12);  color: var(--purple); }
+  .maint-type-badge.muayene { background: var(--yellow-dim);      color: var(--yellow); }
+  .maint-type-badge.diger   { background: rgba(82,96,112,.2);     color: var(--muted); }
+  .maint-del-btn {
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    font-size: 14px; padding: 2px 6px; border-radius: 5px;
+    transition: color .15s, background .15s;
+  }
+  .maint-del-btn:hover { color: var(--red); background: rgba(239,68,68,.08); }
+  .maint-empty { text-align: center; padding: 32px 20px; color: var(--muted); font-size: 13px; }
+  .maint-empty .icon { font-size: 28px; margin-bottom: 8px; }
+  .maint-plan-section {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 14px; padding: 18px; margin-bottom: 20px;
+  }
+  .maint-plan-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--yellow); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .maint-plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+  .maint-plan-card {
+    background: var(--surface3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; position: relative; overflow: hidden;
+  }
+  .maint-plan-card.overdue { border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.04); }
+  .maint-plan-card.warn    { border-color: rgba(245,158,11,.3); background: rgba(245,158,11,.04); }
+  .maint-plan-card.ok      { border-color: rgba(34,197,94,.2); }
+  .maint-plan-card-icon    { font-size: 20px; margin-bottom: 8px; }
+  .maint-plan-card-name    { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .maint-plan-card-due     { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .maint-plan-card-days    { font-size: 11.5px; font-weight: 500; }
+  .maint-plan-card.overdue .maint-plan-card-due  { color: var(--red); }
+  .maint-plan-card.warn    .maint-plan-card-due  { color: var(--yellow); }
+  .maint-plan-card.ok      .maint-plan-card-due  { color: var(--green); }
+  .maint-plan-card.overdue .maint-plan-card-days { color: var(--red); }
+  .maint-plan-card.warn    .maint-plan-card-days { color: var(--yellow); }
+  .maint-plan-card.ok      .maint-plan-card-days { color: var(--green); }
+
   /* Yakıt özet stat kart (ana sayfada) */
   #stat-yakit-val { color: var(--accent); }
 
@@ -1473,6 +1642,119 @@
 </div>
 
 <!-- =========================================================
+     BAKIM / ARIZA TAKİP MODALİ
+     ========================================================= -->
+<div class="maint-modal-backdrop hidden" id="maint-modal-backdrop" onclick="closeMaintModalBackdrop(event)">
+  <div class="maint-modal">
+    <div class="maint-modal-header">
+      <div class="maint-modal-title">
+        🔧 Bakım & Arıza Takibi —
+        <span class="maint-modal-plate" id="maint-modal-plate">—</span>
+      </div>
+      <button class="modal-close" onclick="closeMaintModal()">✕</button>
+    </div>
+    <div class="maint-modal-body">
+
+      <!-- Özet kartlar -->
+      <div class="maint-stats" id="maint-stats-row"></div>
+
+      <!-- Bir sonraki planlı bakım çubuğu -->
+      <div class="maint-next-service" id="maint-next-bar" style="display:none">
+        <div class="maint-next-header">
+          <span class="maint-next-title">📅 Bir Sonraki Planlı Bakım</span>
+          <span class="maint-next-value" id="maint-next-val">—</span>
+        </div>
+        <div class="maint-bar-track">
+          <div class="maint-bar-fill" id="maint-bar-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Planlı Bakım Takvimi -->
+      <div class="maint-plan-section">
+        <div class="maint-plan-title">📅 Planlı Bakım Takvimi</div>
+        <div class="maint-plan-grid" id="maint-plan-grid">
+          <div style="color:var(--muted);font-size:13px;padding:8px 0">Kayıt girildikçe planlı bakımlar burada görünür.</div>
+        </div>
+      </div>
+
+      <!-- Yeni giriş formu -->
+      <div class="maint-form">
+        <div class="maint-form-title">🔧 Yeni Kayıt Ekle</div>
+        <div class="maint-form-grid">
+          <div class="maint-form-group">
+            <label>Tarih *</label>
+            <input class="maint-inp" type="date" id="f-maint-tarih" />
+          </div>
+          <div class="maint-form-group">
+            <label>İşlem Türü *</label>
+            <select class="maint-inp" id="f-maint-tur">
+              <option value="">— Seçin —</option>
+              <option value="bakim">🔧 Periyodik Bakım</option>
+              <option value="ariza">🚨 Arıza / Onarım</option>
+              <option value="parca">🔩 Parça Değişimi</option>
+              <option value="muayene">🔍 Muayene / Kontrol</option>
+              <option value="diger">📋 Diğer</option>
+            </select>
+          </div>
+          <div class="maint-form-group">
+            <label>Km Sayacı</label>
+            <input class="maint-inp" type="number" id="f-maint-km" placeholder="örn. 185000" min="0" />
+          </div>
+          <div class="maint-form-group">
+            <label>Maliyet (TL)</label>
+            <input class="maint-inp" type="number" id="f-maint-maliyet" placeholder="örn. 4500" min="0" step="0.01" />
+          </div>
+          <div class="maint-form-group">
+            <label>Sonraki Bakım Tarihi</label>
+            <input class="maint-inp" type="date" id="f-maint-sonraki" />
+          </div>
+          <div class="maint-form-group">
+            <label>Sonraki Bakım Km</label>
+            <input class="maint-inp" type="number" id="f-maint-sonraki-km" placeholder="örn. 210000" min="0" />
+          </div>
+          <div class="maint-form-group full">
+            <label>Yapılan İşlem / Açıklama *</label>
+            <input class="maint-inp" type="text" id="f-maint-aciklama" placeholder="örn. Yağ değişimi, filtre, fren balataları değiştirildi" />
+          </div>
+          <div class="maint-form-group">
+            <label>Servis / Tamirci</label>
+            <input class="maint-inp" type="text" id="f-maint-servis" placeholder="örn. Karadeniz Oto Servis" />
+          </div>
+          <div class="maint-form-group" style="align-self:end">
+            <button class="maint-add-btn" onclick="addMaintEntry()">🔧 + Kayıt Ekle</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Geçmiş tablosu -->
+      <div class="maint-history-title">
+        <span>SERVİS GEÇMİŞİ</span>
+        <span class="maint-history-count" id="maint-entry-count">0 kayıt</span>
+      </div>
+      <div class="maint-table-wrap">
+        <table class="maint-table">
+          <thead>
+            <tr>
+              <th>Tarih</th>
+              <th>Tür</th>
+              <th>Açıklama</th>
+              <th>Km Sayacı</th>
+              <th>Maliyet</th>
+              <th>Sonraki Bakım</th>
+              <th>Sonraki Km</th>
+              <th>Servis</th>
+              <th class="col-islem">İşlem</th>
+            </tr>
+          </thead>
+          <tbody id="maint-history-body"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
      BÖLÜM 6: TOAST BİLDİRİMLERİ
      ========================================================= -->
 <div id="toast-container"></div>
@@ -1833,6 +2115,7 @@ async function doLogout() {
   _authToken = null;
   vehicles = [];
   fuelData = {};
+  maintData = {};
   location.reload();
 }
 
@@ -1973,6 +2256,7 @@ async function deleteAllFromCloud() {
     // RLS sayesinde sadece auth.uid() == user_id olan satırlar silinir
     await fetch(sbUrl('araclar?id=neq.null'), { method: 'DELETE', headers: sbHeaders() });
     await fetch(sbUrl('yakit_girisleri?id=neq.null'), { method: 'DELETE', headers: sbHeaders() });
+    await fetch(sbUrl('bakim_kayitlari?id=neq.null'), { method: 'DELETE', headers: sbHeaders() });
   } catch (err) {
     console.error('Buluttan toplu silinemedi:', err);
   }
@@ -2260,8 +2544,9 @@ function renderTable() {
       <td style="max-width:130px;white-space:normal;font-size:12px;color:var(--muted)">${v.notlar || ''}</td>
       <td>
         <div class="action-btns">
-          <button class="icon-btn fuel" title="Yakıt Ekle" onclick="openFuelModal('${v.id}')">⛽</button>
-          <button class="icon-btn edit" title="Düzenle" onclick="openModal('${v.id}')">✎</button>
+          <button class="icon-btn fuel"  title="Yakıt Ekle"         onclick="openFuelModal('${v.id}')">⛽</button>
+          <button class="icon-btn maint" title="Bakım / Arıza Takibi" onclick="openMaintModal('${v.id}')">🔧</button>
+          <button class="icon-btn edit"  title="Düzenle"              onclick="openModal('${v.id}')">✎</button>
           <button class="icon-btn del"  title="Sil"     onclick="deleteVehicle('${v.id}')">✕</button>
         </div>
       </td>
@@ -2355,6 +2640,9 @@ async function renderActivityLog() {
     'yakıt_ekle':     { icon: '⛽', dot: 'orange', label: 'Yakıt girişi eklendi' },
     'yakıt_sil':      { icon: '🗑', dot: 'red',    label: 'Yakıt kaydı silindi' },
     'yakıt_düzenle':  { icon: '✎',  dot: 'purple', label: 'Yakıt kaydı düzenlendi' },
+    'bakım_ekle':     { icon: '🔧', dot: 'blue',   label: 'Bakım kaydı eklendi' },
+    'bakım_sil':      { icon: '🗑', dot: 'red',    label: 'Bakım kaydı silindi' },
+    'bakım_düzenle':  { icon: '✎',  dot: 'purple', label: 'Bakım kaydı düzenlendi' },
   };
   list.innerHTML = log.map(entry => {
     const cfg = typeMap[entry.type] || { icon: '•', dot: 'blue', label: entry.type };
@@ -3960,6 +4248,323 @@ async function downloadFuelPDF() {
 }
 
 /* ================================================================
+   BAKIM / ARIZA TAKİP SİSTEMİ
+   ================================================================ */
+
+let maintData = {}; // { vehicleId: [ {id, tarih, tur, aciklama, km, maliyet, sonraki_tarih, sonraki_km, servis} ] }
+let activeMaintVehicleId = null;
+let maintLoaded = false;
+
+// ── localStorage yedek ──
+function loadMaintDataLocal() {
+  try { maintData = JSON.parse(localStorage.getItem('filo_bakim') || '{}'); }
+  catch { maintData = {}; }
+}
+function saveMaintDataLocal() {
+  localStorage.setItem('filo_bakim', JSON.stringify(maintData));
+}
+
+// ── Supabase: tüm bakım verilerini çek ──
+async function loadMaintData() {
+  loadMaintDataLocal();
+  if (isLocalMode()) { maintLoaded = true; return; }
+  try {
+    const res = await fetch(sbUrl('bakim_kayitlari?select=*&order=tarih.desc'), { headers: sbHeaders() });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    maintData = {};
+    rows.forEach(r => {
+      if (!maintData[r.arac_id]) maintData[r.arac_id] = [];
+      maintData[r.arac_id].push({
+        id            : r.id,
+        tarih         : r.tarih,
+        tur           : r.tur,
+        aciklama      : r.aciklama || '',
+        km            : r.km || null,
+        maliyet       : r.maliyet || 0,
+        sonraki_tarih : r.sonraki_tarih || null,
+        sonraki_km    : r.sonraki_km || null,
+        servis        : r.servis || ''
+      });
+    });
+    saveMaintDataLocal();
+    maintLoaded = true;
+  } catch (err) {
+    console.error('Bakım verisi yüklenemedi:', err);
+    maintLoaded = true;
+  }
+}
+
+// ── Supabase: tek kayıt ekle ──
+async function saveMaintEntry(vehicleId, entry) {
+  saveMaintDataLocal();
+  if (isLocalMode()) return;
+  const { data: { user } } = await getSB().auth.getUser();
+  if (!user) return;
+  try {
+    const row = {
+      id            : entry.id,
+      user_id       : user.id,
+      arac_id       : vehicleId,
+      tarih         : entry.tarih,
+      tur           : entry.tur,
+      aciklama      : entry.aciklama || null,
+      km            : entry.km || null,
+      maliyet       : entry.maliyet || 0,
+      sonraki_tarih : entry.sonraki_tarih || null,
+      sonraki_km    : entry.sonraki_km || null,
+      servis        : entry.servis || null
+    };
+    const res = await fetch(sbUrl('bakim_kayitlari'), {
+      method : 'POST',
+      headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body   : JSON.stringify(row)
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(t); }
+  } catch (err) {
+    console.error('Bakım Supabase kayıt hatası:', err);
+    showToast('Buluta kaydedilemedi — yerel yedek alındı.', 'error');
+  }
+}
+
+// ── Supabase: tek kayıt sil ──
+async function deleteMaintEntryCloud(entryId) {
+  saveMaintDataLocal();
+  if (isLocalMode()) return;
+  try {
+    await fetch(sbUrl('bakim_kayitlari?id=eq.' + entryId), {
+      method : 'DELETE',
+      headers: sbHeaders()
+    });
+  } catch (err) { console.error('Bakım silme hatası:', err); }
+}
+
+// ── Modal aç ──
+async function openMaintModal(vehicleId) {
+  activeMaintVehicleId = vehicleId;
+  const v = vehicles.find(x => x.id === vehicleId);
+  document.getElementById('maint-modal-plate').textContent = v ? v.plaka : '—';
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f-maint-tarih').value       = today;
+  document.getElementById('f-maint-tur').value         = '';
+  document.getElementById('f-maint-km').value          = '';
+  document.getElementById('f-maint-maliyet').value     = '';
+  document.getElementById('f-maint-sonraki').value     = '';
+  document.getElementById('f-maint-sonraki-km').value  = '';
+  document.getElementById('f-maint-aciklama').value    = '';
+  document.getElementById('f-maint-servis').value      = '';
+
+  document.getElementById('maint-modal-backdrop').classList.remove('hidden');
+  renderMaintModal();
+  await loadMaintData();
+  renderMaintModal();
+}
+
+function closeMaintModal() {
+  document.getElementById('maint-modal-backdrop').classList.add('hidden');
+  activeMaintVehicleId = null;
+}
+
+function closeMaintModalBackdrop(e) {
+  if (e.target === document.getElementById('maint-modal-backdrop')) closeMaintModal();
+}
+
+// ── Yeni kayıt ekle ──
+function addMaintEntry() {
+  const tarih    = document.getElementById('f-maint-tarih').value;
+  const tur      = document.getElementById('f-maint-tur').value;
+  const aciklama = document.getElementById('f-maint-aciklama').value.trim();
+  const km       = parseFloat(document.getElementById('f-maint-km').value) || null;
+  const maliyet  = parseFloat(document.getElementById('f-maint-maliyet').value) || 0;
+  const sonraki_tarih = document.getElementById('f-maint-sonraki').value || null;
+  const sonraki_km    = parseFloat(document.getElementById('f-maint-sonraki-km').value) || null;
+  const servis   = document.getElementById('f-maint-servis').value.trim();
+
+  if (!tarih)    { showToast('Tarih giriniz.', 'error'); return; }
+  if (!tur)      { showToast('İşlem türü seçiniz.', 'error'); return; }
+  if (!aciklama) { showToast('Açıklama giriniz.', 'error'); return; }
+
+  if (!maintData[activeMaintVehicleId]) maintData[activeMaintVehicleId] = [];
+
+  const entry = { id: uid(), tarih, tur, aciklama, km, maliyet, sonraki_tarih, sonraki_km, servis };
+  maintData[activeMaintVehicleId].unshift(entry); // en yeni başa
+  saveMaintDataLocal();
+  saveMaintEntry(activeMaintVehicleId, entry);
+
+  const _v = vehicles.find(x => x.id === activeMaintVehicleId);
+  addActivity('bakım_ekle', _v?.plaka || '—', maintTurLabel(tur) + (aciklama ? ' · ' + aciklama.slice(0,30) : ''));
+  renderMaintModal();
+
+  // Formu temizle (tarih kalsın)
+  document.getElementById('f-maint-tur').value         = '';
+  document.getElementById('f-maint-km').value          = '';
+  document.getElementById('f-maint-maliyet').value     = '';
+  document.getElementById('f-maint-sonraki').value     = '';
+  document.getElementById('f-maint-sonraki-km').value  = '';
+  document.getElementById('f-maint-aciklama').value    = '';
+  document.getElementById('f-maint-servis').value      = '';
+
+  showToast('Bakım kaydı eklendi ✓', 'success');
+}
+
+// ── Kayıt sil ──
+function deleteMaintEntry(vehicleId, entryId) {
+  if (!maintData[vehicleId]) return;
+  if (!confirm('Bu bakım kaydını silmek istiyor musunuz?')) return;
+  const _v = vehicles.find(x => x.id === vehicleId);
+  maintData[vehicleId] = maintData[vehicleId].filter(e => e.id !== entryId);
+  saveMaintDataLocal();
+  deleteMaintEntryCloud(entryId);
+  addActivity('bakım_sil', _v?.plaka || '—', '');
+  renderMaintModal();
+  showToast('Kayıt silindi.', 'error');
+}
+
+// ── Kayıt düzenle ──
+function editMaintEntry(vehicleId, entryId) {
+  if (!maintData[vehicleId]) return;
+  const entry = maintData[vehicleId].find(e => e.id === entryId);
+  if (!entry) return;
+  document.getElementById('f-maint-tarih').value       = entry.tarih || '';
+  document.getElementById('f-maint-tur').value         = entry.tur   || '';
+  document.getElementById('f-maint-km').value          = entry.km    || '';
+  document.getElementById('f-maint-maliyet').value     = entry.maliyet || '';
+  document.getElementById('f-maint-sonraki').value     = entry.sonraki_tarih || '';
+  document.getElementById('f-maint-sonraki-km').value  = entry.sonraki_km   || '';
+  document.getElementById('f-maint-aciklama').value    = entry.aciklama || '';
+  document.getElementById('f-maint-servis').value      = entry.servis   || '';
+  deleteMaintEntryCloud(entryId);
+  maintData[vehicleId] = maintData[vehicleId].filter(e => e.id !== entryId);
+  saveMaintDataLocal();
+  const _v = vehicles.find(x => x.id === vehicleId);
+  addActivity('bakım_düzenle', _v?.plaka || '—', '');
+  renderMaintModal();
+  showToast('Kaydı düzenleyip "+ Kayıt Ekle" butonuna basın.', 'info');
+}
+
+// ── Tür label yardımcısı ──
+function maintTurLabel(tur) {
+  const map = { bakim:'Periyodik Bakım', ariza:'Arıza/Onarım', parca:'Parça Değişimi', muayene:'Muayene', diger:'Diğer' };
+  return map[tur] || tur;
+}
+
+// ── Modal render ──
+function renderMaintModal() {
+  const entries = maintData[activeMaintVehicleId] || [];
+
+  // Özet kartlar
+  const toplam = entries.length;
+  const toplamMaliyet = entries.reduce((s, e) => s + (e.maliyet || 0), 0);
+  const ariza = entries.filter(e => e.tur === 'ariza').length;
+  const buYil = new Date().getFullYear().toString();
+  const buYilMaliyet = entries.filter(e => e.tarih && e.tarih.startsWith(buYil)).reduce((s, e) => s + (e.maliyet || 0), 0);
+
+  // Bir sonraki planlı bakım: sonraki_tarih alanı dolu olanların en yakını
+  const planlılar = entries.filter(e => e.sonraki_tarih).sort((a, b) => a.sonraki_tarih.localeCompare(b.sonraki_tarih));
+  const sonraki = planlılar.length > 0 ? planlılar[0] : null;
+
+  document.getElementById('maint-stats-row').innerHTML = `
+    <div class="maint-stat">
+      <div class="maint-stat-val" style="color:var(--blue)">${toplam}</div>
+      <div class="maint-stat-lbl">Toplam Kayıt</div>
+    </div>
+    <div class="maint-stat">
+      <div class="maint-stat-val" style="color:var(--red)">${ariza}</div>
+      <div class="maint-stat-lbl">Arıza / Onarım</div>
+    </div>
+    <div class="maint-stat">
+      <div class="maint-stat-val" style="color:var(--green)">${toplamMaliyet > 0 ? toplamMaliyet.toLocaleString('tr-TR', {maximumFractionDigits:0}) + ' ₺' : '—'}</div>
+      <div class="maint-stat-lbl">Toplam Maliyet</div>
+    </div>
+    <div class="maint-stat">
+      <div class="maint-stat-val" style="color:var(--yellow)">${buYilMaliyet > 0 ? buYilMaliyet.toLocaleString('tr-TR', {maximumFractionDigits:0}) + ' ₺' : '—'}</div>
+      <div class="maint-stat-lbl">Bu Yıl Maliyet</div>
+    </div>
+    <div class="maint-stat">
+      <div class="maint-stat-val" style="color:var(--purple)">${sonraki ? fmtDate(sonraki.sonraki_tarih) : '—'}</div>
+      <div class="maint-stat-lbl">Sonraki Bakım</div>
+    </div>
+  `;
+
+  // Bir sonraki planlı bakım çubuğu
+  const nextBar  = document.getElementById('maint-next-bar');
+  const nextVal  = document.getElementById('maint-next-val');
+  const barFill  = document.getElementById('maint-bar-fill');
+  if (sonraki) {
+    const dl = daysLeft(sonraki.sonraki_tarih);
+    nextBar.style.display = 'block';
+    const dlTxt = dl === null ? '—' : (dl < 0 ? Math.abs(dl) + ' gün geçti' : dl + ' gün kaldı');
+    nextVal.textContent = fmtDate(sonraki.sonraki_tarih) + ' · ' + dlTxt;
+    nextVal.style.color = dl === null ? 'var(--muted)' : (dl < 0 ? 'var(--red)' : (dl <= 30 ? 'var(--yellow)' : 'var(--green)'));
+    const barCls = dl === null ? 'ok' : (dl < 0 ? 'overdue' : (dl <= 30 ? 'warn' : 'ok'));
+    const pct = dl === null ? 0 : Math.min(100, Math.max(4, 100 - (dl / 90) * 100));
+    barFill.style.width = pct + '%';
+    barFill.className = 'maint-bar-fill ' + barCls;
+  } else {
+    nextBar.style.display = 'none';
+  }
+
+  // Planlı bakım takvim kartları — sonraki_tarih veya sonraki_km dolu tüm kayıtlar
+  const planGrid = document.getElementById('maint-plan-grid');
+  const planItems = entries.filter(e => e.sonraki_tarih || e.sonraki_km)
+    .sort((a, b) => (a.sonraki_tarih || '9999').localeCompare(b.sonraki_tarih || '9999'));
+
+  if (planItems.length === 0) {
+    planGrid.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Bakım kaydı eklenirken "Sonraki Bakım Tarihi" girilirse burada görünür.</div>';
+  } else {
+    const turIcons = { bakim:'🔧', ariza:'🚨', parca:'🔩', muayene:'🔍', diger:'📋' };
+    planGrid.innerHTML = planItems.map(e => {
+      const dl = e.sonraki_tarih ? daysLeft(e.sonraki_tarih) : null;
+      const cls = dl === null ? 'ok' : (dl < 0 ? 'overdue' : (dl <= 30 ? 'warn' : 'ok'));
+      const dlTxt = dl === null ? '' : (dl < 0 ? Math.abs(dl) + ' gün gecikmiş' : dl === 0 ? 'Bugün!' : dl + ' gün kaldı');
+      return `<div class="maint-plan-card ${cls}">
+        <div class="maint-plan-card-icon">${turIcons[e.tur] || '📋'}</div>
+        <div class="maint-plan-card-name">${maintTurLabel(e.tur)}</div>
+        ${e.aciklama ? `<div style="font-size:11.5px;color:var(--text2);margin-bottom:6px;white-space:normal">${e.aciklama.slice(0,50)}</div>` : ''}
+        ${e.sonraki_tarih ? `<div class="maint-plan-card-due">${fmtDate(e.sonraki_tarih)}</div>` : ''}
+        ${e.sonraki_km ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:4px">${e.sonraki_km.toLocaleString('tr-TR')} km'de</div>` : ''}
+        <div class="maint-plan-card-days">${dlTxt}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Geçmiş tablosu
+  const countEl = document.getElementById('maint-entry-count');
+  if (countEl) countEl.textContent = toplam + ' kayıt';
+
+  const tbody = document.getElementById('maint-history-body');
+  if (entries.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="maint-empty"><div class="icon">🔧</div><p>Henüz bakım kaydı yok. Yukarıdan ekleyin.</p></div></td></tr>`;
+    return;
+  }
+
+  const turBadge = (tur) => {
+    const labels = { bakim:'Periyodik Bakım', ariza:'Arıza/Onarım', parca:'Parça Değişimi', muayene:'Muayene', diger:'Diğer' };
+    return `<span class="maint-type-badge ${tur}">${labels[tur] || tur}</span>`;
+  };
+
+  const vid = activeMaintVehicleId;
+  tbody.innerHTML = entries.map(e => `
+    <tr>
+      <td class="mono">${fmtDate(e.tarih)}</td>
+      <td>${turBadge(e.tur)}</td>
+      <td style="max-width:220px;white-space:normal;font-size:12.5px;color:var(--text)">${e.aciklama || '—'}</td>
+      <td class="mono" style="color:var(--text2)">${e.km ? e.km.toLocaleString('tr-TR') + ' km' : '—'}</td>
+      <td class="mono" style="color:var(--green)">${e.maliyet > 0 ? e.maliyet.toLocaleString('tr-TR', {maximumFractionDigits:0}) + ' ₺' : '—'}</td>
+      <td class="mono" style="color:var(--blue)">${e.sonraki_tarih ? fmtDate(e.sonraki_tarih) : '—'}</td>
+      <td class="mono" style="color:var(--muted)">${e.sonraki_km ? e.sonraki_km.toLocaleString('tr-TR') + ' km' : '—'}</td>
+      <td style="color:var(--muted);font-size:12px">${e.servis || '—'}</td>
+      <td class="col-islem">
+        <div style="display:flex;gap:5px;align-items:center">
+          <button class="maint-del-btn" style="color:var(--blue);font-size:14px;width:26px;height:26px;border-radius:6px;border:1px solid rgba(56,189,248,.25);background:rgba(56,189,248,.06);display:flex;align-items:center;justify-content:center" onclick="editMaintEntry('${vid}','${e.id}')" title="Düzenle">✎</button>
+          <button class="maint-del-btn" style="font-size:14px;width:26px;height:26px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.06);display:flex;align-items:center;justify-content:center" onclick="deleteMaintEntry('${vid}','${e.id}')" title="Sil">✕</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+/* ================================================================
    BAŞLATMA
    ================================================================ */
 // Supabase Auth oturumunu kontrol et — yüklü ise sayfayı göster
@@ -3967,6 +4572,7 @@ checkAuth();
 
 // Başlangıçta yakıt verilerini yükle
 loadFuelData().then(() => { updateFuelStat(); renderActivityLog(); });
+loadMaintData();
 </script>
 </body>
 </html>
