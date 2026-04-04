@@ -2242,6 +2242,7 @@ async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     _authToken = session.access_token;
+    await loadFirmaId();
     hideLoginOverlay();
     loadVehicles();
   } else {
@@ -2252,6 +2253,7 @@ async function checkAuth() {
   sb.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) {
       _authToken = session.access_token;
+      loadFirmaId();
       hideLoginOverlay();
     } else if (event === 'SIGNED_OUT') {
       _authToken = null;
@@ -2436,7 +2438,8 @@ async function saveVehicles() {
   try {
     const rows = vehicles.map(v => ({
       id      : v.id,
-      user_id : user.id,          // ← RLS politikası için zorunlu
+      user_id : user.id,
+      firma_id: currentFirmaId,       // ← firma bazlı paylaşım
       plaka   : v.plaka,
       tip     : v.tip,
       esleme  : v.esleme   || null,
@@ -2880,7 +2883,8 @@ async function addActivity(type, plaka, detail) {
       plaka,
       detail,
       ts: new Date().toISOString(),
-      user_id: user.id
+      user_id: user.id,
+      firma_id: currentFirmaId       // ← firma bazlı paylaşım
     }]);
     if (error) throw error;
   } catch (e) {
@@ -3247,7 +3251,8 @@ async function saveFuelEntry(vehicleId, entry) {
   try {
     const row = {
       id      : entry.id,
-      user_id : user.id,          // ← RLS politikası için zorunlu
+      user_id : user.id,
+      firma_id: currentFirmaId,       // ← firma bazlı paylaşım
       arac_id : vehicleId,
       tarih   : entry.tarih,
       km      : entry.km,
@@ -4605,6 +4610,7 @@ async function saveMaintEntry(vehicleId, entry) {
     const row = {
       id            : entry.id,
       user_id       : user.id,
+      firma_id      : currentFirmaId, // ← firma bazlı paylaşım
       arac_id       : vehicleId,
       tarih         : entry.tarih,
       tur           : entry.tur,
