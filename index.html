@@ -2085,7 +2085,7 @@
           <input class="inp" id="f-sigorta" type="date" />
         </div>
         <div class="form-group">
-          <label>Takograf Tarihi</label>
+          <label>Takograf Bitiş Tarihi</label>
           <input class="inp" id="f-takograf" type="date" />
         </div>
         <div class="form-group full">
@@ -2258,6 +2258,10 @@
           <div class="driver-form-group">
             <label>🧠 Psikoteknik Bitiş</label>
             <input class="driver-inp" type="date" id="f-driver-psiko" />
+          </div>
+          <div class="driver-form-group">
+            <label>📡 Takoğraf Kartı Bitiş</label>
+            <input class="driver-inp" type="date" id="f-driver-takograf" />
           </div>
           <div class="driver-form-group" style="align-self:end">
             <button class="driver-add-btn" onclick="saveDriverEntry()">👤 + Kaydet</button>
@@ -2815,7 +2819,7 @@ async function loadVehicles() {
   updateFuelSummaryPanel();
   await loadMaintData();
   updateMaintStat();
-  loadDriverDataLocal();
+  await loadDriverData();
   updateDriverStat();
   await renderActivityLog();
 }
@@ -2883,6 +2887,7 @@ async function deleteAllFromCloud() {
     await fetch(sbUrl('araclar?id=neq.null'), { method: 'DELETE', headers: sbHeaders() });
     await fetch(sbUrl('yakit_girisleri?id=neq.null'), { method: 'DELETE', headers: sbHeaders() });
     await fetch(sbUrl('bakim_kayitlari?id=neq.null'), { method: 'DELETE', headers: sbHeaders() });
+    await fetch(sbUrl('surucu_belgeler?id=neq.null'), { method: 'DELETE', headers: sbHeaders() });
   } catch (err) {
     console.error('Buluttan toplu silinemedi:', err);
   }
@@ -3070,7 +3075,8 @@ function updateAlerts() {
     const docMap = [
       { iso: d.ehliyet, label: 'Ehliyet' },
       { iso: d.src,     label: 'SRC Belgesi' },
-      { iso: d.psiko,   label: 'Psikoteknik' },
+      { iso: d.psiko,    label: 'Psikoteknik' },
+      { iso: d.takograf, label: 'Takoğraf Kartı' },
     ];
     docMap.forEach(({ iso, label }) => {
       if (!iso) return;
@@ -5939,17 +5945,87 @@ async function downloadMaintPDF() {
    SÜRÜCÜ BELGE TAKİP SİSTEMİ
    ================================================================ */
 
-let driverData = []; // [ {id, ad, tel, plaka, ehliyet, src, psiko} ]
+let driverData = []; // [ {id, ad, tel, arac_id, ehliyet, src, psiko, takograf} ]
 let editingDriverId = null;
 let driverModalVehicleFilter = null; // null = tümü
+let driverLoaded = false;
 
-// ── LocalStorage ──
+// ── LocalStorage yedek ──
 function loadDriverDataLocal() {
   try { driverData = JSON.parse(localStorage.getItem('filo_surucu') || '[]'); }
   catch { driverData = []; }
 }
 function saveDriverDataLocal() {
   localStorage.setItem('filo_surucu', JSON.stringify(driverData));
+}
+
+// ── Supabase: tüm sürücüleri çek ──
+async function loadDriverData() {
+  loadDriverDataLocal(); // önce lokali yükle (hızlı görünüm)
+  if (isLocalMode()) { driverLoaded = true; return; }
+  try {
+    const res = await fetch(sbUrl('surucu_belgeler?select=*&order=ad.asc'), { headers: sbHeaders() });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    driverData = rows.map(r => ({
+      id      : r.id,
+      ad      : r.ad,
+      tel     : r.tel      || '',
+      plaka   : r.arac_id  || '',
+      ehliyet : r.ehliyet  || '',
+      src     : r.src      || '',
+      psiko    : r.psiko    || '',
+      takograf : r.takograf || ''
+    }));
+    saveDriverDataLocal();
+    driverLoaded = true;
+  } catch (err) {
+    console.error('Sürücü verisi yüklenemedi:', err);
+    driverLoaded = true;
+  }
+}
+
+// ── Supabase: kaydet (upsert) ──
+async function saveDriverEntryCloud(entry) {
+  saveDriverDataLocal();
+  if (isLocalMode()) return;
+  try {
+    const { data: { user } } = await getSB().auth.getUser();
+    if (!user) return;
+    const row = {
+      id      : entry.id,
+      user_id : user.id,
+      firma_id: currentFirmaId,
+      ad      : entry.ad,
+      tel     : entry.tel     || null,
+      arac_id : entry.plaka   || null,
+      ehliyet : entry.ehliyet || null,
+      src     : entry.src     || null,
+      psiko    : entry.psiko    || null,
+      takograf : entry.takograf  || null
+    };
+    const res = await fetch(sbUrl('surucu_belgeler'), {
+      method : 'POST',
+      headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body   : JSON.stringify(row)
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(t); }
+  } catch (err) {
+    console.error('Sürücü Supabase kayıt hatası:', err);
+    showToast('Buluta kaydedilemedi — yerel yedek alındı.', 'error');
+  }
+}
+
+// ── Supabase: sil ──
+async function deleteDriverEntryCloud(id) {
+  saveDriverDataLocal();
+  if (isLocalMode()) return;
+  try {
+    await fetch(sbUrl('surucu_belgeler?id=eq.' + id), {
+      method : 'DELETE',
+      headers: sbHeaders()
+    });
+  } catch (err) { console.error('Sürücü silme hatası:', err); }
 }
 
 // ── Yardımcılar ──
@@ -5976,16 +6052,18 @@ function driverDocHTML(icon, label, iso) {
 }
 
 // ── Modal aç / kapat ──
-function openDriverModal() {
+async function openDriverModal() {
   driverModalVehicleFilter = null;
   document.getElementById('driver-modal-subtitle').textContent = '— Tüm Sürücüler';
   _resetDriverForm();
   _fillDriverPlacaSelect();
-  renderDriverModal();
+  renderDriverModal(); // önce lokal ile göster
   document.getElementById('driver-modal-backdrop').classList.remove('hidden');
+  await loadDriverData(); // taze veriyi çek
+  renderDriverModal();
 }
 
-function openDriverModalForVehicle(vehicleId) {
+async function openDriverModalForVehicle(vehicleId) {
   driverModalVehicleFilter = vehicleId;
   const v = vehicles.find(x => x.id === vehicleId);
   document.getElementById('driver-modal-subtitle').textContent = v ? '— ' + v.plaka : '';
@@ -6003,8 +6081,10 @@ function openDriverModalForVehicle(vehicleId) {
     _resetDriverForm();
   }
   _fillDriverPlacaSelect(vehicleId);
-  renderDriverModal();
+  renderDriverModal(); // önce lokal ile göster
   document.getElementById('driver-modal-backdrop').classList.remove('hidden');
+  await loadDriverData(); // taze veriyi çek
+  renderDriverModal();
 }
 
 function closeDriverModal() {
@@ -6023,7 +6103,8 @@ function _resetDriverForm() {
   document.getElementById('f-driver-tel').value   = '';
   document.getElementById('f-driver-ehliyet').value = '';
   document.getElementById('f-driver-src').value   = '';
-  document.getElementById('f-driver-psiko').value = '';
+  document.getElementById('f-driver-psiko').value    = '';
+  document.getElementById('f-driver-takograf').value = '';
   const btn = document.querySelector('#driver-form-section .driver-add-btn');
   if (btn) btn.textContent = '👤 + Kaydet';
 }
@@ -6036,7 +6117,8 @@ function _fillDriverForm(d) {
   document.getElementById('f-driver-plaka').value   = d.plaka || '';
   document.getElementById('f-driver-ehliyet').value = d.ehliyet || '';
   document.getElementById('f-driver-src').value     = d.src || '';
-  document.getElementById('f-driver-psiko').value   = d.psiko || '';
+  document.getElementById('f-driver-psiko').value    = d.psiko    || '';
+  document.getElementById('f-driver-takograf').value = d.takograf || '';
   const btn = document.querySelector('#driver-form-section .driver-add-btn');
   if (btn) btn.textContent = '💾 Güncelle';
 }
@@ -6055,21 +6137,27 @@ function saveDriverEntry() {
   const plaka  = document.getElementById('f-driver-plaka').value;
   const ehliyet= document.getElementById('f-driver-ehliyet').value;
   const src    = document.getElementById('f-driver-src').value;
-  const psiko  = document.getElementById('f-driver-psiko').value;
+  const psiko    = document.getElementById('f-driver-psiko').value;
+  const takograf = document.getElementById('f-driver-takograf').value;
 
   if (!ad) { showToast('Ad Soyad zorunludur.', 'error'); return; }
 
   if (editingDriverId) {
     const idx = driverData.findIndex(d => d.id === editingDriverId);
     if (idx !== -1) {
-      driverData[idx] = { ...driverData[idx], ad, tel, plaka, ehliyet, src, psiko };
+      driverData[idx] = { ...driverData[idx], ad, tel, plaka, ehliyet, src, psiko, takograf };
       showToast('Sürücü güncellendi ✓', 'success');
     }
   } else {
-    driverData.push({ id: uid(), ad, tel, plaka, ehliyet, src, psiko });
+    driverData.push({ id: uid(), ad, tel, plaka, ehliyet, src, psiko, takograf });
     showToast('Sürücü eklendi ✓', 'success');
   }
   saveDriverDataLocal();
+  // Yeni ya da düzenlenmiş kaydı bul ve buluta gönder
+  const _savedEntry = editingDriverId
+    ? driverData.find(d => d.id === editingDriverId)
+    : driverData[driverData.length - 1];
+  if (_savedEntry) saveDriverEntryCloud(_savedEntry);
   _resetDriverForm();
   renderDriverModal();
   updateDriverStat();
@@ -6081,6 +6169,7 @@ function deleteDriverEntry(id) {
   if (!confirm('Bu sürücü kaydını silmek istiyor musunuz?')) return;
   driverData = driverData.filter(d => d.id !== id);
   saveDriverDataLocal();
+  deleteDriverEntryCloud(id);
   renderDriverModal();
   updateDriverStat();
   updateAlerts();
@@ -6114,7 +6203,7 @@ function renderDriverModal() {
   // Uyarılıları üste sırala
   filtered = filtered.slice().sort((a, b) => {
     const worstStatus = d => {
-      const docs = [d.ehliyet, d.src, d.psiko].filter(Boolean);
+      const docs = [d.ehliyet, d.src, d.psiko, d.takograf].filter(Boolean);
       if (docs.length === 0) return 999;
       return Math.min(...docs.map(iso => daysLeft(iso) ?? 999));
     };
@@ -6123,7 +6212,7 @@ function renderDriverModal() {
 
   list.innerHTML = filtered.map(d => {
     const veh = vehicles.find(v => v.id === d.plaka);
-    const docs = [d.ehliyet, d.src, d.psiko];
+    const docs = [d.ehliyet, d.src, d.psiko, d.takograf];
     const statuses = docs.filter(Boolean).map(iso => driverDocStatus(iso).cls);
     const cardCls = statuses.includes('overdue') ? 'has-overdue'
                   : statuses.includes('warn')    ? 'has-warn' : '';
@@ -6140,6 +6229,7 @@ function renderDriverModal() {
           ${driverDocHTML('🪪', 'Ehliyet', d.ehliyet)}
           ${driverDocHTML('📋', 'SRC', d.src)}
           ${driverDocHTML('🧠', 'Psikoteknik', d.psiko)}
+          ${driverDocHTML('📡', 'Takoğraf Kartı', d.takograf)}
         </div>
       </div>
       <div class="driver-actions">
@@ -6152,10 +6242,9 @@ function renderDriverModal() {
 
 // ── Ana ekran stat kartı ──
 function updateDriverStat() {
-  loadDriverDataLocal();
   let uyari = 0, gecmis = 0, warn30 = 0;
   driverData.forEach(d => {
-    [d.ehliyet, d.src, d.psiko].filter(Boolean).forEach(iso => {
+    [d.ehliyet, d.src, d.psiko, d.takograf].filter(Boolean).forEach(iso => {
       const dl = daysLeft(iso);
       if (dl === null) return;
       if (dl < 0)     { gecmis++; uyari++; }
@@ -6213,8 +6302,7 @@ checkAuth();
 // Başlangıçta yakıt verilerini yükle
 loadFuelData().then(() => { updateFuelStat(); updateFuelSummaryPanel(); renderActivityLog(); });
 loadMaintData().then(() => { updateMaintStat(); });
-loadDriverDataLocal();
-updateDriverStat();
+loadDriverData().then(() => { updateDriverStat(); });
 </script>
 </body>
 </html>
