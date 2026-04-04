@@ -6039,22 +6039,24 @@ async function loadDriverData() {
   loadDriverDataLocal(); // önce lokali yükle (hızlı görünüm)
   if (isLocalMode()) { driverLoaded = true; return; }
   try {
-    const { data: { user } } = await getSB().auth.getUser();
-    if (!user) { driverLoaded = true; return; }
+    const sb = getSB();
+    if (!sb) { driverLoaded = true; return; }
 
-    // user_id filtresi ile çek; firma_id varsa onu da ekle
-    let query = 'surucu_belgeler?select=*&order=ad.asc&user_id=eq.' + user.id;
-    if (currentFirmaId) query += '&firma_id=eq.' + currentFirmaId;
+    // Supabase JS SDK kullan — RLS token otomatik eklenir
+    const { data: rows, error } = await sb
+      .from('surucu_belgeler')
+      .select('*')
+      .order('ad', { ascending: true });
 
-    const res = await fetch(sbUrl(query), { headers: sbHeaders() });
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error('Sürücü yükle HTTP hatası:', res.status, errText);
-      throw new Error('HTTP ' + res.status);
+    if (error) {
+      console.error('Sürücü yükle Supabase hatası:', error.code, error.message, error.details);
+      driverLoaded = true;
+      return;
     }
-    const rows = await res.json();
-    console.log('Sürücü verisi geldi:', rows.length, 'kayıt');
-    driverData = rows.map(r => ({
+
+    console.log('Sürücü verisi geldi:', rows ? rows.length : 0, 'kayıt', rows);
+
+    driverData = (rows || []).map(r => ({
       id      : r.id,
       ad      : r.ad,
       tel     : r.tel      || '',
@@ -6077,26 +6079,24 @@ async function saveDriverEntryCloud(entry) {
   saveDriverDataLocal();
   if (isLocalMode()) return;
   try {
-    const { data: { user } } = await getSB().auth.getUser();
+    const sb = getSB();
+    const { data: { user } } = await sb.auth.getUser();
     if (!user) return;
     const row = {
       id      : entry.id,
       user_id : user.id,
-      firma_id: currentFirmaId,
       ad      : entry.ad,
       tel     : entry.tel     || null,
       arac_id : entry.plaka   || null,
       ehliyet : entry.ehliyet || null,
       src     : entry.src     || null,
-      psiko    : entry.psiko    || null,
-      takograf : entry.takograf  || null
+      psiko   : entry.psiko   || null,
+      takograf: entry.takograf || null
     };
-    const res = await fetch(sbUrl('surucu_belgeler'), {
-      method : 'POST',
-      headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body   : JSON.stringify(row)
-    });
-    if (!res.ok) { const t = await res.text(); throw new Error(t); }
+    const { error } = await sb
+      .from('surucu_belgeler')
+      .upsert(row, { onConflict: 'id' });
+    if (error) throw error;
   } catch (err) {
     console.error('Sürücü Supabase kayıt hatası:', err);
     showToast('Buluta kaydedilemedi — yerel yedek alındı.', 'error');
@@ -6108,10 +6108,12 @@ async function deleteDriverEntryCloud(id) {
   saveDriverDataLocal();
   if (isLocalMode()) return;
   try {
-    await fetch(sbUrl('surucu_belgeler?id=eq.' + id), {
-      method : 'DELETE',
-      headers: sbHeaders()
-    });
+    const sb = getSB();
+    const { error } = await sb
+      .from('surucu_belgeler')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   } catch (err) { console.error('Sürücü silme hatası:', err); }
 }
 
