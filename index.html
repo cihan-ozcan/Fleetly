@@ -648,26 +648,28 @@
   }
   .driver-phone { font-size: 11.5px; color: var(--muted); margin-bottom: 10px; }
   .driver-docs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .driver-docs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
   .driver-doc {
-    display: flex; align-items: center; gap: 7px;
+    display: inline-flex; align-items: center; gap: 5px;
     background: var(--surface3); border: 1px solid var(--border);
-    border-radius: 9px; padding: 7px 11px;
-    font-size: 11.5px; min-width: 140px;
+    border-radius: 99px; padding: 3px 10px 3px 7px;
+    font-size: 11px; white-space: nowrap;
   }
-  .driver-doc-icon { font-size: 15px; flex-shrink: 0; }
-  .driver-doc-label { font-size: 9.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1px; }
-  .driver-doc-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; }
-  .driver-doc-days { font-size: 10px; font-weight: 600; margin-top: 1px; }
-  .driver-doc.ok    { border-color: rgba(34,197,94,.2); }
+  .driver-doc-icon { font-size: 11px; flex-shrink: 0; line-height: 1; }
+  .driver-doc-label { font-size: 10px; color: var(--muted); font-weight: 600; }
+  .driver-doc-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; }
+  .driver-doc-days { font-size: 10px; font-weight: 600; }
+  .driver-doc-sep { color: var(--border2); font-size: 10px; }
+  .driver-doc.ok    { border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.05); }
   .driver-doc.ok    .driver-doc-val  { color: var(--green); }
-  .driver-doc.ok    .driver-doc-days { color: var(--green); }
-  .driver-doc.warn  { border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.05); }
+  .driver-doc.ok    .driver-doc-days { color: rgba(34,197,94,.6); }
+  .driver-doc.warn  { border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.07); }
   .driver-doc.warn  .driver-doc-val  { color: var(--yellow); }
-  .driver-doc.warn  .driver-doc-days { color: var(--yellow); }
-  .driver-doc.overdue { border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.06); }
+  .driver-doc.warn  .driver-doc-days { color: rgba(245,158,11,.8); }
+  .driver-doc.overdue { border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.08); }
   .driver-doc.overdue .driver-doc-val  { color: var(--red); }
-  .driver-doc.overdue .driver-doc-days { color: var(--red); }
-  .driver-doc.empty   { opacity: .42; }
+  .driver-doc.overdue .driver-doc-days { color: rgba(239,68,68,.8); }
+  .driver-doc.empty   { opacity: .35; border-style: dashed; }
   .driver-doc.empty   .driver-doc-val { color: var(--muted); }
   .driver-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: flex-start; }
   .driver-edit-btn {
@@ -6091,10 +6093,22 @@ async function loadDriverData() {
         _kaynak : 'arac'   // belge eklenmemiş, araçtan geliyor
       }));
 
-    driverData = [...belgeRows, ...aracKaynakli]
+    // Araçtan gelen listede aynı isim birden fazla araçta olabilir (çekici + dorse).
+    // Ad + tel kombinasyonunu tekilleştir; plaka bilgisini ilk eşleşmeden al.
+    const aracKaynakliUniq = [];
+    const seen = new Set();
+    aracKaynakli.forEach(d => {
+      const key = (d.ad||'').toLowerCase().trim() + '|' + (d.tel||'').trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        aracKaynakliUniq.push(d);
+      }
+    });
+
+    driverData = [...belgeRows, ...aracKaynakliUniq]
       .sort((a, b) => (a.ad||'').localeCompare(b.ad||'', 'tr'));
 
-    console.log('Sürücü verisi:', belgeRows.length, 'belgeli +', aracKaynakli.length, 'araçtan =', driverData.length, 'toplam');
+    console.log('Sürücü verisi:', belgeRows.length, 'belgeli +', aracKaynakliUniq.length, 'araçtan =', driverData.length, 'toplam');
     saveDriverDataLocal();
     driverLoaded = true;
   } catch (err) {
@@ -6159,14 +6173,15 @@ function driverDocStatus(iso) {
 function driverDocHTML(icon, label, iso) {
   const s = driverDocStatus(iso);
   const dateStr = iso ? fmtDate(iso) : '—';
-  return `<div class="driver-doc ${s.cls}">
-    <div class="driver-doc-icon">${icon}</div>
-    <div>
-      <div class="driver-doc-label">${label}</div>
-      <div class="driver-doc-val">${dateStr}</div>
-      <div class="driver-doc-days">${s.days !== null ? s.txt : 'Girilmemiş'}</div>
-    </div>
-  </div>`;
+  const daysHtml = s.days !== null
+    ? `<span class="driver-doc-sep">·</span><span class="driver-doc-days">${s.txt}</span>`
+    : '';
+  return `<span class="driver-doc ${s.cls}" title="${label}">
+    <span class="driver-doc-icon">${icon}</span>
+    <span class="driver-doc-label">${label}</span>
+    <span class="driver-doc-val">${dateStr}</span>
+    ${daysHtml}
+  </span>`;
 }
 
 // ── Modal aç / kapat ──
