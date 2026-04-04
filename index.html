@@ -1169,6 +1169,7 @@
       Şifremi unuttum →
       <button onclick="doResetPassword()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:0;font-family:inherit">Sıfırlama e-postası gönder</button>
     </p>
+    <p style="margin-top:28px;font-size:10px;color:var(--border2);letter-spacing:.04em;user-select:none">created by cihanozcan</p>
   </div>
 </div>
 
@@ -1627,11 +1628,11 @@
           </div>
           <div class="fuel-form-group">
             <label>Birim Fiyat (₺/L)</label>
-            <input class="fuel-inp" type="number" id="f-fuel-fiyat" placeholder="ör. 42.50" step="0.01" min="0" />
+            <input class="fuel-inp" type="number" id="f-fuel-fiyat" placeholder="ör. 70.50" step="0.01" min="0" />
           </div>
           <div class="fuel-form-group">
             <label>İstasyon / Not</label>
-            <input class="fuel-inp" type="text" id="f-fuel-not" placeholder="ör. Shell Ankara" />
+            <input class="fuel-inp" type="text" id="f-fuel-not" placeholder="ör. ABC Opet" />
           </div>
           <div class="fuel-form-group" style="justify-content:flex-end">
             <button class="fuel-add-btn" onclick="addFuelEntry()">+ Ekle</button>
@@ -3336,6 +3337,10 @@ async function downloadFuelPDF() {
     doc.text(tr('Filo Takip Sistemi - Yakit Raporu'), ML, PH - 8);
     doc.text(tr('Sayfa ') + pageNum, PW - MR, PH - 8, { align: 'right' });
     doc.text(new Date().toLocaleDateString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH - 8, {align:'center'});
+    // created by
+    doc.setFontSize(6);
+    doc.setTextColor(50, 62, 78);
+    doc.text('created by cihanozcan app.', PW/2, PH - 3, {align:'center'});
   }
 
   function newPage() {
