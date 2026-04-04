@@ -1736,6 +1736,7 @@
 <div id="mob-menu">
   <button class="btn-sm accent" onclick="openModal();closeMobMenu()">+ Araç Ekle</button>
   <button class="btn-sm" onclick="openFuelSummary();closeMobMenu()">⛽ Yakıt Yönetimi</button>
+  <button class="btn-sm" onclick="openDriverModal();closeMobMenu()" style="color:var(--green)">👤 Sürücüler</button>
   <div style="border-top:1px solid var(--border);margin:4px 0"></div>
   <button class="btn-sm" onclick="exportJSON();closeMobMenu()">⬇ Dışa Aktar</button>
   <label class="btn-sm" style="cursor:pointer">
@@ -2216,69 +2217,127 @@
 
 
 <!-- =========================================================
-     SÜRÜCÜ BELGELERİ MODALİ
+     SÜRÜCÜ YÖNETİM MODALİ
      ========================================================= -->
-<div class="driver-modal-backdrop hidden" id="driver-modal-backdrop" onclick="closeDriverModalBackdrop(event)">
-  <div class="driver-modal">
-    <div class="driver-modal-header">
-      <div class="driver-modal-title">
-        👤 Sürücü Belge Takibi
-        <span id="driver-modal-subtitle" style="font-size:12px;font-weight:400;color:var(--muted)">— Tüm Sürücüler</span>
+<div class="vehicle-select-backdrop hidden" id="driver-select-backdrop" onclick="closeDriverSelectBackdrop(event)">
+  <div class="vehicle-select-modal" style="max-width:640px">
+    <div class="vehicle-select-header" style="border-bottom-color:var(--border)">
+      <div class="vehicle-select-title">
+        <span class="icon">👤</span>
+        Sürücü Belge Yönetimi
       </div>
-      <button class="modal-close" onclick="closeDriverModal()">✕</button>
+      <button class="modal-close" onclick="closeDriverSelect()">✕</button>
     </div>
-    <div class="driver-modal-body">
+    <div class="vehicle-select-body">
 
-      <!-- Yeni sürücü formu -->
-      <div class="driver-form" id="driver-form-section">
-        <div class="driver-form-title">👤 Sürücü Ekle / Güncelle</div>
-        <div class="driver-form-grid">
-          <div class="driver-form-group">
-            <label>Ad Soyad *</label>
-            <input class="driver-inp" type="text" id="f-driver-ad" placeholder="Ad Soyad" />
+      <!-- Sekme Navigasyonu -->
+      <div class="vs-tabs">
+        <button class="vs-tab active" id="ds-tab-suruculer" onclick="switchDsTab('suruculer')">👤 Sürücüler</button>
+        <button class="vs-tab" id="ds-tab-ozet" onclick="switchDsTab('ozet')">📊 Genel Özet</button>
+        <button class="vs-tab" id="ds-tab-ayarlar" onclick="switchDsTab('ayarlar')">⚙️ Yönetim</button>
+      </div>
+
+      <!-- SEKME 1: Sürücü Listesi + Arama -->
+      <div class="vs-tab-panel active" id="dspanel-suruculer">
+        <div class="vehicle-select-search">
+          <span class="srch-icon">🔎</span>
+          <input type="text" id="ds-search" placeholder="Sürücü adı veya plaka ara…"
+            oninput="renderDsDriverList()"
+            style="border-color:var(--border2)"
+            onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(34,197,94,.12)'"
+            onblur="this.style.borderColor='var(--border2)';this.style.boxShadow='none'" />
+        </div>
+        <div id="ds-driver-list"></div>
+      </div>
+
+      <!-- SEKME 2: Genel Özet -->
+      <div class="vs-tab-panel" id="dspanel-ozet">
+        <div class="vs-summary-panel">
+          <div class="vs-summary-title" style="color:var(--green)">👤 Tüm Sürücüler — Belge Durumu</div>
+          <!-- İstatistik Kartları -->
+          <div class="vs-summary-grid" style="grid-template-columns:repeat(3,1fr)">
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--green)" id="ds-s-toplam">—</div>
+              <div class="vs-summary-lbl">Kayıtlı Sürücü</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--red)" id="ds-s-gecmis">—</div>
+              <div class="vs-summary-lbl">Geçmiş Belge</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--yellow)" id="ds-s-warn">—</div>
+              <div class="vs-summary-lbl">30 Gün İçinde</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--blue)" id="ds-s-ehliyet">—</div>
+              <div class="vs-summary-lbl">Ehliyet Uyarısı</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--purple)" id="ds-s-src">—</div>
+              <div class="vs-summary-lbl">SRC Uyarısı</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--accent)" id="ds-s-psiko">—</div>
+              <div class="vs-summary-lbl">Psiko / Tako Uyarısı</div>
+            </div>
           </div>
-          <div class="driver-form-group">
-            <label>Telefon</label>
-            <input class="driver-inp" type="tel" id="f-driver-tel" placeholder="05xx xxx xx xx" />
-          </div>
-          <div class="driver-form-group">
-            <label>Araç Plakası</label>
-            <select class="driver-inp" id="f-driver-plaka">
-              <option value="">— Araç Seçin —</option>
-            </select>
-          </div>
-          <div class="driver-form-group">
-            <label>🪪 Ehliyet Bitiş</label>
-            <input class="driver-inp" type="date" id="f-driver-ehliyet" />
-          </div>
-          <div class="driver-form-group">
-            <label>📋 SRC Belgesi Bitiş</label>
-            <input class="driver-inp" type="date" id="f-driver-src" />
-          </div>
-          <div class="driver-form-group">
-            <label>🧠 Psikoteknik Bitiş</label>
-            <input class="driver-inp" type="date" id="f-driver-psiko" />
-          </div>
-          <div class="driver-form-group">
-            <label>📡 Takoğraf Kartı Bitiş</label>
-            <input class="driver-inp" type="date" id="f-driver-takograf" />
-          </div>
-          <div class="driver-form-group" style="align-self:end">
-            <button class="driver-add-btn" onclick="saveDriverEntry()">👤 + Kaydet</button>
+          <!-- Kritik sürücüler -->
+          <div style="margin-top:14px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">⚠ Kritik Belge Durumları</div>
+            <div id="ds-critical-list" style="display:flex;flex-direction:column;gap:6px"></div>
           </div>
         </div>
-        <input type="hidden" id="f-driver-id" value="" />
       </div>
 
-      <!-- Sürücü listesi başlık -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2)">SÜRÜCÜ LİSTESİ</div>
-        <span id="driver-entry-count" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface3);padding:2px 8px;border-radius:99px">0 sürücü</span>
-      </div>
-
-      <!-- Sürücü kartları -->
-      <div class="driver-list" id="driver-list">
-        <div class="driver-empty"><div class="icon">👤</div><p>Henüz sürücü eklenmedi.</p></div>
+      <!-- SEKME 3: Yönetim (Sürücü Ekle / Düzenle) -->
+      <div class="vs-tab-panel" id="dspanel-ayarlar">
+        <div class="driver-form" id="driver-form-section" style="margin-bottom:16px">
+          <div class="driver-form-title">👤 Sürücü Ekle / Güncelle</div>
+          <div class="driver-form-grid">
+            <div class="driver-form-group">
+              <label>Ad Soyad *</label>
+              <input class="driver-inp" type="text" id="f-driver-ad" placeholder="Ad Soyad" />
+            </div>
+            <div class="driver-form-group">
+              <label>Telefon</label>
+              <input class="driver-inp" type="tel" id="f-driver-tel" placeholder="05xx xxx xx xx" />
+            </div>
+            <div class="driver-form-group">
+              <label>Araç Plakası</label>
+              <select class="driver-inp" id="f-driver-plaka">
+                <option value="">— Araç Seçin —</option>
+              </select>
+            </div>
+            <div class="driver-form-group">
+              <label>🪪 Ehliyet Bitiş</label>
+              <input class="driver-inp" type="date" id="f-driver-ehliyet" />
+            </div>
+            <div class="driver-form-group">
+              <label>📋 SRC Belgesi Bitiş</label>
+              <input class="driver-inp" type="date" id="f-driver-src" />
+            </div>
+            <div class="driver-form-group">
+              <label>🧠 Psikoteknik Bitiş</label>
+              <input class="driver-inp" type="date" id="f-driver-psiko" />
+            </div>
+            <div class="driver-form-group">
+              <label>📡 Takoğraf Kartı Bitiş</label>
+              <input class="driver-inp" type="date" id="f-driver-takograf" />
+            </div>
+            <div class="driver-form-group" style="align-self:end">
+              <button class="driver-add-btn" onclick="saveDriverEntry()">👤 + Kaydet</button>
+            </div>
+          </div>
+          <input type="hidden" id="f-driver-id" value="" />
+        </div>
+        <!-- Tehlike Bölgesi -->
+        <div class="vs-danger-zone" style="border-color:rgba(239,68,68,.2)">
+          <div class="vs-danger-info">
+            <div class="vs-danger-title">⚠ Tüm Sürücü Kayıtlarını Sil</div>
+            <div class="vs-danger-sub">Bu işlem geri alınamaz. Tüm sürücü belge kayıtları silinir.</div>
+          </div>
+          <button class="vs-danger-btn" onclick="confirmDeleteAllDrivers()">🗑 Tümünü Sil</button>
+        </div>
       </div>
 
     </div>
@@ -6054,46 +6113,50 @@ function driverDocHTML(icon, label, iso) {
 // ── Modal aç / kapat ──
 async function openDriverModal() {
   driverModalVehicleFilter = null;
-  document.getElementById('driver-modal-subtitle').textContent = '— Tüm Sürücüler';
   _resetDriverForm();
   _fillDriverPlacaSelect();
-  renderDriverModal(); // önce lokal ile göster
-  document.getElementById('driver-modal-backdrop').classList.remove('hidden');
-  await loadDriverData(); // taze veriyi çek
-  renderDriverModal();
+  switchDsTab('suruculer');
+  renderDsDriverList();
+  renderDsSummary();
+  document.getElementById('ds-search').value = '';
+  document.getElementById('driver-select-backdrop').classList.remove('hidden');
+  await loadDriverData();
+  renderDsDriverList();
+  renderDsSummary();
 }
 
 async function openDriverModalForVehicle(vehicleId) {
   driverModalVehicleFilter = vehicleId;
   const v = vehicles.find(x => x.id === vehicleId);
-  document.getElementById('driver-modal-subtitle').textContent = v ? '— ' + v.plaka : '';
-  // Otomatik olarak o aracın şoförünü forma doldur
+  // Arama kutusuna plakayı yaz
+  const searchEl = document.getElementById('ds-search');
+  if (searchEl) searchEl.value = v ? v.plaka : '';
+  // Ayarlar sekmesinde formu otomatik doldur
   if (v && v.sofor) {
     const existing = driverData.find(d => d.plaka === vehicleId || d.ad === v.sofor);
-    if (existing) {
-      _fillDriverForm(existing);
-    } else {
+    if (existing) { _fillDriverForm(existing); }
+    else {
       _resetDriverForm();
       document.getElementById('f-driver-ad').value  = v.sofor || '';
       document.getElementById('f-driver-tel').value = v.telefon || '';
     }
-  } else {
-    _resetDriverForm();
-  }
+  } else { _resetDriverForm(); }
   _fillDriverPlacaSelect(vehicleId);
-  renderDriverModal(); // önce lokal ile göster
-  document.getElementById('driver-modal-backdrop').classList.remove('hidden');
-  await loadDriverData(); // taze veriyi çek
-  renderDriverModal();
+  switchDsTab('suruculer');
+  renderDsDriverList();
+  document.getElementById('driver-select-backdrop').classList.remove('hidden');
+  await loadDriverData();
+  renderDsDriverList();
 }
 
-function closeDriverModal() {
-  document.getElementById('driver-modal-backdrop').classList.add('hidden');
+function closeDriverModal() { closeDriverSelect(); }
+function closeDriverSelect() {
+  document.getElementById('driver-select-backdrop').classList.add('hidden');
   driverModalVehicleFilter = null;
   _resetDriverForm();
 }
-function closeDriverModalBackdrop(e) {
-  if (e.target === document.getElementById('driver-modal-backdrop')) closeDriverModal();
+function closeDriverSelectBackdrop(e) {
+  if (e.target === document.getElementById('driver-select-backdrop')) closeDriverSelect();
 }
 
 function _resetDriverForm() {
@@ -6159,7 +6222,8 @@ function saveDriverEntry() {
     : driverData[driverData.length - 1];
   if (_savedEntry) saveDriverEntryCloud(_savedEntry);
   _resetDriverForm();
-  renderDriverModal();
+  renderDsDriverList();
+  renderDsSummary();
   updateDriverStat();
   updateAlerts();
 }
@@ -6170,7 +6234,8 @@ function deleteDriverEntry(id) {
   driverData = driverData.filter(d => d.id !== id);
   saveDriverDataLocal();
   deleteDriverEntryCloud(id);
-  renderDriverModal();
+  renderDsDriverList();
+  renderDsSummary();
   updateDriverStat();
   updateAlerts();
   showToast('Sürücü silindi.', 'error');
@@ -6182,21 +6247,37 @@ function editDriverEntry(id) {
   if (!d) return;
   _fillDriverForm(d);
   _fillDriverPlacaSelect(d.plaka);
+  switchDsTab('ayarlar');
   document.getElementById('driver-form-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// ── Modal render ──
-function renderDriverModal() {
-  const list     = document.getElementById('driver-list');
-  const countEl  = document.getElementById('driver-entry-count');
-  let filtered   = driverModalVehicleFilter
-    ? driverData.filter(d => d.plaka === driverModalVehicleFilter)
-    : driverData;
+// ── Sekme geçişi ──
+function switchDsTab(name) {
+  ['suruculer','ozet','ayarlar'].forEach(t => {
+    document.getElementById('ds-tab-' + t)?.classList.toggle('active', t === name);
+    document.getElementById('dspanel-' + t)?.classList.toggle('active', t === name);
+  });
+  if (name === 'ozet')     renderDsSummary();
+  if (name === 'ayarlar')  _fillDriverPlacaSelect();
+}
 
-  if (countEl) countEl.textContent = filtered.length + ' sürücü';
+// ── Sürücü Listesi Render (Sekme 1) ──
+function renderDsDriverList() {
+  const list    = document.getElementById('ds-driver-list');
+  const q       = (document.getElementById('ds-search')?.value || '').toLowerCase().trim();
+
+  let filtered = driverData.filter(d => {
+    if (!q) return true;
+    const veh = vehicles.find(v => v.id === d.plaka);
+    return (d.ad||'').toLowerCase().includes(q)
+        || (d.tel||'').toLowerCase().includes(q)
+        || (veh?.plaka||'').toLowerCase().includes(q);
+  });
 
   if (filtered.length === 0) {
-    list.innerHTML = '<div class="driver-empty"><div class="icon">👤</div><p>Henüz sürücü eklenmedi. Yukarıdaki formu doldurun.</p></div>';
+    list.innerHTML = q
+      ? '<div class="driver-empty"><div class="icon">🔍</div><p>Sürücü bulunamadı.</p></div>'
+      : '<div class="driver-empty"><div class="icon">👤</div><p>Henüz sürücü eklenmedi.<br>⚙️ Yönetim sekmesinden ekleyin.</p></div>';
     return;
   }
 
@@ -6211,11 +6292,11 @@ function renderDriverModal() {
   });
 
   list.innerHTML = filtered.map(d => {
-    const veh = vehicles.find(v => v.id === d.plaka);
-    const docs = [d.ehliyet, d.src, d.psiko, d.takograf];
-    const statuses = docs.filter(Boolean).map(iso => driverDocStatus(iso).cls);
-    const cardCls = statuses.includes('overdue') ? 'has-overdue'
-                  : statuses.includes('warn')    ? 'has-warn' : '';
+    const veh      = vehicles.find(v => v.id === d.plaka);
+    const allDocs  = [d.ehliyet, d.src, d.psiko, d.takograf];
+    const statuses = allDocs.filter(Boolean).map(iso => driverDocStatus(iso).cls);
+    const cardCls  = statuses.includes('overdue') ? 'has-overdue'
+                   : statuses.includes('warn')    ? 'has-warn' : '';
 
     return `<div class="driver-card ${cardCls}">
       <div class="driver-avatar">👤</div>
@@ -6238,6 +6319,89 @@ function renderDriverModal() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Genel Özet Render (Sekme 2) ──
+function renderDsSummary() {
+  let toplam = driverData.length;
+  let gecmis = 0, warn30 = 0;
+  let ehliyet_u = 0, src_u = 0, psiko_tako_u = 0;
+
+  driverData.forEach(d => {
+    const docMap = [
+      { iso: d.ehliyet,  type: 'ehliyet' },
+      { iso: d.src,      type: 'src' },
+      { iso: d.psiko,    type: 'psiko' },
+      { iso: d.takograf, type: 'takograf' },
+    ];
+    docMap.forEach(({ iso, type }) => {
+      if (!iso) return;
+      const dl = daysLeft(iso);
+      if (dl === null) return;
+      const isUyari = dl < 0 || dl <= 30;
+      if (!isUyari) return;
+      if (dl < 0) gecmis++;
+      else warn30++;
+      if (type === 'ehliyet')                 ehliyet_u++;
+      else if (type === 'src')                src_u++;
+      else if (type === 'psiko' || type === 'takograf') psiko_tako_u++;
+    });
+  });
+
+  const s = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  s('ds-s-toplam', toplam);
+  s('ds-s-gecmis', gecmis  > 0 ? gecmis  : '—');
+  s('ds-s-warn',   warn30  > 0 ? warn30  : '—');
+  s('ds-s-ehliyet', ehliyet_u   > 0 ? ehliyet_u   : '—');
+  s('ds-s-src',     src_u       > 0 ? src_u       : '—');
+  s('ds-s-psiko',   psiko_tako_u > 0 ? psiko_tako_u : '—');
+
+  // Kritik sürücüler listesi
+  const critEl = document.getElementById('ds-critical-list');
+  if (!critEl) return;
+  const critItems = [];
+  driverData.forEach(d => {
+    const veh = vehicles.find(v => v.id === d.plaka);
+    [
+      { iso: d.ehliyet,  label: 'Ehliyet' },
+      { iso: d.src,      label: 'SRC' },
+      { iso: d.psiko,    label: 'Psikoteknik' },
+      { iso: d.takograf, label: 'Takoğraf Kartı' },
+    ].forEach(({ iso, label }) => {
+      if (!iso) return;
+      const dl = daysLeft(iso);
+      if (dl === null || dl > 30) return;
+      const cls   = dl < 0 ? 'red' : 'yellow';
+      const badge = dl < 0 ? 'GEÇMİŞ' : dl + ' GÜN';
+      critItems.push({ dl, html: `
+        <div class="alert-item ${cls}" style="border-radius:10px">
+          <div class="plate">${d.ad}</div>
+          <div class="info">${label}${veh ? ' · ' + veh.plaka : ''}</div>
+          <span class="badge ${cls}">${badge}</span>
+        </div>` });
+    });
+  });
+  critItems.sort((a, b) => a.dl - b.dl);
+  critEl.innerHTML = critItems.length > 0
+    ? critItems.map(x => x.html).join('')
+    : '<div style="color:var(--muted);font-size:12px;padding:8px 0">Kritik belge durumu yok ✓</div>';
+}
+
+// ── Tüm sürücüleri sil ──
+function confirmDeleteAllDrivers() {
+  if (!confirm('Tüm sürücü kayıtları silinecek! Bu işlem geri alınamaz.')) return;
+  const ids = driverData.map(d => d.id);
+  driverData = [];
+  saveDriverDataLocal();
+  // Supabase'den de sil
+  if (!isLocalMode()) {
+    ids.forEach(id => deleteDriverEntryCloud(id));
+  }
+  renderDsDriverList();
+  renderDsSummary();
+  updateDriverStat();
+  updateAlerts();
+  showToast('Tüm sürücü kayıtları silindi.', 'error');
 }
 
 // ── Ana ekran stat kartı ──
