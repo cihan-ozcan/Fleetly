@@ -2259,37 +2259,49 @@ function renderTable() {
 }
 
 /* ================================================================
-   AKTİVİTE LOGU
+   AKTİVİTE LOGU — Supabase
    ================================================================ */
-const ACTIVITY_KEY = 'filo_activity_log';
 const MAX_ACTIVITY = 50;
 
-function loadActivityLog() {
-  try { return JSON.parse(localStorage.getItem(ACTIVITY_KEY) || '[]'); }
-  catch { return []; }
+async function loadActivityLog() {
+  try {
+    const { data, error } = await _sb
+      .from('activity_log')
+      .select('*')
+      .order('ts', { ascending: false })
+      .limit(MAX_ACTIVITY);
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error('Aktivite logu yüklenemedi:', e);
+    return [];
+  }
 }
 
-function saveActivityLog(log) {
-  localStorage.setItem(ACTIVITY_KEY, JSON.stringify(log));
-}
-
-function addActivity(type, plaka, detail) {
-  const log = loadActivityLog();
-  log.unshift({
-    id: Date.now() + Math.random().toString(36).slice(2),
-    type,   // 'araç_ekle' | 'araç_düzenle' | 'araç_sil' | 'yakıt_ekle' | 'yakıt_sil' | 'yakıt_düzenle'
-    plaka,
-    detail,
-    ts: new Date().toISOString()
-  });
-  if (log.length > MAX_ACTIVITY) log.length = MAX_ACTIVITY;
-  saveActivityLog(log);
+async function addActivity(type, plaka, detail) {
+  try {
+    const { error } = await _sb.from('activity_log').insert([{
+      id: Date.now() + Math.random().toString(36).slice(2),
+      type,
+      plaka,
+      detail,
+      ts: new Date().toISOString()
+    }]);
+    if (error) throw error;
+  } catch (e) {
+    console.error('Aktivite kaydedilemedi:', e);
+  }
   renderActivityLog();
 }
 
-function clearActivityLog() {
+async function clearActivityLog() {
   if (!confirm('Aktivite geçmişi silinsin mi?')) return;
-  localStorage.removeItem(ACTIVITY_KEY);
+  try {
+    const { error } = await _sb.from('activity_log').delete().neq('id', '');
+    if (error) throw error;
+  } catch (e) {
+    console.error('Aktivite silinemedi:', e);
+  }
   renderActivityLog();
 }
 
@@ -2312,10 +2324,11 @@ function fmtActivityTime(isoStr) {
     + ' ' + d.toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
 }
 
-function renderActivityLog() {
+async function renderActivityLog() {
   const list = document.getElementById('activity-list');
   if (!list) return;
-  const log = loadActivityLog();
+  list.innerHTML = '<div class="activity-empty"><div class="icon">⏳</div><p>Yükleniyor…</p></div>';
+  const log = await loadActivityLog();
   if (log.length === 0) {
     list.innerHTML = '<div class="activity-empty"><div class="icon">📋</div><p>Henüz düzenleme yok.</p></div>';
     return;
@@ -3797,7 +3810,7 @@ checkAuth();
 
 // Başlangıçta yakıt verilerini yükle
 loadFuelData().then(() => { updateFuelStat(); });
-setTimeout(renderActivityLog, 200);
+setTimeout(() => renderActivityLog(), 200);
 </script>
 </body>
 </html>
