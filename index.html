@@ -553,6 +553,143 @@
   #mob-menu { display: none; }
   #mob-card-list { display: none; }
 
+
+  /* ── SÜRÜCÜ BELGELERİ MODALİ ─────────────────────────── */
+  .driver-modal-backdrop {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,.72);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .driver-modal-backdrop.hidden { display: none; }
+  .driver-modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    width: 100%; max-width: 880px;
+    max-height: 92vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 40px 100px rgba(0,0,0,.8);
+  }
+  .driver-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    border-radius: 20px 20px 0 0;
+    flex-shrink: 0;
+  }
+  .driver-modal-title {
+    font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px; color: var(--text);
+  }
+  .driver-modal-body { padding: 20px 22px; overflow-y: auto; flex: 1; }
+  .driver-form {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 14px; padding: 18px; margin-bottom: 20px;
+  }
+  .driver-form-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--green);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .driver-form-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 12px; align-items: end;
+  }
+  .driver-form-group { display: flex; flex-direction: column; gap: 5px; }
+  .driver-form-group label {
+    font-size: 11px; color: var(--muted); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .driver-inp {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 9px; padding: 9px 12px; color: var(--text);
+    font-family: 'Inter', sans-serif; font-size: 13.5px; outline: none;
+    transition: border-color .2s;
+  }
+  .driver-inp:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(34,197,94,.12); }
+  .driver-add-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: linear-gradient(135deg, var(--green), #4ade80);
+    color: #fff; border: none; cursor: pointer;
+    border-radius: 9px; padding: 9px 18px;
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    transition: opacity .2s, transform .15s;
+    box-shadow: 0 3px 12px rgba(34,197,94,.3); white-space: nowrap;
+  }
+  .driver-add-btn:hover { opacity: .9; transform: translateY(-1px); }
+  .driver-list { display: flex; flex-direction: column; gap: 10px; }
+  .driver-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px 18px;
+    display: flex; align-items: flex-start; gap: 16px;
+    transition: border-color .2s;
+  }
+  .driver-card:hover { border-color: var(--border2); }
+  .driver-card.has-overdue { border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.03); }
+  .driver-card.has-warn { border-color: rgba(245,158,11,.3); background: rgba(245,158,11,.02); }
+  .driver-avatar {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--surface3), var(--border2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .driver-info { flex: 1; min-width: 0; }
+  .driver-name {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin-bottom: 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .driver-plate-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    background: var(--accent-dim); padding: 1px 7px; border-radius: 5px;
+  }
+  .driver-phone { font-size: 11.5px; color: var(--muted); margin-bottom: 10px; }
+  .driver-docs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .driver-doc {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--surface3); border: 1px solid var(--border);
+    border-radius: 9px; padding: 7px 11px;
+    font-size: 11.5px; min-width: 140px;
+  }
+  .driver-doc-icon { font-size: 15px; flex-shrink: 0; }
+  .driver-doc-label { font-size: 9.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1px; }
+  .driver-doc-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; }
+  .driver-doc-days { font-size: 10px; font-weight: 600; margin-top: 1px; }
+  .driver-doc.ok    { border-color: rgba(34,197,94,.2); }
+  .driver-doc.ok    .driver-doc-val  { color: var(--green); }
+  .driver-doc.ok    .driver-doc-days { color: var(--green); }
+  .driver-doc.warn  { border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.05); }
+  .driver-doc.warn  .driver-doc-val  { color: var(--yellow); }
+  .driver-doc.warn  .driver-doc-days { color: var(--yellow); }
+  .driver-doc.overdue { border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.06); }
+  .driver-doc.overdue .driver-doc-val  { color: var(--red); }
+  .driver-doc.overdue .driver-doc-days { color: var(--red); }
+  .driver-doc.empty   { opacity: .42; }
+  .driver-doc.empty   .driver-doc-val { color: var(--muted); }
+  .driver-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: flex-start; }
+  .driver-edit-btn {
+    background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.25);
+    color: var(--blue); cursor: pointer; border-radius: 7px;
+    font-size: 13px; padding: 5px 9px; transition: background .15s;
+  }
+  .driver-edit-btn:hover { background: rgba(56,189,248,.18); }
+  .driver-del-btn {
+    background: rgba(239,68,68,.06); border: 1px solid rgba(239,68,68,.2);
+    color: var(--red); cursor: pointer; border-radius: 7px;
+    font-size: 13px; padding: 5px 9px; transition: background .15s;
+  }
+  .driver-del-btn:hover { background: rgba(239,68,68,.16); }
+  .driver-empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+  .driver-empty .icon { font-size: 32px; margin-bottom: 10px; opacity: .5; }
+  .icon-btn.driver {
+    color: var(--green); border-color: rgba(34,197,94,.25);
+    background: rgba(34,197,94,.06);
+  }
+  .icon-btn.driver:hover { background: rgba(34,197,94,.15); border-color: var(--green); }
+
   /* ── GİRİŞ ──────────────────────────────────────────────── */
   #login-overlay {
     position: fixed; inset: 0; z-index: 1000;
@@ -1588,6 +1725,7 @@
       ⬆ İçe Aktar<input type="file" accept=".json" style="display:none" onchange="importJSON(this)" />
     </label>
     <button class="btn-sm danger" onclick="confirmReset()" title="Tüm verileri sil">⊘ Sıfırla</button>
+    <button class="btn-sm" onclick="openDriverModal()" style="color:var(--green);border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.06);font-weight:600" title="Sürücü belgelerini yönet">👤 Sürücü Belgeleri</button>
     <button class="btn-sm accent" onclick="openModal()">+ Araç Ekle</button>
     <button class="btn-sm danger" onclick="doLogout()" title="Çıkış Yap">Çıkış</button>
     <!-- Mobil hamburger -->
@@ -1673,6 +1811,41 @@
         <span style="font-size:10px;color:rgba(249,115,22,.6);font-weight:600;letter-spacing:.03em">DETAY ›</span>
       </div>
       <div class="spark-wrap" id="spark-wrap"></div>
+    </div>
+
+    <!-- SÜRÜCÜ BELGELERİ ÖZET KARTI -->
+    <div class="stat-card" id="driver-stat-card" style="cursor:pointer;border-color:rgba(34,197,94,.2);box-shadow:0 0 0 1px rgba(34,197,94,.06)" onclick="openDriverModal()" title="Sürücü belgelerini görmek için tıklayın" onmouseover="this.style.borderColor='rgba(34,197,94,.45)';this.style.boxShadow='0 0 0 2px rgba(34,197,94,.12)'" onmouseout="this.style.borderColor='rgba(34,197,94,.2)';this.style.boxShadow='0 0 0 1px rgba(34,197,94,.06)'">
+      <div class="stat-card-top">
+        <div class="stat-icon green">👤</div>
+        <span class="stat-trend warn" id="trend-driver-uyari" style="display:none">⚠ Belge Uyarısı</span>
+        <span class="stat-trend ok"   id="trend-driver-ok"   style="display:none">Belgeler Güncel</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:4px">
+        <div>
+          <div class="stat-value green" id="stat-driver-toplam" style="font-size:26px">0</div>
+          <div class="stat-label">Kayıtlı Sürücü</div>
+        </div>
+        <div style="width:1px;height:36px;background:var(--border);flex-shrink:0;margin-bottom:14px"></div>
+        <div>
+          <div class="stat-value red" id="stat-driver-uyari" style="font-size:26px">0</div>
+          <div class="stat-label">Belge Uyarısı</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Geçmiş: </span>
+          <span style="color:var(--red);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-driver-gecmis">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--yellow);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">30 Gün: </span>
+          <span style="color:var(--yellow);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-driver-warn">—</span>
+        </div>
+        <div style="margin-left:auto">
+          <span style="font-size:10px;color:rgba(34,197,94,.6);font-weight:600;letter-spacing:.03em">DETAY ›</span>
+        </div>
+      </div>
     </div>
 
     <!-- BAKIM / ARIZA ÖZET KARTI -->
@@ -2035,6 +2208,73 @@
           </thead>
           <tbody id="maint-history-body"></tbody>
         </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- =========================================================
+     SÜRÜCÜ BELGELERİ MODALİ
+     ========================================================= -->
+<div class="driver-modal-backdrop hidden" id="driver-modal-backdrop" onclick="closeDriverModalBackdrop(event)">
+  <div class="driver-modal">
+    <div class="driver-modal-header">
+      <div class="driver-modal-title">
+        👤 Sürücü Belge Takibi
+        <span id="driver-modal-subtitle" style="font-size:12px;font-weight:400;color:var(--muted)">— Tüm Sürücüler</span>
+      </div>
+      <button class="modal-close" onclick="closeDriverModal()">✕</button>
+    </div>
+    <div class="driver-modal-body">
+
+      <!-- Yeni sürücü formu -->
+      <div class="driver-form" id="driver-form-section">
+        <div class="driver-form-title">👤 Sürücü Ekle / Güncelle</div>
+        <div class="driver-form-grid">
+          <div class="driver-form-group">
+            <label>Ad Soyad *</label>
+            <input class="driver-inp" type="text" id="f-driver-ad" placeholder="Ad Soyad" />
+          </div>
+          <div class="driver-form-group">
+            <label>Telefon</label>
+            <input class="driver-inp" type="tel" id="f-driver-tel" placeholder="05xx xxx xx xx" />
+          </div>
+          <div class="driver-form-group">
+            <label>Araç Plakası</label>
+            <select class="driver-inp" id="f-driver-plaka">
+              <option value="">— Araç Seçin —</option>
+            </select>
+          </div>
+          <div class="driver-form-group">
+            <label>🪪 Ehliyet Bitiş</label>
+            <input class="driver-inp" type="date" id="f-driver-ehliyet" />
+          </div>
+          <div class="driver-form-group">
+            <label>📋 SRC Belgesi Bitiş</label>
+            <input class="driver-inp" type="date" id="f-driver-src" />
+          </div>
+          <div class="driver-form-group">
+            <label>🧠 Psikoteknik Bitiş</label>
+            <input class="driver-inp" type="date" id="f-driver-psiko" />
+          </div>
+          <div class="driver-form-group" style="align-self:end">
+            <button class="driver-add-btn" onclick="saveDriverEntry()">👤 + Kaydet</button>
+          </div>
+        </div>
+        <input type="hidden" id="f-driver-id" value="" />
+      </div>
+
+      <!-- Sürücü listesi başlık -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2)">SÜRÜCÜ LİSTESİ</div>
+        <span id="driver-entry-count" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface3);padding:2px 8px;border-radius:99px">0 sürücü</span>
+      </div>
+
+      <!-- Sürücü kartları -->
+      <div class="driver-list" id="driver-list">
+        <div class="driver-empty"><div class="icon">👤</div><p>Henüz sürücü eklenmedi.</p></div>
       </div>
 
     </div>
@@ -2575,6 +2815,8 @@ async function loadVehicles() {
   updateFuelSummaryPanel();
   await loadMaintData();
   updateMaintStat();
+  loadDriverDataLocal();
+  updateDriverStat();
   await renderActivityLog();
 }
 
@@ -2823,6 +3065,26 @@ function updateAlerts() {
     }
   });
 
+  // Sürücü belge uyarıları
+  driverData.forEach(d => {
+    const docMap = [
+      { iso: d.ehliyet, label: 'Ehliyet' },
+      { iso: d.src,     label: 'SRC Belgesi' },
+      { iso: d.psiko,   label: 'Psikoteknik' },
+    ];
+    docMap.forEach(({ iso, label }) => {
+      if (!iso) return;
+      const dl = daysLeft(iso);
+      if (dl !== null && dl <= 30) {
+        const cls = dl < 0 ? 'red' : 'yellow';
+        const txt = dl < 0
+          ? `${d.ad} — ${label} ${Math.abs(dl)} gün önce bitti`
+          : `${d.ad} — ${label} ${dl} gün içinde bitiyor`;
+        items.push({ cls, plate: d.ad, info: txt, days: dl });
+      }
+    });
+  });
+
   items.sort((a, b) => a.days - b.days);
 
   const badge = document.getElementById('alert-count-badge');
@@ -3002,6 +3264,7 @@ function renderTable() {
         <div class="action-btns">
           <button class="icon-btn fuel"  title="Yakıt Ekle"         onclick="openFuelModal('${v.id}')">⛽</button>
           <button class="icon-btn maint" title="Bakım / Arıza Takibi" onclick="openMaintModal('${v.id}')">🔧</button>
+          <button class="icon-btn driver" title="Sürücü Belgeleri" onclick="openDriverModalForVehicle('${v.id}')">👤</button>
           <button class="icon-btn edit"  title="Düzenle"              onclick="openModal('${v.id}')">✎</button>
           <button class="icon-btn del"  title="Sil"     onclick="deleteVehicle('${v.id}')">✕</button>
         </div>
@@ -3292,6 +3555,7 @@ function refresh() {
   renderTable();
   updateFuelStat();
   updateMaintStat();
+  updateDriverStat();
 }
 
 /* ================================================================
@@ -5670,6 +5934,259 @@ async function downloadMaintPDF() {
   showToast('Bakım Raporu PDF indirildi ✓', 'success');
 }
 
+
+/* ================================================================
+   SÜRÜCÜ BELGE TAKİP SİSTEMİ
+   ================================================================ */
+
+let driverData = []; // [ {id, ad, tel, plaka, ehliyet, src, psiko} ]
+let editingDriverId = null;
+let driverModalVehicleFilter = null; // null = tümü
+
+// ── LocalStorage ──
+function loadDriverDataLocal() {
+  try { driverData = JSON.parse(localStorage.getItem('filo_surucu') || '[]'); }
+  catch { driverData = []; }
+}
+function saveDriverDataLocal() {
+  localStorage.setItem('filo_surucu', JSON.stringify(driverData));
+}
+
+// ── Yardımcılar ──
+function driverDocStatus(iso) {
+  if (!iso) return { cls: 'empty', days: null, txt: '—' };
+  const dl = daysLeft(iso);
+  if (dl === null) return { cls: 'empty', days: null, txt: '—' };
+  if (dl < 0)  return { cls: 'overdue', days: dl, txt: Math.abs(dl) + ' gün geçti' };
+  if (dl <= 30) return { cls: 'warn',   days: dl, txt: dl + ' gün kaldı' };
+  return { cls: 'ok', days: dl, txt: dl + ' gün kaldı' };
+}
+
+function driverDocHTML(icon, label, iso) {
+  const s = driverDocStatus(iso);
+  const dateStr = iso ? fmtDate(iso) : '—';
+  return `<div class="driver-doc ${s.cls}">
+    <div class="driver-doc-icon">${icon}</div>
+    <div>
+      <div class="driver-doc-label">${label}</div>
+      <div class="driver-doc-val">${dateStr}</div>
+      <div class="driver-doc-days">${s.days !== null ? s.txt : 'Girilmemiş'}</div>
+    </div>
+  </div>`;
+}
+
+// ── Modal aç / kapat ──
+function openDriverModal() {
+  driverModalVehicleFilter = null;
+  document.getElementById('driver-modal-subtitle').textContent = '— Tüm Sürücüler';
+  _resetDriverForm();
+  _fillDriverPlacaSelect();
+  renderDriverModal();
+  document.getElementById('driver-modal-backdrop').classList.remove('hidden');
+}
+
+function openDriverModalForVehicle(vehicleId) {
+  driverModalVehicleFilter = vehicleId;
+  const v = vehicles.find(x => x.id === vehicleId);
+  document.getElementById('driver-modal-subtitle').textContent = v ? '— ' + v.plaka : '';
+  // Otomatik olarak o aracın şoförünü forma doldur
+  if (v && v.sofor) {
+    const existing = driverData.find(d => d.plaka === vehicleId || d.ad === v.sofor);
+    if (existing) {
+      _fillDriverForm(existing);
+    } else {
+      _resetDriverForm();
+      document.getElementById('f-driver-ad').value  = v.sofor || '';
+      document.getElementById('f-driver-tel').value = v.telefon || '';
+    }
+  } else {
+    _resetDriverForm();
+  }
+  _fillDriverPlacaSelect(vehicleId);
+  renderDriverModal();
+  document.getElementById('driver-modal-backdrop').classList.remove('hidden');
+}
+
+function closeDriverModal() {
+  document.getElementById('driver-modal-backdrop').classList.add('hidden');
+  driverModalVehicleFilter = null;
+  _resetDriverForm();
+}
+function closeDriverModalBackdrop(e) {
+  if (e.target === document.getElementById('driver-modal-backdrop')) closeDriverModal();
+}
+
+function _resetDriverForm() {
+  editingDriverId = null;
+  document.getElementById('f-driver-id').value    = '';
+  document.getElementById('f-driver-ad').value    = '';
+  document.getElementById('f-driver-tel').value   = '';
+  document.getElementById('f-driver-ehliyet').value = '';
+  document.getElementById('f-driver-src').value   = '';
+  document.getElementById('f-driver-psiko').value = '';
+  const btn = document.querySelector('#driver-form-section .driver-add-btn');
+  if (btn) btn.textContent = '👤 + Kaydet';
+}
+
+function _fillDriverForm(d) {
+  editingDriverId = d.id;
+  document.getElementById('f-driver-id').value      = d.id;
+  document.getElementById('f-driver-ad').value      = d.ad || '';
+  document.getElementById('f-driver-tel').value     = d.tel || '';
+  document.getElementById('f-driver-plaka').value   = d.plaka || '';
+  document.getElementById('f-driver-ehliyet').value = d.ehliyet || '';
+  document.getElementById('f-driver-src').value     = d.src || '';
+  document.getElementById('f-driver-psiko').value   = d.psiko || '';
+  const btn = document.querySelector('#driver-form-section .driver-add-btn');
+  if (btn) btn.textContent = '💾 Güncelle';
+}
+
+function _fillDriverPlacaSelect(selectedId) {
+  const sel = document.getElementById('f-driver-plaka');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Araç Seçin —</option>' +
+    vehicles.map(v => `<option value="${v.id}" ${v.id === selectedId ? 'selected' : ''}>${v.plaka}${v.sofor ? ' · ' + v.sofor : ''}</option>`).join('');
+}
+
+// ── Kaydet ──
+function saveDriverEntry() {
+  const ad     = document.getElementById('f-driver-ad').value.trim();
+  const tel    = document.getElementById('f-driver-tel').value.trim();
+  const plaka  = document.getElementById('f-driver-plaka').value;
+  const ehliyet= document.getElementById('f-driver-ehliyet').value;
+  const src    = document.getElementById('f-driver-src').value;
+  const psiko  = document.getElementById('f-driver-psiko').value;
+
+  if (!ad) { showToast('Ad Soyad zorunludur.', 'error'); return; }
+
+  if (editingDriverId) {
+    const idx = driverData.findIndex(d => d.id === editingDriverId);
+    if (idx !== -1) {
+      driverData[idx] = { ...driverData[idx], ad, tel, plaka, ehliyet, src, psiko };
+      showToast('Sürücü güncellendi ✓', 'success');
+    }
+  } else {
+    driverData.push({ id: uid(), ad, tel, plaka, ehliyet, src, psiko });
+    showToast('Sürücü eklendi ✓', 'success');
+  }
+  saveDriverDataLocal();
+  _resetDriverForm();
+  renderDriverModal();
+  updateDriverStat();
+  updateAlerts();
+}
+
+// ── Sil ──
+function deleteDriverEntry(id) {
+  if (!confirm('Bu sürücü kaydını silmek istiyor musunuz?')) return;
+  driverData = driverData.filter(d => d.id !== id);
+  saveDriverDataLocal();
+  renderDriverModal();
+  updateDriverStat();
+  updateAlerts();
+  showToast('Sürücü silindi.', 'error');
+}
+
+// ── Düzenle ──
+function editDriverEntry(id) {
+  const d = driverData.find(x => x.id === id);
+  if (!d) return;
+  _fillDriverForm(d);
+  _fillDriverPlacaSelect(d.plaka);
+  document.getElementById('driver-form-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Modal render ──
+function renderDriverModal() {
+  const list     = document.getElementById('driver-list');
+  const countEl  = document.getElementById('driver-entry-count');
+  let filtered   = driverModalVehicleFilter
+    ? driverData.filter(d => d.plaka === driverModalVehicleFilter)
+    : driverData;
+
+  if (countEl) countEl.textContent = filtered.length + ' sürücü';
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="driver-empty"><div class="icon">👤</div><p>Henüz sürücü eklenmedi. Yukarıdaki formu doldurun.</p></div>';
+    return;
+  }
+
+  // Uyarılıları üste sırala
+  filtered = filtered.slice().sort((a, b) => {
+    const worstStatus = d => {
+      const docs = [d.ehliyet, d.src, d.psiko].filter(Boolean);
+      if (docs.length === 0) return 999;
+      return Math.min(...docs.map(iso => daysLeft(iso) ?? 999));
+    };
+    return worstStatus(a) - worstStatus(b);
+  });
+
+  list.innerHTML = filtered.map(d => {
+    const veh = vehicles.find(v => v.id === d.plaka);
+    const docs = [d.ehliyet, d.src, d.psiko];
+    const statuses = docs.filter(Boolean).map(iso => driverDocStatus(iso).cls);
+    const cardCls = statuses.includes('overdue') ? 'has-overdue'
+                  : statuses.includes('warn')    ? 'has-warn' : '';
+
+    return `<div class="driver-card ${cardCls}">
+      <div class="driver-avatar">👤</div>
+      <div class="driver-info">
+        <div class="driver-name">
+          ${d.ad}
+          ${veh ? `<span class="driver-plate-badge">${veh.plaka}</span>` : ''}
+        </div>
+        <div class="driver-phone">${d.tel || 'Telefon girilmemiş'}</div>
+        <div class="driver-docs">
+          ${driverDocHTML('🪪', 'Ehliyet', d.ehliyet)}
+          ${driverDocHTML('📋', 'SRC', d.src)}
+          ${driverDocHTML('🧠', 'Psikoteknik', d.psiko)}
+        </div>
+      </div>
+      <div class="driver-actions">
+        <button class="driver-edit-btn" onclick="editDriverEntry('${d.id}')" title="Düzenle">✎</button>
+        <button class="driver-del-btn"  onclick="deleteDriverEntry('${d.id}')" title="Sil">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Ana ekran stat kartı ──
+function updateDriverStat() {
+  loadDriverDataLocal();
+  let uyari = 0, gecmis = 0, warn30 = 0;
+  driverData.forEach(d => {
+    [d.ehliyet, d.src, d.psiko].filter(Boolean).forEach(iso => {
+      const dl = daysLeft(iso);
+      if (dl === null) return;
+      if (dl < 0)     { gecmis++; uyari++; }
+      else if (dl <= 30) { warn30++; uyari++; }
+    });
+  });
+
+  const toplamEl  = document.getElementById('stat-driver-toplam');
+  const uyariEl   = document.getElementById('stat-driver-uyari');
+  const gecmisEl  = document.getElementById('stat-driver-gecmis');
+  const warnEl    = document.getElementById('stat-driver-warn');
+  const trendOk   = document.getElementById('trend-driver-ok');
+  const trendWarn = document.getElementById('trend-driver-uyari');
+
+  if (toplamEl)  toplamEl.textContent  = driverData.length;
+  if (uyariEl)   uyariEl.textContent   = uyari;
+  if (gecmisEl)  gecmisEl.textContent  = gecmis > 0 ? gecmis : '—';
+  if (warnEl)    warnEl.textContent    = warn30 > 0 ? warn30 : '—';
+
+  if (trendOk && trendWarn) {
+    if (uyari > 0) {
+      trendWarn.style.display = ''; trendOk.style.display = 'none';
+    } else if (driverData.length > 0) {
+      trendOk.style.display = '';  trendWarn.style.display = 'none';
+    } else {
+      trendOk.style.display = 'none'; trendWarn.style.display = 'none';
+    }
+  }
+}
+
+
 /* ================================================================
    BAŞLATMA
    ================================================================ */
@@ -5696,6 +6213,8 @@ checkAuth();
 // Başlangıçta yakıt verilerini yükle
 loadFuelData().then(() => { updateFuelStat(); updateFuelSummaryPanel(); renderActivityLog(); });
 loadMaintData().then(() => { updateMaintStat(); });
+loadDriverDataLocal();
+updateDriverStat();
 </script>
 </body>
 </html>
