@@ -1669,6 +1669,38 @@
       </div>
       <div class="spark-wrap" id="spark-wrap"></div>
     </div>
+
+    <!-- BAKIM / ARIZA ÖZET KARTI -->
+    <div class="stat-card" id="maint-stat-card" style="cursor:pointer;border-color:rgba(56,189,248,.2);box-shadow:0 0 0 1px rgba(56,189,248,.06)" onclick="openMaintSummaryModal()" title="Bakım / Arıza özetini görmek için tıklayın" onmouseover="this.style.borderColor='rgba(56,189,248,.45)';this.style.boxShadow='0 0 0 2px rgba(56,189,248,.12)'" onmouseout="this.style.borderColor='rgba(56,189,248,.2)';this.style.boxShadow='0 0 0 1px rgba(56,189,248,.06)'">
+      <div class="stat-card-top">
+        <div class="stat-icon blue">🔧</div>
+        <span class="stat-trend warn" id="trend-maint-gecikme" style="display:none">⚠ Gecikmiş</span>
+        <span class="stat-trend ok"  id="trend-maint-ok" style="display:none">Güncel</span>
+      </div>
+      <div class="stat-value blue" id="stat-maint-toplam">0</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="stat-label">Toplam Bakım Kaydı</div>
+        <span style="font-size:10px;color:rgba(56,189,248,.6);font-weight:600;letter-spacing:.03em">DETAY ›</span>
+      </div>
+      <!-- Mini özet satırları -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Arıza: </span>
+          <span style="color:var(--red);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-maint-ariza">0</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Maliyet: </span>
+          <span style="color:var(--green);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-maint-maliyet">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Sonraki: </span>
+          <span style="color:var(--purple);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-maint-sonraki">—</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 4b. PANEL SATIRI: Uyarılar + Durum -->
@@ -1798,6 +1830,9 @@
       <div style="display:flex;gap:8px;align-items:center">
         <button class="btn-sm" onclick="downloadFuelPDF()" title="Yakıt raporunu PDF olarak indir" style="color:var(--accent);border-color:rgba(249,115,22,.35);background:rgba(249,115,22,.06);font-weight:600">
           ⬇ Yakıt Raporu PDF
+        </button>
+        <button class="btn-sm" onclick="downloadMaintPDF()" title="Bakım/Arıza raporunu PDF olarak indir" style="color:var(--blue);border-color:rgba(56,189,248,.35);background:rgba(56,189,248,.06);font-weight:600">
+          ⬇ Bakım Raporu PDF
         </button>
         <button class="activity-clear-btn" onclick="clearActivityLog()" title="Geçmişi temizle">✕ Temizle</button>
       </div>
@@ -4729,6 +4764,7 @@ function addMaintEntry() {
   document.getElementById('f-maint-servis').value      = '';
 
   showToast('Bakım kaydı eklendi ✓', 'success');
+  updateMaintStat();
 }
 
 // ── Kayıt sil ──
@@ -4742,6 +4778,7 @@ function deleteMaintEntry(vehicleId, entryId) {
   addActivity('bakım_sil', _v?.plaka || '—', '');
   renderMaintModal();
   showToast('Kayıt silindi.', 'error');
+  updateMaintStat();
 }
 
 // ── Kayıt düzenle ──
@@ -4764,6 +4801,96 @@ function editMaintEntry(vehicleId, entryId) {
   addActivity('bakım_düzenle', _v?.plaka || '—', '');
   renderMaintModal();
   showToast('Kaydı düzenleyip "+ Kayıt Ekle" butonuna basın.', 'info');
+}
+
+// ── Ana ekran Bakım/Arıza özet kartını güncelle ──
+function updateMaintStat() {
+  // Tüm araçların bakım kayıtlarını topla
+  let toplamKayit = 0;
+  let toplamAriza = 0;
+  let toplamMaliyet = 0;
+  let enYakinSonraki = null; // en yakın gelecek bakım tarihi
+  let enYakinGecikme = null; // en yakın gecikmiş bakım
+
+  vehicles.forEach(v => {
+    const entries = maintData[v.id] || [];
+    toplamKayit += entries.length;
+    toplamAriza += entries.filter(e => e.tur === 'ariza').length;
+    toplamMaliyet += entries.reduce((s, e) => s + (e.maliyet || 0), 0);
+
+    // Sonraki bakım tarihleri — gelecekteki en yakın + gecikmiş
+    entries.filter(e => e.sonraki_tarih).forEach(e => {
+      const dl = daysLeft(e.sonraki_tarih);
+      if (dl !== null) {
+        if (dl < 0) {
+          // Gecikmiş
+          if (!enYakinGecikme || dl > enYakinGecikme.dl) enYakinGecikme = { tarih: e.sonraki_tarih, dl };
+        } else {
+          // Gelecekte
+          if (!enYakinSonraki || dl < enYakinSonraki.dl) enYakinSonraki = { tarih: e.sonraki_tarih, dl };
+        }
+      }
+    });
+  });
+
+  // Toplam kayıt
+  const statEl = document.getElementById('stat-maint-toplam');
+  if (statEl) statEl.textContent = toplamKayit.toLocaleString('tr-TR');
+
+  // Arıza sayısı
+  const arizaEl = document.getElementById('stat-maint-ariza');
+  if (arizaEl) arizaEl.textContent = toplamAriza;
+
+  // Toplam maliyet
+  const maliyetEl = document.getElementById('stat-maint-maliyet');
+  if (maliyetEl) maliyetEl.textContent = toplamMaliyet > 0
+    ? toplamMaliyet.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺'
+    : '—';
+
+  // Sonraki bakım
+  const sonrakiEl = document.getElementById('stat-maint-sonraki');
+  if (sonrakiEl) {
+    if (enYakinSonraki) {
+      const d = enYakinSonraki.dl;
+      sonrakiEl.textContent = d === 0 ? 'Bugün!' : d + ' gün';
+      sonrakiEl.style.color = d <= 7 ? 'var(--red)' : d <= 30 ? 'var(--yellow)' : 'var(--purple)';
+    } else if (enYakinGecikme) {
+      sonrakiEl.textContent = Math.abs(enYakinGecikme.dl) + ' gün geç';
+      sonrakiEl.style.color = 'var(--red)';
+    } else {
+      sonrakiEl.textContent = '—';
+      sonrakiEl.style.color = 'var(--purple)';
+    }
+  }
+
+  // Trend badge
+  const trendOk  = document.getElementById('trend-maint-ok');
+  const trendGec = document.getElementById('trend-maint-gecikme');
+  if (trendOk && trendGec) {
+    if (enYakinGecikme) {
+      trendGec.style.display = '';
+      trendOk.style.display  = 'none';
+    } else if (toplamKayit > 0) {
+      trendOk.style.display  = '';
+      trendGec.style.display = 'none';
+    } else {
+      trendOk.style.display  = 'none';
+      trendGec.style.display = 'none';
+    }
+  }
+}
+
+// ── Bakım özeti modalını aç (tüm araçlar) ──
+function openMaintSummaryModal() {
+  if (vehicles.length === 0) { showToast('Önce araç ekleyin.', 'error'); return; }
+  // Eğer tek araç varsa direkt o aracın modalını aç
+  if (vehicles.length === 1) {
+    openMaintModal(vehicles[0].id);
+    return;
+  }
+  // Araç seçim diyaloğu
+  const v = vehicles.find(vv => (maintData[vv.id]||[]).length > 0) || vehicles[0];
+  openMaintModal(v.id);
 }
 
 // ── Tür label yardımcısı ──
@@ -4888,6 +5015,378 @@ function renderMaintModal() {
 }
 
 /* ================================================================
+   BAKIM / ARIZA RAPORU PDF İNDİRME
+   ================================================================ */
+
+async function downloadMaintPDF() {
+  // Veri kontrolü
+  const allMaintEntries = [];
+  vehicles.forEach(v => {
+    const entries = (maintData[v.id] || []).map(e => ({ ...e, plaka: v.plaka, tip: v.tip || '', sofor: v.sofor || '' }));
+    allMaintEntries.push(...entries);
+  });
+
+  if (allMaintEntries.length === 0) {
+    showToast('İndirilecek bakım/arıza kaydı yok.', 'error');
+    return;
+  }
+
+  showToast('Bakım raporu hazırlanıyor…', 'info');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const PW = 210, PH = 297, ML = 14, MR = 14, CW = PW - ML - MR;
+
+  function tr(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/ş/g,'s').replace(/Ş/g,'S').replace(/ğ/g,'g').replace(/Ğ/g,'G')
+      .replace(/ü/g,'u').replace(/Ü/g,'U').replace(/ö/g,'o').replace(/Ö/g,'O')
+      .replace(/ç/g,'c').replace(/Ç/g,'C').replace(/ı/g,'i').replace(/İ/g,'I');
+  }
+
+  const LOGO_B64 = 'data:image/png;base64,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';
+
+  const C = {
+    bg:[8,12,16], surface:[17,24,32], surface2:[24,32,44], border:[37,47,62],
+    accent:[56,189,248],   // BLUE for maintenance
+    accentD:[12,74,110],
+    text:[226,234,243], text2:[168,184,204], muted:[82,96,112],
+    green:[34,197,94], yellow:[245,158,11], red:[239,68,68],
+    blue:[56,189,248], orange:[249,115,22], purple:[167,139,250], white:[255,255,255],
+  };
+
+  function setFill(c)   { doc.setFillColor(...c); }
+  function setTxt(c)    { doc.setTextColor(...c); }
+  function rect(x,y,w,h,s='F')       { doc.rect(x,y,w,h,s); }
+  function roundRect(x,y,w,h,r,s='F'){ doc.roundedRect(x,y,w,h,r,r,s); }
+
+  let pageNum = 1;
+  function addFooter() {
+    setTxt(C.muted); doc.setFontSize(8);
+    doc.text(tr('Filo Takip Sistemi - Bakim/Ariza Raporu'), ML, PH-8);
+    doc.text(tr('Sayfa ')+pageNum, PW-MR, PH-8, {align:'right'});
+    doc.text(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH-8, {align:'center'});
+    setTxt([50,62,78]); doc.setFontSize(6);
+    doc.text('created by cihanozcan app.', PW/2, PH-3, {align:'center'});
+  }
+  function newPage() {
+    addFooter(); doc.addPage(); pageNum++;
+    setFill(C.bg); rect(0,0,PW,PH);
+  }
+
+  // ── ARKA PLAN ──
+  setFill(C.bg); rect(0,0,PW,PH);
+
+  // ── HEADER BANDI ──
+  setFill(C.surface); rect(0,0,PW,42);
+  setFill(C.accent);  rect(0,0,4,42);
+  doc.addImage(LOGO_B64,'PNG',ML,7,28,28);
+  setTxt(C.white); doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.text(tr('Bakim / Ariza Raporu'), ML+32, 18);
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); setTxt(C.text2);
+  doc.text(tr('Filo Takip Sistemi  |  Tum Araclar'), ML+32, 26);
+  const dateStr = new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'});
+  setFill(C.surface2); roundRect(PW-ML-52,12,52,18,3);
+  setTxt(C.accent); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text(tr(dateStr), PW-ML-26, 22, {align:'center'});
+
+  let y = 52;
+
+  // ── GENEL ÖZET İSTATİSTİK KARTLARI ──
+  const allByVehicle = vehicles.map(v => {
+    const entries = maintData[v.id] || [];
+    return { v, entries };
+  }).filter(x => x.entries.length > 0);
+
+  const totalKayit   = allMaintEntries.length;
+  const totalAriza   = allMaintEntries.filter(e => e.tur === 'ariza').length;
+  const totalMaliyet = allMaintEntries.reduce((s,e) => s+(e.maliyet||0), 0);
+  const totalBakim   = allMaintEntries.filter(e => e.tur === 'bakim').length;
+  const totalParca   = allMaintEntries.filter(e => e.tur === 'parca').length;
+
+  // Gecikmiş bakım sayısı
+  let gecikmisSayisi = 0;
+  allMaintEntries.forEach(e => {
+    if (e.sonraki_tarih) {
+      const dl = daysLeft(e.sonraki_tarih);
+      if (dl !== null && dl < 0) gecikmisSayisi++;
+    }
+  });
+
+  const summaryCards = [
+    { label:tr('Toplam Kayit'),    value: totalKayit.toString(),    color: C.blue,   icon:'K' },
+    { label:tr('Arizа/Onarim'),    value: totalAriza.toString(),    color: C.red,    icon:'A' },
+    { label:tr('Toplam Maliyet'),  value: totalMaliyet > 0 ? totalMaliyet.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL' : '--', color: C.green, icon:'M' },
+    { label:tr('Parca Degisimi'),  value: totalParca.toString(),    color: C.yellow, icon:'P' },
+    { label:tr('Gecikmis Bakim'),  value: gecikmisSayisi.toString(),color: gecikmisSayisi>0?C.red:C.green, icon:'!' },
+    { label:tr('Aktif Arac'),      value: allByVehicle.length + ' / ' + vehicles.length, color: C.orange, icon:'V' },
+  ];
+
+  const cW = (CW - 5*2) / 6;
+  summaryCards.forEach((card, i) => {
+    const cx = ML + i*(cW+2);
+    setFill(C.surface); roundRect(cx, y, cW, 26, 2);
+    setFill(card.color); roundRect(cx, y, 3, 26, 1);
+    // İkon dairesi
+    setFill(card.color.map(x => Math.round(x*0.18)));
+    roundRect(cx+5, y+5, 14, 16, 2);
+    setTxt(card.color); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text(card.icon, cx+12, y+15, {align:'center'});
+    // Değer
+    setTxt(C.white); doc.setFontSize(9.5); doc.setFont('helvetica','bold');
+    doc.text(card.value, cx+22, y+12);
+    // Etiket
+    setTxt(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(card.label.toUpperCase(), cx+22, y+20);
+  });
+  y += 34;
+
+  // ── ARIZA TÜRÜ DAĞILIMI ÇUBUĞU ──
+  if (y + 18 > PH - 30) { newPage(); y = 20; }
+  setTxt(C.accent); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(tr('Tur Dagilimi'), ML, y); y += 6;
+
+  const turList = [
+    { key:'bakim',   label:tr('Periyodik Bakim'), color:C.blue,   count: allMaintEntries.filter(e=>e.tur==='bakim').length },
+    { key:'ariza',   label:tr('Ariza/Onarim'),    color:C.red,    count: totalAriza },
+    { key:'parca',   label:tr('Parca Degisimi'),  color:C.yellow, count: totalParca },
+    { key:'muayene', label:tr('Muayene'),          color:C.green,  count: allMaintEntries.filter(e=>e.tur==='muayene').length },
+    { key:'diger',   label:tr('Diger'),            color:C.muted,  count: allMaintEntries.filter(e=>e.tur==='diger').length },
+  ].filter(t => t.count > 0);
+
+  const maxCount = Math.max(...turList.map(t=>t.count), 1);
+  turList.forEach(t => {
+    if (y + 8 > PH - 20) { newPage(); y = 20; }
+    setTxt(t.color); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text(t.label, ML, y+5);
+    const barX = ML + 48;
+    const barW = CW - 48 - 22;
+    setFill(C.surface2); rect(barX, y, barW, 6);
+    const fillW = Math.max(2, (t.count/maxCount)*barW);
+    setFill(t.color); rect(barX, y, fillW, 6);
+    setTxt(C.text2); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.text(t.count.toString(), barX+barW+3, y+5);
+    y += 9;
+  });
+  y += 6;
+
+  // ── ARAÇ BAZLI ÖZET TABLO ──
+  if (y + 20 > PH - 30) { newPage(); y = 20; }
+  setTxt(C.accent); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(tr('Arac Bazli Bakim Ozeti'), ML, y); y += 6;
+
+  const vCols = [
+    { label:tr('Plaka'),      w:30 },
+    { label:tr('Tip'),        w:25 },
+    { label:tr('Kayit'),      w:18 },
+    { label:tr('Ariza'),      w:16 },
+    { label:tr('Toplam TL'),  w:32 },
+    { label:tr('Bu Yil TL'), w:30 },
+    { label:tr('Sonraki Bakim'), w:CW-151 },
+  ];
+  setFill(C.surface2); rect(ML, y, CW, 8);
+  setFill(C.accent); rect(ML, y, CW, 0.8); rect(ML, y+7.2, CW, 0.8);
+  setTxt(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+  let hx = ML+2;
+  vCols.forEach(col => { doc.text(col.label.toUpperCase(), hx, y+5.5); hx += col.w; });
+  y += 9;
+
+  const buYil = new Date().getFullYear().toString();
+  vehicles.forEach((v, vi) => {
+    if (y > PH - 20) { newPage(); y = 20; }
+    const entries = (maintData[v.id] || []);
+    if (entries.length === 0) return;
+    const vAriza   = entries.filter(e=>e.tur==='ariza').length;
+    const vMaliyet = entries.reduce((s,e)=>s+(e.maliyet||0),0);
+    const vBuYilM  = entries.filter(e=>e.tarih&&e.tarih.startsWith(buYil)).reduce((s,e)=>s+(e.maliyet||0),0);
+    const planlı   = entries.filter(e=>e.sonraki_tarih).sort((a,b)=>a.sonraki_tarih.localeCompare(b.sonraki_tarih));
+    const nextBakim = planlı.length > 0 ? planlı[0] : null;
+
+    setFill(vi%2===0 ? C.surface : C.bg); rect(ML, y, CW, 7.5);
+    let rx = ML+2;
+    setTxt(C.accent); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text(tr(v.plaka||'—'), rx, y+5); rx += vCols[0].w;
+    setTxt(C.text2); doc.setFont('helvetica','normal');
+    doc.text(tr(v.tip||'—'), rx, y+5); rx += vCols[1].w;
+    setTxt(C.blue);
+    doc.text(entries.length.toString(), rx, y+5); rx += vCols[2].w;
+    setTxt(vAriza>0?C.red:C.muted);
+    doc.text(vAriza.toString(), rx, y+5); rx += vCols[3].w;
+    setTxt(C.green);
+    doc.text(vMaliyet>0?vMaliyet.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—', rx, y+5); rx += vCols[4].w;
+    setTxt(C.yellow);
+    doc.text(vBuYilM>0?vBuYilM.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—', rx, y+5); rx += vCols[5].w;
+    if (nextBakim) {
+      const dl = daysLeft(nextBakim.sonraki_tarih);
+      const clr = dl===null?C.muted:(dl<0?C.red:dl<=30?C.yellow:C.green);
+      setTxt(clr);
+      const dlTxt = dl===null?'—':(dl<0?Math.abs(dl)+' gun gec':dl===0?'Bugun':dl+' gun');
+      doc.text(tr(nextBakim.sonraki_tarih.split('-').reverse().join('.'))+' ('+dlTxt+')', rx, y+5);
+    } else {
+      setTxt(C.muted); doc.text('—', rx, y+5);
+    }
+    y += 7.5;
+  });
+  setFill(C.border); rect(ML, y, CW, 0.5);
+  y += 10;
+
+  // ── AYLIK BAKIM MALİYET GRAFİĞİ ──
+  if (y + 60 > PH - 30) { newPage(); y = 20; }
+  const now2 = new Date();
+  const months12 = [];
+  for (let i=11; i>=0; i--) {
+    const d = new Date(now2.getFullYear(), now2.getMonth()-i, 1);
+    months12.push({ key: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), d });
+  }
+  const monthMaliyet = {}; const monthKayit = {};
+  months12.forEach(m => { monthMaliyet[m.key]=0; monthKayit[m.key]=0; });
+  allMaintEntries.forEach(e => {
+    const mk = e.tarih?e.tarih.slice(0,7):'';
+    if (mk in monthMaliyet) { monthMaliyet[mk]+=(e.maliyet||0); monthKayit[mk]++; }
+  });
+
+  const chartCanvas = document.createElement('canvas');
+  chartCanvas.width=900; chartCanvas.height=300; document.body.appendChild(chartCanvas);
+  const labels = months12.map(m=>m.d.toLocaleDateString('tr-TR',{month:'short',year:'2-digit'}));
+  const chartInst = new Chart(chartCanvas, {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        { label:tr('Maliyet (TL)'), data:months12.map(m=>+(monthMaliyet[m.key]||0).toFixed(0)),
+          backgroundColor:'rgba(56,189,248,0.7)', borderColor:'rgba(56,189,248,1)', borderWidth:1.5, borderRadius:4, yAxisID:'y' },
+        { label:tr('Kayit Sayisi'), data:months12.map(m=>monthKayit[m.key]||0),
+          type:'line', borderColor:'rgba(249,115,22,1)', backgroundColor:'rgba(249,115,22,0.08)',
+          borderWidth:2, pointBackgroundColor:'rgba(249,115,22,1)', pointRadius:4, fill:true, tension:0.35, yAxisID:'y2' }
+      ]
+    },
+    options:{
+      responsive:false, animation:false,
+      plugins:{legend:{labels:{color:'#a8b8cc',font:{size:10}}}},
+      scales:{
+        x:{ticks:{color:'#a8b8cc',font:{size:9}},grid:{color:'rgba(255,255,255,0.06)'}},
+        y:{ticks:{color:'#38bdf8',font:{size:9}},grid:{color:'rgba(255,255,255,0.06)'},title:{display:true,text:'Maliyet (TL)',color:'#38bdf8',font:{size:9}}},
+        y2:{position:'right',ticks:{color:'#f97316',font:{size:9}},grid:{drawOnChartArea:false},title:{display:true,text:'Kayit',color:'#f97316',font:{size:9}}}
+      }
+    }
+  });
+
+  setTxt(C.accent); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(tr('Aylik Bakim Maliyeti ve Kayit Sayisi (Son 12 Ay)'), ML, y); y += 5;
+  await new Promise(res=>setTimeout(res,220));
+  const chartImg = chartCanvas.toDataURL('image/png');
+  const chartH = Math.min(65, PH-y-30);
+  doc.addImage(chartImg,'PNG',ML,y,CW,chartH);
+  y += chartH+8;
+  chartInst.destroy(); chartCanvas.remove();
+
+  // ── ARAÇ BAZLI DETAY TABLOLARI ──
+  const turColors = { bakim:C.blue, ariza:C.red, parca:C.yellow, muayene:C.green, diger:C.muted };
+  const turLabels = { bakim:tr('Periyodik Bakim'), ariza:tr('Ariza/Onarim'), parca:tr('Parca Degisimi'), muayene:tr('Muayene'), diger:tr('Diger') };
+  const dCols = [
+    { label:tr('Tarih'),        w:24 },
+    { label:tr('Tur'),          w:30 },
+    { label:tr('KM'),           w:24 },
+    { label:tr('Maliyet (TL)'), w:28 },
+    { label:tr('Sonraki Tarih'),w:26 },
+    { label:tr('Sonraki KM'),   w:26 },
+    { label:tr('Servis'),       w:28 },
+    { label:tr('Aciklama'),     w:CW-186 },
+  ];
+
+  function drawDHeader(yy) {
+    setFill(C.surface2); rect(ML, yy, CW, 7.5);
+    setFill(C.accent); rect(ML, yy, CW, 0.7); rect(ML, yy+6.8, CW, 0.7);
+    setTxt(C.muted); doc.setFontSize(6); doc.setFont('helvetica','bold');
+    let hxx=ML+2; dCols.forEach(dc=>{ doc.text(dc.label.toUpperCase(),hxx,yy+5.2); hxx+=dc.w; });
+    return yy+8.5;
+  }
+
+  for (const v of vehicles) {
+    const entries = (maintData[v.id]||[]).slice().sort((a,b)=>(a.tarih||'').localeCompare(b.tarih||''));
+    if (entries.length===0) continue;
+
+    newPage(); y=18;
+
+    // Araç başlık bandı
+    setFill(C.surface); roundRect(ML, y, CW, 14, 3);
+    setFill(C.accent); roundRect(ML, y, 3, 14, 1);
+    setTxt(C.accent); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text(tr(v.plaka||'—'), ML+7, y+9.5);
+    setTxt(C.text2); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(tr([v.tip, v.sofor].filter(Boolean).join('  ·  ')), ML+38, y+9.5);
+    y += 18;
+
+    // Araç mini özet kartları
+    const vToplam  = entries.length;
+    const vAriza   = entries.filter(e=>e.tur==='ariza').length;
+    const vMaliyet = entries.reduce((s,e)=>s+(e.maliyet||0),0);
+    const vBuYilM  = entries.filter(e=>e.tarih&&e.tarih.startsWith(buYil)).reduce((s,e)=>s+(e.maliyet||0),0);
+    const vPlanlı  = entries.filter(e=>e.sonraki_tarih).sort((a,b)=>a.sonraki_tarih.localeCompare(b.sonraki_tarih));
+    const vSonraki = vPlanlı.length>0?vPlanlı[0]:null;
+    const vDL      = vSonraki?daysLeft(vSonraki.sonraki_tarih):null;
+
+    const mCards = [
+      { l:tr('Toplam Kayit'),  v:vToplam.toString(),      c:C.blue },
+      { l:tr('Ariza'),         v:vAriza.toString(),        c:vAriza>0?C.red:C.muted },
+      { l:tr('Toplam Maliyet'),v:vMaliyet>0?vMaliyet.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—', c:C.green },
+      { l:tr('Bu Yil Maliyet'),v:vBuYilM>0?vBuYilM.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—', c:C.yellow },
+      { l:tr('Sonraki Bakim'), v:vSonraki?(vDL<0?Math.abs(vDL)+' gun gec':vDL===0?'Bugun':vDL+' gun'):'—',
+        c:vSonraki?(vDL<0?C.red:vDL<=30?C.yellow:C.green):C.muted },
+    ];
+    const mcW=(CW-4*2)/5;
+    mCards.forEach((mc,mi)=>{
+      const mx=ML+mi*(mcW+2);
+      setFill(C.surface2); roundRect(mx,y,mcW,16,2);
+      setTxt(mc.c); doc.setFontSize(9); doc.setFont('helvetica','bold');
+      doc.text(mc.v, mx+mcW/2, y+7.5, {align:'center'});
+      setTxt(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+      doc.text(mc.l.toUpperCase(), mx+mcW/2, y+13, {align:'center'});
+    });
+    y += 22;
+
+    // Tablo
+    setTxt(C.accent); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(tr('Kayit Gecmisi'), ML, y); y += 5;
+    y = drawDHeader(y);
+
+    entries.forEach((e, ei) => {
+      if (y > PH-18) { newPage(); y=15; y=drawDHeader(y); }
+      setFill(ei%2===0?C.surface:C.bg); rect(ML, y, CW, 6.5);
+      doc.setFontSize(6.8); doc.setFont('helvetica','normal');
+      let rx=ML+2;
+      const turColor = turColors[e.tur]||C.muted;
+      setTxt(C.text2); doc.text(e.tarih?e.tarih.split('-').reverse().join('.'):'—', rx, y+4.5); rx+=dCols[0].w;
+      setTxt(turColor); doc.setFont('helvetica','bold');
+      doc.text(turLabels[e.tur]||tr(e.tur||'—'), rx, y+4.5); rx+=dCols[1].w;
+      setTxt(C.text2); doc.setFont('helvetica','normal');
+      doc.text(e.km?e.km.toLocaleString('tr-TR')+' km':'—', rx, y+4.5); rx+=dCols[2].w;
+      setTxt(C.green);
+      doc.text(e.maliyet>0?e.maliyet.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—', rx, y+4.5); rx+=dCols[3].w;
+      if (e.sonraki_tarih) {
+        const dl2=daysLeft(e.sonraki_tarih);
+        setTxt(dl2<0?C.red:dl2<=30?C.yellow:C.green);
+        doc.text(e.sonraki_tarih.split('-').reverse().join('.'), rx, y+4.5);
+      } else { setTxt(C.muted); doc.text('—', rx, y+4.5); }
+      rx+=dCols[4].w;
+      setTxt(C.blue);
+      doc.text(e.sonraki_km?e.sonraki_km.toLocaleString('tr-TR')+' km':'—', rx, y+4.5); rx+=dCols[5].w;
+      setTxt(C.text2);
+      doc.text(tr((e.servis||'').slice(0,18)), rx, y+4.5); rx+=dCols[6].w;
+      setTxt(C.muted);
+      doc.text(tr((e.aciklama||'').slice(0,30)), rx, y+4.5);
+      y+=6.5;
+    });
+    setFill(C.border); rect(ML, y, CW, 0.5);
+  }
+
+  addFooter();
+  doc.save('bakim_ariza_raporu_' + new Date().toISOString().slice(0,10) + '.pdf');
+  showToast('Bakım Raporu PDF indirildi ✓', 'success');
+}
+
+/* ================================================================
    BAŞLATMA
    ================================================================ */
 // ── Mobil menü ──
@@ -4912,7 +5411,7 @@ checkAuth();
 
 // Başlangıçta yakıt verilerini yükle
 loadFuelData().then(() => { updateFuelStat(); updateFuelSummaryPanel(); renderActivityLog(); });
-loadMaintData();
+loadMaintData().then(() => { updateMaintStat(); });
 </script>
 </body>
 </html>
