@@ -6847,12 +6847,76 @@ loadMasrafData();
    ================================================================ */
 let seferData = [];
 
-function loadSeferData() {
+async function loadSeferData() {
+  // Önce localStorage'dan yükle (anlık gösterim için)
   try { seferData = JSON.parse(localStorage.getItem('filo_sefer') || '[]'); }
   catch { seferData = []; }
+
+  if (isLocalMode()) { updateSeferStat(); return; }
+
+  try {
+    const res = await fetch(sbUrl('seferler?select=*&order=tarih.desc'), { headers: sbHeaders() });
+    if (!res.ok) throw new Error('Seferler yüklenemedi: ' + res.status);
+    const rows = await res.json();
+    seferData = rows.map(r => ({
+      id      : r.id,
+      tarih   : r.tarih,
+      aracId  : r.arac_id || '',
+      plaka   : r.plaka   || '',
+      sofor   : r.sofor   || '',
+      kalkis  : r.kalkis  || '',
+      varis   : r.varis   || '',
+      km      : r.km      || 0,
+      yuk     : r.yuk     || '',
+      ucret   : r.ucret   || 0,
+      not     : r.notlar  || '',
+    }));
+    localStorage.setItem('filo_sefer', JSON.stringify(seferData));
+  } catch (err) {
+    console.warn('Seferler Supabase hatası, localStorage kullanılıyor:', err);
+  }
   updateSeferStat();
 }
-function saveSeferData() { localStorage.setItem('filo_sefer', JSON.stringify(seferData)); }
+
+async function saveSeferData() {
+  localStorage.setItem('filo_sefer', JSON.stringify(seferData));
+}
+
+async function saveSeferEntryCloud(entry) {
+  if (isLocalMode()) return;
+  try {
+    const { data: { user } } = await getSB().auth.getUser();
+    if (!user) return;
+    const row = {
+      id      : entry.id,
+      user_id : user.id,
+      firma_id: currentFirmaId || null,
+      tarih   : entry.tarih,
+      arac_id : entry.aracId  || null,
+      plaka   : entry.plaka   || null,
+      sofor   : entry.sofor   || null,
+      kalkis  : entry.kalkis,
+      varis   : entry.varis,
+      km      : entry.km      || null,
+      yuk     : entry.yuk     || null,
+      ucret   : entry.ucret   || null,
+      notlar  : entry.not     || null,
+    };
+    const res = await fetch(sbUrl('seferler'), {
+      method : 'POST',
+      headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body   : JSON.stringify(row)
+    });
+    if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  } catch (err) { console.error('Sefer buluta kaydedilemedi:', err); showToast('Sefer yerel kaydedildi (bulut hatası).', 'error'); }
+}
+
+async function deleteSeferEntryCloud(id) {
+  if (isLocalMode()) return;
+  try {
+    await fetch(sbUrl('seferler?id=eq.' + id), { method: 'DELETE', headers: sbHeaders() });
+  } catch (err) { console.error('Sefer buluttan silinemedi:', err); }
+}
 
 function openSeferModal() {
   _fillSeferAracSelect();
@@ -6902,7 +6966,9 @@ function saveSeferEntry() {
   if(eid) { const i=seferData.findIndex(s=>s.id===eid); if(i!==-1) seferData[i]=entry; }
   else seferData.push(entry);
 
-  saveSeferData(); updateSeferStat();
+  saveSeferData();
+  saveSeferEntryCloud(entry);
+  updateSeferStat();
   document.getElementById('f-sefer-id').value='';
   // formu sıfırla
   ['f-sefer-arac','f-sefer-sofor','f-sefer-kalkis','f-sefer-varis','f-sefer-km','f-sefer-yuk','f-sefer-ucret','f-sefer-not'].forEach(id=>{
@@ -6915,7 +6981,9 @@ function saveSeferEntry() {
 function deleteSeferEntry(id) {
   if(!confirm('Bu sefer kaydını silmek istiyor musunuz?')) return;
   seferData = seferData.filter(s=>s.id!==id);
-  saveSeferData(); updateSeferStat(); renderSeferTable(); renderSeferStats();
+  saveSeferData();
+  deleteSeferEntryCloud(id);
+  updateSeferStat(); renderSeferTable(); renderSeferStats();
   showToast('Sefer silindi.','error');
 }
 
@@ -6997,12 +7065,69 @@ function updateSeferStat() {
    ================================================================ */
 let masrafData = [];
 
-function loadMasrafData() {
+async function loadMasrafData() {
   try { masrafData = JSON.parse(localStorage.getItem('filo_masraf') || '[]'); }
   catch { masrafData = []; }
+
+  if (isLocalMode()) { updateMasrafStat(); return; }
+
+  try {
+    const res = await fetch(sbUrl('masraflar?select=*&order=tarih.desc'), { headers: sbHeaders() });
+    if (!res.ok) throw new Error('Masraflar yüklenemedi: ' + res.status);
+    const rows = await res.json();
+    masrafData = rows.map(r => ({
+      id       : r.id,
+      tarih    : r.tarih,
+      aracId   : r.arac_id   || '',
+      plaka    : r.plaka     || 'Genel',
+      kategori : r.kategori  || '',
+      tutar    : r.tutar     || 0,
+      makbuz   : r.makbuz    || '',
+      aciklama : r.aciklama  || '',
+    }));
+    localStorage.setItem('filo_masraf', JSON.stringify(masrafData));
+  } catch (err) {
+    console.warn('Masraflar Supabase hatası, localStorage kullanılıyor:', err);
+  }
   updateMasrafStat();
 }
-function saveMasrafData() { localStorage.setItem('filo_masraf', JSON.stringify(masrafData)); }
+
+async function saveMasrafData() {
+  localStorage.setItem('filo_masraf', JSON.stringify(masrafData));
+}
+
+async function saveMasrafEntryCloud(entry) {
+  if (isLocalMode()) return;
+  try {
+    const { data: { user } } = await getSB().auth.getUser();
+    if (!user) return;
+    const row = {
+      id       : entry.id,
+      user_id  : user.id,
+      firma_id : currentFirmaId || null,
+      tarih    : entry.tarih,
+      arac_id  : entry.aracId  || null,
+      plaka    : entry.plaka   || null,
+      kategori : entry.kategori,
+      tutar    : entry.tutar,
+      makbuz   : entry.makbuz  || null,
+      aciklama : entry.aciklama|| null,
+    };
+    const res = await fetch(sbUrl('masraflar'), {
+      method : 'POST',
+      headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body   : JSON.stringify(row)
+    });
+    if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  } catch (err) { console.error('Masraf buluta kaydedilemedi:', err); showToast('Masraf yerel kaydedildi (bulut hatası).', 'error'); }
+}
+
+async function deleteMasrafEntryCloud(id) {
+  if (isLocalMode()) return;
+  try {
+    await fetch(sbUrl('masraflar?id=eq.' + id), { method: 'DELETE', headers: sbHeaders() });
+  } catch (err) { console.error('Masraf buluttan silinemedi:', err); }
+}
 
 function openMasrafModal() {
   _fillMasrafAracSelect();
@@ -7049,7 +7174,9 @@ function saveMasrafEntry() {
   if(eid) { const i=masrafData.findIndex(m=>m.id===eid); if(i!==-1) masrafData[i]=entry; }
   else masrafData.push(entry);
 
-  saveMasrafData(); updateMasrafStat();
+  saveMasrafData();
+  saveMasrafEntryCloud(entry);
+  updateMasrafStat();
   document.getElementById('f-masraf-id').value='';
   ['f-masraf-arac','f-masraf-kategori','f-masraf-tutar','f-masraf-makbuz','f-masraf-aciklama'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
@@ -7061,7 +7188,9 @@ function saveMasrafEntry() {
 function deleteMasrafEntry(id) {
   if(!confirm('Bu masraf kaydını silmek istiyor musunuz?')) return;
   masrafData = masrafData.filter(m=>m.id!==id);
-  saveMasrafData(); updateMasrafStat(); renderMasrafTable(); renderMasrafStats();
+  saveMasrafData();
+  deleteMasrafEntryCloud(id);
+  updateMasrafStat(); renderMasrafTable(); renderMasrafStats();
   showToast('Masraf silindi.','error');
 }
 
