@@ -2574,6 +2574,7 @@ async function loadVehicles() {
   updateFuelStat();
   updateFuelSummaryPanel();
   await loadMaintData();
+  updateMaintStat();
   await renderActivityLog();
 }
 
@@ -3290,6 +3291,7 @@ function refresh() {
   updateAlerts();
   renderTable();
   updateFuelStat();
+  updateMaintStat();
 }
 
 /* ================================================================
