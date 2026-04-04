@@ -548,6 +548,11 @@
   }
   .activity-clear-btn:hover { color: var(--red); background: rgba(239,68,68,.08); }
 
+  /* Masaüstünde gizli, mobilde gösterilecek elemanlar */
+  #mob-menu-btn { display: none; }
+  #mob-menu { display: none; }
+  #mob-card-list { display: none; }
+
   /* ── GİRİŞ ──────────────────────────────────────────────── */
   #login-overlay {
     position: fixed; inset: 0; z-index: 1000;
@@ -564,6 +569,11 @@
     width: 100%; max-width: 400px;
     text-align: center;
     box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(249,115,22,.08);
+  }
+  @media (max-width: 480px) {
+    .login-card { padding: 36px 24px; border-radius: 16px; }
+    .login-title { font-size: 20px; }
+    #login-overlay { padding: 16px; align-items: center; }
   }
 
   .login-logo {
@@ -942,9 +952,11 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
   }
-  .date-cell.expired { color: var(--red); }
-  .date-cell.warn    { color: var(--yellow); }
-  .date-cell.ok      { color: var(--text2); }
+  .date-cell.expired, .mob-card-value.expired { color: var(--red); }
+  .date-cell.warn,    .mob-card-value.warn    { color: var(--yellow); }
+  .date-cell.ok,      .mob-card-value.ok      { color: var(--text2); }
+  .mob-card-value.red    { color: var(--red); }
+  .mob-card-value.yellow { color: var(--yellow); }
 
   .days-cell {
     font-family: 'JetBrains Mono', monospace;
@@ -1049,13 +1061,211 @@
   }
 
   /* ── RESPONSIVE ─────────────────────────────────────────── */
+  /* ══════════════════════════════════════════════════════════
+     MOBİL RESPONSIVE — 768px ve altı
+     ══════════════════════════════════════════════════════════ */
   @media (max-width: 768px) {
-    header { padding: 0 16px; }
-    main   { padding: 16px; }
-    .table-wrap { overflow-x: auto; }
-    table  { min-width: 860px; }
+
+    /* ── Header ── */
+    header {
+      padding: 0 14px;
+      height: 54px;
+    }
     .header-subtitle { display: none; }
     .header-divider  { display: none; }
+    .header-logo span { font-size: 14px; }
+
+    /* Masaüstü butonlarını gizle — hamburger menü gösterilecek */
+    .header-actions .btn-sm:not(.mob-visible) { display: none; }
+
+    /* Hamburger butonu */
+    #mob-menu-btn {
+      display: flex;
+      width: 36px; height: 36px; border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text2); cursor: pointer;
+      align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+
+    /* Mobil dropdown menü */
+    #mob-menu {
+      position: fixed;
+      top: 54px; right: 0;
+      width: 220px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-top: none;
+      border-radius: 0 0 0 14px;
+      z-index: 200;
+      padding: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: 0 12px 32px rgba(0,0,0,.5);
+    }
+    #mob-menu.open { display: flex; }
+    #mob-menu .btn-sm {
+      display: flex !important;
+      width: 100%; text-align: left;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    /* Araç ekle butonu her zaman görünür */
+    .header-actions .btn-sm.accent {
+      display: inline-flex !important;
+      padding: 7px 11px;
+      font-size: 12px;
+    }
+
+    /* ── Ana içerik ── */
+    main { padding: 12px 12px 80px; }
+
+    /* ── Stat kartlar — 2 sütun ── */
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .stat-card { padding: 13px 14px; }
+    .stat-value { font-size: 24px; }
+    .stat-card-top { margin-bottom: 10px; }
+
+    /* ── Panel satırı — tek sütun ── */
+    .panel-row { gap: 10px; margin-bottom: 14px; }
+
+    /* ── Tablo bölümü — kartlar görünümü ── */
+    .table-section .table-toolbar {
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toolbar-left { flex-direction: column; gap: 8px; width: 100%; }
+    .search-wrap { min-width: unset; width: 100%; }
+    .search-wrap input { font-size: 14px; }
+    .filter-tabs { gap: 5px; }
+    .tab { padding: 6px 11px; font-size: 11.5px; }
+
+    /* Tablo → gizle, kart listesi → göster */
+    .table-wrap { display: none; }
+    #mob-card-list { display: block; }
+
+    /* ── Mobil araç kartları ── */
+    .mob-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      transition: border-color .15s;
+    }
+    .mob-card:last-child { margin-bottom: 0; }
+    .mob-card-header {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .mob-card-plaka {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px; font-weight: 700;
+      color: var(--text);
+    }
+    .mob-card-meta {
+      display: flex; align-items: center; gap: 7px;
+      flex-wrap: wrap;
+    }
+    .mob-card-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px 10px;
+      margin-bottom: 12px;
+    }
+    .mob-card-field { display: flex; flex-direction: column; gap: 2px; }
+    .mob-card-label {
+      font-size: 10px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .mob-card-value {
+      font-size: 12.5px; color: var(--text2);
+    }
+    .mob-card-value.mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; font-weight: 600;
+    }
+    .mob-card-days {
+      display: inline-flex; align-items: center;
+      gap: 4px; font-size: 12px; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .mob-card-days.red    { color: var(--red); }
+    .mob-card-days.yellow { color: var(--yellow); }
+    .mob-card-days.green  { color: var(--green); }
+    .mob-card-actions {
+      display: flex; gap: 7px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .mob-card-actions .icon-btn {
+      flex: 1; height: 36px; border-radius: 9px;
+      font-size: 14px;
+    }
+    .mob-card-actions .icon-btn span {
+      font-size: 10.5px; font-weight: 600; margin-left: 3px;
+    }
+
+    /* ── Modaller — tam ekran ── */
+    .modal-backdrop,
+    .fuel-modal-backdrop,
+    .maint-modal-backdrop,
+    .vehicle-select-backdrop { padding: 0; align-items: flex-end; }
+
+    .modal,
+    .fuel-modal,
+    .maint-modal,
+    .vehicle-select-modal {
+      max-width: 100% !important;
+      width: 100% !important;
+      max-height: 95vh;
+      border-radius: 20px 20px 0 0 !important;
+    }
+
+    .modal-header,
+    .fuel-modal-header,
+    .maint-modal-header,
+    .vehicle-select-header { border-radius: 20px 20px 0 0 !important; }
+
+    /* Modal form grid — tek sütun */
+    .form-grid { grid-template-columns: 1fr !important; }
+    .fuel-form-grid { grid-template-columns: 1fr 1fr !important; }
+    .maint-form-grid { grid-template-columns: 1fr 1fr !important; }
+    .maint-form-group.full { grid-column: 1 / -1; }
+
+    /* Fuel özet kartlar — küçült */
+    .fuel-stats { grid-template-columns: repeat(3,1fr); }
+    .fuel-stat-val { font-size: 16px; }
+    .maint-stats { grid-template-columns: repeat(3,1fr); }
+    .maint-stat-val { font-size: 16px; }
+
+    /* ── Son düzenlemeler paneli ── */
+    .activity-panel .panel-header {
+      flex-wrap: wrap; gap: 8px;
+    }
+    .activity-panel .panel-header > div {
+      flex-wrap: wrap; gap: 6px;
+    }
+  }
+
+  /* ── Çok küçük ekranlar (≤ 380px) ── */
+  @media (max-width: 380px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat-value { font-size: 21px; }
+    .mob-card-body { grid-template-columns: 1fr; }
+    .fuel-form-grid { grid-template-columns: 1fr !important; }
+    .maint-form-grid { grid-template-columns: 1fr !important; }
+    .fuel-stats { grid-template-columns: repeat(2,1fr); }
+    .maint-stats { grid-template-columns: repeat(2,1fr); }
   }
 
   /* ── ARAÇ SEÇİM MODALİ ─────────────────────────────────── */
@@ -1362,8 +1572,23 @@
     <button class="btn-sm danger" onclick="confirmReset()" title="Tüm verileri sil">⊘ Sıfırla</button>
     <button class="btn-sm accent" onclick="openModal()">+ Araç Ekle</button>
     <button class="btn-sm danger" onclick="doLogout()" title="Çıkış Yap">Çıkış</button>
+    <!-- Mobil hamburger -->
+    <button id="mob-menu-btn" onclick="toggleMobMenu()" title="Menü">☰</button>
   </div>
 </header>
+<!-- Mobil dropdown menü -->
+<div id="mob-menu">
+  <button class="btn-sm accent" onclick="openModal();closeMobMenu()">+ Araç Ekle</button>
+  <button class="btn-sm" onclick="openFuelSummary();closeMobMenu()">⛽ Yakıt Yönetimi</button>
+  <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+  <button class="btn-sm" onclick="exportJSON();closeMobMenu()">⬇ Dışa Aktar</button>
+  <label class="btn-sm" style="cursor:pointer">
+    ⬆ İçe Aktar<input type="file" accept=".json" style="display:none" onchange="importJSON(this);closeMobMenu()" />
+  </label>
+  <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+  <button class="btn-sm danger" onclick="confirmReset();closeMobMenu()">⊘ Sıfırla</button>
+  <button class="btn-sm danger" onclick="doLogout()">Çıkış Yap</button>
+</div>
 
 <!-- =========================================================
      BÖLÜM 4: ANA İÇERİK
@@ -1507,6 +1732,8 @@
 
   <!-- 4c. ARAÇ TABLOSU -->
   <div class="table-section">
+  <!-- Mobil kart listesi (tablo yerine) -->
+  <div id="mob-card-list"></div>
     <div class="table-toolbar">
       <div class="toolbar-left">
         <div class="search-wrap">
@@ -2515,6 +2742,48 @@ function renderTable() {
 
   const countEl = document.getElementById('table-count');
   if (countEl) countEl.textContent = list.length + ' araç';
+
+  // ── Mobil kart render ──
+  const mobList = document.getElementById('mob-card-list');
+  if (mobList) {
+    if (list.length === 0) {
+      mobList.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Sonuç bulunamadı</p></div>';
+    } else {
+      mobList.innerHTML = list.map(v => {
+        const md   = minDaysLeft(v);
+        const cls  = colorClass(md);
+        const days = md === null ? '—' : (md < 0 ? Math.abs(md) + ' gün geçti' : md + ' gün kaldı');
+        const muayeneCls = v.muayene ? colorClass(daysLeft(v.muayene)) : '';
+        const sigortaCls = v.sigorta ? colorClass(daysLeft(v.sigorta)) : '';
+        return `
+        <div class="mob-card">
+          <div class="mob-card-header">
+            <div class="mob-card-meta">
+              <span class="mob-card-plaka">${v.plaka || '—'}</span>
+              ${tipBadge(v.tip)}
+              ${statusBadge(v.durum)}
+            </div>
+            ${md !== null ? `<span class="mob-card-days ${cls}">⏱ ${days}</span>` : ''}
+          </div>
+          <div class="mob-card-body">
+            ${v.sofor ? `<div class="mob-card-field"><span class="mob-card-label">Şoför</span><span class="mob-card-value">${v.sofor}</span></div>` : ''}
+            ${v.telefon ? `<div class="mob-card-field"><span class="mob-card-label">Telefon</span><span class="mob-card-value mono">${v.telefon}</span></div>` : ''}
+            ${v.esleme ? `<div class="mob-card-field"><span class="mob-card-label">Eşleşme</span><span class="mob-card-value mono">${v.esleme}</span></div>` : ''}
+            <div class="mob-card-field"><span class="mob-card-label">Muayene</span><span class="mob-card-value mono ${muayeneCls}">${fmtDate(v.muayene)}</span></div>
+            <div class="mob-card-field"><span class="mob-card-label">Sigorta</span><span class="mob-card-value mono ${sigortaCls}">${fmtDate(v.sigorta)}</span></div>
+            <div class="mob-card-field"><span class="mob-card-label">Takograf</span><span class="mob-card-value mono">${fmtDate(v.takograf)}</span></div>
+            ${v.notlar ? `<div class="mob-card-field" style="grid-column:1/-1"><span class="mob-card-label">Not</span><span class="mob-card-value" style="white-space:normal">${v.notlar}</span></div>` : ''}
+          </div>
+          <div class="mob-card-actions">
+            <button class="icon-btn fuel" onclick="openFuelModal('${v.id}')">⛽<span>Yakıt</span></button>
+            <button class="icon-btn maint" onclick="openMaintModal('${v.id}')">🔧<span>Bakım</span></button>
+            <button class="icon-btn edit" onclick="openModal('${v.id}')">✎<span>Düzenle</span></button>
+            <button class="icon-btn del" onclick="deleteVehicle('${v.id}')">✕<span>Sil</span></button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
 
   if (list.length === 0) {
     tbody.innerHTML = `<tr><td colspan="12">
@@ -4567,6 +4836,23 @@ function renderMaintModal() {
 /* ================================================================
    BAŞLATMA
    ================================================================ */
+// ── Mobil menü ──
+function toggleMobMenu() {
+  const m = document.getElementById('mob-menu');
+  m.classList.toggle('open');
+}
+function closeMobMenu() {
+  document.getElementById('mob-menu').classList.remove('open');
+}
+// Dışarı tıklanınca menüyü kapat
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('mob-menu');
+  const btn  = document.getElementById('mob-menu-btn');
+  if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+    menu.classList.remove('open');
+  }
+});
+
 // Supabase Auth oturumunu kontrol et — yüklü ise sayfayı göster
 checkAuth();
 
