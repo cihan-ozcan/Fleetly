@@ -910,8 +910,9 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     overflow: hidden;
+    overflow-x: auto;
   }
-  table { width: 100%; border-collapse: collapse; }
+  table { width: 100%; border-collapse: collapse; min-width: 1100px; }
   thead { background: var(--surface2); }
   th {
     padding: 11px 14px;
@@ -978,6 +979,18 @@
   }
   .icon-btn.edit:hover { border-color: var(--blue);  color: var(--blue);  background: var(--blue-dim); }
   .icon-btn.del:hover  { border-color: var(--red);   color: var(--red);   background: var(--red-dim); }
+
+  /* İşlem sütunu sağda sabit */
+  table th:last-child,
+  table td:last-child {
+    position: sticky;
+    right: 0;
+    background: var(--surface2);
+    box-shadow: -3px 0 8px rgba(0,0,0,.25);
+    z-index: 2;
+  }
+  table td:last-child { background: var(--surface); }
+  table tr:hover td:last-child { background: var(--surface2); }
 
   .empty-state {
     padding: 56px 20px; text-align: center; color: var(--muted);
