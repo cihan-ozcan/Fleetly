@@ -1945,7 +1945,7 @@
           </div>
           <div class="maint-form-group">
             <label>Servis / Tamirci</label>
-            <input class="maint-inp" type="text" id="f-maint-servis" placeholder="örn. Öner Tır Servis" />
+            <input class="maint-inp" type="text" id="f-maint-servis" placeholder="örn. Cihan Tır Servis" />
           </div>
           <div class="maint-form-group" style="align-self:end">
             <button class="maint-add-btn" onclick="addMaintEntry()">🔧 + Kayıt Ekle</button>
@@ -2603,8 +2603,11 @@ function updateStats() {
   document.getElementById('sum-bakim').textContent  = bakim;
   document.getElementById('sum-pasif').textContent  = pasif;
 
-  // Yakıt özetini Filo Özeti paneline de yaz
-  loadFuelData();
+  // Yakıt özeti: veri zaten yüklüyse hemen yaz, değilse yüklendikten sonra yaz
+  updateFuelSummaryPanel();
+}
+
+function updateFuelSummaryPanel() {
   const fuelNow = new Date();
   const fuelThisMonth = `${fuelNow.getFullYear()}-${String(fuelNow.getMonth()+1).padStart(2,'0')}`;
   let fuelTotalL = 0, fuelTotalTL = 0, fuelThisMonthL = 0, fuelDolum = 0;
@@ -4857,7 +4860,7 @@ document.addEventListener('click', (e) => {
 checkAuth();
 
 // Başlangıçta yakıt verilerini yükle
-loadFuelData().then(() => { updateFuelStat(); renderActivityLog(); });
+loadFuelData().then(() => { updateFuelStat(); updateFuelSummaryPanel(); renderActivityLog(); });
 loadMaintData();
 </script>
 </body>
