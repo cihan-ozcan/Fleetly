@@ -2020,6 +2020,98 @@
         </div>
       </div>
     </div>
+
+    <!-- SEFER ÖZET KARTI -->
+    <div class="stat-card" id="sefer-stat-card" style="cursor:pointer;border-color:rgba(167,139,250,.2);box-shadow:0 0 0 1px rgba(167,139,250,.06)" onclick="openSeferModal()" title="Sefer takibini görmek için tıklayın" onmouseover="this.style.borderColor='rgba(167,139,250,.45)';this.style.boxShadow='0 0 0 2px rgba(167,139,250,.12)'" onmouseout="this.style.borderColor='rgba(167,139,250,.2)';this.style.boxShadow='0 0 0 1px rgba(167,139,250,.06)'">
+      <div class="stat-card-top">
+        <div class="stat-icon purple">🗺</div>
+        <span class="stat-trend ok" id="trend-sefer">Bu ay: 0</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:4px">
+        <div>
+          <div class="stat-value purple" id="stat-sefer-toplam" style="font-size:26px">0</div>
+          <div class="stat-label">Toplam Sefer</div>
+        </div>
+        <div style="width:1px;height:36px;background:var(--border);flex-shrink:0;margin-bottom:14px"></div>
+        <div>
+          <div class="stat-value green" id="stat-sefer-ciro" style="font-size:22px">—</div>
+          <div class="stat-label">Toplam Ciro</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Toplam Km: </span>
+          <span style="color:var(--blue);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-sefer-km">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--yellow);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Ort. Ücret: </span>
+          <span style="color:var(--yellow);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-sefer-ort">—</span>
+        </div>
+        <div style="margin-left:auto">
+          <span style="font-size:10px;color:rgba(167,139,250,.6);font-weight:600;letter-spacing:.03em">DETAY ›</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MASRAF ÖZET KARTI -->
+    <div class="stat-card" id="masraf-stat-card" style="cursor:pointer;border-color:rgba(245,158,11,.2);box-shadow:0 0 0 1px rgba(245,158,11,.06)" onclick="openMasrafModal()" title="Masraf takibini görmek için tıklayın" onmouseover="this.style.borderColor='rgba(245,158,11,.45)';this.style.boxShadow='0 0 0 2px rgba(245,158,11,.12)'" onmouseout="this.style.borderColor='rgba(245,158,11,.2)';this.style.boxShadow='0 0 0 1px rgba(245,158,11,.06)'">
+      <div class="stat-card-top">
+        <div class="stat-icon yellow">💸</div>
+        <span class="stat-trend warn" id="trend-masraf">Bu ay: —</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:4px">
+        <div>
+          <div class="stat-value yellow" id="stat-masraf-toplam" style="font-size:26px">0</div>
+          <div class="stat-label">Toplam Kayıt</div>
+        </div>
+        <div style="width:1px;height:36px;background:var(--border);flex-shrink:0;margin-bottom:14px"></div>
+        <div>
+          <div class="stat-value red" id="stat-masraf-tutar" style="font-size:22px">—</div>
+          <div class="stat-label">Toplam Masraf</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--orange, var(--accent));flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">En Büyük: </span>
+          <span style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-masraf-kategori">—</span>
+        </div>
+        <div style="margin-left:auto">
+          <span style="font-size:10px;color:rgba(245,158,11,.6);font-weight:600;letter-spacing:.03em">DETAY ›</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAPORLAR KARTI -->
+    <div class="stat-card" id="rapor-stat-card" style="cursor:pointer;border-color:rgba(232,121,249,.2);box-shadow:0 0 0 1px rgba(232,121,249,.06)" onclick="openRaporModal()" title="Raporları görmek için tıklayın" onmouseover="this.style.borderColor='rgba(232,121,249,.45)';this.style.boxShadow='0 0 0 2px rgba(232,121,249,.12)'" onmouseout="this.style.borderColor='rgba(232,121,249,.2)';this.style.boxShadow='0 0 0 1px rgba(232,121,249,.06)'">
+      <div class="stat-card-top">
+        <div class="stat-icon" style="background:rgba(232,121,249,.12);color:#e879f9">📊</div>
+        <span class="stat-trend ok" id="trend-rapor" style="color:#e879f9">Analiz</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:4px">
+        <div>
+          <div class="stat-value" id="stat-rapor-kar" style="font-size:22px;color:#e879f9">—</div>
+          <div class="stat-label">Net Kâr / Zarar</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Ciro: </span>
+          <span style="color:var(--green);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-rapor-ciro">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Gider: </span>
+          <span style="color:var(--red);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-rapor-gider">—</span>
+        </div>
+        <div style="margin-left:auto">
+          <span style="font-size:10px;color:rgba(232,121,249,.6);font-weight:600;letter-spacing:.03em">DETAY ›</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 4b. PANEL SATIRI: Uyarılar + Durum -->
@@ -3181,6 +3273,7 @@ async function loadVehicles() {
   updateDriverStat();
   await loadSeferData();
   await loadMasrafData();
+  updateRaporStat();
   await renderActivityLog();
 }
 
@@ -7760,7 +7853,27 @@ function renderSeferOzet() {
 }
 
 function updateSeferStat() {
-  // Header'daki stat kartlarını güncelle (opsiyonel - ilerisi için)
+  const toplam   = seferData.length;
+  const toplamKm = seferData.reduce((a,s) => a + (s.km||0), 0);
+  const toplamCiro = seferData.reduce((a,s) => a + (s.ucret||0), 0);
+  const ortUcret = toplam > 0 ? toplamCiro / toplam : 0;
+  const buAy = new Date().toISOString().slice(0,7);
+  const buAySayisi = seferData.filter(s => s.tarih && s.tarih.startsWith(buAy)).length;
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('stat-sefer-toplam', toplam.toLocaleString('tr-TR'));
+  set('stat-sefer-ciro',   toplamCiro > 0 ? '₺' + toplamCiro.toLocaleString('tr-TR', {maximumFractionDigits:0}) : '—');
+  set('stat-sefer-km',     toplamKm > 0 ? toplamKm.toLocaleString('tr-TR') + ' km' : '—');
+  set('stat-sefer-ort',    ortUcret > 0 ? '₺' + ortUcret.toLocaleString('tr-TR', {maximumFractionDigits:0}) : '—');
+
+  const trendEl = document.getElementById('trend-sefer');
+  if (trendEl) {
+    trendEl.textContent = 'Bu ay: ' + buAySayisi + ' sefer';
+    trendEl.className = buAySayisi > 0 ? 'stat-trend ok' : 'stat-trend warn';
+  }
+
+  // Rapor kartını da güncelle
+  updateRaporStat();
 }
 
 /* ================================================================
@@ -7997,7 +8110,55 @@ function renderMasrafOzet() {
   </div>`;
 }
 
-function updateMasrafStat() {}
+function updateMasrafStat() {
+  const toplam = masrafData.length;
+  const toplamTutar = masrafData.reduce((a,m) => a + (m.tutar||0), 0);
+  const buAy = new Date().toISOString().slice(0,7);
+  const buAyTutar = masrafData.filter(m => m.tarih && m.tarih.startsWith(buAy)).reduce((a,m) => a + (m.tutar||0), 0);
+
+  // En büyük kategori
+  const byKat = {};
+  masrafData.forEach(m => { byKat[m.kategori] = (byKat[m.kategori]||0) + (m.tutar||0); });
+  const topKat = Object.entries(byKat).sort((a,b) => b[1]-a[1])[0];
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('stat-masraf-toplam',   toplam.toLocaleString('tr-TR'));
+  set('stat-masraf-tutar',    toplamTutar > 0 ? '₺' + toplamTutar.toLocaleString('tr-TR', {maximumFractionDigits:0}) : '—');
+  set('stat-masraf-kategori', topKat ? topKat[0] : '—');
+
+  const trendEl = document.getElementById('trend-masraf');
+  if (trendEl) {
+    trendEl.textContent = 'Bu ay: ' + (buAyTutar > 0 ? '₺' + buAyTutar.toLocaleString('tr-TR', {maximumFractionDigits:0}) : '—');
+    trendEl.className = buAyTutar > 0 ? 'stat-trend warn' : 'stat-trend ok';
+  }
+
+  // Rapor kartını da güncelle
+  updateRaporStat();
+}
+
+function updateRaporStat() {
+  const toplamCiro  = seferData.reduce((a,s) => a + (s.ucret||0), 0);
+  const toplamYakit = Object.values(fuelData).flat().reduce((a,e) => a + (e.fiyat ? e.fiyat*e.litre : 0), 0);
+  const toplamBakim = Object.values(maintData).flat().reduce((a,e) => a + (e.maliyet||0), 0);
+  const toplamMasraf = masrafData.reduce((a,m) => a + (m.tutar||0), 0);
+  const toplamGider = toplamYakit + toplamBakim + toplamMasraf;
+  const netKar = toplamCiro - toplamGider;
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('stat-rapor-ciro',  toplamCiro > 0  ? '₺' + toplamCiro.toLocaleString('tr-TR', {maximumFractionDigits:0})  : '—');
+  set('stat-rapor-gider', toplamGider > 0 ? '₺' + toplamGider.toLocaleString('tr-TR', {maximumFractionDigits:0}) : '—');
+
+  const karEl = document.getElementById('stat-rapor-kar');
+  if (karEl) {
+    if (toplamCiro === 0 && toplamGider === 0) {
+      karEl.textContent = '—';
+      karEl.style.color = '#e879f9';
+    } else {
+      karEl.textContent = (netKar >= 0 ? '+' : '') + '₺' + Math.abs(netKar).toLocaleString('tr-TR', {maximumFractionDigits:0});
+      karEl.style.color = netKar >= 0 ? 'var(--green)' : 'var(--red)';
+    }
+  }
+}
 
 /* ================================================================
    RAPORLAR
