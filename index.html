@@ -1009,6 +1009,146 @@
     color: var(--muted); font-size: 13px;
   }
   .vs-empty .icon { font-size: 28px; margin-bottom: 8px; }
+
+  /* ── YAKIТ GENEL ÖZET PANELİ ─────────────────────────── */
+  .vs-summary-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .vs-summary-title {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em;
+    color: var(--muted); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .vs-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .vs-summary-stat {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 12px;
+    text-align: center;
+  }
+  .vs-summary-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px; font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .vs-summary-lbl {
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .05em; font-weight: 500;
+  }
+  .vs-top-vehicles {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .vs-top-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px;
+  }
+  .vs-top-plaka {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px; font-weight: 700;
+    color: var(--accent); min-width: 80px;
+  }
+  .vs-top-bar-wrap {
+    flex: 1; height: 6px; background: var(--surface3);
+    border-radius: 99px; overflow: hidden;
+  }
+  .vs-top-bar {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .5s ease;
+  }
+  .vs-top-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text2); min-width: 52px; text-align: right;
+  }
+
+  /* Ay seçici */
+  .vs-month-tabs {
+    display: flex; gap: 4px; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .vs-month-tab {
+    padding: 4px 10px; border-radius: 7px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted); font-size: 11px; font-weight: 500;
+    cursor: pointer; transition: all .15s;
+    font-family: 'Inter', sans-serif;
+  }
+  .vs-month-tab:hover { border-color: var(--border2); color: var(--text2); }
+  .vs-month-tab.active {
+    background: rgba(249,115,22,.12);
+    border-color: rgba(249,115,22,.35);
+    color: var(--accent); font-weight: 600;
+  }
+
+  /* Tüm yakıt sil butonu */
+  .vs-danger-zone {
+    border: 1px solid rgba(239,68,68,.2);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    background: rgba(239,68,68,.04);
+    margin-top: 14px;
+  }
+  .vs-danger-info { flex: 1; }
+  .vs-danger-title {
+    font-size: 12px; font-weight: 600; color: var(--red);
+    margin-bottom: 2px;
+  }
+  .vs-danger-sub {
+    font-size: 11px; color: var(--muted);
+  }
+  .vs-danger-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(239,68,68,.1);
+    border: 1px solid rgba(239,68,68,.35);
+    color: var(--red); cursor: pointer;
+    border-radius: 8px; padding: 7px 14px;
+    font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+    transition: background .2s, border-color .2s;
+    white-space: nowrap;
+  }
+  .vs-danger-btn:hover {
+    background: rgba(239,68,68,.18);
+    border-color: var(--red);
+  }
+
+  /* Modal sekme bar */
+  .vs-tabs {
+    display: flex; gap: 0;
+    background: var(--surface3);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 14px;
+  }
+  .vs-tab {
+    flex: 1; padding: 7px 10px;
+    border-radius: 8px; border: none;
+    background: transparent; cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 500;
+    color: var(--muted); transition: all .2s;
+  }
+  .vs-tab.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,.4);
+    font-weight: 600;
+  }
+  .vs-tab-panel { display: none; }
+  .vs-tab-panel.active { display: block; }
 </style>
 </head>
 <body>
@@ -1337,20 +1477,102 @@
      ARAÇ SEÇİM MODALİ (Yakıt Kart Tıklama)
      ========================================================= -->
 <div class="vehicle-select-backdrop hidden" id="vehicle-select-backdrop" onclick="closeVehicleSelectBackdrop(event)">
-  <div class="vehicle-select-modal">
+  <div class="vehicle-select-modal" style="max-width:620px">
     <div class="vehicle-select-header">
       <div class="vehicle-select-title">
         <span class="icon">⛽</span>
-        Yakıt Girişi — Araç Seçin
+        Yakıt Yönetimi
       </div>
       <button class="modal-close" onclick="closeVehicleSelect()">✕</button>
     </div>
     <div class="vehicle-select-body">
-      <div class="vehicle-select-search">
-        <span class="srch-icon">🔎</span>
-        <input type="text" id="vs-search" placeholder="Plaka veya şoför ara…" oninput="renderVehicleSelect()" />
+
+      <!-- Sekme Navigasyonu -->
+      <div class="vs-tabs">
+        <button class="vs-tab active" id="vs-tab-araclar" onclick="switchVsTab('araclar')">🚛 Araç Seçimi</button>
+        <button class="vs-tab" id="vs-tab-ozet" onclick="switchVsTab('ozet')">📊 Genel Özet</button>
+        <button class="vs-tab" id="vs-tab-ayarlar" onclick="switchVsTab('ayarlar')">⚙️ Yönetim</button>
       </div>
-      <div id="vs-vehicle-list"></div>
+
+      <!-- SEKME 1: Araç Seçimi -->
+      <div class="vs-tab-panel active" id="vspanel-araclar">
+        <div class="vehicle-select-search">
+          <span class="srch-icon">🔎</span>
+          <input type="text" id="vs-search" placeholder="Plaka veya şoför ara…" oninput="renderVehicleSelect()" />
+        </div>
+        <div id="vs-vehicle-list"></div>
+      </div>
+
+      <!-- SEKME 2: Genel Özet -->
+      <div class="vs-tab-panel" id="vspanel-ozet">
+        <div class="vs-summary-panel">
+          <div class="vs-summary-title">📊 Tüm Filo — Genel İstatistikler</div>
+          <!-- Ay Filtresi -->
+          <div class="vs-month-tabs" id="vs-month-tabs"></div>
+          <!-- İstatistik Kartları -->
+          <div class="vs-summary-grid">
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--blue)" id="vs-s-dolum">—</div>
+              <div class="vs-summary-lbl">Toplam Dolum</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--accent)" id="vs-s-litre">—</div>
+              <div class="vs-summary-lbl">Toplam Litre</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--green)" id="vs-s-tutar">—</div>
+              <div class="vs-summary-lbl">Toplam Maliyet</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--yellow)" id="vs-s-arac">—</div>
+              <div class="vs-summary-lbl">Kayıtlı Araç</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--purple)" id="vs-s-ort-fiyat">—</div>
+              <div class="vs-summary-lbl">Ort. Birim Fiyat</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:var(--red)" id="vs-s-ort-tuketim">—</div>
+              <div class="vs-summary-lbl">Ort. L/100km</div>
+            </div>
+          </div>
+          <!-- En Çok Tüketen Top 5 -->
+          <div style="margin-top:14px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏆 En Çok Yakıt Kullanan Araçlar</div>
+            <div class="vs-top-vehicles" id="vs-top-vehicles"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEKME 3: Yönetim -->
+      <div class="vs-tab-panel" id="vspanel-ayarlar">
+        <!-- JSON dışa aktarım -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">📤 Yakıt Verilerini Dışa Aktar</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Tüm yakıt kayıtlarını JSON dosyası olarak indirin.</div>
+          <button class="fuel-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none" onclick="exportFuelJSON()">⬇ JSON İndir</button>
+        </div>
+        <!-- PDF Rapor -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">📄 PDF Rapor</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Tüm araçların yakıt geçmişini detaylı PDF raporu olarak indirin.</div>
+          <button class="fuel-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none;background:linear-gradient(135deg,#38bdf8,#0ea5e9)" onclick="closeVehicleSelect();downloadFuelPDF()">⬇ PDF Rapor</button>
+        </div>
+        <!-- Tehlike Bölgesi -->
+        <div class="vs-danger-zone">
+          <div class="vs-danger-info">
+            <div class="vs-danger-title">⚠ Tüm Yakıt Kayıtlarını Sil</div>
+            <div class="vs-danger-sub">Bu işlem geri alınamaz. Tüm araçlara ait yakıt geçmişi silinir.</div>
+          </div>
+          <button class="vs-danger-btn" onclick="confirmDeleteAllFuel()">🗑 Tümünü Sil</button>
+        </div>
+        <!-- Tek araç yakıt silme -->
+        <div style="border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:12px 14px;background:rgba(239,68,68,.04);margin-top:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">🚛 Araç Bazlı Yakıt Sil</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" id="vs-per-vehicle-delete"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -2791,8 +3013,177 @@ function openFuelSummary() {
   }
   loadFuelData();
   document.getElementById('vs-search').value = '';
+  switchVsTab('araclar');
   renderVehicleSelect();
+  renderVsSummary();
+  renderVsManagement();
   document.getElementById('vehicle-select-backdrop').classList.remove('hidden');
+}
+
+// Sekme geçişi
+function switchVsTab(name) {
+  ['araclar','ozet','ayarlar'].forEach(t => {
+    document.getElementById('vs-tab-' + t)?.classList.toggle('active', t === name);
+    document.getElementById('vspanel-' + t)?.classList.toggle('active', t === name);
+  });
+  if (name === 'ozet') renderVsSummary();
+  if (name === 'ayarlar') renderVsManagement();
+}
+
+// Seçili ay filtresi (null = tüm zamanlar)
+let vsSummaryMonth = null;
+
+// Genel özet panelini render et
+function renderVsSummary() {
+  const allMonths = new Set();
+  Object.values(fuelData).forEach(entries => {
+    entries.forEach(e => { if (e.tarih) allMonths.add(e.tarih.slice(0,7)); });
+  });
+  const sortedMonths = Array.from(allMonths).sort().reverse().slice(0, 12);
+
+  const tabsEl = document.getElementById('vs-month-tabs');
+  if (tabsEl) {
+    tabsEl.innerHTML = `<button class="vs-month-tab ${vsSummaryMonth===null?'active':''}" onclick="setVsSummaryMonth(null)">Tümü</button>` +
+      sortedMonths.map(m => {
+        const [y, mo] = m.split('-');
+        return `<button class="vs-month-tab ${vsSummaryMonth===m?'active':''}" onclick="setVsSummaryMonth('${m}')">${mo}/${y}</button>`;
+      }).join('');
+  }
+
+  let totalDolum = 0, totalLitre = 0, totalTutar = 0;
+  let fiyatSamples = [], litreByVehicle = {};
+  const aracSayisi = vehicles.filter(v => (fuelData[v.id]||[]).length > 0).length;
+
+  vehicles.forEach(v => {
+    const entries = (fuelData[v.id] || []).filter(e => !vsSummaryMonth || (e.tarih && e.tarih.startsWith(vsSummaryMonth)));
+    const litre = entries.reduce((s,e) => s+(e.litre||0), 0);
+    totalDolum += entries.length;
+    totalLitre += litre;
+    totalTutar += entries.reduce((s,e) => s+(e.litre||0)*(e.fiyat||0), 0);
+    entries.forEach(e => { if (e.fiyat > 0) fiyatSamples.push(e.fiyat); });
+    if (litre > 0) litreByVehicle[v.id] = { plaka: v.plaka, litre };
+  });
+
+  const avgFiyat = fiyatSamples.length > 0 ? fiyatSamples.reduce((a,b)=>a+b,0)/fiyatSamples.length : null;
+
+  let tuketimSamples = [];
+  vehicles.forEach(v => {
+    const entries = (fuelData[v.id] || [])
+      .filter(e => !vsSummaryMonth || (e.tarih && e.tarih.startsWith(vsSummaryMonth)))
+      .slice().sort((a,b) => a.km-b.km);
+    if (entries.length >= 2) {
+      const totalKm = entries[entries.length-1].km - entries[0].km;
+      const usedL = entries.slice(1).reduce((s,e) => s+e.litre, 0);
+      if (totalKm > 0) tuketimSamples.push((usedL/totalKm)*100);
+    }
+  });
+  const avgTuketim = tuketimSamples.length > 0 ? tuketimSamples.reduce((a,b)=>a+b,0)/tuketimSamples.length : null;
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('vs-s-dolum',    totalDolum.toLocaleString('tr-TR'));
+  set('vs-s-litre',    totalLitre > 0 ? totalLitre.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' L' : '—');
+  set('vs-s-tutar',    totalTutar > 0 ? totalTutar.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' ₺' : '—');
+  set('vs-s-arac',     aracSayisi + ' / ' + vehicles.length);
+  set('vs-s-ort-fiyat', avgFiyat ? avgFiyat.toLocaleString('tr-TR',{minimumFractionDigits:2}) + ' ₺' : '—');
+
+  const tuketimEl = document.getElementById('vs-s-ort-tuketim');
+  if (tuketimEl) {
+    if (avgTuketim !== null) {
+      tuketimEl.textContent = avgTuketim.toFixed(1) + ' L/100km';
+      tuketimEl.style.color = avgTuketim < 25 ? 'var(--green)' : avgTuketim < 35 ? 'var(--yellow)' : 'var(--red)';
+    } else {
+      tuketimEl.textContent = '—';
+      tuketimEl.style.color = 'var(--muted)';
+    }
+  }
+
+  const topEl = document.getElementById('vs-top-vehicles');
+  if (topEl) {
+    const sorted = Object.entries(litreByVehicle).sort((a,b) => b[1].litre - a[1].litre).slice(0,5);
+    const maxL = sorted.length > 0 ? sorted[0][1].litre : 1;
+    topEl.innerHTML = sorted.length === 0
+      ? `<div style="color:var(--muted);font-size:12px">Bu dönemde kayıt yok.</div>`
+      : sorted.map(([, info]) => {
+          const pct = Math.max(4, Math.round((info.litre/maxL)*100));
+          return `<div class="vs-top-row">
+            <div class="vs-top-plaka">${info.plaka}</div>
+            <div class="vs-top-bar-wrap"><div class="vs-top-bar" style="width:${pct}%"></div></div>
+            <div class="vs-top-val">${info.litre.toLocaleString('tr-TR',{maximumFractionDigits:0})} L</div>
+          </div>`;
+        }).join('');
+  }
+}
+
+function setVsSummaryMonth(m) {
+  vsSummaryMonth = m;
+  renderVsSummary();
+}
+
+// Yönetim sekmesini render et
+function renderVsManagement() {
+  const el = document.getElementById('vs-per-vehicle-delete');
+  if (!el) return;
+  const btns = vehicles.map(v => {
+    const cnt = (fuelData[v.id] || []).length;
+    if (cnt === 0) return '';
+    return `<button class="vs-danger-btn" style="font-size:11px;padding:5px 11px" onclick="confirmDeleteVehicleFuel('${v.id}','${v.plaka}')">
+      ${v.plaka} <span style="opacity:.6;font-weight:400">(${cnt})</span>
+    </button>`;
+  }).join('');
+  el.innerHTML = btns || '<span style="color:var(--muted);font-size:12px">Henüz yakıt kaydı yok.</span>';
+}
+
+// Tüm yakıt verilerini sil
+async function confirmDeleteAllFuel() {
+  const total = Object.values(fuelData).reduce((s, a) => s + a.length, 0);
+  if (total === 0) { showToast('Silinecek yakıt kaydı yok.', 'error'); return; }
+  if (!confirm(`Tüm ${total} yakıt kaydı silinecek. Bu işlem geri alınamaz!\n\nDevam edilsin mi?`)) return;
+  if (!isLocalMode()) {
+    try {
+      await fetch(sbUrl('yakit_girisleri?id=neq.null'), { method: 'DELETE', headers: sbHeaders() });
+    } catch(e) { console.error(e); }
+  }
+  fuelData = {};
+  saveFuelDataLocal();
+  updateFuelStat();
+  updateStats();
+  renderVsSummary();
+  renderVsManagement();
+  showToast('Tüm yakıt kayıtları silindi.', 'error');
+}
+
+// Tek araç yakıt verilerini sil
+async function confirmDeleteVehicleFuel(vehicleId, plaka) {
+  const cnt = (fuelData[vehicleId] || []).length;
+  if (cnt === 0) { showToast('Bu araçta kayıt yok.', 'error'); return; }
+  if (!confirm(`"${plaka}" aracına ait ${cnt} yakıt kaydı silinecek.\n\nDevam edilsin mi?`)) return;
+  if (!isLocalMode()) {
+    try {
+      await fetch(sbUrl('yakit_girisleri?arac_id=eq.' + vehicleId), { method: 'DELETE', headers: sbHeaders() });
+    } catch(e) { console.error(e); }
+  }
+  delete fuelData[vehicleId];
+  saveFuelDataLocal();
+  updateFuelStat();
+  updateStats();
+  renderVsSummary();
+  renderVsManagement();
+  showToast(`${plaka} yakıt kayıtları silindi.`, 'error');
+}
+
+// Yakıt verilerini JSON olarak indir
+function exportFuelJSON() {
+  const out = { exportDate: new Date().toISOString(), vehicles: [] };
+  vehicles.forEach(v => {
+    const entries = fuelData[v.id] || [];
+    if (entries.length > 0) out.vehicles.push({ plaka: v.plaka, tip: v.tip, entries });
+  });
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'yakit_verileri_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  showToast('JSON indirildi ✓', 'success');
 }
 
 function closeVehicleSelect() {
