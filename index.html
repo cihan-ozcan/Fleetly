@@ -2301,7 +2301,8 @@ async function addActivity(type, plaka, detail) {
   } catch (e) {
     console.error('Activity log hatası:', e);
   }
-  renderActivityLog();
+  // Insert tamamlandıktan SONRA listeyi yenile
+  await renderActivityLog();
 }
 
 async function clearActivityLog() {
@@ -3965,8 +3966,7 @@ async function downloadFuelPDF() {
 checkAuth();
 
 // Başlangıçta yakıt verilerini yükle
-loadFuelData().then(() => { updateFuelStat(); });
-setTimeout(() => renderActivityLog(), 200);
+loadFuelData().then(() => { updateFuelStat(); renderActivityLog(); });
 </script>
 </body>
 </html>
