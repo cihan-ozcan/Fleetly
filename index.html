@@ -6042,7 +6042,7 @@ async function loadDriverData() {
     const sb = getSB();
     if (!sb) { driverLoaded = true; return; }
 
-    // Supabase JS SDK kullan — RLS token otomatik eklenir
+    // surucu_belgeler tablosundan kayıtları çek
     const { data: rows, error } = await sb
       .from('surucu_belgeler')
       .select('*')
@@ -6050,13 +6050,9 @@ async function loadDriverData() {
 
     if (error) {
       console.error('Sürücü yükle Supabase hatası:', error.code, error.message, error.details);
-      driverLoaded = true;
-      return;
     }
 
-    console.log('Sürücü verisi geldi:', rows ? rows.length : 0, 'kayıt', rows);
-
-    driverData = (rows || []).map(r => ({
+    const belgeRows = (rows || []).map(r => ({
       id      : r.id,
       ad      : r.ad,
       tel     : r.tel      || '',
@@ -6064,8 +6060,41 @@ async function loadDriverData() {
       ehliyet : r.ehliyet  || '',
       src     : r.src      || '',
       psiko   : r.psiko    || '',
-      takograf: r.takograf || ''
+      takograf: r.takograf || '',
+      _kaynak : 'belge'
     }));
+
+    // araclar tablosundaki sofor alanından da sürücüleri çek
+    // vehicles zaten yüklenmiş olmalı; değilse Supabase'den al
+    let aracList = vehicles.length > 0 ? vehicles : [];
+    if (aracList.length === 0) {
+      const { data: aracRows } = await sb.from('araclar').select('id,plaka,sofor,telefon');
+      aracList = (aracRows || []).map(r => ({ id: r.id, plaka: r.plaka, sofor: r.sofor, telefon: r.telefon }));
+    }
+
+    // Araçlarda şoför adı olan ama surucu_belgeler'de kaydı olmayan sürücüleri ekle
+    const belgeAracIds = new Set(belgeRows.map(d => d.plaka).filter(Boolean));
+    const belgeAdlar   = new Set(belgeRows.map(d => (d.ad||'').toLowerCase().trim()).filter(Boolean));
+
+    const aracKaynakli = aracList
+      .filter(v => v.sofor && v.sofor.trim())
+      .filter(v => !belgeAracIds.has(v.id) && !belgeAdlar.has(v.sofor.toLowerCase().trim()))
+      .map(v => ({
+        id      : 'arac_' + v.id,
+        ad      : v.sofor,
+        tel     : v.telefon || '',
+        plaka   : v.id,
+        ehliyet : '',
+        src     : '',
+        psiko   : '',
+        takograf: '',
+        _kaynak : 'arac'   // belge eklenmemiş, araçtan geliyor
+      }));
+
+    driverData = [...belgeRows, ...aracKaynakli]
+      .sort((a, b) => (a.ad||'').localeCompare(b.ad||'', 'tr'));
+
+    console.log('Sürücü verisi:', belgeRows.length, 'belgeli +', aracKaynakli.length, 'araçtan =', driverData.length, 'toplam');
     saveDriverDataLocal();
     driverLoaded = true;
   } catch (err) {
@@ -6238,11 +6267,15 @@ function saveDriverEntry() {
   if (editingDriverId) {
     const idx = driverData.findIndex(d => d.id === editingDriverId);
     if (idx !== -1) {
-      driverData[idx] = { ...driverData[idx], ad, tel, plaka, ehliyet, src, psiko, takograf };
+      // Araç kaynağından geliyorsa yeni bir gerçek ID ver (surucu_belgeler'e yazılacak)
+      const isAracKaynakli = editingDriverId.startsWith('arac_');
+      const newId = isAracKaynakli ? uid() : editingDriverId;
+      driverData[idx] = { ...driverData[idx], id: newId, ad, tel, plaka, ehliyet, src, psiko, takograf, _kaynak: 'belge' };
+      editingDriverId = newId;
       showToast('Sürücü güncellendi ✓', 'success');
     }
   } else {
-    driverData.push({ id: uid(), ad, tel, plaka, ehliyet, src, psiko, takograf });
+    driverData.push({ id: uid(), ad, tel, plaka, ehliyet, src, psiko, takograf, _kaynak: 'belge' });
     showToast('Sürücü eklendi ✓', 'success');
   }
   saveDriverDataLocal();
@@ -6328,12 +6361,14 @@ function renderDsDriverList() {
     const cardCls  = statuses.includes('overdue') ? 'has-overdue'
                    : statuses.includes('warn')    ? 'has-warn' : '';
 
-    return `<div class="driver-card ${cardCls}">
+    const noBelge = d._kaynak === 'arac';
+    return `<div class="driver-card ${cardCls}" style="${noBelge ? 'border-color:rgba(245,158,11,.25);' : ''}">
       <div class="driver-avatar">👤</div>
       <div class="driver-info">
         <div class="driver-name">
           ${d.ad}
           ${veh ? `<span class="driver-plate-badge">${veh.plaka}</span>` : ''}
+          ${noBelge ? `<span style="font-size:10px;font-weight:600;color:var(--yellow);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);padding:1px 7px;border-radius:5px;letter-spacing:.03em">BELGE EKLENMEMİŞ</span>` : ''}
         </div>
         <div class="driver-phone">${d.tel || 'Telefon girilmemiş'}</div>
         <div class="driver-docs">
@@ -6345,7 +6380,7 @@ function renderDsDriverList() {
       </div>
       <div class="driver-actions">
         <button class="driver-edit-btn" onclick="editDriverEntry('${d.id}')" title="Düzenle">✎</button>
-        <button class="driver-del-btn"  onclick="deleteDriverEntry('${d.id}')" title="Sil">✕</button>
+        ${noBelge ? '' : `<button class="driver-del-btn" onclick="deleteDriverEntry('${d.id}')" title="Sil">✕</button>`}
       </div>
     </div>`;
   }).join('');
