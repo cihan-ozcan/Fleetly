@@ -4798,7 +4798,7 @@ async function downloadSingleVehiclePDF() {
   });
   sf(C.border); rc(ML,y,CW,0.5);
   footer();
-  doc.save('yakit_' + (v.plaka||'arac').replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+  _pdfSave(doc, 'yakit_' + (v.plaka||'arac').replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.pdf');
   showToast('PDF indirildi ✓', 'success');
 }
 
@@ -5333,10 +5333,7 @@ async function downloadFuelPDF() {
   }
 
   addPageNum();
-
-  // İndir
-  const fname = 'yakit_raporu_' + new Date().toISOString().slice(0,10) + '.pdf';
-  doc.save(fname);
+  _pdfSave(doc, 'yakit_raporu_' + new Date().toISOString().slice(0,10) + '.pdf');
   showToast('PDF indirildi ✓', 'success');
 }
 
@@ -6300,7 +6297,7 @@ async function downloadMaintPDF() {
   }
 
   addFooter();
-  doc.save('bakim_ariza_raporu_' + new Date().toISOString().slice(0,10) + '.pdf');
+  _pdfSave(doc, 'bakim_ariza_raporu_' + new Date().toISOString().slice(0,10) + '.pdf');
   showToast('Bakım Raporu PDF indirildi ✓', 'success');
 }
 
@@ -6812,6 +6809,19 @@ function updateDriverStat() {
    ================================================================ */
 const LOGO_B64_SHARED = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAABXFBMVEX///8ap+UAoOMAouP7//8An+MAneIAn+IWpuXV7fpguuv3/P6Mx8gAo+Pq9vyAwcJ1ury34PYAmuI3reeX0vKWzc1ps7ei09SBx+54xO1errDx+f3k9Pyu2dxjveskuewDSYMrmtYofcCs2vTJ6Pig1fJZrea24PcAT5bF5OVEv+glruUwjcsAYaqWzdc';
 
+function _pdfSave(doc, filename) {
+  try {
+    doc.save(filename);
+  } catch(e) {
+    var blob = doc.output('blob');
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+  }
+}
+
 function _pdfCommonSetup(title, subtitle, accentColor) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -7090,7 +7100,7 @@ async function downloadSeferPDF() {
   doc.text('TL '+totalCiro.toLocaleString('tr-TR',{maximumFractionDigits:0}), ML+176, y+6);
 
   addFooter();
-  doc.save('sefer_raporu_' + new Date().toISOString().slice(0,10) + '.pdf');
+  _pdfSave(doc, 'sefer_raporu_' + new Date().toISOString().slice(0,10) + '.pdf');
   showToast('Sefer Raporu PDF indirildi!', 'success');
 }
 
@@ -7257,7 +7267,7 @@ async function downloadMasrafPDF() {
   doc.text('TL '+totalMasraf.toLocaleString('tr-TR',{maximumFractionDigits:2}),ML+154,y+6);
 
   addFooter();
-  doc.save('masraf_raporu_'+new Date().toISOString().slice(0,10)+'.pdf');
+  _pdfSave(doc, 'masraf_raporu_'+new Date().toISOString().slice(0,10)+'.pdf');
   showToast('Masraf Raporu PDF indirildi!','success');
 }
 
@@ -7265,6 +7275,7 @@ async function downloadMasrafPDF() {
    KAPSAMLI YÖNETİM RAPORU PDF (Raporlar modalındaki)
    ================================================================ */
 async function downloadRaporPDF() {
+  try {
   const donem   = document.getElementById('rapor-donem')?.value||'all';
   const flt     = e => !donem||donem==='all'||!e.tarih||e.tarih.startsWith(donem);
 
@@ -7488,8 +7499,13 @@ async function downloadRaporPDF() {
   });
 
   addFooter();
-  doc.save('yonetim_raporu_'+new Date().toISOString().slice(0,10)+'.pdf');
+  try {
+  _pdfSave(doc, 'yonetim_raporu_'+new Date().toISOString().slice(0,10)+'.pdf');
   showToast('Yonetim Raporu PDF indirildi!','success');
+  } catch(err) {
+    console.error('Rapor PDF hatası:', err);
+    showToast('PDF oluşturulamadı: ' + err.message, 'error');
+  }
 }
 // ── Ayarlar dropdown ──
 function toggleSettings() {
