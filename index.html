@@ -2433,9 +2433,12 @@ async function loadVehicles() {
   }
   seedDemo();
   refresh();
-  // Araçlar yüklendikten sonra yakıt verilerini de çek
+  // Araçlar yüklendikten sonra yakıt, bakım ve aktivite verilerini de çek
   await loadFuelData();
   updateFuelStat();
+  updateFuelSummaryPanel();
+  await loadMaintData();
+  await renderActivityLog();
 }
 
 async function saveVehicles() {
