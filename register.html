@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleetly — Ücretsiz Deneyin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+
+  <style>
+    :root {
+      --bg:       #080c10;
+      --surface:  #111820;
+      --surface2: #18202c;
+      --border:   #252f3e;
+      --border2:  #2e3c50;
+      --accent:   #f97316;
+      --accent2:  #fb923c;
+      --text:     #e2eaf3;
+      --text2:    #a8b8cc;
+      --muted:    #526070;
+      --green:    #22c55e;
+      --red:      #ef4444;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(249,115,22,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(249,115,22,.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    /* ── LAYOUT ── */
+    .page-wrap {
+      position: relative; z-index: 1;
+      display: flex;
+      width: 100%;
+      min-height: 100vh;
+    }
+
+    /* SOL PANEL */
+    .left-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px 64px;
+      background: linear-gradient(145deg, rgba(249,115,22,.06) 0%, transparent 60%);
+      border-right: 1px solid var(--border);
+      max-width: 520px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 56px;
+    }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 20px rgba(249,115,22,.35);
+    }
+    .brand-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px; font-weight: 800;
+      letter-spacing: 2px;
+    }
+
+    .left-heading {
+      font-family: 'Syne', sans-serif;
+      font-size: 38px; font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -.5px;
+      margin-bottom: 16px;
+    }
+    .left-heading em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--accent), #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .left-sub {
+      font-size: 16px;
+      color: var(--text2);
+      line-height: 1.65;
+      margin-bottom: 40px;
+    }
+
+    /* Özellik listesi */
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 48px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .feature-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .feature-icon.orange { background: rgba(249,115,22,.15); }
+    .feature-icon.blue   { background: rgba(56,189,248,.12); }
+    .feature-icon.green  { background: rgba(34,197,94,.12); }
+    .feature-icon.purple { background: rgba(167,139,250,.12); }
+
+    .feature-text strong {
+      display: block;
+      font-size: 14px; font-weight: 600;
+      color: var(--text); margin-bottom: 2px;
+    }
+    .feature-text span {
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    /* Sosyal proof */
+    .trust-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 99px;
+      padding: 8px 16px;
+      font-size: 12.5px;
+      color: var(--text2);
+    }
+    .trust-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      flex-shrink: 0;
+    }
+
+    /* SAĞ PANEL — FORM */
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 48px;
+      overflow-y: auto;
+    }
+
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 24px;
+      padding: 44px 40px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.6);
+    }
+
+    .form-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px; font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -.2px;
+    }
+    .form-sub {
+      font-size: 13px; color: var(--muted);
+      margin-bottom: 32px;
+    }
+
+    /* Step göstergesi */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 28px;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px; font-weight: 600;
+      color: var(--muted);
+    }
+    .step.active { color: var(--accent); }
+    .step.done   { color: var(--green); }
+    .step-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+    }
+    .step.active .step-num { border-color: var(--accent); background: rgba(249,115,22,.1); color: var(--accent); }
+    .step.done   .step-num { border-color: var(--green);  background: rgba(34,197,94,.1);  color: var(--green); }
+    .step-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      margin: 0 8px;
+    }
+
+    /* Form alanları */
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+    .field-label {
+      font-size: 11.5px; font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .field-inp {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border2);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .field-inp:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+    }
+    .field-inp.err { border-color: var(--red); }
+    .field-hint {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Plan seçimi */
+    .plan-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .plan-card {
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 14px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s, transform .15s;
+      position: relative;
+    }
+    .plan-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+    .plan-card.selected {
+      border-color: var(--accent);
+      background: rgba(249,115,22,.06);
+    }
+    .plan-card input[type="radio"] {
+      position: absolute; opacity: 0; width: 0; height: 0;
+    }
+    .plan-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px; font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .plan-price {
+      font-size: 22px; font-weight: 800;
+      color: var(--accent); line-height: 1;
+      margin-bottom: 2px;
+    }
+    .plan-price small {
+      font-size: 12px; font-weight: 400;
+      color: var(--muted); vertical-align: middle;
+    }
+    .plan-desc {
+      font-size: 11px; color: var(--muted);
+      margin-top: 4px; line-height: 1.4;
+    }
+    .plan-badge {
+      position: absolute;
+      top: -1px; right: 10px;
+      background: var(--green);
+      color: #fff; font-size: 9px; font-weight: 700;
+      padding: 2px 7px; border-radius: 0 0 6px 6px;
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+
+    /* CTA buton */
+    .btn-cta {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      border: none; cursor: pointer;
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 600;
+      letter-spacing: .01em;
+      transition: opacity .2s, transform .15s;
+      box-shadow: 0 6px 20px rgba(249,115,22,.35);
+      margin-top: 6px;
+    }
+    .btn-cta:hover   { opacity: .92; transform: translateY(-1px); }
+    .btn-cta:active  { transform: translateY(0); }
+    .btn-cta:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .form-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .form-footer a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .form-footer a:hover { text-decoration: underline; }
+
+    .form-error {
+      color: var(--red);
+      font-size: 12.5px;
+      min-height: 18px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .form-success {
+      text-align: center;
+      padding: 32px 20px;
+    }
+    .form-success .success-icon {
+      font-size: 52px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .form-success h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px; font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .form-success p {
+      color: var(--text2);
+      font-size: 14px; line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .form-success .trial-badge {
+      display: inline-block;
+      background: rgba(34,197,94,.12);
+      border: 1px solid rgba(34,197,94,.3);
+      color: var(--green);
+      font-size: 13px; font-weight: 600;
+      padding: 8px 20px;
+      border-radius: 99px;
+      margin-bottom: 24px;
+    }
+
+    /* Divider */
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 20px 0;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1;
+      height: 1px; background: var(--border);
+    }
+    .divider span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+    /* Şart onay */
+    .checkbox-row {
+      display: flex; gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .checkbox-row input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; accent-color: var(--accent); }
+    .checkbox-row label {
+      font-size: 12px; color: var(--muted); line-height: 1.5;
+      cursor: pointer;
+    }
+    .checkbox-row a { color: var(--accent); text-decoration: none; }
+
+    /* Güvenlik ikonları */
+    .security-row {
+      display: flex; gap: 16px; justify-content: center;
+      margin-top: 20px; padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .sec-item {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .left-panel { display: none; }
+      .right-panel { padding: 24px 20px; }
+      .form-card { padding: 32px 24px; }
+    }
+    @media (max-width: 480px) {
+      .field-row { grid-template-columns: 1fr; }
+      .plan-grid  { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- ── SOL PANEL ── -->
+  <div class="left-panel">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="24" height="24" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="60,8 108,34 108,86 60,112 12,86 12,34" fill="none" stroke="white" stroke-width="3" opacity="0.35"/>
+          <line x1="22" y1="96" x2="60" y2="26" stroke="white" stroke-width="5.5" stroke-linecap="round"/>
+          <line x1="40" y1="106" x2="78" y2="22" stroke="white" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+          <circle cx="96" cy="30" r="7" fill="white"/>
+          <circle cx="22" cy="96" r="10" fill="white" opacity="0.9"/>
+        </svg>
+      </div>
+      <span class="brand-name">Fleetly</span>
+    </div>
+
+    <h1 class="left-heading">
+      Filonuzu <em>tamamen<br>ücretsiz</em> deneyin.
+    </h1>
+    <p class="left-sub">
+      7 gün boyunca tüm özelliklere sınırsız erişin. Kredi kartı gerekmez.
+      Deneme bitince dilediğiniz planı seçin.
+    </p>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon orange">🚛</div>
+        <div class="feature-text">
+          <strong>Araç & Filo Yönetimi</strong>
+          <span>Tüm araçları tek ekrandan takip edin</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon orange">⛽</div>
+        <div class="feature-text">
+          <strong>Yakıt Takibi & Tüketim Analizi</strong>
+          <span>L/100km hesapla, maliyetleri görüntüle</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon blue">🔧</div>
+        <div class="feature-text">
+          <strong>Bakım & Arıza Yönetimi</strong>
+          <span>Periyodik bakım hatırlatmaları, arıza logları</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon green">🗺</div>
+        <div class="feature-text">
+          <strong>Sefer ve Masraf Takibi</strong>
+          <span>Gelir-gider dengesi, PDF/Excel raporları</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon purple">📊</div>
+        <div class="feature-text">
+          <strong>Gelişmiş Raporlama</strong>
+          <span>Aylık ve yıllık performans analizleri</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="trust-badge">
+      <div class="trust-dot"></div>
+      Güvenli · Supabase altyapısı · Verileriniz Türkiye'de
+    </div>
+  </div>
+
+  <!-- ── SAĞ PANEL — FORM ── -->
+  <div class="right-panel">
+    <div class="form-card">
+
+      <!-- ADIM GÖSTERGESİ -->
+      <div class="step-indicator">
+        <div class="step active" id="step1-ind">
+          <div class="step-num">1</div>
+          <span>Hesap</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step2-ind">
+          <div class="step-num">2</div>
+          <span>Firma</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step3-ind">
+          <div class="step-num">3</div>
+          <span>Plan</span>
+        </div>
+      </div>
+
+      <!-- ADIM 1: Hesap -->
+      <div id="step1">
+        <div class="form-title">Hesabınızı oluşturun</div>
+        <div class="form-sub">E-posta adresinizi doğrulayarak başlayın</div>
+
+        <div class="field-group">
+          <div class="field-label">E-posta Adresi</div>
+          <input class="field-inp" type="email" id="r-email" placeholder="ornek@sirket.com" autocomplete="email" />
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">Şifre</div>
+            <input class="field-inp" type="password" id="r-pass" placeholder="En az 8 karakter" autocomplete="new-password" />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Şifre Tekrar</div>
+            <input class="field-inp" type="password" id="r-pass2" placeholder="Aynı şifre" autocomplete="new-password" />
+          </div>
+        </div>
+
+        <div class="form-error" id="step1-error"></div>
+
+        <button class="btn-cta" id="step1-btn" onclick="goStep2()">Devam Et →</button>
+
+        <div class="form-footer">
+          Hesabınız var mı? <a href="index.html">Giriş yapın</a>
+        </div>
+      </div>
+
+      <!-- ADIM 2: Firma Bilgileri -->
+      <div id="step2" style="display:none">
+        <div class="form-title">Firma bilgileriniz</div>
+        <div class="form-sub">Şirketinizi sisteme tanıtın</div>
+
+        <div class="field-group">
+          <div class="field-label">Firma Adı *</div>
+          <input class="field-inp" type="text" id="r-firma" placeholder="ABC Lojistik A.Ş." />
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">Telefon</div>
+            <input class="field-inp" type="tel" id="r-telefon" placeholder="0532 000 00 00" />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Vergi No</div>
+            <input class="field-inp" type="text" id="r-vergino" placeholder="1234567890" />
+          </div>
+        </div>
+
+        <div class="form-error" id="step2-error"></div>
+
+        <button class="btn-cta" id="step2-btn" onclick="goStep3()">Devam Et →</button>
+
+        <div class="form-footer">
+          <a href="#" onclick="backStep(1)">← Geri dön</a>
+        </div>
+      </div>
+
+      <!-- ADIM 3: Plan Seçimi -->
+      <div id="step3" style="display:none">
+        <div class="form-title">Plan seçin</div>
+        <div class="form-sub">İlk 7 gün <strong style="color:var(--green)">ücretsiz</strong> — kredi kartı gerekmez</div>
+
+        <div class="plan-grid">
+          <label class="plan-card" id="plan-aylik" for="plan-r-aylik">
+            <input type="radio" name="plan" id="plan-r-aylik" value="aylik" checked onchange="selectPlan('aylik')" />
+            <div class="plan-name">Aylık</div>
+            <div class="plan-price">₺990 <small>/ay</small></div>
+            <div class="plan-desc">Aylık yenilenebilir. Dilediğinizde iptal.</div>
+          </label>
+          <label class="plan-card" id="plan-yillik" for="plan-r-yillik">
+            <input type="radio" name="plan" id="plan-r-yillik" value="yillik" onchange="selectPlan('yillik')" />
+            <div class="plan-badge">%25 İndirim</div>
+            <div class="plan-name">Yıllık</div>
+            <div class="plan-price">₺8.900 <small>/yıl</small></div>
+            <div class="plan-desc">Yılda ₺2.980 tasarruf. Tek ödeme.</div>
+          </label>
+        </div>
+
+        <!-- Deneme bilgi kutusu -->
+        <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:14px 16px;margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:4px">✅ 7 Gün Ücretsiz Deneme</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5">
+            Kayıt olduğunuzda deneme süreniz başlar. Ödeme bilgisi istemiyoruz.
+            Deneme sonunda abone olmak isterseniz ödeme adımına yönlendirilirsiniz.
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="r-kvkk" />
+          <label for="r-kvkk">
+            <a href="#" target="_blank">Kullanım Şartları</a> ve
+            <a href="#" target="_blank">KVKK Aydınlatma Metni</a>'ni okudum ve kabul ediyorum.
+          </label>
+        </div>
+
+        <div class="form-error" id="step3-error"></div>
+
+        <button class="btn-cta" id="step3-btn" onclick="doRegister()">🚀 Ücretsiz Deneyi Başlat</button>
+
+        <div class="form-footer">
+          <a href="#" onclick="backStep(2)">← Geri dön</a>
+        </div>
+      </div>
+
+      <!-- BAŞARI EKRANI -->
+      <div id="step-success" style="display:none">
+        <div class="form-success">
+          <span class="success-icon">🎉</span>
+          <h2>Hoş geldiniz!</h2>
+          <div class="trial-badge">✅ 7 Günlük Deneme Başladı</div>
+          <p>
+            Hesabınız oluşturuldu.<br>
+            E-posta adresinize bir doğrulama mesajı gönderdik.<br>
+            Uygulamaya giriş yapabilirsiniz.
+          </p>
+          <button class="btn-cta" onclick="window.location.href='index.html'">
+            Uygulamaya Git →
+          </button>
+        </div>
+      </div>
+
+      <!-- Güvenlik satırı -->
+      <div class="security-row">
+        <div class="sec-item">🔒 SSL Şifreleme</div>
+        <div class="sec-item">🛡 Güvenli Depolama</div>
+        <div class="sec-item">🇹🇷 Türk Sunucusu</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CFG = window.FILO_CONFIG || { SUPABASE_URL: '', SUPABASE_ANON: '' };
+let _sb = null;
+function getSB() {
+  if (!_sb && CFG.SUPABASE_URL && CFG.SUPABASE_ANON) {
+    _sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON);
+  }
+  return _sb;
+}
+
+let secilenPlan = 'aylik';
+
+function selectPlan(p) {
+  secilenPlan = p;
+  document.getElementById('plan-aylik').classList.toggle('selected', p === 'aylik');
+  document.getElementById('plan-yillik').classList.toggle('selected', p === 'yillik');
+}
+// Başlangıçta aylık seçili
+selectPlan('aylik');
+
+function showStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('step'+i);
+    if (el) el.style.display = (i === n) ? '' : 'none';
+  });
+  // Step göstergeleri
+  ['step1-ind','step2-ind','step3-ind'].forEach((id, idx) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'step';
+    if (idx+1 < n)  el.classList.add('done');
+    if (idx+1 === n) el.classList.add('active');
+    // Tik ikonu
+    const num = el.querySelector('.step-num');
+    if (idx+1 < n) num.textContent = '✓';
+    else num.textContent = idx+1;
+  });
+}
+
+function backStep(n) { showStep(n); }
+
+function setErr(id, msg) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = msg || '';
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) {
+    btn.dataset.orig = btn.textContent;
+    btn.textContent = '⏳ Lütfen bekleyin…';
+  } else {
+    btn.textContent = btn.dataset.orig || 'Devam Et →';
+  }
+}
+
+/* ADIM 1 → 2 */
+async function goStep2() {
+  setErr('step1-error', '');
+  const email = document.getElementById('r-email').value.trim();
+  const pass  = document.getElementById('r-pass').value;
+  const pass2 = document.getElementById('r-pass2').value;
+
+  if (!email || !email.includes('@')) { setErr('step1-error', '❌ Geçerli bir e-posta girin.'); return; }
+  if (pass.length < 8) { setErr('step1-error', '❌ Şifre en az 8 karakter olmalı.'); return; }
+  if (pass !== pass2)  { setErr('step1-error', '❌ Şifreler eşleşmiyor.'); return; }
+
+  showStep(2);
+}
+
+/* ADIM 2 → 3 */
+function goStep3() {
+  setErr('step2-error', '');
+  const firma = document.getElementById('r-firma').value.trim();
+  if (!firma) { setErr('step2-error', '❌ Firma adı zorunludur.'); return; }
+  showStep(3);
+}
+
+/* ADIM 3 — KAYIT */
+async function doRegister() {
+  setErr('step3-error', '');
+  const kvkk = document.getElementById('r-kvkk').checked;
+  if (!kvkk) { setErr('step3-error', '❌ Kullanım şartlarını kabul etmelisiniz.'); return; }
+
+  const sb = getSB();
+  if (!sb) { setErr('step3-error', '⚠ Sistem yapılandırması eksik. Yöneticiye başvurun.'); return; }
+
+  const email    = document.getElementById('r-email').value.trim();
+  const pass     = document.getElementById('r-pass').value;
+  const firmaAdi = document.getElementById('r-firma').value.trim();
+  const telefon  = document.getElementById('r-telefon').value.trim() || null;
+  const vergiNo  = document.getElementById('r-vergino').value.trim() || null;
+
+  setLoading('step3-btn', true);
+
+  try {
+    // 1. Supabase Auth ile kullanıcı oluştur
+    const { data: authData, error: authErr } = await sb.auth.signUp({
+      email,
+      password: pass,
+      options: { emailRedirectTo: window.location.origin + '/index.html' }
+    });
+
+    if (authErr) {
+      let msg = '❌ ' + authErr.message;
+      if (authErr.message.includes('already registered')) msg = '❌ Bu e-posta zaten kayıtlı. Giriş yapın.';
+      if (authErr.message.includes('weak')) msg = '❌ Şifre çok zayıf. Harf ve sayı kombinasyonu kullanın.';
+      setErr('step3-error', msg);
+      setLoading('step3-btn', false);
+      return;
+    }
+
+    // 2. Supabase Auth oturumu otomatik başlar — firma RPC'yi çağır
+    // Not: E-posta onayı kapatılmışsa session hemen gelir
+    const { data: rpcData, error: rpcErr } = await sb.rpc('firma_kayit_et', {
+      p_firma_adi : firmaAdi,
+      p_email     : email,
+      p_telefon   : telefon,
+      p_vergi_no  : vergiNo
+    });
+
+    if (rpcErr) {
+      // Eğer e-posta onayı zorunluysa RPC çalışmayabilir — sessizce geç
+      console.warn('RPC uyarısı:', rpcErr.message);
+      // Yine de başarı ekranını göster, kullanıcı mail onayladıktan sonra uygulama üzerinden tekrar çağrılacak
+    }
+
+    // 3. Seçilen planı localStorage'a kaydet (giriş sonrası kullanılacak)
+    localStorage.setItem('fleetly_secilen_plan', secilenPlan);
+
+    // 4. Başarı ekranı
+    setLoading('step3-btn', false);
+    [1,2,3].forEach(i => {
+      const el = document.getElementById('step'+i);
+      if (el) el.style.display = 'none';
+    });
+    document.getElementById('step-success').style.display = '';
+
+  } catch (err) {
+    console.error(err);
+    setErr('step3-error', '❌ Beklenmedik hata: ' + err.message);
+    setLoading('step3-btn', false);
+  }
+}
+
+// Enter tuşu desteği
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const step1 = document.getElementById('step1');
+  const step2 = document.getElementById('step2');
+  const step3 = document.getElementById('step3');
+  if (step1 && step1.style.display !== 'none') goStep2();
+  else if (step2 && step2.style.display !== 'none') goStep3();
+  else if (step3 && step3.style.display !== 'none') doRegister();
+});
+</script>
+</body>
+</html>
