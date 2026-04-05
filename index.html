@@ -3554,7 +3554,21 @@ async function checkAuth() {
 let _secilenSubPlan = 'aylik';
 
 async function checkSubscription() {
-  if (!currentFirmaId) return; // firma_id yoksa kontrol atla
+  // Firma ID yoksa → yeni kayıt olan kullanıcı (firma henüz oluşturulmamış)
+  if (!currentFirmaId) {
+    const sb = getSB();
+    if (sb) {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+          // Giriş yapmış ama firması yok — register'a yönlendir
+          showToast('⚠ Lütfen firma kaydınızı tamamlayın.', 'info');
+          setTimeout(() => { window.location.href = 'register.html'; }, 1800);
+        }
+      } catch(e) { /* sessiz */ }
+    }
+    return;
+  }
 
   try {
     const sb = getSB();
@@ -3564,41 +3578,48 @@ async function checkSubscription() {
       p_firma_id: currentFirmaId
     });
 
-    if (error) { console.warn('Abonelik kontrol hatası:', error.message); return; }
+    // RPC hatası → sessizce geç, uygulamayı engelleme
+    if (error) {
+      console.warn('Abonelik kontrol RPC hatası:', error.message);
+      return;
+    }
 
-    const durum      = data?.durum;
-    const kalanGun   = data?.kalan_gun ?? 0;
-    const bitis      = data?.bitis;
+    // data null veya durum belirsizse → uygulamayı engelleme
+    if (!data || !data.durum) {
+      console.warn('Abonelik durumu alınamadı, erişim açık bırakılıyor');
+      return;
+    }
+
+    const durum    = data.durum;
+    const kalanGun = (typeof data.kalan_gun === 'number') ? data.kalan_gun : 0;
+    const bitis    = data.bitis;
 
     if (durum === 'aktif') {
-      // Aktif abonelik — banner gizli
       hideSubscriptionOverlay();
       hideTrialBanner();
-      // Biteceğe yakın uyarı (10 gün)
       if (kalanGun <= 10) {
-        showToast(`⚠ Aboneliğiniz ${kalanGun} gün içinde sona eriyor.`, 'warning');
+        showToast('⚠ Aboneliğiniz ' + kalanGun + ' gün içinde sona eriyor.', 'warning');
       }
       return;
     }
 
     if (durum === 'deneme') {
-      // Deneme süresi devam ediyor — banner göster
       hideSubscriptionOverlay();
       showTrialBanner(kalanGun, bitis);
       return;
     }
 
     if (durum === 'suresi_dolmus') {
-      // Erişimi engelle
       showSubscriptionOverlay('suresi_dolmus', kalanGun);
       return;
     }
 
-    // Bilinmeyen durum — sessize al
+    // Bilinmeyen durum → uygulamayı engelleme
     console.warn('Bilinmeyen abonelik durumu:', durum);
 
   } catch (e) {
-    console.warn('Abonelik kontrolü atlandı:', e.message);
+    // Herhangi bir hata → uygulamayı engelleme, sadece logla
+    console.warn('Abonelik kontrolü başarısız (hata yutuldu):', e.message);
   }
 }
 
