@@ -3510,6 +3510,9 @@ async function updateFirmaHeader() {
   }
 }
 
+let _authListenerRegistered = false;
+let _isLoggingOut = false;
+
 async function checkAuth() {
   const sb = getSB();
   if (!sb) { showLoginOverlay(); return; }
@@ -3527,8 +3530,15 @@ async function checkAuth() {
     showLoginOverlay();
   }
 
+  // Dinleyiciyi yalnızca bir kez kaydet
+  if (_authListenerRegistered) return;
+  _authListenerRegistered = true;
+
   // Oturum değişikliklerini dinle (token yenileme, çıkış vb.)
   sb.auth.onAuthStateChange(async (event, session) => {
+    // Çıkış yapılıyorken gelen sahte SIGNED_IN eventini yoksay
+    if (_isLoggingOut && event === 'SIGNED_IN') return;
+
     if (event === 'SIGNED_IN' && session) {
       _authToken = session.access_token;
       await loadFirmaId();
@@ -3536,6 +3546,7 @@ async function checkAuth() {
       hideLoginOverlay();
       await checkSubscription();
     } else if (event === 'SIGNED_OUT') {
+      _isLoggingOut = false;
       _authToken = null;
       currentFirmaId = null;
       hideSubscriptionOverlay();
@@ -3874,10 +3885,13 @@ async function doLogout() {
   try { closeSettings(); } catch(e) {}
   try { closeMobMenu(); } catch(e) {}
 
+  // Race condition'ı önle: signOut sırasında gelen SIGNED_IN eventini yoksay
+  _isLoggingOut = true;
+
   try {
     const sb = getSB();
     if (sb) await sb.auth.signOut();
-  } catch(e) {}
+  } catch(e) { _isLoggingOut = false; }
   _authToken = null;
   currentFirmaId = null;
   vehicles = [];
@@ -9545,7 +9559,7 @@ loadMasrafData();
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('/onerfilotakip/service-worker.js')
           .then(reg => console.log('SW kayıtlı:', reg.scope))
           .catch(err => console.warn('SW hatası:', err));
       });
