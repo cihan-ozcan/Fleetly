@@ -1245,11 +1245,12 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    overflow: hidden;
-    overflow-x: auto;
+    overflow: auto;
+    max-height: 520px;
   }
   table { width: 100%; border-collapse: collapse; min-width: 1100px; }
   thead { background: var(--surface2); }
+  thead tr { position: sticky; top: 0; z-index: 2; }
   th {
     padding: 11px 14px;
     text-align: left;
@@ -1259,6 +1260,7 @@
     border-bottom: 1px solid var(--border);
     cursor: pointer; white-space: nowrap;
     user-select: none; transition: color .15s;
+    background: var(--surface2);
   }
   th:hover { color: var(--text2); }
   th .sort-icon { margin-left: 4px; opacity: .3; font-size: 10px; }
@@ -2308,7 +2310,7 @@
       <div class="toolbar-left">
         <div class="search-wrap">
           <span class="icon-search">🔎</span>
-          <input type="text" id="search-input" placeholder="Plaka veya şoför ara…" oninput="renderTable()" />
+          <input type="text" id="search-input" placeholder="Plaka veya şoför ara…" oninput="currentPage=1;renderTable()" />
         </div>
         <div class="filter-tabs">
           <div class="tab active" data-filter="all" onclick="setFilter('all',this)">Tümü</div>
@@ -2319,6 +2321,12 @@
       </div>
       <div class="toolbar-right">
         <span id="table-count" style="font-size:12px;color:var(--muted)"></span>
+        <select id="page-size-select" onchange="pageSize=+this.value;currentPage=1;renderTable()" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border2);border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;margin-left:10px">
+          <option value="10">10 / sayfa</option>
+          <option value="25" selected>25 / sayfa</option>
+          <option value="50">50 / sayfa</option>
+          <option value="9999">Tümü</option>
+        </select>
       </div>
     </div>
   <!-- Mobil kart listesi (tablo yerine) -->
@@ -2345,6 +2353,8 @@
         <tbody id="table-body"></tbody>
       </table>
     </div>
+    <!-- Sayfalama -->
+    <div id="pagination-bar" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 0 4px;flex-wrap:wrap"></div>
   </div><!-- /table-section -->
 
   <!-- 4d. SON DÜZENLEMELER PANELİ -->
@@ -3202,6 +3212,8 @@ let editingId   = null;
 let activeFilter= 'all';
 let sortField   = null;
 let sortAsc     = true;
+let currentPage = 1;
+let pageSize    = 25;
 
 /* ================================================================
    GİRİŞ / ÇIKIŞ — Supabase Auth
@@ -3704,6 +3716,7 @@ function updateAlerts() {
    ================================================================ */
 function setFilter(f, el) {
   activeFilter = f;
+  currentPage  = 1;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   renderTable();
@@ -3712,6 +3725,7 @@ function setFilter(f, el) {
 function sortBy(field) {
   if (sortField === field) sortAsc = !sortAsc;
   else { sortField = field; sortAsc = true; }
+  currentPage = 1;
   document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
   const thEls = document.querySelectorAll('th');
   // map field to column index
@@ -3773,16 +3787,23 @@ function getFilteredSorted() {
    TABLO RENDER
    ================================================================ */
 function renderTable() {
-  const tbody = document.getElementById('table-body');
-  const list  = getFilteredSorted();
+  const tbody    = document.getElementById('table-body');
+  const fullList = getFilteredSorted();
+  const total    = fullList.length;
+  const totPages = pageSize >= 9999 ? 1 : Math.max(1, Math.ceil(total / pageSize));
+  if (currentPage > totPages) currentPage = totPages;
 
   const countEl = document.getElementById('table-count');
-  if (countEl) countEl.textContent = list.length + ' araç';
+  if (countEl) countEl.textContent = total + ' araç';
+
+  // sayfalanmış dilim
+  const sliceStart = pageSize >= 9999 ? 0 : (currentPage - 1) * pageSize;
+  const list = pageSize >= 9999 ? fullList : fullList.slice(sliceStart, sliceStart + pageSize);
 
   // ── Mobil kart render ──
   const mobList = document.getElementById('mob-card-list');
   if (mobList) {
-    if (list.length === 0) {
+    if (fullList.length === 0) {
       mobList.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Sonuç bulunamadı</p></div>';
     } else {
       mobList.innerHTML = list.map(v => {
@@ -3824,10 +3845,11 @@ function renderTable() {
     }
   }
 
-  if (list.length === 0) {
+  if (fullList.length === 0) {
     tbody.innerHTML = `<tr><td colspan="12">
       <div class="empty-state"><div class="icon">🔍</div><p>Sonuç bulunamadı</p></div>
     </td></tr>`;
+    renderPaginationBar(0, 1);
     return;
   }
 
@@ -3866,6 +3888,43 @@ function renderTable() {
       </td>
     </tr>`;
   }).join('');
+
+  renderPaginationBar(total, totPages);
+}
+
+function renderPaginationBar(total, totPages) {
+  const bar = document.getElementById('pagination-bar');
+  if (!bar) return;
+  if (totPages <= 1) { bar.innerHTML = ''; return; }
+
+  const pBtn = (label, page, isActive, isDisabled) => {
+    const base = `min-width:32px;height:32px;padding:0 10px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;`;
+    const style = isActive
+      ? base + 'background:var(--accent);border-color:var(--accent);color:#fff;'
+      : base + `background:var(--surface2);border-color:var(--border2);color:var(--text2);opacity:${isDisabled ? '.35' : '1'};`;
+    return `<button style="${style}" onclick="${isDisabled || isActive ? '' : `currentPage=${page};renderTable()`}" ${isDisabled ? 'disabled' : ''}>${label}</button>`;
+  };
+
+  let html = pBtn('‹', currentPage - 1, false, currentPage === 1);
+
+  // akıllı sayfa numaraları
+  const pages = [];
+  for (let i = 1; i <= totPages; i++) {
+    if (i === 1 || i === totPages || (i >= currentPage - 2 && i <= currentPage + 2)) pages.push(i);
+    else if (pages[pages.length - 1] !== '…') pages.push('…');
+  }
+  pages.forEach(p => {
+    if (p === '…') html += `<span style="color:var(--muted);padding:0 2px;align-self:center;font-size:13px">…</span>`;
+    else html += pBtn(p, p, p === currentPage, false);
+  });
+
+  html += pBtn('›', currentPage + 1, false, currentPage === totPages);
+
+  const from = pageSize >= 9999 ? 1 : (currentPage - 1) * pageSize + 1;
+  const to   = pageSize >= 9999 ? total : Math.min(currentPage * pageSize, total);
+  html += `<span style="font-size:11.5px;color:var(--muted);margin-left:8px">${from}–${to} / ${total} araç</span>`;
+
+  bar.innerHTML = html;
 }
 
 const MAX_ACTIVITY = 50;
