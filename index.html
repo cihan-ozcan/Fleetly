@@ -177,10 +177,10 @@
 
     .hero-title {
       font-family: 'Syne', sans-serif;
-      font-size: clamp(32px, 9vw, 80px);
+      font-size: clamp(44px, 7vw, 80px);
       font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -1px;
+      line-height: 1.08;
+      letter-spacing: -2px;
       margin-bottom: 24px;
       animation: fadeUp .7s ease .1s both;
     }
@@ -193,7 +193,7 @@
     }
 
     .hero-sub {
-      font-size: clamp(15px, 2.2vw, 20px);
+      font-size: clamp(16px, 2.2vw, 20px);
       color: var(--text2);
       max-width: 580px;
       margin: 0 auto 44px;
@@ -728,143 +728,152 @@
     .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color .2s; }
     .footer-links a:hover { color: var(--accent); }
 
+    /* ── HAMBURGEr BUTONU (her zaman tanımlı, mobilde görünür) ── */
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 40px; height: 40px;
+      cursor: pointer;
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 8px;
+      background: none;
+      flex-shrink: 0;
+    }
+    .nav-hamburger span {
+      display: block; height: 2px;
+      background: var(--text2); border-radius: 2px;
+      transition: transform .25s, opacity .2s;
+    }
+    .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+    .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* Mobil açılır menü */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 68px; left: 0; right: 0;
+      background: rgba(8,12,16,.98);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      z-index: 99;
+      padding: 8px 20px 24px;
+      flex-direction: column;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a.mm-link {
+      color: var(--text2); text-decoration: none;
+      font-size: 16px; font-weight: 500;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      display: block;
+    }
+    .mobile-menu a.mm-link:hover { color: var(--accent); }
+    .mobile-menu .mm-btns {
+      display: flex; flex-direction: column; gap: 10px; margin-top: 16px;
+    }
+    .mobile-menu .mm-btns a {
+      display: block; text-align: center; text-decoration: none;
+      padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 600;
+    }
+    .mobile-menu .mm-btns a.mm-ghost {
+      border: 1px solid var(--border2); color: var(--text2); background: none;
+    }
+    .mobile-menu .mm-btns a.mm-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff;
+    }
+
     /* ── MOBILE ── */
     @media (max-width: 900px) {
-      nav { padding: 0 20px; }
+      /* Taşmayı tamamen engelle */
+      html, body { overflow-x: hidden; max-width: 100%; }
+      * { max-width: 100%; }
+      img, svg, table { max-width: 100%; }
+
+      /* Nav */
+      nav { padding: 0 16px; }
       .nav-links { display: none; }
-
-      /* Hamburger butonu */
-      .nav-hamburger {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 5px;
-        width: 40px; height: 40px;
-        cursor: pointer;
-        border: 1px solid var(--border2);
-        border-radius: 8px;
-        padding: 8px;
-        background: none;
-        flex-shrink: 0;
-      }
-      .nav-hamburger span {
-        display: block;
-        height: 2px;
-        background: var(--text2);
-        border-radius: 2px;
-        transition: transform .25s, opacity .2s;
-      }
-      .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-      .nav-hamburger.open span:nth-child(2) { opacity: 0; }
-      .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-      /* Mobil açılır menü */
-      .mobile-menu {
-        display: none;
-        position: fixed;
-        top: 68px; left: 0; right: 0;
-        background: rgba(8,12,16,.98);
-        backdrop-filter: blur(20px);
-        border-bottom: 1px solid var(--border);
-        z-index: 99;
-        padding: 16px 20px 24px;
-        flex-direction: column;
-        gap: 4px;
-      }
-      .mobile-menu.open { display: flex; }
-      .mobile-menu a {
-        color: var(--text2);
-        text-decoration: none;
-        font-size: 16px;
-        font-weight: 500;
-        padding: 14px 0;
-        border-bottom: 1px solid var(--border);
-        display: block;
-      }
-      .mobile-menu a:last-of-type { border-bottom: none; }
-      .mobile-menu a:hover { color: var(--accent); }
-      .mobile-menu .mobile-cta {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-top: 16px;
-      }
-      .mobile-menu .btn-ghost,
-      .mobile-menu .btn-primary {
-        width: 100%;
-        text-align: center;
-        padding: 14px;
-        font-size: 15px;
-        border-radius: 10px;
-        justify-content: center;
-      }
-
-      /* Nav'da hamburger göster, masaüstü CTA'yı gizle */
       .nav-cta { display: none; }
+      .nav-hamburger { display: flex; }
 
-      .hero { padding: 100px 20px 60px; }
-      .hero-stats { display: grid; grid-template-columns: 1fr 1fr; }
-      .hero-stat { border-right: none; border-bottom: 1px solid var(--border); }
-      .hero-stat:nth-child(odd) { border-right: 1px solid var(--border); }
-      .hero-stat:last-child { border-bottom: none; grid-column: span 2; }
-      .features-section { padding: 60px 20px; }
-      .features-grid { grid-template-columns: 1fr; }
-      .bigfeature-section { padding: 60px 20px; }
-      .bigfeature-wrap { grid-template-columns: 1fr; gap: 40px; }
-      .bigfeature-wrap.reverse { direction: ltr; }
-      .pricing-section { padding: 60px 20px; }
-      .pricing-grid { grid-template-columns: 1fr; max-width: 420px; }
-      .trust-section { padding: 60px 20px; }
-      .trust-grid { grid-template-columns: 1fr; }
-      .faq-section { padding: 60px 20px; }
-      .cta-section { padding: 60px 20px; }
-      .cta-box { padding: 48px 28px; }
-      footer { padding: 28px 20px; flex-direction: column; align-items: flex-start; gap: 20px; }
-    }
-
-    @media (min-width: 901px) {
-      .nav-hamburger { display: none; }
-      .mobile-menu { display: none !important; }
-    }
-
-    /* ── DOKUNMATIK & GÜVENLİ ALAN ── */
-    @media (max-width: 900px) {
-      /* iOS zoom engellemek için input font-size >= 16px */
-      input, select, textarea { font-size: 16px !important; }
-      /* Güvenli alan (iPhone çentik / home bar) */
-      footer { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
-      nav { padding-top: env(safe-area-inset-top); height: calc(68px + env(safe-area-inset-top)); }
-      .mobile-menu { top: calc(68px + env(safe-area-inset-top)); }
-      /* Büyük dokunma hedefleri */
-      .faq-q { min-height: 56px; }
-
-      /* Hero butonları mobilde tam genişlik */
-      .hero-actions { flex-direction: column; align-items: stretch; gap: 10px; }
+      /* Hero */
+      .hero { padding: 88px 20px 48px; text-align: center; }
+      .hero-title {
+        font-size: clamp(30px, 8vw, 50px);
+        letter-spacing: -0.5px;
+        line-height: 1.12;
+      }
+      .hero-sub { font-size: 15px; }
+      .hero-actions {
+        flex-direction: column; align-items: stretch; gap: 12px;
+      }
       .btn-hero, .btn-hero-ghost {
         width: 100%; justify-content: center;
-        padding: 16px 20px;
+        padding: 15px 20px; font-size: 15px;
+        box-sizing: border-box;
       }
 
-      /* Hero başlık harf aralığı küçük ekranda azalt */
-      .hero-title { letter-spacing: -0.5px; }
-
-      /* Stats — 2×2 grid, son satır tek kolon */
+      /* Stats — 2×2 grid, hepsi eşit */
       .hero-stats {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
+        width: 100%;
       }
       .hero-stat {
         border-right: none !important;
         border-bottom: 1px solid var(--border) !important;
-        padding: 20px 12px;
+        padding: 18px 10px;
       }
-      .hero-stat:nth-child(odd)  { border-right: 1px solid var(--border) !important; }
-      .hero-stat:nth-child(4)    { border-bottom: none !important; }
-      .hero-stat:last-child      { border-bottom: none !important; grid-column: span 2; }
-      .hero-stat-val { font-size: 28px; }
+      .hero-stat:nth-child(1),
+      .hero-stat:nth-child(3) { border-right: 1px solid var(--border) !important; }
+      .hero-stat:nth-child(3),
+      .hero-stat:nth-child(4) { border-bottom: none !important; }
+      .hero-stat-val { font-size: 26px; }
+      .hero-stat-lbl { font-size: 11px; }
 
-      /* Section başlık boyutu */
-      .section-title { font-size: clamp(24px, 6vw, 40px); }
+      /* Sections */
+      .features-section { padding: 52px 16px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .feature-card { padding: 24px 20px; }
+
+      .bigfeature-section { padding: 48px 16px; }
+      .bigfeature-wrap {
+        grid-template-columns: 1fr !important;
+        direction: ltr !important;
+        gap: 32px;
+      }
+      .bigfeature-wrap > * { direction: ltr !important; }
+      /* Mock tablolar mobilde taşmasın */
+      .mock-table { font-size: 11px; }
+      .mock-table th, .mock-table td { padding: 6px 6px; }
+      .mock-plate { font-size: 10px; }
+      .mock-stat-row { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .mock-stat-val { font-size: 16px; }
+
+      .pricing-section { padding: 52px 16px; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 100%; }
+      .pricing-card { padding: 28px 20px; }
+
+      .trust-section { padding: 48px 16px; }
+      .trust-grid { grid-template-columns: 1fr; }
+
+      .faq-section { padding: 48px 16px; }
+      .faq-q { font-size: 14px; padding: 16px 18px; min-height: 54px; }
+
+      .cta-section { padding: 48px 16px; }
+      .cta-box { padding: 36px 20px; }
+      .cta-trust { gap: 14px; }
+
+      footer {
+        padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+        flex-direction: column; align-items: flex-start; gap: 16px;
+      }
+
+      .section-title { font-size: clamp(22px, 6vw, 36px); letter-spacing: -.3px; }
+      .section-sub { font-size: 15px; }
     }
 
     /* Scroll animasyon */
@@ -905,8 +914,6 @@
     <a class="btn-ghost" href="app.html">Giriş Yap</a>
     <a class="btn-primary" href="register.html">Ücretsiz Dene</a>
   </div>
-
-  <!-- Hamburger (mobil) -->
   <button class="nav-hamburger" id="nav-hamburger" aria-label="Menüyü aç">
     <span></span><span></span><span></span>
   </button>
@@ -914,12 +921,12 @@
 
 <!-- Mobil Menü -->
 <div class="mobile-menu" id="mobile-menu">
-  <a href="#ozellikler" onclick="closeMobileMenu()">Özellikler</a>
-  <a href="#fiyatlar" onclick="closeMobileMenu()">Fiyatlar</a>
-  <a href="#sss" onclick="closeMobileMenu()">SSS</a>
-  <div class="mobile-cta">
-    <a class="btn-ghost" href="app.html">Giriş Yap</a>
-    <a class="btn-primary" href="register.html">Ücretsiz Dene</a>
+  <a class="mm-link" href="#ozellikler">Özellikler</a>
+  <a class="mm-link" href="#fiyatlar">Fiyatlar</a>
+  <a class="mm-link" href="#sss">SSS</a>
+  <div class="mm-btns">
+    <a class="mm-ghost" href="app.html">Giriş Yap</a>
+    <a class="mm-primary" href="register.html">🚀 Ücretsiz Dene</a>
   </div>
 </div>
 
@@ -1387,21 +1394,26 @@
   // ── Hamburger menü ──
   const hamburger = document.getElementById('nav-hamburger');
   const mobileMenu = document.getElementById('mobile-menu');
+
   function closeMobileMenu() {
     hamburger.classList.remove('open');
     mobileMenu.classList.remove('open');
     document.body.style.overflow = '';
   }
-  hamburger.addEventListener('click', () => {
+
+  hamburger.addEventListener('click', e => {
+    e.stopPropagation();
     const isOpen = mobileMenu.classList.toggle('open');
     hamburger.classList.toggle('open', isOpen);
     document.body.style.overflow = isOpen ? 'hidden' : '';
   });
-  // Dışarı tıklayınca kapat
+
+  document.querySelectorAll('.mm-link').forEach(a => {
+    a.addEventListener('click', closeMobileMenu);
+  });
+
   document.addEventListener('click', e => {
-    if (!hamburger.contains(e.target) && !mobileMenu.contains(e.target)) {
-      closeMobileMenu();
-    }
+    if (!hamburger.contains(e.target) && !mobileMenu.contains(e.target)) closeMobileMenu();
   });
 
   // ── Scroll reveal ──
