@@ -2570,7 +2570,10 @@
         <span class="icon">👤</span>
         Sürücü Belge Yönetimi
       </div>
-      <button class="modal-close" onclick="closeDriverSelect()">✕</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="downloadDriverExcel()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s" onmouseover="this.style.background='rgba(34,197,94,.22)'" onmouseout="this.style.background='rgba(34,197,94,.12)'">⬇ Excel</button>
+        <button class="modal-close" onclick="closeDriverSelect()">✕</button>
+      </div>
     </div>
     <div class="vehicle-select-body">
 
@@ -2769,6 +2772,7 @@
       <div class="srm-title">💸 Masraf Takibi</div>
       <div style="display:flex;gap:8px;align-items:center">
         <button onclick="downloadMasrafPDF()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#f59e0b;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s" onmouseover="this.style.background='rgba(245,158,11,.22)'" onmouseout="this.style.background='rgba(245,158,11,.12)'">⬇ PDF Raporu</button>
+        <button onclick="downloadMasrafExcel()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s" onmouseover="this.style.background='rgba(34,197,94,.22)'" onmouseout="this.style.background='rgba(34,197,94,.12)'">⬇ Excel</button>
         <button class="modal-close" onclick="closeMasrafModal()">✕</button>
       </div>
     </div>
@@ -2848,6 +2852,7 @@
           <option value="all">Tüm Zamanlar</option>
         </select>
         <button onclick="downloadRaporPDF()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(232,121,249,.12);border:1px solid rgba(232,121,249,.35);color:#e879f9;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s" onmouseover="this.style.background='rgba(232,121,249,.22)'" onmouseout="this.style.background='rgba(232,121,249,.12)'">⬇ PDF Raporu</button>
+        <button onclick="downloadRaporExcel()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s" onmouseover="this.style.background='rgba(34,197,94,.22)'" onmouseout="this.style.background='rgba(34,197,94,.12)'">⬇ Excel</button>
         <button class="modal-close" onclick="closeRaporModal()">✕</button>
       </div>
     </div>
@@ -2943,6 +2948,12 @@
           <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Tüm araçların yakıt geçmişini detaylı PDF raporu olarak indirin.</div>
           <button class="fuel-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none;background:linear-gradient(135deg,#38bdf8,#0ea5e9)" onclick="closeVehicleSelect();downloadFuelPDF()">⬇ PDF Rapor</button>
         </div>
+        <!-- Excel Rapor -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">📊 Excel Rapor</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Tüm araçların yakıt geçmişini Excel tablosu olarak indirin.</div>
+          <button class="fuel-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none;background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="closeVehicleSelect();downloadFuelExcel()">⬇ Excel İndir</button>
+        </div>
         <!-- Tehlike Bölgesi -->
         <div class="vs-danger-zone">
           <div class="vs-danger-info">
@@ -3036,6 +3047,12 @@
           <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">📄 Bakım / Arıza PDF Raporu</div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Tüm araçların bakım ve arıza geçmişini detaylı PDF raporu olarak indirin.</div>
           <button class="maint-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none" onclick="closeMaintSelect();downloadMaintPDF()">⬇ PDF Rapor İndir</button>
+        </div>
+        <!-- Excel Rapor -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">📊 Excel Rapor</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Tüm araçların bakım ve arıza geçmişini Excel tablosu olarak indirin.</div>
+          <button class="maint-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none;background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="closeMaintSelect();downloadMaintExcel()">⬇ Excel İndir</button>
         </div>
         <!-- Tehlike Bölgesi -->
         <div class="vs-danger-zone">
@@ -4865,6 +4882,78 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 /* ================================================================
+   YAKIT EXCEL İNDİRME
+   ================================================================ */
+function downloadFuelExcel() {
+  const allEntries = Object.values(fuelData).flat();
+  if (allEntries.length === 0) { showToast('İndirilecek yakıt kaydı yok.', 'error'); return; }
+  showToast('Excel hazırlanıyor…', 'info');
+  try {
+    const WB   = XLSX.utils.book_new();
+    const fmtD = d => d ? d.split('-').reverse().join('.') : '—';
+    const fmtN = n => (n != null && n !== '') ? Number(n) : '';
+
+    /* Araç id → plaka eşlemesi */
+    const plakaMap = {};
+    vehicles.forEach(v => { plakaMap[v.id] = v.plaka || v.id; });
+
+    /* ── Sayfa 1: Tüm Yakıt Kayıtları ── */
+    const sorted = allEntries
+      .map(e => ({ ...e, _plaka: plakaMap[Object.keys(fuelData).find(vid => fuelData[vid].includes(e))] || '—' }))
+      .sort((a, b) => (b.tarih||'').localeCompare(a.tarih||''));
+
+    // Daha doğru plaka eşlemesi
+    const rows1 = [['Araç Plakası','Tarih','Km','Litre','Birim Fiyat (₺)','Toplam (₺)','Notlar']];
+    Object.entries(fuelData).forEach(([vid, entries]) => {
+      const plaka = plakaMap[vid] || vid;
+      [...entries].sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||'')).forEach(e => {
+        const toplam = (e.fiyat && e.litre) ? e.fiyat * e.litre : '';
+        rows1.push([plaka, fmtD(e.tarih), fmtN(e.km), fmtN(e.litre), fmtN(e.fiyat), toplam ? +toplam.toFixed(2) : '', e.not||'']);
+      });
+    });
+    const ws1 = XLSX.utils.aoa_to_sheet(rows1);
+    ws1['!cols'] = [{wch:14},{wch:12},{wch:10},{wch:10},{wch:16},{wch:12},{wch:22}];
+    XLSX.utils.book_append_sheet(WB, ws1, 'Yakıt Kayıtları');
+
+    /* ── Sayfa 2: Araç Bazlı Özet ── */
+    const aracRows = [['Araç Plakası','Dolum Sayısı','Toplam Litre','Toplam Maliyet (₺)','Ort. Birim Fiyat (₺)']];
+    Object.entries(fuelData).forEach(([vid, entries]) => {
+      if (!entries.length) return;
+      const plaka  = plakaMap[vid] || vid;
+      const litre  = entries.reduce((a,e)=>a+(e.litre||0),0);
+      const tutar  = entries.reduce((a,e)=>a+(e.fiyat?e.fiyat*e.litre:0),0);
+      const ortFiy = entries.filter(e=>e.fiyat).length > 0
+        ? entries.reduce((a,e)=>a+(e.fiyat||0),0) / entries.filter(e=>e.fiyat).length : 0;
+      aracRows.push([plaka, entries.length, +litre.toFixed(2), +tutar.toFixed(2), +ortFiy.toFixed(2)]);
+    });
+    const ws2 = XLSX.utils.aoa_to_sheet(aracRows);
+    ws2['!cols'] = [{wch:14},{wch:14},{wch:14},{wch:18},{wch:20}];
+    XLSX.utils.book_append_sheet(WB, ws2, 'Araç Özeti');
+
+    /* ── Sayfa 3: Aylık Özet ── */
+    const now=new Date(); const aylikRows=[['Dönem','Dolum Sayısı','Toplam Litre','Toplam Maliyet (₺)']];
+    for(let i=11;i>=0;i--){
+      const d   = new Date(now.getFullYear(),now.getMonth()-i,1);
+      const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      const lbl = d.toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
+      const ef  = allEntries.filter(e=>e.tarih&&e.tarih.startsWith(key));
+      const lt  = ef.reduce((a,e)=>a+(e.litre||0),0);
+      const tt  = ef.reduce((a,e)=>a+(e.fiyat?e.fiyat*e.litre:0),0);
+      aylikRows.push([lbl, ef.length, +lt.toFixed(2), +tt.toFixed(2)]);
+    }
+    const ws3 = XLSX.utils.aoa_to_sheet(aylikRows);
+    ws3['!cols'] = [{wch:22},{wch:14},{wch:14},{wch:18}];
+    XLSX.utils.book_append_sheet(WB, ws3, 'Aylık Özet');
+
+    XLSX.writeFile(WB, 'yakit_raporu_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    showToast('Excel indirildi ✓', 'success');
+  } catch(err) {
+    console.error('Excel hatası:', err);
+    showToast('Excel oluşturulurken hata oluştu.', 'error');
+  }
+}
+
+/* ================================================================
    YAKIT RAPORU PDF İNDİRME
    ================================================================ */
 
@@ -6141,6 +6230,85 @@ function renderMaintModal() {
 }
 
 /* ================================================================
+   BAKIM / ARIZA EXCEL İNDİRME
+   ================================================================ */
+function downloadMaintExcel() {
+  const allEntries = [];
+  vehicles.forEach(v => {
+    (maintData[v.id]||[]).forEach(e => allEntries.push({...e, plaka:v.plaka||v.id}));
+  });
+  if (allEntries.length === 0) { showToast('İndirilecek bakım/arıza kaydı yok.', 'error'); return; }
+  showToast('Excel hazırlanıyor…', 'info');
+  try {
+    const WB   = XLSX.utils.book_new();
+    const fmtD = d => d ? d.split('-').reverse().join('.') : '—';
+    const fmtN = n => (n != null && n !== '') ? Number(n) : '';
+    const sorted = [...allEntries].sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
+
+    /* ── Sayfa 1: Tüm Bakım / Arıza Kayıtları ── */
+    const rows1 = [['Araç Plakası','Tarih','Tür','Açıklama','Km','Maliyet (₺)','Sonraki Tarih','Sonraki Km','Servis / Yetkili']];
+    sorted.forEach(e => rows1.push([
+      e.plaka, fmtD(e.tarih), e.tur||'—', e.aciklama||'—',
+      fmtN(e.km), fmtN(e.maliyet), fmtD(e.sonraki_tarih), fmtN(e.sonraki_km), e.servis||''
+    ]));
+    const totalMaliyet = allEntries.reduce((a,e)=>a+(e.maliyet||0),0);
+    rows1.push(['TOPLAM','','','','', totalMaliyet,'','','']);
+    const ws1 = XLSX.utils.aoa_to_sheet(rows1);
+    ws1['!cols'] = [{wch:14},{wch:12},{wch:14},{wch:28},{wch:10},{wch:14},{wch:14},{wch:12},{wch:22}];
+    XLSX.utils.book_append_sheet(WB, ws1, 'Bakım-Arıza Kayıtları');
+
+    /* ── Sayfa 2: Araç Bazlı Özet ── */
+    const byArac = {};
+    allEntries.forEach(e => {
+      if (!byArac[e.plaka]) byArac[e.plaka]={plaka:e.plaka,toplam:0,bakim:0,ariza:0,maliyet:0};
+      byArac[e.plaka].toplam++;
+      if ((e.tur||'').toLowerCase().includes('arıza')||(e.tur||'').toLowerCase().includes('ariza')) byArac[e.plaka].ariza++;
+      else byArac[e.plaka].bakim++;
+      byArac[e.plaka].maliyet+=e.maliyet||0;
+    });
+    const aracRows=[['Araç Plakası','Toplam Kayıt','Bakım','Arıza','Toplam Maliyet (₺)']];
+    Object.values(byArac).sort((a,b)=>b.maliyet-a.maliyet).forEach(a=>{
+      aracRows.push([a.plaka,a.toplam,a.bakim,a.ariza,a.maliyet]);
+    });
+    const ws2 = XLSX.utils.aoa_to_sheet(aracRows);
+    ws2['!cols'] = [{wch:14},{wch:14},{wch:10},{wch:10},{wch:18}];
+    XLSX.utils.book_append_sheet(WB, ws2, 'Araç Özeti');
+
+    /* ── Sayfa 3: Tür Bazlı Özet ── */
+    const byTur = {};
+    allEntries.forEach(e => {
+      const k = e.tur||'Diğer';
+      if (!byTur[k]) byTur[k]={tur:k,adet:0,maliyet:0};
+      byTur[k].adet++; byTur[k].maliyet+=e.maliyet||0;
+    });
+    const turRows=[['Tür','Kayıt Sayısı','Toplam Maliyet (₺)']];
+    Object.values(byTur).sort((a,b)=>b.maliyet-a.maliyet).forEach(t=>turRows.push([t.tur,t.adet,t.maliyet]));
+    const ws3 = XLSX.utils.aoa_to_sheet(turRows);
+    ws3['!cols'] = [{wch:18},{wch:14},{wch:18}];
+    XLSX.utils.book_append_sheet(WB, ws3, 'Tür Özeti');
+
+    /* ── Sayfa 4: Aylık Özet ── */
+    const now=new Date(); const aylikRows=[['Dönem','Kayıt Sayısı','Toplam Maliyet (₺)']];
+    for(let i=11;i>=0;i--){
+      const d   = new Date(now.getFullYear(),now.getMonth()-i,1);
+      const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      const lbl = d.toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
+      const ef  = allEntries.filter(e=>e.tarih&&e.tarih.startsWith(key));
+      aylikRows.push([lbl, ef.length, ef.reduce((a,e)=>a+(e.maliyet||0),0)]);
+    }
+    const ws4 = XLSX.utils.aoa_to_sheet(aylikRows);
+    ws4['!cols'] = [{wch:22},{wch:14},{wch:18}];
+    XLSX.utils.book_append_sheet(WB, ws4, 'Aylık Özet');
+
+    XLSX.writeFile(WB, 'bakim_ariza_raporu_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    showToast('Excel indirildi ✓', 'success');
+  } catch(err) {
+    console.error('Excel hatası:', err);
+    showToast('Excel oluşturulurken hata oluştu.', 'error');
+  }
+}
+
+/* ================================================================
    BAKIM / ARIZA RAPORU PDF İNDİRME
    ================================================================ */
 
@@ -6726,6 +6894,84 @@ function closeDriverSelect() {
 }
 function closeDriverSelectBackdrop(e) {
   if (e.target === document.getElementById('driver-select-backdrop')) closeDriverSelect();
+}
+
+/* ================================================================
+   SÜRÜCÜ BELGELERİ EXCEL İNDİRME
+   ================================================================ */
+function downloadDriverExcel() {
+  if (!driverData || driverData.length === 0) {
+    showToast('İndirilecek sürücü kaydı yok.', 'error');
+    return;
+  }
+  showToast('Excel hazırlanıyor…', 'info');
+  try {
+    const WB   = XLSX.utils.book_new();
+    const fmtD = d => d ? d.split('-').reverse().join('.') : '—';
+    const today = new Date(); today.setHours(0,0,0,0);
+    const gunKal = d => {
+      if (!d) return null;
+      const t = new Date(d); t.setHours(0,0,0,0);
+      return Math.round((t-today)/(1000*60*60*24));
+    };
+    const durumStr = d => {
+      if (!d) return '—';
+      const g = gunKal(d);
+      if (g < 0)  return 'GEÇMİŞ';
+      if (g <= 30) return 'UYARI ('+g+' gün)';
+      return 'Geçerli ('+g+' gün)';
+    };
+
+    /* ── Sayfa 1: Tüm Sürücüler ── */
+    const rows1 = [[
+      'Ad Soyad','Telefon','Araç Plakası',
+      'Ehliyet Bitiş','Ehliyet Durum',
+      'SRC Bitiş','SRC Durum',
+      'Psikoteknik Bitiş','Psikoteknik Durum',
+      'Takoğraf Bitiş','Takoğraf Durum'
+    ]];
+    driverData.forEach(d => {
+      rows1.push([
+        d.ad||'—', d.tel||'—', d.plaka||'—',
+        fmtD(d.ehliyet),  durumStr(d.ehliyet),
+        fmtD(d.src),      durumStr(d.src),
+        fmtD(d.psiko),    durumStr(d.psiko),
+        fmtD(d.takograf), durumStr(d.takograf),
+      ]);
+    });
+    const ws1 = XLSX.utils.aoa_to_sheet(rows1);
+    ws1['!cols'] = [{wch:20},{wch:14},{wch:14},{wch:14},{wch:20},{wch:14},{wch:20},{wch:16},{wch:20},{wch:16},{wch:20}];
+    XLSX.utils.book_append_sheet(WB, ws1, 'Sürücü Belgeleri');
+
+    /* ── Sayfa 2: Kritik / Uyarı Durumlar ── */
+    const kritikRows = [['Ad Soyad','Araç Plakası','Belge Türü','Bitiş Tarihi','Kalan Gün','Durum']];
+    driverData.forEach(d => {
+      const belgeler = [
+        {tur:'Ehliyet',    tarih:d.ehliyet},
+        {tur:'SRC',        tarih:d.src},
+        {tur:'Psikoteknik',tarih:d.psiko},
+        {tur:'Takoğraf',   tarih:d.takograf},
+      ];
+      belgeler.forEach(b => {
+        if (!b.tarih) return;
+        const g = gunKal(b.tarih);
+        if (g !== null && g <= 60) {
+          kritikRows.push([d.ad||'—', d.plaka||'—', b.tur, fmtD(b.tarih), g, g<0?'GEÇMİŞ':g<=30?'UYARI':'Dikkat']);
+        }
+      });
+    });
+    if (kritikRows.length === 1) kritikRows.push(['Kritik/Uyarı durumda belge yok.','','','','','']);
+    const ws2 = XLSX.utils.aoa_to_sheet(kritikRows);
+    ws2['!cols'] = [{wch:20},{wch:14},{wch:16},{wch:14},{wch:12},{wch:14}];
+    XLSX.utils.book_append_sheet(WB, ws2, 'Kritik Belgeler');
+
+    XLSX.writeFile(WB, 'surucu_belgeleri_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    showToast('Excel indirildi ✓', 'success');
+  } catch(err) {
+    console.error('Excel hatası:', err);
+    showToast('Excel oluşturulurken hata oluştu.', 'error');
+  }
+}
 }
 
 function _resetDriverForm() {
@@ -7445,6 +7691,88 @@ async function downloadSeferPDF() {
 }
 
 /* ================================================================
+   MASRAF EXCEL İNDİRME
+   ================================================================ */
+function downloadMasrafExcel() {
+  if (!masrafData || masrafData.length === 0) {
+    showToast('İndirilecek masraf kaydı yok.', 'error');
+    return;
+  }
+  showToast('Excel hazırlanıyor…', 'info');
+  try {
+    const WB   = XLSX.utils.book_new();
+    const fmtD = d => d ? d.split('-').reverse().join('.') : '—';
+    const fmtN = n => (n != null && n !== '') ? Number(n) : '';
+    const sorted = [...masrafData].sort((a, b) => (b.tarih||'').localeCompare(a.tarih||''));
+
+    /* ── Sayfa 1: Tüm Masraf Kayıtları ── */
+    const rows = [['Tarih','Araç Plakası','Kategori','Açıklama','Tutar (₺)','Makbuz / Belge No']];
+    sorted.forEach(m => rows.push([
+      fmtD(m.tarih), m.plaka||m.aracId||'—', m.kategori||'—',
+      m.aciklama||'—', fmtN(m.tutar), m.makbuz||''
+    ]));
+    const totalTutar = masrafData.reduce((a,m)=>a+(m.tutar||0),0);
+    rows.push(['TOPLAM','','','', totalTutar,'']);
+    const ws1 = XLSX.utils.aoa_to_sheet(rows);
+    ws1['!cols'] = [{wch:12},{wch:14},{wch:20},{wch:28},{wch:14},{wch:18}];
+    XLSX.utils.book_append_sheet(WB, ws1, 'Masraf Kayıtları');
+
+    /* ── Sayfa 2: Kategori Bazlı Özet ── */
+    const byKat = {};
+    masrafData.forEach(m => {
+      const k = m.kategori||'Diğer';
+      if (!byKat[k]) byKat[k] = { kategori:k, adet:0, tutar:0 };
+      byKat[k].adet++;
+      byKat[k].tutar += m.tutar||0;
+    });
+    const katRows = [['Kategori','Kayıt Sayısı','Toplam Tutar (₺)','Pay (%)']];
+    const toplamTutar2 = masrafData.reduce((a,m)=>a+(m.tutar||0),0);
+    Object.values(byKat).sort((a,b)=>b.tutar-a.tutar).forEach(k => {
+      katRows.push([k.kategori, k.adet, k.tutar, toplamTutar2>0?+(k.tutar/toplamTutar2*100).toFixed(1):0]);
+    });
+    const ws2 = XLSX.utils.aoa_to_sheet(katRows);
+    ws2['!cols'] = [{wch:22},{wch:14},{wch:18},{wch:10}];
+    XLSX.utils.book_append_sheet(WB, ws2, 'Kategori Özeti');
+
+    /* ── Sayfa 3: Araç Bazlı Özet ── */
+    const byArac = {};
+    masrafData.forEach(m => {
+      const k = m.plaka||m.aracId||'Bilinmiyor';
+      if (!byArac[k]) byArac[k] = { plaka:k, adet:0, tutar:0 };
+      byArac[k].adet++;
+      byArac[k].tutar += m.tutar||0;
+    });
+    const aracRows = [['Araç Plakası','Kayıt Sayısı','Toplam Masraf (₺)']];
+    Object.values(byArac).sort((a,b)=>b.tutar-a.tutar).forEach(a => {
+      aracRows.push([a.plaka, a.adet, a.tutar]);
+    });
+    const ws3 = XLSX.utils.aoa_to_sheet(aracRows);
+    ws3['!cols'] = [{wch:16},{wch:14},{wch:18}];
+    XLSX.utils.book_append_sheet(WB, ws3, 'Araç Bazlı');
+
+    /* ── Sayfa 4: Aylık Özet ── */
+    const now = new Date();
+    const aylikRows = [['Dönem','Kayıt Sayısı','Toplam Masraf (₺)']];
+    for (let i=11;i>=0;i--) {
+      const d   = new Date(now.getFullYear(), now.getMonth()-i, 1);
+      const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      const lbl = d.toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
+      const sf  = masrafData.filter(m=>m.tarih&&m.tarih.startsWith(key));
+      aylikRows.push([lbl, sf.length, sf.reduce((a,m)=>a+(m.tutar||0),0)]);
+    }
+    const ws4 = XLSX.utils.aoa_to_sheet(aylikRows);
+    ws4['!cols'] = [{wch:22},{wch:14},{wch:18}];
+    XLSX.utils.book_append_sheet(WB, ws4, 'Aylık Özet');
+
+    XLSX.writeFile(WB, 'masraf_raporu_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    showToast('Excel indirildi ✓', 'success');
+  } catch(err) {
+    console.error('Excel hatası:', err);
+    showToast('Excel oluşturulurken hata oluştu.', 'error');
+  }
+}
+
+/* ================================================================
    MASRAF PDF
    ================================================================ */
 async function downloadMasrafPDF() {
@@ -7609,6 +7937,104 @@ async function downloadMasrafPDF() {
   addFooter();
   _pdfSave(doc, 'masraf_raporu_'+new Date().toISOString().slice(0,10)+'.pdf');
   showToast('Masraf Raporu PDF indirildi!','success');
+}
+
+/* ================================================================
+   KAPSAMLI RAPOR EXCEL İNDİRME
+   ================================================================ */
+function downloadRaporExcel() {
+  showToast('Excel hazırlanıyor…', 'info');
+  try {
+    const WB     = XLSX.utils.book_new();
+    const donem  = document.getElementById('rapor-donem')?.value||'all';
+    const flt    = e => !donem||donem==='all'||!e.tarih||e.tarih.startsWith(donem);
+    const fmtD   = d => d ? d.split('-').reverse().join('.') : '—';
+    const fmtN   = n => (n != null && n !== '') ? Number(n) : '';
+
+    const seferler  = seferData.filter(flt);
+    const masraflar = masrafData.filter(flt);
+    const yakitlar  = Object.values(fuelData).flat().filter(flt);
+    const bakimlar  = Object.values(maintData).flat().filter(flt);
+
+    if (seferler.length+masraflar.length+yakitlar.length+bakimlar.length === 0) {
+      showToast('Seçili dönemde veri yok.', 'error'); return;
+    }
+
+    /* ── Sayfa 1: Genel Özet ── */
+    const toplamCiro   = seferler.reduce((a,s)=>a+(s.ucret||0),0);
+    const toplamYakit  = yakitlar.reduce((a,e)=>a+(e.fiyat?e.fiyat*e.litre:0),0);
+    const toplamBakim  = bakimlar.reduce((a,e)=>a+(e.maliyet||0),0);
+    const toplamMasraf = masraflar.reduce((a,m)=>a+(m.tutar||0),0);
+    const toplamGider  = toplamYakit+toplamBakim+toplamMasraf;
+    const netKar       = toplamCiro-toplamGider;
+    const toplamKm     = seferler.reduce((a,s)=>a+(s.km||0),0);
+    const ozet = [
+      ['Metrik','Değer'],
+      ['Toplam Ciro (₺)',toplamCiro],
+      ['Toplam Yakıt Gideri (₺)',toplamYakit],
+      ['Toplam Bakım Gideri (₺)',toplamBakim],
+      ['Diğer Masraflar (₺)',toplamMasraf],
+      ['Toplam Gider (₺)',toplamGider],
+      ['Net Kâr/Zarar (₺)',netKar],
+      ['Sefer Sayısı',seferler.length],
+      ['Toplam Mesafe (km)',toplamKm],
+      ['Maliyet/km (₺)',toplamKm>0?+(toplamGider/toplamKm).toFixed(2):0],
+    ];
+    const ws0 = XLSX.utils.aoa_to_sheet(ozet);
+    ws0['!cols'] = [{wch:26},{wch:16}];
+    XLSX.utils.book_append_sheet(WB, ws0, 'Genel Özet');
+
+    /* ── Sayfa 2: Araç Bazlı Kârlılık ── */
+    const byArac = {};
+    vehicles.forEach(v=>{ byArac[v.id]={plaka:v.plaka,ciro:0,yakit:0,bakim:0,masraf:0,km:0,sefer:0}; });
+    seferler.forEach(s=>{
+      if(!byArac[s.aracId]) byArac[s.aracId]={plaka:s.plaka||s.aracId,ciro:0,yakit:0,bakim:0,masraf:0,km:0,sefer:0};
+      byArac[s.aracId].ciro+=s.ucret||0; byArac[s.aracId].km+=s.km||0; byArac[s.aracId].sefer++;
+    });
+    Object.entries(fuelData).forEach(([vid,ent])=>{
+      if(byArac[vid]) ent.filter(flt).forEach(e=>{ byArac[vid].yakit+=(e.fiyat?e.fiyat*e.litre:0); });
+    });
+    Object.entries(maintData).forEach(([vid,ent])=>{
+      if(byArac[vid]) ent.filter(flt).forEach(e=>{ byArac[vid].bakim+=(e.maliyet||0); });
+    });
+    masraflar.forEach(m=>{ if(byArac[m.aracId]) byArac[m.aracId].masraf+=m.tutar||0; });
+    const araclarRows = [['Plaka','Sefer Sayısı','Km','Ciro (₺)','Yakıt (₺)','Bakım (₺)','Masraf (₺)','Toplam Gider (₺)','Net Kâr/Zarar (₺)']];
+    Object.values(byArac)
+      .map(a=>({...a,gider:a.yakit+a.bakim+a.masraf,kar:a.ciro-(a.yakit+a.bakim+a.masraf)}))
+      .filter(a=>a.ciro>0||a.gider>0).sort((a,b)=>b.kar-a.kar)
+      .forEach(a=>araclarRows.push([a.plaka,a.sefer,a.km,a.ciro,a.yakit,a.bakim,a.masraf,a.gider,a.kar]));
+    const ws1 = XLSX.utils.aoa_to_sheet(araclarRows);
+    ws1['!cols'] = [{wch:14},{wch:12},{wch:10},{wch:12},{wch:12},{wch:12},{wch:12},{wch:16},{wch:16}];
+    XLSX.utils.book_append_sheet(WB, ws1, 'Araç Kârlılığı');
+
+    /* ── Sayfa 3: Aylık Trend ── */
+    const now=new Date(); const months=[];
+    for(let i=11;i>=0;i--){
+      const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+      months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),lbl:d.toLocaleDateString('tr-TR',{month:'long',year:'numeric'})});
+    }
+    const aylikRows=[['Dönem','Sefer Sayısı','Ciro (₺)','Yakıt (₺)','Bakım (₺)','Masraf (₺)','Net (₺)']];
+    months.forEach(m=>{
+      const sf=seferData.filter(s=>s.tarih&&s.tarih.startsWith(m.key));
+      const mf=masrafData.filter(x=>x.tarih&&x.tarih.startsWith(m.key));
+      const yf=Object.values(fuelData).flat().filter(x=>x.tarih&&x.tarih.startsWith(m.key));
+      const bf=Object.values(maintData).flat().filter(x=>x.tarih&&x.tarih.startsWith(m.key));
+      const ciro=sf.reduce((a,s)=>a+(s.ucret||0),0);
+      const yakit=yf.reduce((a,e)=>a+(e.fiyat?e.fiyat*e.litre:0),0);
+      const bakim=bf.reduce((a,e)=>a+(e.maliyet||0),0);
+      const masraf=mf.reduce((a,x)=>a+(x.tutar||0),0);
+      aylikRows.push([m.lbl,sf.length,ciro,yakit,bakim,masraf,ciro-(yakit+bakim+masraf)]);
+    });
+    const ws2 = XLSX.utils.aoa_to_sheet(aylikRows);
+    ws2['!cols'] = [{wch:22},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(WB, ws2, 'Aylık Trend');
+
+    XLSX.writeFile(WB, 'yonetim_raporu_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    showToast('Excel indirildi ✓', 'success');
+  } catch(err) {
+    console.error('Excel hatası:', err);
+    showToast('Excel oluşturulurken hata oluştu.', 'error');
+  }
 }
 
 /* ================================================================
