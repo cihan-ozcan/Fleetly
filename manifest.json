@@ -2,8 +2,8 @@
   "name": "Fleetly — Araç & Bilgi Yönetim Sistemi",
   "short_name": "Fleetly",
   "description": "Araç filosu takip, yakıt, bakım ve sefer yönetim sistemi",
-  "start_url": "/Fleetly/",
-  "scope": "/Fleetly/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#080c10",
@@ -35,14 +35,14 @@
       "name": "Araçlar",
       "short_name": "Araçlar",
       "description": "Araç listesini görüntüle",
-      "url": "/Fleetly/app.html",
+      "url": "/app.html",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Seferler",
       "short_name": "Seferler",
       "description": "Sefer kayıtları",
-      "url": "/Fleetly/app.html?open=seferler",
+      "url": "/app.html?open=seferler",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ],
