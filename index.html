@@ -2111,13 +2111,15 @@
     <!-- Ayarlar dropdown -->
     <!-- Masaüstü PWA butonu (sadece desteklenirse görünür) -->
     <button id="pwa-desktop-btn" class="btn-sm" onclick="pwaShowInfo()"
-      style="color:var(--accent);border-color:rgba(249,115,22,.3);background:rgba(249,115,22,.06);font-weight:600"
+      style="display:none"
       title="Fleetly'yi telefonunuza veya bilgisayarınıza uygulama olarak yükleyin">
       📲 Uygulamayı Yükle
     </button>
     <div class="settings-wrap" id="settings-wrap">
       <button class="btn-sm" id="settings-btn" onclick="toggleSettings()" title="Ayarlar">⚙ Ayarlar</button>
       <div class="settings-dropdown hidden" id="settings-dropdown">
+        <div class="settings-item" id="settings-pwa-item" onclick="pwaInstall();closeSettings()" style="display:none">📲 Ana Ekrana Ekle</div>
+        <div class="settings-sep" id="settings-pwa-sep" style="display:none"></div>
         <div class="settings-item" onclick="openDashEdit();closeSettings()">🎛 Dashboard Düzenle</div>
         <div class="settings-sep"></div>
         <div class="settings-item" onclick="exportJSON();closeSettings()">⬇ Dışa Aktar</div>
@@ -9100,14 +9102,28 @@ loadMasrafData();
       }, 4000);
     }
 
-    /* ── Masaustu: header butonu ── */
+    /* ── Masaustu: artik buton gosterilmiyor ── */
     if (!isMobile) {
       window.addEventListener('beforeinstallprompt', function(e) {
         e.preventDefault();
         deferredPrompt = e;
-        var db = document.getElementById('pwa-desktop-btn');
-        if (db) db.style.display = 'inline-flex';
+        // masaustunde hicbir sey gosterme
       });
+    }
+
+    /* ── Mobil: ayarlar menusundeki butonu goster ── */
+    function maybeShowSettingsPwaItem() {
+      if (!isMobile || isInStandalone) return;
+      var item = document.getElementById('settings-pwa-item');
+      var sep  = document.getElementById('settings-pwa-sep');
+      if (item) item.style.display = '';
+      if (sep)  sep.style.display  = '';
+    }
+    // DOM hazir oldugunda calistir
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', maybeShowSettingsPwaItem);
+    } else {
+      maybeShowSettingsPwaItem();
     }
 
     window.pwaInstall = function() {
