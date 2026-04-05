@@ -3872,11 +3872,20 @@ const MAX_ACTIVITY = 50;
 
 async function loadActivityLog() {
   try {
-    const { data, error } = await _sb
+    let query = _sb
       .from('activity_log')
       .select('*')
       .order('ts', { ascending: false })
       .limit(MAX_ACTIVITY);
+    // Sadece bu firmanın kayıtlarını göster (SaaS izolasyonu)
+    if (currentFirmaId) {
+      query = query.eq('firma_id', currentFirmaId);
+    } else {
+      // firma_id yoksa yalnızca kendi user kayıtları
+      const { data: { user } } = await _sb.auth.getUser();
+      if (user) query = query.eq('user_id', user.id);
+    }
+    const { data, error } = await query;
     if (error) throw error;
     return data || [];
   } catch (e) {
@@ -3910,9 +3919,14 @@ async function clearActivityLog() {
   try {
     const { data: { user } } = await _sb.auth.getUser();
     if (!user) return;
-    const { error } = await _sb.from('activity_log')
-      .delete()
-      .eq('user_id', user.id);
+    let del = _sb.from('activity_log').delete();
+    // Firma varsa sadece o firmanın kayıtlarını sil
+    if (currentFirmaId) {
+      del = del.eq('firma_id', currentFirmaId);
+    } else {
+      del = del.eq('user_id', user.id);
+    }
+    const { error } = await del;
     if (error) throw error;
   } catch (e) {
     console.error('Silme hatası:', e);
