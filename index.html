@@ -1087,15 +1087,7 @@
   }
 
   /* ── PANEL SATIRI ───────────────────────────────────────── */
-  .panel-row {
-    display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 16px;
-    margin-bottom: 20px;
-  }
-  @media (max-width: 1100px) {
-    .panel-row { grid-template-columns: 1fr; }
-  }
+  /* .panel-row kaldırıldı — Filo Özeti paneli silindi */
 
   /* ── UYARILER PANELİ ────────────────────────────────────── */
   .panel {
@@ -2065,6 +2057,29 @@
         <span style="font-size:10px;color:rgba(249,115,22,.6);font-weight:600;letter-spacing:.03em">DETAY ›</span>
       </div>
       <div class="spark-wrap" id="spark-wrap"></div>
+      <!-- Yakıt özet mini satırlar -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Dolum: </span>
+          <span style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:700" id="sum-fuel-dolum">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Toplam: </span>
+          <span style="color:var(--blue);font-family:'JetBrains Mono',monospace;font-weight:700" id="sum-fuel-litre">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Maliyet: </span>
+          <span style="color:var(--green);font-family:'JetBrains Mono',monospace;font-weight:700" id="sum-fuel-tutar">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Bu ay: </span>
+          <span style="color:var(--purple);font-family:'JetBrains Mono',monospace;font-weight:700" id="sum-fuel-buay">—</span>
+        </div>
+      </div>
     </div>
 
     <!-- SÜRÜCÜ BELGELERİ ÖZET KARTI -->
@@ -2232,9 +2247,8 @@
     </div>
   </div>
 
-  <!-- 4b. PANEL SATIRI: Uyarılar + Durum -->
-  <div class="panel-row">
-    <!-- Acil Durumlar -->
+  <!-- 4b. ACİL DURUMLAR (tam genişlik) -->
+  <div style="margin-bottom:20px">
     <div class="panel">
       <div class="panel-header">
         <div class="panel-title">
@@ -2243,66 +2257,20 @@
         </div>
         <span class="alert-count-badge" id="alert-count-badge" style="display:none">0</span>
       </div>
-      <div class="panel-body">
-        <div class="alert-list" id="alert-list">
+      <div class="panel-body" style="max-height:220px">
+        <div class="alert-list" id="alert-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:0">
           <div class="empty-state"><div class="icon">✅</div><p>Acil durum yok</p></div>
         </div>
       </div>
     </div>
-
-    <!-- Filo Özet -->
-    <div class="panel status-panel">
-      <div class="panel-header">
-        <div class="panel-title">
-          <span class="dot dot-green"></span>
-          Filo Özeti
-        </div>
-      </div>
-      <div class="panel-body">
-        <div class="status-row">
-          <div class="status-row-label">🚛 Çekici</div>
-          <div class="status-row-value" id="sum-cekici" style="color:var(--accent)">—</div>
-        </div>
-        <div class="status-row">
-          <div class="status-row-label">🚚 Dorse</div>
-          <div class="status-row-value" id="sum-dorse" style="color:var(--blue)">—</div>
-        </div>
-        <div class="status-row">
-          <div class="status-row-label">🚐 Diğer</div>
-          <div class="status-row-value" id="sum-diger" style="color:var(--purple)">—</div>
-        </div>
-        <div class="status-row">
-          <div class="status-row-label">✅ Aktif</div>
-          <div class="status-row-value" id="sum-aktif" style="color:var(--green)">—</div>
-        </div>
-        <div class="status-row">
-          <div class="status-row-label">🔧 Bakımda</div>
-          <div class="status-row-value" id="sum-bakim" style="color:var(--yellow)">—</div>
-        </div>
-        <div class="status-row">
-          <div class="status-row-label">⏸ Pasif</div>
-          <div class="status-row-value" id="sum-pasif" style="color:var(--muted)">—</div>
-        </div>
-        <div style="border-top:1px solid var(--border);margin:10px 0"></div>
-        <div class="status-row">
-          <div class="status-row-label">⛽ Toplam Dolum</div>
-          <div class="status-row-value" id="sum-fuel-dolum" style="color:var(--accent)">—</div>
-        </div>
-        <div class="status-row">
-          <div class="status-row-label">🛢 Toplam Litre</div>
-          <div class="status-row-value" id="sum-fuel-litre" style="color:var(--accent)">—</div>
-        </div>
-        <div class="status-row">
-          <div class="status-row-label">💰 Toplam Maliyet</div>
-          <div class="status-row-value" id="sum-fuel-tutar" style="color:var(--green)">—</div>
-        </div>
-        <div class="status-row">
-          <div class="status-row-label">📅 Bu Ay Litre</div>
-          <div class="status-row-value" id="sum-fuel-buay" style="color:var(--blue)">—</div>
-        </div>
-      </div>
-    </div>
   </div>
+  <!-- gizli anchor id'ler — JS güncellemeye devam etsin -->
+  <span id="sum-cekici" style="display:none"></span>
+  <span id="sum-dorse"  style="display:none"></span>
+  <span id="sum-diger"  style="display:none"></span>
+  <span id="sum-aktif"  style="display:none"></span>
+  <span id="sum-bakim"  style="display:none"></span>
+  <span id="sum-pasif"  style="display:none"></span>
 
   <!-- 4c. ARAÇ TABLOSU -->
   <div class="table-section">
