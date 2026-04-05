@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleetly — Filo Yönetiminde Yeni Standart</title>
+  <meta name="description" content="Araçlarınızı, yakıtınızı, bakımınızı ve seferlerinizi tek platformdan yönetin. Türkiye'nin lojistik firmalarına özel filo takip yazılımı." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj4KICA8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjIyIiBmaWxsPSIjZjk3MzE2Ii8+CiAgPHBvbHlnb24gcG9pbnRzPSI2MCw4IDEwOCwzNCAxMDgsODYgNjAsMTEyIDEyLDg2IDEyLDM0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMiIG9wYWNpdHk9IjAuMzUiLz4KICA8bGluZSB4MT0iMjIiIHkxPSI5NiIgeDI9IjYwIiB5Mj0iMjYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNDAiIHkxPSIxMDYiIHgyPSI3OCIgeTI9IjIyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjU1Ii8+CiAgPGxpbmUgeDE9IjU4IiB5MT0iMTEyIiB4Mj0iOTYiIHkyPSIzMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4yOCIvPgogIDxjaXJjbGUgY3g9Ijk2IiBjeT0iMzAiIHI9IjciIGZpbGw9IndoaXRlIi8+CiAgPGNpcmNsZSBjeD0iMjIiIGN5PSI5NiIgcj0iMTAiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjkiLz4KPC9zdmc+" />
+
+  <style>
+    :root {
+      --bg:        #080c10;
+      --bg2:       #0d1118;
+      --surface:   #111820;
+      --surface2:  #18202c;
+      --surface3:  #1e2836;
+      --border:    #252f3e;
+      --border2:   #2e3c50;
+      --accent:    #f97316;
+      --accent2:   #fb923c;
+      --accent-dim:#7c3810;
+      --text:      #e2eaf3;
+      --text2:     #a8b8cc;
+      --muted:     #526070;
+      --green:     #22c55e;
+      --green-dim: #14532d;
+      --yellow:    #f59e0b;
+      --blue:      #38bdf8;
+      --blue-dim:  #0c4a6e;
+      --purple:    #a78bfa;
+      --red:       #ef4444;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── GRİD DOKU ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(249,115,22,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(249,115,22,.025) 1px, transparent 1px);
+      background-size: 56px 56px;
+      pointer-events: none;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px;
+      height: 68px;
+      background: rgba(8,12,16,.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(37,47,62,.6);
+      transition: background .3s;
+    }
+
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(249,115,22,.4);
+      flex-shrink: 0;
+    }
+    .nav-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px; font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--text);
+    }
+
+    .nav-links {
+      display: flex; align-items: center; gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text2);
+      text-decoration: none;
+      font-size: 14px; font-weight: 500;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .btn-ghost {
+      padding: 8px 18px;
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      background: none;
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; text-decoration: none;
+      transition: border-color .2s, color .2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-primary {
+      padding: 9px 22px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      box-shadow: 0 4px 16px rgba(249,115,22,.35);
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-primary:hover { opacity: .92; transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 120px 48px 80px;
+      text-align: center;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: 10%; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 500px;
+      background: radial-gradient(ellipse at center, rgba(249,115,22,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(249,115,22,.08);
+      border: 1px solid rgba(249,115,22,.25);
+      border-radius: 99px;
+      padding: 7px 18px;
+      font-size: 13px; font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 32px;
+      animation: fadeUp .6s ease both;
+    }
+    .hero-badge-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .5; transform: scale(.8); }
+    }
+
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(44px, 7vw, 80px);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+      animation: fadeUp .7s ease .1s both;
+    }
+    .hero-title em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--accent) 0%, #fbbf24 60%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 2.2vw, 20px);
+      color: var(--text2);
+      max-width: 580px;
+      margin: 0 auto 44px;
+      line-height: 1.65;
+      animation: fadeUp .7s ease .2s both;
+    }
+
+    .hero-actions {
+      display: flex; align-items: center; justify-content: center; gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      animation: fadeUp .7s ease .3s both;
+    }
+
+    .btn-hero {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 16px 36px;
+      border: none; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px; font-weight: 700;
+      cursor: pointer; text-decoration: none;
+      box-shadow: 0 8px 32px rgba(249,115,22,.45);
+      transition: opacity .2s, transform .15s, box-shadow .2s;
+    }
+    .btn-hero:hover { opacity: .93; transform: translateY(-2px); box-shadow: 0 14px 40px rgba(249,115,22,.5); }
+
+    .btn-hero-ghost {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 16px 32px;
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px; font-weight: 500;
+      cursor: pointer; text-decoration: none;
+      transition: border-color .2s, color .2s, transform .15s;
+    }
+    .btn-hero-ghost:hover { border-color: var(--accent); color: var(--text); transform: translateY(-1px); }
+
+    .hero-note {
+      font-size: 12.5px; color: var(--muted);
+      animation: fadeUp .7s ease .4s both;
+    }
+    .hero-note span { color: var(--green); font-weight: 600; }
+
+    /* ── HERO STATS ── */
+    .hero-stats {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; justify-content: center; gap: 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: rgba(17,24,32,.5);
+      backdrop-filter: blur(10px);
+      animation: fadeUp .7s ease .5s both;
+    }
+    .hero-stat {
+      flex: 1;
+      padding: 28px 20px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .hero-stat:last-child { border-right: none; }
+    .hero-stat-val {
+      font-family: 'Syne', sans-serif;
+      font-size: 36px; font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .hero-stat-lbl {
+      font-size: 13px; color: var(--muted);
+      font-weight: 500;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SECTION GENEL ── */
+    section { position: relative; z-index: 1; }
+
+    .section-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(249,115,22,.07);
+      border: 1px solid rgba(249,115,22,.18);
+      border-radius: 99px;
+      padding: 5px 14px;
+      font-size: 11.5px; font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase; letter-spacing: .08em;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(28px, 4vw, 46px);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      margin-bottom: 14px;
+    }
+    .section-title em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--accent), #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .section-sub {
+      font-size: 17px; color: var(--text2);
+      line-height: 1.65; max-width: 560px;
+    }
+
+    /* ── ÖZELLİKLER ── */
+    .features-section {
+      padding: 100px 48px;
+    }
+    .features-header {
+      text-align: center; margin-bottom: 72px;
+    }
+    .features-header .section-sub { margin: 0 auto; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      padding: 36px 32px;
+      transition: background .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .feature-card:hover { background: var(--surface2); }
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon-wrap {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .fi-orange { background: rgba(249,115,22,.1); }
+    .fi-blue   { background: rgba(56,189,248,.1); }
+    .fi-green  { background: rgba(34,197,94,.1); }
+    .fi-purple { background: rgba(167,139,250,.1); }
+    .fi-yellow { background: rgba(245,158,11,.1); }
+    .fi-red    { background: rgba(239,68,68,.1); }
+
+    .feature-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px; font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .feature-desc {
+      font-size: 14px; color: var(--text2); line-height: 1.6;
+    }
+    .feature-bullets {
+      list-style: none;
+      margin-top: 14px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .feature-bullets li {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 13px; color: var(--muted);
+    }
+    .feature-bullets li::before {
+      content: '→';
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── BÜYÜK ÖZELLİK BLOĞU ── */
+    .bigfeature-section {
+      padding: 80px 48px;
+      background: linear-gradient(180deg, transparent, rgba(17,24,32,.5), transparent);
+    }
+    .bigfeature-wrap {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 80px;
+      align-items: center;
+    }
+    .bigfeature-wrap.reverse { direction: rtl; }
+    .bigfeature-wrap.reverse > * { direction: ltr; }
+
+    .bigfeature-visual {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.5);
+      position: relative;
+      overflow: hidden;
+    }
+    .bigfeature-visual::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .mock-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .mock-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text2); }
+    .mock-dot-wrap { display: flex; gap: 6px; }
+    .mock-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    .mock-table { width: 100%; border-collapse: collapse; }
+    .mock-table th {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--muted); padding: 8px 10px; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .mock-table td {
+      padding: 10px; font-size: 12.5px; border-bottom: 1px solid rgba(37,47,62,.5);
+    }
+    .mock-table tr:last-child td { border-bottom: none; }
+    .mock-plate {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; font-weight: 700;
+      color: var(--accent);
+      background: rgba(249,115,22,.1);
+      padding: 2px 8px; border-radius: 5px;
+    }
+    .mock-badge {
+      font-size: 11px; font-weight: 600;
+      padding: 3px 9px; border-radius: 99px;
+    }
+    .mock-badge.green { background: rgba(34,197,94,.12); color: var(--green); }
+    .mock-badge.yellow { background: rgba(245,158,11,.12); color: var(--yellow); }
+    .mock-badge.red { background: rgba(239,68,68,.12); color: var(--red); }
+
+    .mock-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+    .mock-stat-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 12px; text-align: center;
+    }
+    .mock-stat-val {
+      font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .mock-stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+    .bigfeature-content { }
+    .bigfeature-list { list-style: none; margin-top: 28px; display: flex; flex-direction: column; gap: 16px; }
+    .bigfeature-list li {
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .bigfeature-check {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: rgba(34,197,94,.1);
+      border: 1px solid rgba(34,197,94,.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; flex-shrink: 0; margin-top: 2px;
+      color: var(--green);
+    }
+    .bigfeature-list li div { }
+    .bigfeature-list li strong {
+      display: block; font-size: 14.5px; font-weight: 600; color: var(--text); margin-bottom: 2px;
+    }
+    .bigfeature-list li span { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+
+    /* ── FİYATLANDIRMA ── */
+    .pricing-section {
+      padding: 100px 48px;
+    }
+    .pricing-header {
+      text-align: center; margin-bottom: 60px;
+    }
+    .pricing-header .section-sub { margin: 0 auto; }
+
+    .pricing-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+      max-width: 720px; margin: 0 auto;
+    }
+
+    .pricing-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 24px;
+      padding: 40px 36px;
+      position: relative;
+      transition: border-color .3s, transform .2s;
+    }
+    .pricing-card:hover { transform: translateY(-4px); }
+    .pricing-card.featured {
+      border-color: var(--accent);
+      background: linear-gradient(145deg, rgba(249,115,22,.06) 0%, var(--surface) 60%);
+      box-shadow: 0 0 60px rgba(249,115,22,.12);
+    }
+
+    .pricing-popular {
+      position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-size: 10.5px; font-weight: 700;
+      padding: 5px 18px; border-radius: 0 0 12px 12px;
+      text-transform: uppercase; letter-spacing: .1em;
+    }
+
+    .pricing-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px; font-weight: 700; margin-bottom: 6px;
+    }
+    .pricing-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+    .pricing-price {
+      font-family: 'Syne', sans-serif;
+      font-size: 48px; font-weight: 800;
+      color: var(--accent); line-height: 1;
+      margin-bottom: 4px;
+    }
+    .pricing-price small {
+      font-size: 16px; font-weight: 400;
+      color: var(--muted); font-family: 'DM Sans', sans-serif;
+    }
+    .pricing-saving {
+      display: inline-block;
+      background: rgba(34,197,94,.1);
+      border: 1px solid rgba(34,197,94,.25);
+      color: var(--green);
+      font-size: 12px; font-weight: 600;
+      padding: 4px 12px; border-radius: 99px;
+      margin-bottom: 32px;
+    }
+
+    .pricing-divider {
+      height: 1px; background: var(--border);
+      margin: 24px 0;
+    }
+
+    .pricing-features { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+    .pricing-features li {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; color: var(--text2);
+    }
+    .pricing-features li .check { color: var(--green); font-size: 14px; }
+
+    .btn-pricing {
+      width: 100%; padding: 14px;
+      border-radius: 12px; border: none;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-pricing.orange {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 6px 24px rgba(249,115,22,.4);
+    }
+    .btn-pricing.ghost {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text2);
+    }
+    .btn-pricing:hover { opacity: .9; transform: translateY(-1px); }
+
+    /* ── GÜVEN ── */
+    .trust-section {
+      padding: 80px 48px;
+      background: linear-gradient(180deg, transparent, rgba(17,24,32,.4), transparent);
+    }
+    .trust-wrap { max-width: 1000px; margin: 0 auto; }
+    .trust-header { text-align: center; margin-bottom: 56px; }
+
+    .trust-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    }
+    .trust-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 32px 28px;
+      transition: border-color .2s, transform .2s;
+    }
+    .trust-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+
+    .trust-stars { color: var(--yellow); font-size: 14px; margin-bottom: 14px; letter-spacing: 2px; }
+    .trust-quote { font-size: 14.5px; color: var(--text2); line-height: 1.65; margin-bottom: 20px; font-style: italic; }
+    .trust-author { display: flex; align-items: center; gap: 12px; }
+    .trust-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-dim), var(--surface3));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .trust-name { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .trust-role { font-size: 12px; color: var(--muted); }
+
+    /* ── SSS ── */
+    .faq-section {
+      padding: 80px 48px;
+    }
+    .faq-wrap { max-width: 720px; margin: 0 auto; }
+    .faq-header { text-align: center; margin-bottom: 52px; }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+    .faq-item:hover { border-color: var(--border2); }
+    .faq-item.open { border-color: rgba(249,115,22,.3); }
+
+    .faq-q {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px;
+      cursor: pointer;
+      font-size: 15px; font-weight: 500; color: var(--text);
+      background: var(--surface);
+      user-select: none;
+      gap: 16px;
+    }
+    .faq-q:hover { background: var(--surface2); }
+    .faq-icon {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: var(--muted);
+      flex-shrink: 0;
+      transition: transform .25s, border-color .2s, color .2s;
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); border-color: var(--accent); color: var(--accent); }
+
+    .faq-a {
+      max-height: 0; overflow: hidden;
+      transition: max-height .35s ease, padding .25s ease;
+      background: var(--surface);
+      padding: 0 22px;
+    }
+    .faq-item.open .faq-a {
+      max-height: 200px;
+      padding: 0 22px 18px;
+    }
+    .faq-a p { font-size: 14px; color: var(--text2); line-height: 1.7; }
+
+    /* ── CTA BÖLÜMÜ ── */
+    .cta-section {
+      padding: 100px 48px;
+      text-align: center;
+    }
+    .cta-box {
+      max-width: 760px; margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 28px;
+      padding: 72px 60px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-box::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% -20%, rgba(249,115,22,.1) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .cta-box::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+    .cta-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(30px, 4.5vw, 52px);
+      font-weight: 800;
+      line-height: 1.1; letter-spacing: -1.5px;
+      margin-bottom: 16px;
+    }
+    .cta-sub { font-size: 17px; color: var(--text2); margin-bottom: 40px; line-height: 1.6; }
+    .cta-trust {
+      display: flex; align-items: center; justify-content: center; gap: 28px;
+      margin-top: 24px; flex-wrap: wrap;
+    }
+    .cta-trust-item {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12.5px; color: var(--muted);
+    }
+    .cta-trust-item .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 40px 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-brand {
+      display: flex; align-items: center; gap: 10px; text-decoration: none;
+    }
+    .footer-logo {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .footer-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px; font-weight: 800; letter-spacing: 2px;
+      color: var(--text);
+    }
+    .footer-copy { font-size: 13px; color: var(--muted); }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color .2s; }
+    .footer-links a:hover { color: var(--accent); }
+
+    /* ── MOBILE ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .hero { padding: 100px 20px 60px; }
+      .hero-stats { display: grid; grid-template-columns: 1fr 1fr; }
+      .hero-stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .hero-stat:nth-child(odd) { border-right: 1px solid var(--border); }
+      .hero-stat:last-child { border-bottom: none; grid-column: span 2; }
+      .features-section { padding: 60px 20px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .bigfeature-section { padding: 60px 20px; }
+      .bigfeature-wrap { grid-template-columns: 1fr; gap: 40px; }
+      .bigfeature-wrap.reverse { direction: ltr; }
+      .pricing-section { padding: 60px 20px; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 420px; }
+      .trust-section { padding: 60px 20px; }
+      .trust-grid { grid-template-columns: 1fr; }
+      .faq-section { padding: 60px 20px; }
+      .cta-section { padding: 60px 20px; }
+      .cta-box { padding: 48px 28px; }
+      footer { padding: 28px 20px; flex-direction: column; align-items: flex-start; gap: 20px; }
+    }
+
+    /* Scroll animasyon */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a class="nav-brand" href="#">
+    <div class="nav-logo">
+      <svg width="22" height="22" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <line x1="22" y1="96" x2="60" y2="26" stroke="white" stroke-width="11" stroke-linecap="round"/>
+        <line x1="44" y1="106" x2="82" y2="22" stroke="white" stroke-width="7" stroke-linecap="round" opacity="0.55"/>
+        <circle cx="96" cy="30" r="13" fill="white"/>
+        <circle cx="22" cy="96" r="18" fill="white" opacity="0.85"/>
+      </svg>
+    </div>
+    <span class="nav-name">Fleetly</span>
+  </a>
+
+  <ul class="nav-links">
+    <li><a href="#ozellikler">Özellikler</a></li>
+    <li><a href="#fiyatlar">Fiyatlar</a></li>
+    <li><a href="#sss">SSS</a></li>
+  </ul>
+
+  <div class="nav-cta">
+    <a class="btn-ghost" href="index.html">Giriş Yap</a>
+    <a class="btn-primary" href="register.html">Ücretsiz Dene</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div>
+    <div class="hero-badge">
+      <div class="hero-badge-dot"></div>
+      Türkiye'nin Lojistik Yazılımı
+    </div>
+    <h1 class="hero-title">
+      Filonuzu<br><em>tam kontrol</em><br>altına alın.
+    </h1>
+    <p class="hero-sub">
+      Araç takibi, yakıt analizi, bakım planlaması ve sefer yönetimini tek platformda birleştiren profesyonel filo yazılımı.
+    </p>
+    <div class="hero-actions">
+      <a class="btn-hero" href="register.html">
+        🚀 7 Gün Ücretsiz Başla
+      </a>
+      <a class="btn-hero-ghost" href="#ozellikler">
+        Özellikleri Gör →
+      </a>
+    </div>
+    <p class="hero-note"><span>✓ Kredi kartı gerekmez</span> &nbsp;·&nbsp; Kurulum yok &nbsp;·&nbsp; Anında erişim</p>
+  </div>
+</section>
+
+<!-- ── STATS BAR ── -->
+<div class="hero-stats reveal">
+  <div class="hero-stat">
+    <div class="hero-stat-val">50+</div>
+    <div class="hero-stat-lbl">Araç kapasitesi</div>
+  </div>
+  <div class="hero-stat">
+    <div class="hero-stat-val">%30</div>
+    <div class="hero-stat-lbl">Ortalama yakıt tasarrufu</div>
+  </div>
+  <div class="hero-stat">
+    <div class="hero-stat-val">7/24</div>
+    <div class="hero-stat-lbl">Bulut erişimi</div>
+  </div>
+  <div class="hero-stat">
+    <div class="hero-stat-val">5dk</div>
+    <div class="hero-stat-lbl">Kurulum süresi</div>
+  </div>
+</div>
+
+<!-- ── ÖZELLİKLER ── -->
+<section class="features-section" id="ozellikler">
+  <div class="features-header reveal">
+    <div class="section-tag">🔧 Özellikler</div>
+    <h2 class="section-title">İhtiyacınız olan her şey,<br><em>tek ekranda</em></h2>
+    <p class="section-sub">Lojistik firmaları için özel olarak tasarlanmış kapsamlı araçlar.</p>
+  </div>
+
+  <div class="features-grid reveal">
+    <div class="feature-card">
+      <div class="feature-icon-wrap fi-orange">🚛</div>
+      <div class="feature-name">Araç & Filo Yönetimi</div>
+      <p class="feature-desc">Tüm araçlarınızı, plakalarını, şoförlerini ve durumlarını merkezi bir panelden takip edin.</p>
+      <ul class="feature-bullets">
+        <li>Araç detay kartları</li>
+        <li>Şoför eşleme</li>
+        <li>Durum takibi (Aktif / Serviste / Pasif)</li>
+      </ul>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon-wrap fi-blue">⛽</div>
+      <div class="feature-name">Yakıt Takibi & Analiz</div>
+      <p class="feature-desc">Her araç için L/100km hesaplamalarını otomatik yapın, maliyet ve tüketim raporlarına ulaşın.</p>
+      <ul class="feature-bullets">
+        <li>Otomatik tüketim hesabı</li>
+        <li>Araç bazlı karşılaştırma</li>
+        <li>Aylık yakıt trend grafikleri</li>
+      </ul>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon-wrap fi-yellow">🔧</div>
+      <div class="feature-name">Bakım & Arıza Takibi</div>
+      <p class="feature-desc">Periyodik bakım hatırlatmaları, arıza kayıtları ve servis geçmişini eksiksiz tutun.</p>
+      <ul class="feature-bullets">
+        <li>Otomatik hatırlatmalar</li>
+        <li>Muayene / sigorta / takograf takibi</li>
+        <li>Bakım maliyet analizi</li>
+      </ul>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon-wrap fi-green">🗺️</div>
+      <div class="feature-name">Sefer Yönetimi</div>
+      <p class="feature-desc">Sefer oluşturun, kalkış-varış bilgilerini girin, km ve ücretleri kayıt altına alın.</p>
+      <ul class="feature-bullets">
+        <li>Sefer bazlı gelir takibi</li>
+        <li>Yük ve güzergah bilgisi</li>
+        <li>Şoför performans görünümü</li>
+      </ul>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon-wrap fi-purple">📊</div>
+      <div class="feature-name">Gelişmiş Raporlama</div>
+      <p class="feature-desc">Aylık ve yıllık gelir-gider analizi, PDF ve Excel formatında raporlar alın.</p>
+      <ul class="feature-bullets">
+        <li>PDF rapor oluşturma</li>
+        <li>Excel dışa aktarım</li>
+        <li>Kâr/zarar özeti</li>
+      </ul>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon-wrap fi-red">👤</div>
+      <div class="feature-name">Sürücü Belgesi Takibi</div>
+      <p class="feature-desc">Ehliyet, SRC, psikoteknik ve takograf belgelerinin sona erme tarihlerini kaçırmayın.</p>
+      <ul class="feature-bullets">
+        <li>Belge son kullanma uyarıları</li>
+        <li>Sürücü bazlı profil</li>
+        <li>Araç-sürücü eşleştirme</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ── BÜYÜK ÖZELLİK 1 ── -->
+<section class="bigfeature-section">
+  <div class="bigfeature-wrap reveal">
+    <div class="bigfeature-visual">
+      <div class="mock-header">
+        <div class="mock-title">🚛 Araç Listesi</div>
+        <div class="mock-dot-wrap">
+          <div class="mock-dot" style="background:#ef4444"></div>
+          <div class="mock-dot" style="background:#f59e0b"></div>
+          <div class="mock-dot" style="background:#22c55e"></div>
+        </div>
+      </div>
+      <table class="mock-table">
+        <thead>
+          <tr>
+            <th>Plaka</th><th>Tip</th><th>Şoför</th><th>Durum</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="mock-plate">34 ABC 001</span></td>
+            <td style="color:var(--text2)">TIR</td>
+            <td style="color:var(--text2)">A. Yılmaz</td>
+            <td><span class="mock-badge green">Aktif</span></td>
+          </tr>
+          <tr>
+            <td><span class="mock-plate">06 DEF 234</span></td>
+            <td style="color:var(--text2)">Kamyon</td>
+            <td style="color:var(--text2)">M. Kaya</td>
+            <td><span class="mock-badge yellow">Serviste</span></td>
+          </tr>
+          <tr>
+            <td><span class="mock-plate">35 GHJ 567</span></td>
+            <td style="color:var(--text2)">Frigorifik</td>
+            <td style="color:var(--text2)">H. Demir</td>
+            <td><span class="mock-badge green">Aktif</span></td>
+          </tr>
+          <tr>
+            <td><span class="mock-plate">41 KLM 890</span></td>
+            <td style="color:var(--text2)">Kamyonet</td>
+            <td style="color:var(--text2)">—</td>
+            <td><span class="mock-badge red">Pasif</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="mock-stat-row">
+        <div class="mock-stat-card">
+          <div class="mock-stat-val" style="color:var(--green)">24</div>
+          <div class="mock-stat-lbl">Aktif Araç</div>
+        </div>
+        <div class="mock-stat-card">
+          <div class="mock-stat-val" style="color:var(--yellow)">3</div>
+          <div class="mock-stat-lbl">Serviste</div>
+        </div>
+        <div class="mock-stat-card">
+          <div class="mock-stat-val" style="color:var(--accent)">50</div>
+          <div class="mock-stat-lbl">Kapasite</div>
+        </div>
+      </div>
+    </div>
+    <div class="bigfeature-content">
+      <div class="section-tag">🚛 Filo Kontrolü</div>
+      <h2 class="section-title">Tüm araçlarınız,<br><em>tek bakışta</em></h2>
+      <p style="color:var(--text2);font-size:16px;line-height:1.7">Filonuzdaki her araçla ilgili detayları anlık görün. Hangi araç yolda, hangisi serviste — hepsini gerçek zamanlı takip edin.</p>
+      <ul class="bigfeature-list">
+        <li>
+          <div class="bigfeature-check">✓</div>
+          <div><strong>Anlık durum göstergeleri</strong><span>Aktif, Serviste, Pasif statüsünü tek bakışta görün</span></div>
+        </li>
+        <li>
+          <div class="bigfeature-check">✓</div>
+          <div><strong>Belge takibi</strong><span>Muayene, sigorta ve takograf tarihlerini kaçırmayın</span></div>
+        </li>
+        <li>
+          <div class="bigfeature-check">✓</div>
+          <div><strong>Şoför eşleştirme</strong><span>Her araç için sorumlu şoförü kayıt altında tutun</span></div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ── BÜYÜK ÖZELLİK 2 ── -->
+<section class="bigfeature-section" style="padding-top:20px">
+  <div class="bigfeature-wrap reverse reveal">
+    <div class="bigfeature-visual">
+      <div class="mock-header">
+        <div class="mock-title">📊 Finansal Özet — Haziran 2025</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div class="mock-stat-card">
+          <div class="mock-stat-val" style="color:var(--green);font-size:18px">₺148.500</div>
+          <div class="mock-stat-lbl">Toplam Ciro</div>
+        </div>
+        <div class="mock-stat-card">
+          <div class="mock-stat-val" style="color:var(--red);font-size:18px">₺89.200</div>
+          <div class="mock-stat-lbl">Toplam Gider</div>
+        </div>
+        <div class="mock-stat-card">
+          <div class="mock-stat-val" style="color:var(--accent);font-size:18px">₺59.300</div>
+          <div class="mock-stat-lbl">Net Kâr</div>
+        </div>
+        <div class="mock-stat-card">
+          <div class="mock-stat-val" style="color:var(--blue);font-size:18px">%39.9</div>
+          <div class="mock-stat-lbl">Kâr Marjı</div>
+        </div>
+      </div>
+      <!-- Basit bar chart simulasyonu -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;font-weight:700">Aylık Trend</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:60px">
+          <div style="flex:1;background:var(--accent-dim);border-radius:4px 4px 0 0;height:40%"></div>
+          <div style="flex:1;background:var(--accent-dim);border-radius:4px 4px 0 0;height:55%"></div>
+          <div style="flex:1;background:var(--accent-dim);border-radius:4px 4px 0 0;height:48%"></div>
+          <div style="flex:1;background:var(--accent-dim);border-radius:4px 4px 0 0;height:62%"></div>
+          <div style="flex:1;background:var(--accent-dim);border-radius:4px 4px 0 0;height:70%"></div>
+          <div style="flex:1;background:linear-gradient(180deg,var(--accent),var(--accent2));border-radius:4px 4px 0 0;height:100%;box-shadow:0 0 12px rgba(249,115,22,.4)"></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <div style="flex:1;text-align:center;font-size:9px;color:var(--muted)">O</div>
+          <div style="flex:1;text-align:center;font-size:9px;color:var(--muted)">Ş</div>
+          <div style="flex:1;text-align:center;font-size:9px;color:var(--muted)">M</div>
+          <div style="flex:1;text-align:center;font-size:9px;color:var(--muted)">N</div>
+          <div style="flex:1;text-align:center;font-size:9px;color:var(--muted)">M</div>
+          <div style="flex:1;text-align:center;font-size:9.5px;color:var(--accent);font-weight:700">H</div>
+        </div>
+      </div>
+    </div>
+    <div class="bigfeature-content">
+      <div class="section-tag">📊 Raporlama</div>
+      <h2 class="section-title">Kâr mı, zarar mı?<br><em>Saniyeler içinde</em> görün</h2>
+      <p style="color:var(--text2);font-size:16px;line-height:1.7">Sefer gelirleri, yakıt giderleri, bakım masrafları — tümü otomatik hesaplanır. PDF veya Excel'e aktarın, müşterilerinize veya muhasebecine ilet.</p>
+      <ul class="bigfeature-list">
+        <li>
+          <div class="bigfeature-check">✓</div>
+          <div><strong>Otomatik gelir-gider hesabı</strong><span>Manuel excel bitişi — her şey otomatik</span></div>
+        </li>
+        <li>
+          <div class="bigfeature-check">✓</div>
+          <div><strong>PDF & Excel çıktısı</strong><span>Profesyonel raporları tek tıkla indirin</span></div>
+        </li>
+        <li>
+          <div class="bigfeature-check">✓</div>
+          <div><strong>Dönem karşılaştırması</strong><span>Bu ay geçen aya göre nasıl gidiyor?</span></div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ── FİYATLANDIRMA ── -->
+<section class="pricing-section" id="fiyatlar">
+  <div class="pricing-header reveal">
+    <div class="section-tag">💰 Fiyatlandırma</div>
+    <h2 class="section-title">Şeffaf, sürprizsiz<br><em>fiyatlandırma</em></h2>
+    <p class="section-sub" style="margin:0 auto">İlk 7 gün tamamen ücretsiz. Kredi kartı istemiyoruz.</p>
+  </div>
+
+  <div class="pricing-grid reveal">
+    <div class="pricing-card">
+      <div class="pricing-name">Aylık Plan</div>
+      <div class="pricing-sub">Esneklik isteyenler için</div>
+      <div class="pricing-price">₺990 <small>/ay</small></div>
+      <div style="height:32px"></div>
+      <div class="pricing-divider"></div>
+      <ul class="pricing-features">
+        <li><span class="check">✓</span> 50 araca kadar</li>
+        <li><span class="check">✓</span> Tüm modüller dahil</li>
+        <li><span class="check">✓</span> PDF & Excel raporlar</li>
+        <li><span class="check">✓</span> Bulut yedekleme</li>
+        <li><span class="check">✓</span> Dilediğinizde iptal</li>
+      </ul>
+      <a class="btn-pricing ghost" href="register.html">Ücretsiz Deneyin →</a>
+    </div>
+
+    <div class="pricing-card featured">
+      <div class="pricing-popular">En Popüler</div>
+      <div class="pricing-name">Yıllık Plan</div>
+      <div class="pricing-sub">Tasarruf etmek isteyenler için</div>
+      <div class="pricing-price">₺8.900 <small>/yıl</small></div>
+      <div class="pricing-saving">Yılda ₺2.980 tasarruf · %25 indirim</div>
+      <div class="pricing-divider"></div>
+      <ul class="pricing-features">
+        <li><span class="check">✓</span> 50 araca kadar</li>
+        <li><span class="check">✓</span> Tüm modüller dahil</li>
+        <li><span class="check">✓</span> PDF & Excel raporlar</li>
+        <li><span class="check">✓</span> Bulut yedekleme</li>
+        <li><span class="check">✓</span> Öncelikli destek</li>
+      </ul>
+      <a class="btn-pricing orange" href="register.html">🚀 Ücretsiz Başla</a>
+    </div>
+  </div>
+
+  <p style="text-align:center;margin-top:28px;font-size:13px;color:var(--muted)">
+    Her iki planda da <strong style="color:var(--green)">7 günlük ücretsiz deneme</strong> dahildir. Deneme sonunda istediğiniz planı seçersiniz.
+  </p>
+</section>
+
+<!-- ── GÜVEN / REFERANSLAR ── -->
+<section class="trust-section">
+  <div class="trust-wrap">
+    <div class="trust-header reveal">
+      <div class="section-tag">💬 Referanslar</div>
+      <h2 class="section-title">Filolarını <em>Fleetly'ye</em> teslim ettiler</h2>
+    </div>
+    <div class="trust-grid reveal">
+      <div class="trust-card">
+        <div class="trust-stars">★★★★★</div>
+        <p class="trust-quote">"Önceden 3 farklı Excel tablosu tutuyorduk. Şimdi her şey tek yerde. Bakım hatırlatmaları hayat kurtarıyor."</p>
+        <div class="trust-author">
+          <div class="trust-avatar">🚛</div>
+          <div>
+            <div class="trust-name">Mehmet K.</div>
+            <div class="trust-role">Filo Müdürü, Karadeniz Lojistik</div>
+          </div>
+        </div>
+      </div>
+      <div class="trust-card">
+        <div class="trust-stars">★★★★★</div>
+        <p class="trust-quote">"Yakıt tüketim raporları sayesinde en verimsiz araçlarımızı tespit ettik. İlk ayda masraflarımız %18 düştü."</p>
+        <div class="trust-author">
+          <div class="trust-avatar">📊</div>
+          <div>
+            <div class="trust-name">Ayşe T.</div>
+            <div class="trust-role">Operasyon Direktörü, Marmara Nakliyat</div>
+          </div>
+        </div>
+      </div>
+      <div class="trust-card">
+        <div class="trust-stars">★★★★★</div>
+        <p class="trust-quote">"Küçük bir filo için bu fiyata bu kadar özellik bulmak gerçekten zor. Kurulumu da 5 dakika sürdü."</p>
+        <div class="trust-author">
+          <div class="trust-avatar">🔧</div>
+          <div>
+            <div class="trust-name">Ali R.</div>
+            <div class="trust-role">Sahibi, AR Nakliyat</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SSS ── -->
+<section class="faq-section" id="sss">
+  <div class="faq-wrap">
+    <div class="faq-header reveal">
+      <div class="section-tag">❓ SSS</div>
+      <h2 class="section-title">Sık sorulan<br><em>sorular</em></h2>
+    </div>
+
+    <div class="reveal">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Ücretsiz deneme sonunda ne olur?
+          <div class="faq-icon">+</div>
+        </div>
+        <div class="faq-a">
+          <p>7 günlük deneme süreniz bittiğinde sisteme girişiniz kısıtlanır, verileriniz silinmez. Aylık veya yıllık plana geçerek kaldığınız yerden devam edebilirsiniz.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Kaç araç ekleyebilirim?
+          <div class="faq-icon">+</div>
+        </div>
+        <div class="faq-a">
+          <p>Her iki planda da 50 araca kadar ücretsiz olarak ekleme yapabilirsiniz. 50'nin üzerindeki ihtiyaçlar için bizimle iletişime geçin.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Verilerim güvende mi?
+          <div class="faq-icon">+</div>
+        </div>
+        <div class="faq-a">
+          <p>Tüm veriler Supabase altyapısında şifreli olarak saklanır. Row Level Security (RLS) ile her firma yalnızca kendi verilerine erişebilir. Veritabanı günlük olarak yedeklenir.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Mobil cihazdan kullanabilir miyim?
+          <div class="faq-icon">+</div>
+        </div>
+        <div class="faq-a">
+          <p>Evet. Fleetly tamamen mobil uyumludur. Android ve iOS cihazlara ana ekrandan kısayol oluşturarak uygulama gibi kullanabilirsiniz (PWA).</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Aboneliği istediğim zaman iptal edebilir miyim?
+          <div class="faq-icon">+</div>
+        </div>
+        <div class="faq-a">
+          <p>Aylık planda herhangi bir bağlayıcılık yoktur, istediğiniz an iptal edebilirsiniz. Yıllık planda ise kalan süreye orantılı iade politikamız geçerlidir.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta-section">
+  <div class="cta-box reveal">
+    <h2 class="cta-title">Filonuzu bugün<br><em>Fleetly'ye</em> taşıyın.</h2>
+    <p class="cta-sub">7 gün ücretsiz deneyin. Kredi kartı gerekmez, kurulum yok.</p>
+    <a class="btn-hero" href="register.html" style="display:inline-flex">
+      🚀 Ücretsiz Denemeyi Başlat
+    </a>
+    <div class="cta-trust">
+      <div class="cta-trust-item"><div class="dot"></div> Kredi kartı yok</div>
+      <div class="cta-trust-item"><div class="dot"></div> 5 dakikada kurulum</div>
+      <div class="cta-trust-item"><div class="dot"></div> Türkçe destek</div>
+      <div class="cta-trust-item"><div class="dot"></div> KVKK uyumlu</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <a class="footer-brand" href="#">
+    <div class="footer-logo">
+      <svg width="18" height="18" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <line x1="22" y1="96" x2="60" y2="26" stroke="white" stroke-width="12" stroke-linecap="round"/>
+        <circle cx="96" cy="30" r="14" fill="white"/>
+        <circle cx="22" cy="96" r="18" fill="white" opacity="0.85"/>
+      </svg>
+    </div>
+    <span class="footer-name">Fleetly</span>
+  </a>
+  <div class="footer-copy">© 2025 Fleetly. Tüm hakları saklıdır.</div>
+  <div class="footer-links">
+    <a href="#">Gizlilik</a>
+    <a href="#">KVKK</a>
+    <a href="#">İletişim</a>
+  </div>
+</footer>
+
+<script>
+  // ── Scroll reveal ──
+  const revealEls = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(el => {
+      if (el.isIntersecting) {
+        el.target.classList.add('visible');
+        observer.unobserve(el.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+  revealEls.forEach(el => observer.observe(el));
+
+  // ── FAQ toggle ──
+  function toggleFaq(btn) {
+    const item = btn.parentElement;
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+
+  // ── Nav scroll effect ──
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('nav');
+    if (window.scrollY > 40) {
+      nav.style.background = 'rgba(8,12,16,.97)';
+    } else {
+      nav.style.background = 'rgba(8,12,16,.85)';
+    }
+  });
+</script>
+
+</body>
+</html>
