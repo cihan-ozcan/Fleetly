@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -2699,6 +2700,7 @@
       <div class="srm-title">🗺 Sefer Takibi</div>
       <div style="display:flex;gap:8px;align-items:center">
         <button onclick="downloadSeferPDF()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.35);color:#a78bfa;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s" onmouseover="this.style.background='rgba(167,139,250,.22)'" onmouseout="this.style.background='rgba(167,139,250,.12)'">⬇ PDF Raporu</button>
+        <button onclick="downloadSeferExcel()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s" onmouseover="this.style.background='rgba(34,197,94,.22)'" onmouseout="this.style.background='rgba(34,197,94,.12)'">⬇ Excel</button>
         <button class="modal-close" onclick="closeSeferModal()">✕</button>
       </div>
     </div>
@@ -7104,6 +7106,135 @@ function _pdfKpiRow(doc, ML, CW, y, cards, C, setFill, setTxt, rRect) {
     doc.text(card.lbl.toUpperCase(), cx+6, y+18);
   });
   return y + 28;
+}
+
+/* ================================================================
+   SEFERLERİ EXCEL İNDİRME
+   ================================================================ */
+function downloadSeferExcel() {
+  if (!seferData || seferData.length === 0) {
+    showToast('İndirilecek sefer kaydı yok.', 'error');
+    return;
+  }
+  showToast('Excel hazırlanıyor…', 'info');
+
+  try {
+    const WB = XLSX.utils.book_new();
+
+    /* ── 1. SAYFA: Tüm Sefer Kayıtları ── */
+    const sorted = [...seferData].sort((a, b) => (b.tarih || '').localeCompare(a.tarih || ''));
+    const fmtD = d => d ? d.split('-').reverse().join('.') : '—';
+    const fmtN = n => (n != null && n !== '') ? Number(n) : '';
+
+    const detayRows = [
+      ['Tarih', 'Araç Plakası', 'Sürücü', 'Kalkış', 'Varış', 'Mesafe (km)', 'Yük / Müşteri', 'Sefer Ücreti (₺)', 'Notlar']
+    ];
+    sorted.forEach(s => {
+      detayRows.push([
+        fmtD(s.tarih),
+        s.plaka || s.aracId || '—',
+        s.sofor || '—',
+        s.kalkis || '—',
+        s.varis  || '—',
+        fmtN(s.km),
+        s.yuk    || '—',
+        fmtN(s.ucret),
+        s.not    || ''
+      ]);
+    });
+    // Toplam satırı
+    const totalKm   = seferData.reduce((a, s) => a + (s.km    || 0), 0);
+    const totalCiro = seferData.reduce((a, s) => a + (s.ucret || 0), 0);
+    detayRows.push(['TOPLAM', '', '', '', '', totalKm, '', totalCiro, '']);
+
+    const wsDetay = XLSX.utils.aoa_to_sheet(detayRows);
+
+    // Kolon genişlikleri
+    wsDetay['!cols'] = [
+      {wch:12},{wch:14},{wch:18},{wch:18},{wch:18},{wch:13},{wch:24},{wch:18},{wch:24}
+    ];
+    XLSX.utils.book_append_sheet(WB, wsDetay, 'Sefer Kayıtları');
+
+    /* ── 2. SAYFA: Araç Bazlı Özet ── */
+    const byArac = {};
+    seferData.forEach(s => {
+      const key = s.plaka || s.aracId || 'Bilinmiyor';
+      if (!byArac[key]) byArac[key] = { plaka: key, sefer: 0, km: 0, ciro: 0 };
+      byArac[key].sefer++;
+      byArac[key].km   += s.km    || 0;
+      byArac[key].ciro += s.ucret || 0;
+    });
+    const aracRows = [
+      ['Araç Plakası', 'Sefer Sayısı', 'Toplam Mesafe (km)', 'Toplam Ciro (₺)', 'Ort. Mesafe (km)', 'Sefer Başı Ücret (₺)']
+    ];
+    Object.values(byArac).sort((a, b) => b.ciro - a.ciro).forEach(a => {
+      aracRows.push([
+        a.plaka,
+        a.sefer,
+        a.km,
+        a.ciro,
+        a.sefer > 0 ? Math.round(a.km   / a.sefer) : 0,
+        a.sefer > 0 ? Math.round(a.ciro / a.sefer) : 0
+      ]);
+    });
+    const wsArac = XLSX.utils.aoa_to_sheet(aracRows);
+    wsArac['!cols'] = [{wch:14},{wch:14},{wch:20},{wch:18},{wch:18},{wch:20}];
+    XLSX.utils.book_append_sheet(WB, wsArac, 'Araç Özeti');
+
+    /* ── 3. SAYFA: Rota Bazlı Özet ── */
+    const byRota = {};
+    seferData.forEach(s => {
+      const key = (s.kalkis || '?') + ' → ' + (s.varis || '?');
+      if (!byRota[key]) byRota[key] = { rota: key, count: 0, ciro: 0, km: 0 };
+      byRota[key].count++;
+      byRota[key].ciro += s.ucret || 0;
+      byRota[key].km   += s.km   || 0;
+    });
+    const rotaRows = [
+      ['Rota', 'Sefer Sayısı', 'Toplam Mesafe (km)', 'Toplam Ciro (₺)', 'Sefer Başı Ücret (₺)']
+    ];
+    Object.values(byRota).sort((a, b) => b.count - a.count).forEach(r => {
+      rotaRows.push([
+        r.rota,
+        r.count,
+        r.km,
+        r.ciro,
+        r.count > 0 ? Math.round(r.ciro / r.count) : 0
+      ]);
+    });
+    const wsRota = XLSX.utils.aoa_to_sheet(rotaRows);
+    wsRota['!cols'] = [{wch:32},{wch:14},{wch:20},{wch:18},{wch:20}];
+    XLSX.utils.book_append_sheet(WB, wsRota, 'Rota Özeti');
+
+    /* ── 4. SAYFA: Aylık Özet ── */
+    const now    = new Date();
+    const months = [];
+    for (let i = 11; i >= 0; i--) {
+      const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      const lbl = d.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+      months.push({ key, lbl });
+    }
+    const aylikRows = [['Dönem', 'Sefer Sayısı', 'Toplam Mesafe (km)', 'Toplam Ciro (₺)']];
+    months.forEach(m => {
+      const sf = seferData.filter(s => s.tarih && s.tarih.startsWith(m.key));
+      const km   = sf.reduce((a, s) => a + (s.km    || 0), 0);
+      const ciro = sf.reduce((a, s) => a + (s.ucret || 0), 0);
+      aylikRows.push([m.lbl, sf.length, km, ciro]);
+    });
+    const wsAylik = XLSX.utils.aoa_to_sheet(aylikRows);
+    wsAylik['!cols'] = [{wch:22},{wch:14},{wch:20},{wch:18}];
+    XLSX.utils.book_append_sheet(WB, wsAylik, 'Aylık Özet');
+
+    /* ── Dosyayı İndir ── */
+    const fileName = 'sefer_raporu_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    XLSX.writeFile(WB, fileName);
+    showToast('Excel indirildi ✓', 'success');
+
+  } catch (err) {
+    console.error('Excel hatası:', err);
+    showToast('Excel oluşturulurken hata oluştu.', 'error');
+  }
 }
 
 /* ================================================================
