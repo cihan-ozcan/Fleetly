@@ -2073,7 +2073,7 @@
         background:var(--surface2);
       ">
         <div style="font-size:13px;font-weight:700;margin-bottom:6px">Aylık</div>
-        <div style="font-size:24px;font-weight:800;color:var(--accent);margin-bottom:4px">₺2500</div>
+        <div style="font-size:24px;font-weight:800;color:var(--accent);margin-bottom:4px">₺990</div>
         <div style="font-size:11px;color:var(--muted)">/ay · Dilediğinizde iptal</div>
       </div>
       <div id="sub-plan-yillik" onclick="selectSubPlan('yillik')" style="
@@ -2085,21 +2085,21 @@
           position:absolute;top:-1px;right:10px;
           background:var(--green);color:#fff;font-size:9px;font-weight:700;
           padding:2px 8px;border-radius:0 0 6px 6px;letter-spacing:.08em;
-        ">%15 İNDİRİM</div>
+        ">%25 İNDİRİM</div>
         <div style="font-size:13px;font-weight:700;margin-bottom:6px">Yıllık</div>
-        <div style="font-size:24px;font-weight:800;color:var(--accent);margin-bottom:4px">₺25.500</div>
-        <div style="font-size:11px;color:var(--muted)">/yıl · Tek ödeme</div>
+        <div style="font-size:24px;font-weight:800;color:var(--accent);margin-bottom:4px">₺8.900</div>
+        <div style="font-size:11px;color:var(--muted)">/yıl · Tek ödeme · ₺2.980 tasarruf</div>
       </div>
     </div>
 
-    <!-- Ödeme notu (gerçek ödeme entegrasyonu için değiştirin) -->
+    <!-- Shopier ödeme notu -->
     <div style="
       background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.2);
       border-radius:12px;padding:14px;margin-bottom:20px;
       font-size:12.5px;color:var(--text2);line-height:1.5;
     " id="sub-payment-note">
-      Seçtiğiniz planı aktifleştirmek için aşağıdaki butona tıklayın.
-      Ödeme işlemi güvenli şekilde gerçekleştirilir.
+      🔒 Güvenli ödeme — Shopier altyapısı ile kredi/banka kartı ile ödeyin.<br>
+      Ödeme onaylandıktan sonra aboneliğiniz <strong style="color:var(--accent)">24 saat içinde</strong> aktif edilir.
     </div>
 
     <button id="sub-buy-btn" onclick="subPlanSatin()" style="
@@ -2110,7 +2110,7 @@
       box-shadow:0 6px 20px rgba(249,115,22,.35);
       transition:opacity .2s,transform .15s;
     " onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
-      💳 Satın Al ve Devam Et
+      💳 Shopier ile Güvenli Öde →
     </button>
 
     <button onclick="doLogout()" style="
@@ -3774,54 +3774,44 @@ function selectSubPlan(plan) {
   if (yillik) yillik.style.background  = plan === 'yillik' ? 'rgba(249,115,22,.06)' : 'var(--surface2)';
 }
 
-async function subPlanSatin() {
-  /*
-    ─────────────────────────────────────────────────────────────
-    ÖDEME ENTEGRASYONU YER TUTUCU
-    ─────────────────────────────────────────────────────────────
-    Gerçek üretime geçmeden önce bu fonksiyonu şu ödeme
-    sağlayıcılarından biriyle entegre edin:
-      • İyzico (Türkiye'nin en yaygın ödeme altyapısı)
-      • Stripe (uluslararası kartlar)
-      • PayTR, Sipay vb.
+function subPlanSatin() {
+  // ── Shopier ödeme linkleri ──────────────────────────────────────
+  // Shopier panelinden ürün oluşturduktan sonra linkleri buraya yapıştırın.
+  // Shopier → Ürünler → Yeni Ürün → "Ödeme Linki"ni kopyalayın.
+  const SHOPIER_LINKS = {
+    aylik : 'AYLIK_SHOPIER_LINK_BURAYA',   // ₺990/ay
+    yillik: 'YILLIK_SHOPIER_LINK_BURAYA'   // ₺8.900/yıl
+  };
+  // ───────────────────────────────────────────────────────────────
 
-    Entegrasyon akışı:
-      1. Backend sunucu (/api/odeme-baslat) endpoint'ini oluşturun.
-      2. Kullanıcı firma_id + plan_id gönderin.
-      3. Ödeme sağlayıcı token alın ve yönlendirin.
-      4. Başarılı ödeme webhook'unda abonelik_aktif_et() RPC'yi çağırın.
-      5. Kullanıcıyı uygulamaya geri yönlendirin.
-    ─────────────────────────────────────────────────────────────
-  */
+  const link = SHOPIER_LINKS[_secilenSubPlan];
+
+  // Henüz link eklenmemişse uyarı ver
+  if (!link || link.includes('BURAYA')) {
+    showToast('⚠ Ödeme linki henüz tanımlanmadı. Shopier panelinden linki ekleyin.', 'error');
+    return;
+  }
+
   const btn = document.getElementById('sub-buy-btn');
   if (btn) {
     btn.disabled = true;
-    btn.textContent = '⏳ Ödeme sayfasına yönlendiriliyorsunuz…';
+    btn.textContent = '⏳ Shopier ödeme sayfasına yönlendiriliyorsunuz…';
   }
 
-  // Test modu: 30 saniyelik simülasyon (üretimde kaldırın)
-  // Gerçek entegrasyonda backend'e POST isteği atın:
-  /*
-  try {
-    const res = await fetch('/api/odeme-baslat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
-      body: JSON.stringify({ firma_id: currentFirmaId, plan_id: _secilenSubPlan })
-    });
-    const { odeme_url } = await res.json();
-    window.location.href = odeme_url;
-  } catch(e) {
-    showToast('Ödeme başlatılamadı: ' + e.message, 'error');
-  }
-  */
+  // Shopier linkine firma_id'yi parametre olarak ekle (takip için)
+  const url = new URL(link);
+  if (currentFirmaId) url.searchParams.set('ref', currentFirmaId);
 
-  // ── DEMO: Direkt aktivasyon (test için — üretimde kaldırın) ──
-  showToast('ℹ Ödeme modülü henüz entegre edilmedi. Lütfen yöneticiye başvurun.', 'info');
+  // Yeni sekmede aç — kullanıcı ödeyip geri döndüğünde uygulama hâlâ açık olsun
+  window.open(url.toString(), '_blank');
+
+  // 3 saniye sonra butonu tekrar aktif et
   setTimeout(() => {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = '💳 Satın Al ve Devam Et';
+      btn.textContent = '💳 Shopier ile Güvenli Öde →';
     }
+    showToast('💡 Ödemeyi tamamladıysanız aboneliğiniz 24 saat içinde aktif edilecektir.', 'info');
   }, 3000);
 }
 
