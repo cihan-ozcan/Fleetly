@@ -2051,7 +2051,7 @@
 <div id="subscription-overlay" class="hidden" style="
   position:fixed;inset:0;z-index:1100;
   background:var(--bg);
-  display:flex;align-items:center;justify-content:center;
+  display:none;align-items:center;justify-content:center;
   padding:20px;
 ">
   <div style="
@@ -2131,7 +2131,7 @@
   background:linear-gradient(90deg,rgba(249,115,22,.12),rgba(249,115,22,.06));
   border-bottom:1px solid rgba(249,115,22,.2);
   padding:8px 24px;
-  display:flex;align-items:center;justify-content:space-between;
+  display:none;align-items:center;justify-content:space-between;
   font-size:12.5px;position:relative;z-index:99;
   flex-wrap:wrap;gap:8px;
 ">
@@ -3554,19 +3554,17 @@ async function checkAuth() {
 let _secilenSubPlan = 'aylik';
 
 async function checkSubscription() {
-  // Firma ID yoksa → yeni kayıt olan kullanıcı (firma henüz oluşturulmamış)
+  // ── Firma ID yoksa kullanıcının firması henüz yok ──
   if (!currentFirmaId) {
-    const sb = getSB();
-    if (sb) {
-      try {
-        const { data: { user } } = await sb.auth.getUser();
-        if (user) {
-          // Giriş yapmış ama firması yok — register'a yönlendir
-          showToast('⚠ Lütfen firma kaydınızı tamamlayın.', 'info');
-          setTimeout(() => { window.location.href = 'register.html'; }, 1800);
-        }
-      } catch(e) { /* sessiz */ }
-    }
+    try {
+      const sb = getSB();
+      if (!sb) return;
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) {
+        showToast('⚠ Lütfen firma kaydınızı tamamlayın.', 'info');
+        setTimeout(() => { window.location.href = 'register.html'; }, 1800);
+      }
+    } catch(e) { /* sessiz */ }
     return;
   }
 
@@ -3574,26 +3572,73 @@ async function checkSubscription() {
     const sb = getSB();
     if (!sb) return;
 
-    const { data, error } = await sb.rpc('firma_abonelik_durumu', {
+    // ── Önce RPC dene, hata alırsa doğrudan tablodan oku ──
+    let durum = null, kalanGun = 0, bitis = null;
+
+    const { data: rpcData, error: rpcErr } = await sb.rpc('firma_abonelik_durumu', {
       p_firma_id: currentFirmaId
     });
 
-    // RPC hatası → sessizce geç, uygulamayı engelleme
-    if (error) {
-      console.warn('Abonelik kontrol RPC hatası:', error.message);
-      return;
+    if (!rpcErr && rpcData && rpcData.durum) {
+      // RPC başarılı
+      durum    = rpcData.durum;
+      kalanGun = (typeof rpcData.kalan_gun === 'number') ? rpcData.kalan_gun : 0;
+      bitis    = rpcData.bitis;
+      console.log('Abonelik (RPC):', durum, kalanGun, 'gün');
+    } else {
+      // RPC yoksa veya hata aldıysa → doğrudan firmalar tablosunu oku
+      console.warn('RPC kullanılamıyor, tablo sorgusuyla devam:', rpcErr?.message);
+
+      const { data: firmaRow, error: firmaErr } = await sb
+        .from('firmalar')
+        .select('deneme_bitis, abonelik_bitis, abonelik_durumu, abonelik_plani')
+        .eq('id', currentFirmaId)
+        .single();
+
+      if (firmaErr || !firmaRow) {
+        console.warn('Firma verisi alınamadı, erişim açık bırakılıyor:', firmaErr?.message);
+        return; // Hata durumunda engelleme!
+      }
+
+      const now = new Date();
+
+      // Aktif ücretli abonelik var mı?
+      if (firmaRow.abonelik_bitis && new Date(firmaRow.abonelik_bitis) > now) {
+        const ms = new Date(firmaRow.abonelik_bitis) - now;
+        kalanGun = Math.max(0, Math.floor(ms / 86400000));
+        durum    = 'aktif';
+        bitis    = firmaRow.abonelik_bitis;
+      }
+      // Deneme süresi devam ediyor mu?
+      else if (firmaRow.deneme_bitis && new Date(firmaRow.deneme_bitis) > now) {
+        const ms = new Date(firmaRow.deneme_bitis) - now;
+        kalanGun = Math.max(0, Math.floor(ms / 86400000));
+        durum    = 'deneme';
+        bitis    = firmaRow.deneme_bitis;
+      }
+      // Deneme_bitis hiç set edilmemişse → yeni firma, 7 gün ver
+      else if (!firmaRow.deneme_bitis) {
+        console.info('deneme_bitis null — firma yeni, deneme başlatılıyor');
+        // Supabase'de deneme_bitis güncelle
+        const yeniTarih = new Date(Date.now() + 7 * 86400000).toISOString();
+        await sb.from('firmalar').update({
+          deneme_bitis: yeniTarih,
+          abonelik_durumu: 'deneme'
+        }).eq('id', currentFirmaId);
+        kalanGun = 7;
+        durum    = 'deneme';
+        bitis    = yeniTarih;
+      }
+      // Süresi dolmuş
+      else {
+        durum    = 'suresi_dolmus';
+        kalanGun = 0;
+      }
+
+      console.log('Abonelik (tablo):', durum, kalanGun, 'gün');
     }
 
-    // data null veya durum belirsizse → uygulamayı engelleme
-    if (!data || !data.durum) {
-      console.warn('Abonelik durumu alınamadı, erişim açık bırakılıyor');
-      return;
-    }
-
-    const durum    = data.durum;
-    const kalanGun = (typeof data.kalan_gun === 'number') ? data.kalan_gun : 0;
-    const bitis    = data.bitis;
-
+    // ── Duruma göre UI ──
     if (durum === 'aktif') {
       hideSubscriptionOverlay();
       hideTrialBanner();
@@ -3614,12 +3659,11 @@ async function checkSubscription() {
       return;
     }
 
-    // Bilinmeyen durum → uygulamayı engelleme
     console.warn('Bilinmeyen abonelik durumu:', durum);
 
   } catch (e) {
-    // Herhangi bir hata → uygulamayı engelleme, sadece logla
-    console.warn('Abonelik kontrolü başarısız (hata yutuldu):', e.message);
+    // Beklenmedik hata → ASLA engelleme, sadece logla
+    console.warn('checkSubscription beklenmedik hata (görmezden gelindi):', e.message);
   }
 }
 
@@ -3632,15 +3676,17 @@ function showTrialBanner(kalanGun, bitis) {
   let emoji = kalanGun <= 2 ? '🚨' : (kalanGun <= 5 ? '⚠' : '⏱');
 
   const bitisTarih = bitis ? new Date(bitis).toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' }) : '';
-  text.innerHTML = `${emoji} <strong style="color:${renk}">Ücretsiz Deneme</strong> — <span style="color:var(--text2)">${kalanGun} gün kaldı${bitisTarih ? ' (' + bitisTarih + ')' : ''}</span>`;
+  text.innerHTML = emoji + ' <strong style="color:' + renk + '">Ücretsiz Deneme</strong> — <span style="color:var(--text2)">' + kalanGun + ' gün kaldı' + (bitisTarih ? ' (' + bitisTarih + ')' : '') + '</span>';
 
-  banner.style.display = '';
+  banner.style.display = 'flex';
   banner.classList.remove('hidden');
 }
 
 function hideTrialBanner() {
   const banner = document.getElementById('trial-banner');
-  if (banner) { banner.classList.add('hidden'); banner.style.display = 'none'; }
+  if (!banner) return;
+  banner.style.display = 'none';
+  banner.classList.add('hidden');
 }
 
 function showSubscriptionOverlay(neden, kalanGun) {
@@ -3655,18 +3701,23 @@ function showSubscriptionOverlay(neden, kalanGun) {
     if (icon)  icon.textContent  = '⏰';
     if (title) title.textContent = 'Deneme Süreniz Doldu';
     if (msg)   msg.textContent   = '7 günlük ücretsiz deneme süreniz sona erdi. Fleetly\'yi kullanmaya devam etmek için bir plan seçin.';
+  } else if (neden === 'manuel') {
+    if (icon)  icon.textContent  = '💳';
+    if (title) title.textContent = 'Plan Seçin';
+    if (msg)   msg.textContent   = 'Dilediğiniz planı seçerek Fleetly\'den tam verim alın.';
   }
 
-  overlay.classList.remove('hidden');
   overlay.style.display = 'flex';
-
-  // Başlangıçta aylık seçili
+  overlay.classList.remove('hidden');
   selectSubPlan('aylik');
 }
 
 function hideSubscriptionOverlay() {
   const overlay = document.getElementById('subscription-overlay');
-  if (overlay) { overlay.classList.add('hidden'); overlay.style.display = 'none'; }
+  if (!overlay) return;
+  overlay.style.display = 'none';
+  overlay.classList.add('hidden');
+}
 }
 
 function openSubscriptionModal() {
