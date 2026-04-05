@@ -35,14 +35,14 @@
       "name": "Araçlar",
       "short_name": "Araçlar",
       "description": "Araç listesini görüntüle",
-      "url": "/",
+      "url": "/onerfilotakip/",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Seferler",
       "short_name": "Seferler",
       "description": "Sefer kayıtları",
-      "url": "/?open=seferler",
+      "url": "/onerfilotakip/?open=seferler",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ],
