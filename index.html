@@ -3972,6 +3972,12 @@ async function renderActivityLog() {
     'bakım_ekle':     { icon: '🔧', dot: 'blue',   label: 'Bakım kaydı eklendi' },
     'bakım_sil':      { icon: '🗑', dot: 'red',    label: 'Bakım kaydı silindi' },
     'bakım_düzenle':  { icon: '✎',  dot: 'purple', label: 'Bakım kaydı düzenlendi' },
+    'sefer_ekle':     { icon: '🗺', dot: 'green',  label: 'Yeni sefer eklendi' },
+    'sefer_düzenle':  { icon: '✎',  dot: 'blue',   label: 'Sefer düzenlendi' },
+    'sefer_sil':      { icon: '🗑', dot: 'red',    label: 'Sefer silindi' },
+    'masraf_ekle':    { icon: '💸', dot: 'yellow', label: 'Yeni masraf eklendi' },
+    'masraf_düzenle': { icon: '✎',  dot: 'purple', label: 'Masraf düzenlendi' },
+    'masraf_sil':     { icon: '🗑', dot: 'red',    label: 'Masraf silindi' },
   };
   list.innerHTML = log.map(entry => {
     const cfg = typeMap[entry.type] || { icon: '•', dot: 'blue', label: entry.type };
@@ -7997,6 +8003,11 @@ function saveSeferEntry() {
   saveSeferData();
   saveSeferEntryCloud(entry);
   updateSeferStat();
+
+  // Aktivite logu
+  const _sefDetail = kalkis + ' → ' + varis + (ucret ? ' · ' + ucret.toLocaleString('tr-TR') + ' ₺' : '');
+  addActivity(eid ? 'sefer_düzenle' : 'sefer_ekle', entry.plaka || '—', _sefDetail);
+
   document.getElementById('f-sefer-id').value='';
   // formu sıfırla
   ['f-sefer-arac','f-sefer-sofor','f-sefer-kalkis','f-sefer-varis','f-sefer-km','f-sefer-yuk','f-sefer-ucret','f-sefer-not'].forEach(id=>{
@@ -8008,9 +8019,11 @@ function saveSeferEntry() {
 
 function deleteSeferEntry(id) {
   if(!confirm('Bu sefer kaydını silmek istiyor musunuz?')) return;
+  const _sefDel = seferData.find(s=>s.id===id);
   seferData = seferData.filter(s=>s.id!==id);
   saveSeferData();
   deleteSeferEntryCloud(id);
+  addActivity('sefer_sil', _sefDel?.plaka || '—', (_sefDel?.kalkis||'') + (_sefDel?.varis ? ' → ' + _sefDel.varis : ''));
   updateSeferStat(); renderSeferTable(); renderSeferStats();
   showToast('Sefer silindi.','error');
 }
@@ -8228,6 +8241,11 @@ function saveMasrafEntry() {
   saveMasrafData();
   saveMasrafEntryCloud(entry);
   updateMasrafStat();
+
+  // Aktivite logu
+  const _masDetail = kategori + ' · ' + tutar.toLocaleString('tr-TR') + ' ₺' + (aciklama ? ' · ' + aciklama.slice(0,30) : '');
+  addActivity(eid ? 'masraf_düzenle' : 'masraf_ekle', entry.plaka || 'Genel', _masDetail);
+
   document.getElementById('f-masraf-id').value='';
   ['f-masraf-arac','f-masraf-kategori','f-masraf-tutar','f-masraf-makbuz','f-masraf-aciklama'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
@@ -8238,9 +8256,11 @@ function saveMasrafEntry() {
 
 function deleteMasrafEntry(id) {
   if(!confirm('Bu masraf kaydını silmek istiyor musunuz?')) return;
+  const _masDel = masrafData.find(m=>m.id===id);
   masrafData = masrafData.filter(m=>m.id!==id);
   saveMasrafData();
   deleteMasrafEntryCloud(id);
+  addActivity('masraf_sil', _masDel?.plaka || 'Genel', (_masDel?.kategori||'') + (_masDel?.tutar ? ' · ' + _masDel.tutar.toLocaleString('tr-TR') + ' ₺' : ''));
   updateMasrafStat(); renderMasrafTable(); renderMasrafStats();
   showToast('Masraf silindi.','error');
 }
