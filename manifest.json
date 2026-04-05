@@ -2,8 +2,8 @@
   "name": "Fleetly — Araç & Bilgi Yönetim Sistemi",
   "short_name": "Fleetly",
   "description": "Araç filosu takip, yakıt, bakım ve sefer yönetim sistemi",
-  "start_url": "/onerfilotakip/",
-  "scope": "/onerfilotakip/",
+  "start_url": "/Fleetly/",
+  "scope": "/Fleetly/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#080c10",
@@ -35,14 +35,14 @@
       "name": "Araçlar",
       "short_name": "Araçlar",
       "description": "Araç listesini görüntüle",
-      "url": "/onerfilotakip/",
+      "url": "/Fleetly/app.html",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Seferler",
       "short_name": "Seferler",
       "description": "Sefer kayıtları",
-      "url": "/onerfilotakip/?open=seferler",
+      "url": "/Fleetly/app.html?open=seferler",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ],
