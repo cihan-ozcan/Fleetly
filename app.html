@@ -3565,17 +3565,46 @@ async function checkAuth() {
 let _secilenSubPlan = 'aylik';
 
 async function checkSubscription() {
-  // ── Firma ID yoksa kullanıcının firması henüz yok ──
+  // ── Firma ID yoksa kullanıcının firması henüz oluşturulmamış ──
+  // (E-posta onaylı yeni kayıtlarda RPC register sırasında çalışamaz; burada tamamlanır)
   if (!currentFirmaId) {
     try {
       const sb = getSB();
       if (!sb) return;
       const { data: { user } } = await sb.auth.getUser();
       if (user) {
-        showToast('⚠ Lütfen firma kaydınızı tamamlayın.', 'info');
-        setTimeout(() => { window.location.href = 'register.html'; }, 1800);
+        // localStorage'da kayıt formundan gelen firma bilgileri var mı?
+        const firmaAdi = localStorage.getItem('fleetly_firma_adi') || user.email.split('@')[0];
+        const firmaFn  = localStorage.getItem('fleetly_firma_tel') || null;
+        const firmaVn  = localStorage.getItem('fleetly_firma_vno') || null;
+
+        showToast('⏳ Firma kaydınız tamamlanıyor…', 'info');
+
+        const { error: rpcErr } = await sb.rpc('firma_kayit_et', {
+          p_firma_adi : firmaAdi,
+          p_email     : user.email,
+          p_telefon   : firmaFn,
+          p_vergi_no  : firmaVn
+        });
+
+        if (!rpcErr) {
+          // localStorage temizle
+          ['fleetly_firma_adi','fleetly_firma_tel','fleetly_firma_vno'].forEach(k => localStorage.removeItem(k));
+          // firma_id'yi yeniden yükle ve devam et
+          await loadFirmaId();
+          if (currentFirmaId) {
+            await updateFirmaHeader();
+            showToast('✅ Firma kaydınız tamamlandı.', 'success');
+            await checkSubscription(); // geri kalanı normal akışta çalıştır
+          } else {
+            showToast('⚠ Firma kaydı oluşturulamadı. Lütfen destek alın.', 'error');
+          }
+        } else {
+          console.error('Firma RPC hatası:', rpcErr.message);
+          showToast('⚠ Firma kaydı oluşturulamadı: ' + rpcErr.message, 'error');
+        }
       }
-    } catch(e) { /* sessiz */ }
+    } catch(e) { console.error('checkSubscription firma hatası:', e); }
     return;
   }
 
