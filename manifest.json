@@ -1,0 +1,51 @@
+{
+  "name": "Fleetly — Araç & Bilgi Yönetim Sistemi",
+  "short_name": "Fleetly",
+  "description": "Araç filosu takip, yakıt, bakım ve sefer yönetim sistemi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080c10",
+  "theme_color": "#f97316",
+  "lang": "tr",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='22' fill='%23f97316'/%3E%3Cpolygon points='60,8 108,34 108,86 60,112 12,86 12,34' fill='none' stroke='white' stroke-width='3' opacity='0.35'/%3E%3Cline x1='22' y1='96' x2='60' y2='26' stroke='white' stroke-width='5.5' stroke-linecap='round'/%3E%3Cline x1='40' y1='106' x2='78' y2='22' stroke='white' stroke-width='3.5' stroke-linecap='round' opacity='0.55'/%3E%3Cline x1='58' y1='112' x2='96' y2='30' stroke='white' stroke-width='2.5' stroke-linecap='round' opacity='0.28'/%3E%3Ccircle cx='96' cy='30' r='7' fill='white'/%3E%3Ccircle cx='22' cy='96' r='10' fill='white' opacity='0.9'/%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Araçlar",
+      "short_name": "Araçlar",
+      "description": "Araç listesini görüntüle",
+      "url": "/",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Seferler",
+      "short_name": "Seferler",
+      "description": "Sefer kayıtları",
+      "url": "/?open=seferler",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
