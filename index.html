@@ -1436,7 +1436,7 @@
     #mob-menu {
       position: fixed;
       top: 54px; right: 0;
-      width: 220px;
+      width: 260px;
       background: var(--surface);
       border: 1px solid var(--border2);
       border-top: none;
@@ -1966,6 +1966,10 @@
 <!-- Mobil dropdown menü -->
 <div id="mob-menu">
   <button class="btn-sm accent" onclick="openModal();closeMobMenu()">+ Araç Ekle</button>
+  <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+  <button class="btn-sm" onclick="openSeferModal();closeMobMenu()" style="color:var(--purple)">🗺 Seferler</button>
+  <button class="btn-sm" onclick="openMasrafModal();closeMobMenu()" style="color:var(--yellow)">💸 Masraflar</button>
+  <button class="btn-sm" onclick="openRaporModal();closeMobMenu()" style="color:#e879f9">📊 Raporlar</button>
   <div style="border-top:1px solid var(--border);margin:4px 0"></div>
   <button class="btn-sm" onclick="openFuelSummary();closeMobMenu()" style="color:var(--accent)">⛽ Yakıt Yönetimi</button>
   <button class="btn-sm" onclick="openMaintSummaryModal();closeMobMenu()" style="color:var(--blue)">🔧 Bakım & Arıza</button>
