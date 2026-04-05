@@ -9,6 +9,17 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj4KICA8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjIyIiBmaWxsPSIjZjk3MzE2Ii8+CiAgPHBvbHlnb24gcG9pbnRzPSI2MCw4IDEwOCwzNCAxMDgsODYgNjAsMTEyIDEyLDg2IDEyLDM0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMiIG9wYWNpdHk9IjAuMzUiLz4KICA8bGluZSB4MT0iMjIiIHkxPSI5NiIgeDI9IjYwIiB5Mj0iMjYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNDAiIHkxPSIxMDYiIHgyPSI3OCIgeTI9IjIyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjU1Ii8+CiAgPGxpbmUgeDE9IjU4IiB5MT0iMTEyIiB4Mj0iOTYiIHkyPSIzMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4yOCIvPgogIDxjaXJjbGUgY3g9Ijk2IiBjeT0iMzAiIHI9IjciIGZpbGw9IndoaXRlIi8+CiAgPGNpcmNsZSBjeD0iMjIiIGN5PSI5NiIgcj0iMTAiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjkiLz4KPC9zdmc+" />
   <link rel="shortcut icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj4KICA8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjIyIiBmaWxsPSIjZjk3MzE2Ii8+CiAgPHBvbHlnb24gcG9pbnRzPSI2MCw4IDEwOCwzNCAxMDgsODYgNjAsMTEyIDEyLDg2IDEyLDM0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMiIG9wYWNpdHk9IjAuMzUiLz4KICA8bGluZSB4MT0iMjIiIHkxPSI5NiIgeDI9IjYwIiB5Mj0iMjYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNDAiIHkxPSIxMDYiIHgyPSI3OCIgeTI9IjIyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjU1Ii8+CiAgPGxpbmUgeDE9IjU4IiB5MT0iMTEyIiB4Mj0iOTYiIHkyPSIzMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4yOCIvPgogIDxjaXJjbGUgY3g9Ijk2IiBjeT0iMzAiIHI9IjciIGZpbGw9IndoaXRlIi8+CiAgPGNpcmNsZSBjeD0iMjIiIGN5PSI5NiIgcj0iMTAiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjkiLz4KPC9zdmc+" />
   <meta name="theme-color" content="#f97316" />
+
+  <!-- ── PWA ── -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Fleetly" />
+  <meta name="application-name" content="Fleetly" />
+  <meta name="msapplication-TileColor" content="#f97316" />
+  <meta name="description" content="Araç filosu takip, yakıt, bakım ve sefer yönetim sistemi" />
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -1879,9 +1890,146 @@
   }
   .vs-tab-panel { display: none; }
   .vs-tab-panel.active { display: block; }
+
+  /* ── PWA KURULUM BANNERI ──────────────────────────────────── */
+  #pwa-banner {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 9999;
+    background: linear-gradient(135deg, #111820, #18202c);
+    border-top: 1px solid rgba(249,115,22,.35);
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 -8px 32px rgba(0,0,0,.5);
+    transform: translateY(100%);
+    transition: transform .4s cubic-bezier(.16,1,.3,1);
+  }
+  #pwa-banner.visible { transform: translateY(0); }
+  #pwa-banner.hidden-perm { display: none; }
+  .pwa-banner-icon {
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: #f97316;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pwa-banner-text { flex: 1; }
+  .pwa-banner-title {
+    font-size: 13.5px; font-weight: 700; color: #e2eaf3;
+    margin-bottom: 2px;
+  }
+  .pwa-banner-sub {
+    font-size: 11.5px; color: #7a8fa8; line-height: 1.4;
+  }
+  .pwa-banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .pwa-install-btn {
+    background: #f97316; color: #fff; border: none;
+    border-radius: 9px; padding: 9px 16px;
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    transition: opacity .2s;
+  }
+  .pwa-install-btn:hover { opacity: .88; }
+  .pwa-close-btn {
+    background: rgba(255,255,255,.06); color: #7a8fa8;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 9px; padding: 9px 12px;
+    font-family: 'Inter', sans-serif; font-size: 13px;
+    cursor: pointer; transition: background .2s;
+  }
+  .pwa-close-btn:hover { background: rgba(255,255,255,.1); }
+
+  /* iPhone yönlendirme popup */
+  #pwa-ios-popup {
+    position: fixed;
+    bottom: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 10000;
+    background: #18202c;
+    border: 1px solid rgba(249,115,22,.4);
+    border-radius: 16px;
+    padding: 18px 20px;
+    width: calc(100% - 40px); max-width: 340px;
+    box-shadow: 0 16px 48px rgba(0,0,0,.6);
+    display: none;
+    text-align: center;
+  }
+  #pwa-ios-popup.show { display: block; animation: popIn .3s ease; }
+  @keyframes popIn {
+    from { opacity:0; transform: translateX(-50%) scale(.95); }
+    to   { opacity:1; transform: translateX(-50%) scale(1); }
+  }
+  .ios-popup-title { font-size: 14px; font-weight: 700; color: #e2eaf3; margin-bottom: 12px; }
+  .ios-popup-step {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12.5px; color: #a8b8cc;
+    padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+    text-align: left;
+  }
+  .ios-popup-step:last-of-type { border-bottom: none; }
+  .ios-step-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: rgba(249,115,22,.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .ios-popup-close {
+    margin-top: 14px; width: 100%;
+    background: rgba(255,255,255,.06); color: #a8b8cc;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 9px; padding: 9px;
+    font-family: 'Inter', sans-serif; font-size: 13px; cursor: pointer;
+  }
+  /* Küçük ok işareti (iOS paylaş butonuna işaret eder) */
+  #pwa-ios-popup::after {
+    content: '';
+    position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 9px solid rgba(249,115,22,.4);
+  }
+
 </style>
 </head>
 <body>
+
+<!-- ── PWA KURULUM BANNERI ── -->
+<div id="pwa-banner">
+  <div class="pwa-banner-icon">
+    <svg width="32" height="32" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="60,8 108,34 108,86 60,112 12,86 12,34" fill="none" stroke="white" stroke-width="3" opacity="0.4"/>
+      <line x1="22" y1="96" x2="60" y2="26" stroke="white" stroke-width="6" stroke-linecap="round"/>
+      <line x1="40" y1="106" x2="78" y2="22" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+      <circle cx="96" cy="30" r="8" fill="white"/>
+      <circle cx="22" cy="96" r="11" fill="white" opacity="0.9"/>
+    </svg>
+  </div>
+  <div class="pwa-banner-text">
+    <div class="pwa-banner-title">📲 Fleetly'yi Yükle</div>
+    <div class="pwa-banner-sub" id="pwa-banner-sub">Telefonunuza uygulama olarak ekleyin</div>
+  </div>
+  <div class="pwa-banner-actions">
+    <button class="pwa-install-btn" id="pwa-install-btn" onclick="pwaInstall()">Yükle</button>
+    <button class="pwa-close-btn" onclick="pwaDismiss()">✕</button>
+  </div>
+</div>
+
+<!-- iPhone yönlendirme popup -->
+<div id="pwa-ios-popup">
+  <div class="ios-popup-title">📲 Ana Ekrana Ekle</div>
+  <div class="ios-popup-step">
+    <div class="ios-step-icon">⬆</div>
+    <span>Alttaki <strong style="color:#f97316">Paylaş</strong> butonuna basın</span>
+  </div>
+  <div class="ios-popup-step">
+    <div class="ios-step-icon">＋</div>
+    <span><strong style="color:#f97316">Ana Ekrana Ekle</strong> seçeneğini seçin</span>
+  </div>
+  <div class="ios-popup-step">
+    <div class="ios-step-icon">✓</div>
+    <span>Sağ üstten <strong style="color:#f97316">Ekle</strong>'ye basın</span>
+  </div>
+  <button class="ios-popup-close" onclick="document.getElementById('pwa-ios-popup').classList.remove('show');pwaDismiss()">Anladım</button>
+</div>
+
 
 <!-- =========================================================
      DASHBOARD DÜZENLEME PANELİ
@@ -8903,5 +9051,77 @@ loadDriverData().then(() => { updateDriverStat(); });
 loadSeferData();
 loadMasrafData();
 </script>
+
+  <!-- ── PWA Kurulum Mantığı ── -->
+  <script>
+  (function() {
+    var DISMISSED_KEY = 'fleetly_pwa_dismissed';
+    var deferredPrompt = null;
+    var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    var isInStandalone = window.matchMedia('(display-mode: standalone)').matches
+                      || window.navigator.standalone === true;
+    var isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+
+    /* Zaten uygulama olarak açıksa veya masaüstüyse gösterme */
+    if (isInStandalone || !isMobile) return;
+
+    /* Daha önce kapatıldıysa gösterme */
+    if (localStorage.getItem(DISMISSED_KEY)) return;
+
+    var banner = document.getElementById('pwa-banner');
+    var subText = document.getElementById('pwa-banner-sub');
+
+    /* Android: beforeinstallprompt event'ini yakala */
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (subText) subText.textContent = 'Tek tıkla uygulama olarak kurun, internet olmadan da çalışır';
+      setTimeout(function() { banner && banner.classList.add('visible'); }, 2000);
+    });
+
+    /* iOS: Safari'de otomatik event yok, elle göster */
+    if (isIOS) {
+      var installBtn = document.getElementById('pwa-install-btn');
+      if (installBtn) installBtn.textContent = 'Nasıl Kurulur?';
+      if (subText) subText.textContent = 'Safari'de Ana Ekrana ekleyerek kullanın';
+      setTimeout(function() { banner && banner.classList.add('visible'); }, 2500);
+    }
+
+    window.pwaInstall = function() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(result) {
+          if (result.outcome === 'accepted') pwaDismiss();
+          deferredPrompt = null;
+        });
+      } else if (isIOS) {
+        var popup = document.getElementById('pwa-ios-popup');
+        if (popup) popup.classList.add('show');
+      }
+    };
+
+    window.pwaDismiss = function() {
+      var banner = document.getElementById('pwa-banner');
+      if (banner) banner.classList.remove('visible');
+      localStorage.setItem(DISMISSED_KEY, '1');
+    };
+
+    /* Başarıyla kurulduysa banner'ı gizle */
+    window.addEventListener('appinstalled', function() {
+      pwaDismiss();
+    });
+  })();
+  </script>
+
+  <!-- ── Service Worker kaydı ── -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(reg => console.log('SW kayıtlı:', reg.scope))
+          .catch(err => console.warn('SW hatası:', err));
+      });
+    }
+  </script>
 </body>
 </html>
