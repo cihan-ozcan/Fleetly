@@ -2234,7 +2234,7 @@
         <div class="settings-sep"></div>
         <div class="settings-item danger" onclick="confirmReset();closeSettings()">⊘ Tüm Verileri Sıfırla</div>
         <div class="settings-sep"></div>
-        <div class="settings-item danger" onclick="doLogout()">⏻ Çıkış Yap</div>
+        <div class="settings-item danger" onclick="closeSettings();doLogout()">⏻ Çıkış Yap</div>
       </div>
     </div>
     <button class="btn-sm accent" onclick="openModal()">+ Araç Ekle</button>
@@ -2260,7 +2260,7 @@
   </label>
   <div style="border-top:1px solid var(--border);margin:4px 0"></div>
   <button class="btn-sm danger" onclick="confirmReset();closeMobMenu()">⊘ Sıfırla</button>
-  <button class="btn-sm danger" onclick="doLogout()">Çıkış Yap</button>
+  <button class="btn-sm danger" onclick="closeMobMenu();doLogout()">Çıkış Yap</button>
 </div>
 
 <!-- =========================================================
@@ -3786,10 +3786,16 @@ async function subPlanSatin() {
 }
 
 function showLoginOverlay() {
-  document.getElementById('login-overlay').classList.remove('hidden');
+  const el = document.getElementById('login-overlay');
+  if (!el) return;
+  el.classList.remove('hidden');
+  el.style.display = 'flex';
 }
 function hideLoginOverlay() {
-  document.getElementById('login-overlay').classList.add('hidden');
+  const el = document.getElementById('login-overlay');
+  if (!el) return;
+  el.classList.add('hidden');
+  el.style.display = 'none';
 }
 
 async function doLogin() {
@@ -3864,6 +3870,10 @@ async function doResetPassword() {
 }
 
 async function doLogout() {
+  // Açık olan menü/dropdown'ları kapat
+  try { closeSettings(); } catch(e) {}
+  try { closeMobMenu(); } catch(e) {}
+
   try {
     const sb = getSB();
     if (sb) await sb.auth.signOut();
@@ -3879,12 +3889,20 @@ async function doLogout() {
   // Abonelik ekranlarını gizle
   hideSubscriptionOverlay();
   hideTrialBanner();
-  // Login ekranını göster, sayfayı yenileme
-  document.getElementById('login-overlay').classList.remove('hidden');
-  document.getElementById('header-subtitle').textContent = 'Araç Yönetim Sistemi';
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-pass').value = '';
-  document.getElementById('login-error').textContent = '';
+  // Login ekranını göster
+  const loginOverlay = document.getElementById('login-overlay');
+  if (loginOverlay) {
+    loginOverlay.classList.remove('hidden');
+    loginOverlay.style.display = 'flex';
+  }
+  const sub = document.getElementById('header-subtitle');
+  if (sub) sub.textContent = 'Araç Yönetim Sistemi';
+  const emailEl = document.getElementById('login-email');
+  const passEl  = document.getElementById('login-pass');
+  const errEl   = document.getElementById('login-error');
+  if (emailEl) emailEl.value = '';
+  if (passEl)  passEl.value  = '';
+  if (errEl)   errEl.textContent = '';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
