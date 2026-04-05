@@ -11,10 +11,12 @@ const CACHE_NAME_CDN = 'fleetly-cdn-v1';
 
 /* Uygulama kabuğu — her zaman önbellekle */
 const APP_SHELL = [
-  '/onerfilotakip/',
-  '/onerfilotakip/index.html',
-  '/onerfilotakip/config.js',
-  '/onerfilotakip/manifest.json',
+  '/Fleetly/',
+  '/Fleetly/index.html',
+  '/Fleetly/app.html',
+  '/Fleetly/register.html',
+  '/Fleetly/config.js',
+  '/Fleetly/manifest.json',
 ];
 
 /* CDN kaynakları — önbellekte tut */
@@ -91,7 +93,7 @@ self.addEventListener('fetch', event => {
           );
         }
         return response;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => caches.match('/Fleetly/index.html'));
     })
   );
 });
