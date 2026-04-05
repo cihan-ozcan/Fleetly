@@ -11,10 +11,10 @@ const CACHE_NAME_CDN = 'fleetly-cdn-v1';
 
 /* Uygulama kabuğu — her zaman önbellekle */
 const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/config.js',
-  '/manifest.json',
+  '/onerfilotakip/',
+  '/onerfilotakip/index.html',
+  '/onerfilotakip/config.js',
+  '/onerfilotakip/manifest.json',
 ];
 
 /* CDN kaynakları — önbellekte tut */
