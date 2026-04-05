@@ -1905,9 +1905,22 @@
      ========================================================= -->
 <div id="login-overlay">
   <div class="login-card">
-    <div class="login-logo">🚛</div>
-    <h1 class="login-title">Filo Takip</h1>
-    <p class="login-sub" id="login-sub">Sisteme giriş yapın</p>
+    <!-- Logo -->
+    <div style="display:flex;align-items:center;justify-content:center;margin-bottom:22px">
+      <svg width="64" height="64" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <rect width="120" height="120" rx="22" fill="#f97316"/>
+        <polygon points="60,8 108,34 108,86 60,112 12,86 12,34"
+          fill="none" stroke="white" stroke-width="3" opacity="0.35"/>
+        <line x1="22" y1="96" x2="60" y2="26" stroke="white" stroke-width="5.5" stroke-linecap="round"/>
+        <line x1="40" y1="106" x2="78" y2="22" stroke="white" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+        <line x1="58" y1="112" x2="96" y2="30" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.28"/>
+        <circle cx="96" cy="30" r="7" fill="white"/>
+        <circle cx="22" cy="96" r="10" fill="white" opacity="0.9"/>
+      </svg>
+    </div>
+    <h1 class="login-title" style="font-size:24px;letter-spacing:2px;font-weight:800">SAAB</h1>
+    <p style="font-size:11px;letter-spacing:4px;color:var(--muted);margin-bottom:4px;text-transform:uppercase">Sistem</p>
+    <p class="login-sub" id="login-sub" style="margin-bottom:28px">Araç &amp; Bilgi Yönetimi</p>
     <input id="login-email" class="inp" type="email" placeholder="E-posta" autocomplete="email" />
     <input id="login-pass"  class="inp" type="password" placeholder="Şifre" autocomplete="current-password" />
     <button class="btn-primary" id="login-btn" onclick="doLogin()">🔓 Giriş Yap</button>
@@ -1916,7 +1929,7 @@
       Şifremi unuttum →
       <button onclick="doResetPassword()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:0;font-family:inherit">Sıfırlama e-postası gönder</button>
     </p>
-    <p style="margin-top:28px;font-size:10px;color:var(--border2);letter-spacing:.04em;user-select:none">created by cihanozcan</p>
+    <p style="margin-top:28px;font-size:10px;color:var(--border2);letter-spacing:.06em;user-select:none;opacity:0.5">created by cihanozcan</p>
   </div>
 </div>
 
@@ -1926,8 +1939,17 @@
 <header>
   <div class="header-left">
     <div class="header-logo">
-      <div class="header-logo-icon">🚛</div>
-      <span>Filo Takip</span>
+      <svg width="28" height="28" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+        <rect width="120" height="120" rx="22" fill="#f97316"/>
+        <polygon points="60,8 108,34 108,86 60,112 12,86 12,34"
+          fill="none" stroke="white" stroke-width="3" opacity="0.35"/>
+        <line x1="22" y1="96" x2="60" y2="26" stroke="white" stroke-width="5.5" stroke-linecap="round"/>
+        <line x1="40" y1="106" x2="78" y2="22" stroke="white" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+        <line x1="58" y1="112" x2="96" y2="30" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.28"/>
+        <circle cx="96" cy="30" r="7" fill="white"/>
+        <circle cx="22" cy="96" r="10" fill="white" opacity="0.9"/>
+      </svg>
+      <span style="letter-spacing:1.5px;font-weight:800">SAAB</span>
     </div>
     <div class="header-divider"></div>
     <span class="header-subtitle" id="header-subtitle">Araç Yönetim Sistemi</span>
