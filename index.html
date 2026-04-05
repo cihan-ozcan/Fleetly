@@ -1940,7 +1940,8 @@
   /* iPhone yönlendirme popup */
   #pwa-ios-popup {
     position: fixed;
-    bottom: 80px; left: 50%; transform: translateX(-50%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 10000;
     background: #18202c;
     border: 1px solid rgba(249,115,22,.4);
@@ -1977,15 +1978,7 @@
     border-radius: 9px; padding: 9px;
     font-family: 'Inter', sans-serif; font-size: 13px; cursor: pointer;
   }
-  /* Küçük ok işareti (iOS paylaş butonuna işaret eder) */
-  #pwa-ios-popup::after {
-    content: '';
-    position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%);
-    width: 0; height: 0;
-    border-left: 9px solid transparent;
-    border-right: 9px solid transparent;
-    border-top: 9px solid rgba(249,115,22,.4);
-  }
+
 
 </style>
 </head>
@@ -2027,7 +2020,7 @@
     <div class="ios-step-icon">✓</div>
     <span>Sağ üstten <strong style="color:#f97316">Ekle</strong>'ye basın</span>
   </div>
-  <button class="ios-popup-close" onclick="document.getElementById('pwa-ios-popup').classList.remove('show');pwaDismiss()">Anladım</button>
+  <button class="ios-popup-close" onclick="document.getElementById('pwa-ios-popup').classList.remove('show')">Anladım</button>
 </div>
 
 
@@ -2116,6 +2109,12 @@
     <button class="btn-sm" onclick="openDriverModal()" style="color:var(--green);border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.06);font-weight:600" title="Sürücü Belgelerini Yönet">👤 Sürücü Belgeleri</button>
     <div class="header-divider"></div>
     <!-- Ayarlar dropdown -->
+    <!-- Masaüstü PWA butonu (sadece desteklenirse görünür) -->
+    <button id="pwa-desktop-btn" class="btn-sm" onclick="pwaShowInfo()"
+      style="color:var(--accent);border-color:rgba(249,115,22,.3);background:rgba(249,115,22,.06);font-weight:600"
+      title="Fleetly'yi telefonunuza veya bilgisayarınıza uygulama olarak yükleyin">
+      📲 Uygulamayı Yükle
+    </button>
     <div class="settings-wrap" id="settings-wrap">
       <button class="btn-sm" id="settings-btn" onclick="toggleSettings()" title="Ayarlar">⚙ Ayarlar</button>
       <div class="settings-dropdown hidden" id="settings-dropdown">
@@ -9057,63 +9056,105 @@ loadMasrafData();
   (function() {
     var DISMISSED_KEY = 'fleetly_pwa_dismissed';
     var deferredPrompt = null;
-    var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    var ua = navigator.userAgent;
+    var isIOS = /iphone|ipad|ipod/i.test(ua);
+    var isAndroid = /android/i.test(ua);
+    var isMobile = isIOS || isAndroid;
     var isInStandalone = window.matchMedia('(display-mode: standalone)').matches
                       || window.navigator.standalone === true;
-    var isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
 
-    /* Zaten uygulama olarak açıksa veya masaüstüyse gösterme */
-    if (isInStandalone || !isMobile) return;
+    var banner     = document.getElementById('pwa-banner');
+    var subText    = document.getElementById('pwa-banner-sub');
+    var installBtn = document.getElementById('pwa-install-btn');
 
-    /* Daha önce kapatıldıysa gösterme */
-    if (localStorage.getItem(DISMISSED_KEY)) return;
+    function showBanner() {
+      if (!banner || isInStandalone) return;
+      if (localStorage.getItem(DISMISSED_KEY)) return;
+      banner.classList.add('visible');
+    }
 
-    var banner = document.getElementById('pwa-banner');
-    var subText = document.getElementById('pwa-banner-sub');
-
-    /* Android: beforeinstallprompt event'ini yakala */
+    /* ── Android: Chrome beforeinstallprompt ── */
     window.addEventListener('beforeinstallprompt', function(e) {
       e.preventDefault();
       deferredPrompt = e;
-      if (subText) subText.textContent = 'Tek tıkla uygulama olarak kurun, internet olmadan da çalışır';
-      setTimeout(function() { banner && banner.classList.add('visible'); }, 2000);
+      if (subText) subText.textContent = 'Tek tikla uygulama olarak kurun';
+      if (installBtn) installBtn.textContent = 'Yukle';
+      setTimeout(showBanner, 1500);
     });
 
-    /* iOS: Safari'de otomatik event yok, elle göster */
-    if (isIOS) {
-      var installBtn = document.getElementById('pwa-install-btn');
-      if (installBtn) installBtn.textContent = 'Nasıl Kurulur?';
-      if (subText) subText.textContent = 'Safari'de Ana Ekrana ekleyerek kullanın';
-      setTimeout(function() { banner && banner.classList.add('visible'); }, 2500);
+    /* ── iOS Safari — event yok, elle goster ── */
+    if (isIOS && !isInStandalone) {
+      if (installBtn) installBtn.textContent = 'Nasil Kurulur?';
+      if (subText) subText.textContent = "Safari Ana Ekrana ekle ile kullanin";
+      setTimeout(showBanner, 1500);
+    }
+
+    /* ── Android fallback: 4sn sonra hala prompt gelmediyse ── */
+    if (isAndroid && !isInStandalone) {
+      setTimeout(function() {
+        if (!deferredPrompt && !localStorage.getItem(DISMISSED_KEY)) {
+          if (installBtn) installBtn.textContent = 'Nasil Kurulur?';
+          if (subText) subText.textContent = 'Chrome menusu ile ana ekrana ekleyebilirsiniz';
+          showBanner();
+        }
+      }, 4000);
+    }
+
+    /* ── Masaustu: header butonu ── */
+    if (!isMobile) {
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        var db = document.getElementById('pwa-desktop-btn');
+        if (db) db.style.display = 'inline-flex';
+      });
     }
 
     window.pwaInstall = function() {
       if (deferredPrompt) {
         deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(function(result) {
-          if (result.outcome === 'accepted') pwaDismiss();
+        deferredPrompt.userChoice.then(function(r) {
+          if (r.outcome === 'accepted') pwaDismiss();
           deferredPrompt = null;
         });
-      } else if (isIOS) {
-        var popup = document.getElementById('pwa-ios-popup');
-        if (popup) popup.classList.add('show');
+        return;
       }
+      var popup = document.getElementById('pwa-ios-popup');
+      if (!popup) return;
+      var title = popup.querySelector('.ios-popup-title');
+      var steps = popup.querySelectorAll('.ios-popup-step span');
+      if (isAndroid) {
+        if (title) title.textContent = 'Ana Ekrana Ekle — Android';
+        if (steps[0]) steps[0].innerHTML = 'Chrome sag ust <strong style="color:#f97316">3 nokta menusu</strong>ne basin';
+        if (steps[1]) steps[1].innerHTML = '<strong style="color:#f97316">Ana ekrana ekle</strong> secenegini secin';
+        if (steps[2]) steps[2].innerHTML = '<strong style="color:#f97316">Ekle</strong>'ye basin, hazir!';
+      } else if (isIOS) {
+        if (title) title.textContent = 'Ana Ekrana Ekle — iPhone';
+        if (steps[0]) steps[0].innerHTML = 'Alttaki <strong style="color:#f97316">Paylasim</strong> butonuna basin';
+        if (steps[1]) steps[1].innerHTML = '<strong style="color:#f97316">Ana Ekrana Ekle</strong> secenegini secin';
+        if (steps[2]) steps[2].innerHTML = 'Sag ustten <strong style="color:#f97316">Ekle</strong>'ye basin';
+      } else {
+        if (title) title.textContent = 'Mobil Uygulama Olarak Kullanin';
+        if (steps[0]) steps[0].innerHTML = '<strong style="color:#f97316">Android:</strong> Chrome menusu ile Ana Ekrana Ekle';
+        if (steps[1]) steps[1].innerHTML = '<strong style="color:#f97316">iPhone:</strong> Safari Paylas → Ana Ekrana Ekle';
+        if (steps[2]) steps[2].innerHTML = 'Uygulama gibi tam ekran acilir';
+      }
+      popup.classList.add('show');
     };
 
     window.pwaDismiss = function() {
-      var banner = document.getElementById('pwa-banner');
       if (banner) banner.classList.remove('visible');
       localStorage.setItem(DISMISSED_KEY, '1');
     };
 
-    /* Başarıyla kurulduysa banner'ı gizle */
-    window.addEventListener('appinstalled', function() {
-      pwaDismiss();
-    });
+    window.pwaShowInfo = function() {
+      window.pwaInstall();
+    };
+
+    window.addEventListener('appinstalled', pwaDismiss);
   })();
   </script>
-
-  <!-- ── Service Worker kaydı ── -->
+    <!-- ── Service Worker kaydı ── -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
