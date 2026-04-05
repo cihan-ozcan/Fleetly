@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -4884,11 +4883,12 @@ document.addEventListener('DOMContentLoaded', function() {
 /* ================================================================
    YAKIT EXCEL İNDİRME
    ================================================================ */
-function downloadFuelExcel() {
+async function downloadFuelExcel() {
   const allEntries = Object.values(fuelData).flat();
   if (allEntries.length === 0) { showToast('İndirilecek yakıt kaydı yok.', 'error'); return; }
   showToast('Excel hazırlanıyor…', 'info');
   try {
+    const XLSX = await _loadXLSX();
     const WB   = XLSX.utils.book_new();
     const fmtD = d => d ? d.split('-').reverse().join('.') : '—';
     const fmtN = n => (n != null && n !== '') ? Number(n) : '';
@@ -6232,7 +6232,7 @@ function renderMaintModal() {
 /* ================================================================
    BAKIM / ARIZA EXCEL İNDİRME
    ================================================================ */
-function downloadMaintExcel() {
+async function downloadMaintExcel() {
   const allEntries = [];
   vehicles.forEach(v => {
     (maintData[v.id]||[]).forEach(e => allEntries.push({...e, plaka:v.plaka||v.id}));
@@ -6240,6 +6240,7 @@ function downloadMaintExcel() {
   if (allEntries.length === 0) { showToast('İndirilecek bakım/arıza kaydı yok.', 'error'); return; }
   showToast('Excel hazırlanıyor…', 'info');
   try {
+    const XLSX = await _loadXLSX();
     const WB   = XLSX.utils.book_new();
     const fmtD = d => d ? d.split('-').reverse().join('.') : '—';
     const fmtN = n => (n != null && n !== '') ? Number(n) : '';
@@ -6899,13 +6900,14 @@ function closeDriverSelectBackdrop(e) {
 /* ================================================================
    SÜRÜCÜ BELGELERİ EXCEL İNDİRME
    ================================================================ */
-function downloadDriverExcel() {
+async function downloadDriverExcel() {
   if (!driverData || driverData.length === 0) {
     showToast('İndirilecek sürücü kaydı yok.', 'error');
     return;
   }
   showToast('Excel hazırlanıyor…', 'info');
   try {
+    const XLSX = await _loadXLSX();
     const WB   = XLSX.utils.book_new();
     const fmtD = d => d ? d.split('-').reverse().join('.') : '—';
     const today = new Date(); today.setHours(0,0,0,0);
@@ -7355,16 +7357,30 @@ function _pdfKpiRow(doc, ML, CW, y, cards, C, setFill, setTxt, rRect) {
 }
 
 /* ================================================================
+   XLSX YARDIMCI — dinamik yükle (sayfa açılışını bozmaz)
+   ================================================================ */
+function _loadXLSX() {
+  return new Promise((resolve, reject) => {
+    if (window.XLSX) { resolve(window.XLSX); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload  = () => resolve(window.XLSX);
+    s.onerror = () => reject(new Error('SheetJS yüklenemedi'));
+    document.head.appendChild(s);
+  });
+}
+
+/* ================================================================
    SEFERLERİ EXCEL İNDİRME
    ================================================================ */
-function downloadSeferExcel() {
+async function downloadSeferExcel() {
   if (!seferData || seferData.length === 0) {
     showToast('İndirilecek sefer kaydı yok.', 'error');
     return;
   }
   showToast('Excel hazırlanıyor…', 'info');
-
   try {
+    const XLSX = await _loadXLSX();
     const WB = XLSX.utils.book_new();
 
     /* ── 1. SAYFA: Tüm Sefer Kayıtları ── */
@@ -7693,13 +7709,14 @@ async function downloadSeferPDF() {
 /* ================================================================
    MASRAF EXCEL İNDİRME
    ================================================================ */
-function downloadMasrafExcel() {
+async function downloadMasrafExcel() {
   if (!masrafData || masrafData.length === 0) {
     showToast('İndirilecek masraf kaydı yok.', 'error');
     return;
   }
   showToast('Excel hazırlanıyor…', 'info');
   try {
+    const XLSX = await _loadXLSX();
     const WB   = XLSX.utils.book_new();
     const fmtD = d => d ? d.split('-').reverse().join('.') : '—';
     const fmtN = n => (n != null && n !== '') ? Number(n) : '';
@@ -7942,9 +7959,10 @@ async function downloadMasrafPDF() {
 /* ================================================================
    KAPSAMLI RAPOR EXCEL İNDİRME
    ================================================================ */
-function downloadRaporExcel() {
+async function downloadRaporExcel() {
   showToast('Excel hazırlanıyor…', 'info');
   try {
+    const XLSX = await _loadXLSX();
     const WB     = XLSX.utils.book_new();
     const donem  = document.getElementById('rapor-donem')?.value||'all';
     const flt    = e => !donem||donem==='all'||!e.tarih||e.tarih.startsWith(donem);
