@@ -789,22 +789,28 @@ async function doRegister() {
       return;
     }
 
-    // 2. Supabase Auth oturumu otomatik başlar — firma RPC'yi çağır
-    // Not: E-posta onayı kapatılmışsa session hemen gelir
-    const { data: rpcData, error: rpcErr } = await sb.rpc('firma_kayit_et', {
-      p_firma_adi : firmaAdi,
-      p_email     : email,
-      p_telefon   : telefon,
-      p_vergi_no  : vergiNo
-    });
+    // 2. Firma bilgilerini localStorage'a kaydet
+    //    (E-posta onayı zorunluysa RPC şu an çalışamaz; app.html açıldığında tekrar denenecek)
+    localStorage.setItem('fleetly_firma_adi', firmaAdi);
+    localStorage.setItem('fleetly_firma_tel', telefon  || '');
+    localStorage.setItem('fleetly_firma_vno', vergiNo  || '');
 
-    if (rpcErr) {
-      // Eğer e-posta onayı zorunluysa RPC çalışmayabilir — sessizce geç
-      console.warn('RPC uyarısı:', rpcErr.message);
-      // Yine de başarı ekranını göster, kullanıcı mail onayladıktan sonra uygulama üzerinden tekrar çağrılacak
+    // 3. Oturum varsa (e-posta onayı kapalıysa) RPC'yi hemen çalıştır
+    const { data: { session: currentSession } } = await sb.auth.getSession();
+    if (currentSession) {
+      const { error: rpcErr } = await sb.rpc('firma_kayit_et', {
+        p_firma_adi : firmaAdi,
+        p_email     : email,
+        p_telefon   : telefon,
+        p_vergi_no  : vergiNo
+      });
+      if (rpcErr) {
+        console.warn('RPC uyarısı (oturum açıkken):', rpcErr.message);
+      }
     }
+    // Oturum yoksa (e-posta onayı zorunlu) → RPC'yi app.html açılışında çalıştıracağız
 
-    // 3. Seçilen planı localStorage'a kaydet (giriş sonrası kullanılacak)
+    // 4. Seçilen planı localStorage'a kaydet (giriş sonrası kullanılacak)
     localStorage.setItem('fleetly_secilen_plan', secilenPlan);
 
     // 4. Başarı ekranı
