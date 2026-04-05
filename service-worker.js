@@ -6,8 +6,8 @@
    - Fontlar / CDN kaynakları → Cache First
 ═══════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'fleetly-v1';
-const CACHE_NAME_CDN = 'fleetly-cdn-v1';
+const CACHE_NAME = 'fleetly-v2';
+const CACHE_NAME_CDN = 'fleetly-cdn-v2';
 
 /* Uygulama kabuğu — her zaman önbellekle */
 const APP_SHELL = [
@@ -93,7 +93,7 @@ self.addEventListener('fetch', event => {
           );
         }
         return response;
-      }).catch(() => caches.match('/Fleetly/index.html'));
+      }).catch(() => caches.match('/index.html'));
     })
   );
 });
