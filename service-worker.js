@@ -11,12 +11,12 @@ const CACHE_NAME_CDN = 'fleetly-cdn-v1';
 
 /* Uygulama kabuğu — her zaman önbellekle */
 const APP_SHELL = [
-  '/Fleetly/',
-  '/Fleetly/index.html',
-  '/Fleetly/app.html',
-  '/Fleetly/register.html',
-  '/Fleetly/config.js',
-  '/Fleetly/manifest.json',
+  '/',
+  '/index.html',
+  '/app.html',
+  '/register.html',
+  '/config.js',
+  '/manifest.json',
 ];
 
 /* CDN kaynakları — önbellekte tut */
