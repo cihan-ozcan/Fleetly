@@ -3371,13 +3371,24 @@ async function doResetPassword() {
 }
 
 async function doLogout() {
-  const sb = getSB();
-  if (sb) await sb.auth.signOut();
+  try {
+    const sb = getSB();
+    if (sb) await sb.auth.signOut();
+  } catch(e) {}
   _authToken = null;
+  currentFirmaId = null;
   vehicles = [];
-  fuelData = {};
-  maintData = {};
-  location.reload();
+  try { fuelData = {}; } catch(e) {}
+  try { maintData = {}; } catch(e) {}
+  try { seferData = []; } catch(e) {}
+  try { masrafData = []; } catch(e) {}
+  try { driverData = []; } catch(e) {}
+  // Login ekranını göster, sayfayı yenileme
+  document.getElementById('login-overlay').classList.remove('hidden');
+  document.getElementById('header-subtitle').textContent = 'Araç Yönetim Sistemi';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
