@@ -8,6 +8,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
+  <meta name="theme-color" content="#f97316" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Fleetly" />
+  <link rel="manifest" href="manifest.json" />
 
   <style>
     :root {
@@ -424,11 +430,20 @@
     @media (max-width: 900px) {
       .left-panel { display: none; }
       .right-panel { padding: 24px 20px; }
-      .form-card { padding: 32px 24px; }
+      .form-card { padding: 32px 24px; max-width: 100%; }
     }
     @media (max-width: 480px) {
+      .right-panel { padding: 16px 12px; }
+      .form-card { padding: 28px 18px; border-radius: 18px; }
       .field-row { grid-template-columns: 1fr; }
       .plan-grid  { grid-template-columns: 1fr; }
+      .field-inp  { font-size: 16px; /* iOS zoom önleme */ padding: 13px 14px; }
+      .btn-cta    { padding: 16px 24px; font-size: 16px; }
+      .security-row { flex-wrap: wrap; gap: 10px; }
+    }
+    /* Güvenli alan (iPhone çentik / home bar) */
+    body {
+      padding-bottom: env(safe-area-inset-bottom);
     }
   </style>
 </head>
