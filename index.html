@@ -9158,7 +9158,7 @@ loadMasrafData();
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('/onerfilotakip/service-worker.js')
           .then(reg => console.log('SW kayıtlı:', reg.scope))
           .catch(err => console.warn('SW hatası:', err));
       });
