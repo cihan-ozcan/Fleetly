@@ -1930,7 +1930,7 @@
       <span>Filo Takip</span>
     </div>
     <div class="header-divider"></div>
-    <span class="header-subtitle">Araç Yönetim Sistemi</span>
+    <span class="header-subtitle" id="header-subtitle">Araç Yönetim Sistemi</span>
   </div>
   <div class="header-actions">
     <!-- Yönetim butonları -->
@@ -3194,6 +3194,28 @@ let pageSize    = 25;
 // Brute-force koruması
 const _loginAttempts = { count: 0, lockedUntil: 0 };
 
+async function updateFirmaHeader() {
+  try {
+    const el = document.getElementById('header-subtitle');
+    if (!el) return;
+    if (!currentFirmaId) return; // firma_id yoksa default metni koru
+
+    const sb = getSB();
+    if (!sb) return;
+    const { data, error } = await sb
+      .from('firmalar')
+      .select('ad')
+      .eq('id', currentFirmaId)
+      .single();
+
+    if (error || !data?.ad) return;
+
+    el.textContent = data.ad + ' Araç ve Bilgi Yönetim Sistemi';
+  } catch (e) {
+    // hata olursa sessizce geç, default metin kalır
+  }
+}
+
 async function checkAuth() {
   const sb = getSB();
   if (!sb) { showLoginOverlay(); return; }
@@ -3202,6 +3224,7 @@ async function checkAuth() {
   if (session) {
     _authToken = session.access_token;
     await loadFirmaId();
+    await updateFirmaHeader();
     hideLoginOverlay();
     loadVehicles();
   } else {
@@ -3209,10 +3232,11 @@ async function checkAuth() {
   }
 
   // Oturum değişikliklerini dinle (token yenileme, çıkış vb.)
-  sb.auth.onAuthStateChange((event, session) => {
+  sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       _authToken = session.access_token;
-      loadFirmaId();
+      await loadFirmaId();
+      await updateFirmaHeader();
       hideLoginOverlay();
     } else if (event === 'SIGNED_OUT') {
       _authToken = null;
