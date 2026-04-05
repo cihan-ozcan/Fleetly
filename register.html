@@ -777,7 +777,7 @@ async function doRegister() {
     const { data: authData, error: authErr } = await sb.auth.signUp({
       email,
       password: pass,
-      options: { emailRedirectTo: window.location.origin + '/index.html' }
+      options: { emailRedirectTo: 'https://fleetly.fit/app.html' }
     });
 
     if (authErr) {
