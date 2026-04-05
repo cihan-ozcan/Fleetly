@@ -3322,6 +3322,8 @@ async function doLogin() {
   _loginAttempts.count = 0;
   _authToken = data.session.access_token;
   errEl.textContent = '';
+  await loadFirmaId();
+  await updateFirmaHeader();
   hideLoginOverlay();
   loadVehicles();
 }
@@ -7942,13 +7944,6 @@ checkAuth();
 // Dashboard kart tercihlerini uygula
 applyDashCards();
 
-// Başlangıçta yerel verilerden hızlı gösterim (auth sonrası loadVehicles içinde buluttan güncellenir)
-loadFuelData().then(() => { updateFuelStat(); updateFuelSummaryPanel(); });
-loadMaintData().then(() => { updateMaintStat(); });
-loadDriverData().then(() => { updateDriverStat(); });
-loadSeferData();   // localStorage'dan hızlı yükle; bulut verisi loadVehicles içinde gelecek
-loadMasrafData();  // localStorage'dan hızlı yükle; bulut verisi loadVehicles içinde gelecek
-
 /* ================================================================
    SEFER TAKİBİ
    ================================================================ */
@@ -8870,6 +8865,13 @@ async function downloadRaporExcel() {
     showToast('Excel indirildi ✓', 'success');
   } catch(err){ console.error(err); showToast('Excel hatası: '+err.message, 'error'); }
 }
+
+// Başlangıçta yerel verilerden hızlı gösterim (auth sonrası loadVehicles içinde buluttan güncellenir)
+loadFuelData().then(() => { updateFuelStat(); updateFuelSummaryPanel(); });
+loadMaintData().then(() => { updateMaintStat(); });
+loadDriverData().then(() => { updateDriverStat(); });
+loadSeferData();
+loadMasrafData();
 </script>
 </body>
 </html>
