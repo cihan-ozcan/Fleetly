@@ -2047,6 +2047,104 @@
 <!-- =========================================================
      BÖLÜM 2: GİRİŞ EKRANI
      ========================================================= -->
+<!-- ── ABONELİK ENGEL EKRANI ── -->
+<div id="subscription-overlay" class="hidden" style="
+  position:fixed;inset:0;z-index:1100;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+">
+  <div style="
+    background:var(--surface);border:1px solid var(--border2);
+    border-radius:24px;padding:48px 44px;width:100%;max-width:480px;
+    text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.7);
+  ">
+    <div style="font-size:52px;margin-bottom:16px" id="sub-icon">⏰</div>
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:8px;letter-spacing:-.2px" id="sub-title">Deneme Süreniz Doldu</h2>
+    <p style="color:var(--text2);font-size:14px;line-height:1.65;margin-bottom:28px" id="sub-msg">
+      7 günlük ücretsiz denemeniz sona erdi. Fleetly'yi kullanmaya devam etmek için bir plan seçin.
+    </p>
+
+    <!-- Plan kartları -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px" id="sub-plan-grid">
+      <div id="sub-plan-aylik" onclick="selectSubPlan('aylik')" style="
+        border:2px solid var(--border);border-radius:14px;padding:18px 14px;
+        cursor:pointer;transition:border-color .2s,background .2s;
+        background:var(--surface2);
+      ">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px">Aylık</div>
+        <div style="font-size:24px;font-weight:800;color:var(--accent);margin-bottom:4px">₺990</div>
+        <div style="font-size:11px;color:var(--muted)">/ay · Dilediğinizde iptal</div>
+      </div>
+      <div id="sub-plan-yillik" onclick="selectSubPlan('yillik')" style="
+        border:2px solid var(--border);border-radius:14px;padding:18px 14px;
+        cursor:pointer;transition:border-color .2s,background .2s;
+        background:var(--surface2);position:relative;
+      ">
+        <div style="
+          position:absolute;top:-1px;right:10px;
+          background:var(--green);color:#fff;font-size:9px;font-weight:700;
+          padding:2px 8px;border-radius:0 0 6px 6px;letter-spacing:.08em;
+        ">%25 İNDİRİM</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px">Yıllık</div>
+        <div style="font-size:24px;font-weight:800;color:var(--accent);margin-bottom:4px">₺8.900</div>
+        <div style="font-size:11px;color:var(--muted)">/yıl · Tek ödeme</div>
+      </div>
+    </div>
+
+    <!-- Ödeme notu (gerçek ödeme entegrasyonu için değiştirin) -->
+    <div style="
+      background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.2);
+      border-radius:12px;padding:14px;margin-bottom:20px;
+      font-size:12.5px;color:var(--text2);line-height:1.5;
+    " id="sub-payment-note">
+      Seçtiğiniz planı aktifleştirmek için aşağıdaki butona tıklayın.
+      Ödeme işlemi güvenli şekilde gerçekleştirilir.
+    </div>
+
+    <button id="sub-buy-btn" onclick="subPlanSatin()" style="
+      width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:#fff;border:none;cursor:pointer;border-radius:12px;
+      padding:14px 24px;font-family:inherit;font-size:15px;font-weight:600;
+      box-shadow:0 6px 20px rgba(249,115,22,.35);
+      transition:opacity .2s,transform .15s;
+    " onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+      💳 Satın Al ve Devam Et
+    </button>
+
+    <button onclick="doLogout()" style="
+      margin-top:12px;width:100%;
+      background:none;border:1px solid var(--border2);
+      color:var(--muted);cursor:pointer;border-radius:10px;
+      padding:10px;font-family:inherit;font-size:13px;
+      transition:border-color .2s;
+    " onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+       onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">
+      Çıkış Yap
+    </button>
+  </div>
+</div>
+
+<!-- ── DENEME SÜRESİ BANNER ── -->
+<div id="trial-banner" class="hidden" style="
+  background:linear-gradient(90deg,rgba(249,115,22,.12),rgba(249,115,22,.06));
+  border-bottom:1px solid rgba(249,115,22,.2);
+  padding:8px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:12.5px;position:relative;z-index:99;
+  flex-wrap:wrap;gap:8px;
+">
+  <span id="trial-banner-text" style="color:var(--text2)">
+    ⏱ <strong style="color:var(--accent)">Deneme Süresi</strong> devam ediyor
+  </span>
+  <button onclick="openSubscriptionModal()" style="
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;border:none;cursor:pointer;border-radius:8px;
+    padding:5px 14px;font-family:inherit;font-size:12px;font-weight:600;
+  ">Abone Ol →</button>
+</div>
+
 <div id="login-overlay">
   <div class="login-card">
     <!-- Logo -->
@@ -2073,7 +2171,14 @@
       Şifremi unuttum →
       <button onclick="doResetPassword()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:0;font-family:inherit">Sıfırlama e-postası gönder</button>
     </p>
-    <p style="margin-top:28px;font-size:10px;color:var(--border2);letter-spacing:.06em;user-select:none;opacity:0.5">created by cihanozcan</p>
+    <!-- Kayıt ol linki -->
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
+      <span style="font-size:12.5px;color:var(--muted)">Hesabınız yok mu?</span>
+      <a href="register.html" style="margin-left:6px;font-size:12.5px;color:var(--accent);font-weight:600;text-decoration:none">
+        7 Gün Ücretsiz Deneyin →
+      </a>
+    </div>
+    <p style="margin-top:16px;font-size:10px;color:var(--border2);letter-spacing:.06em;user-select:none;opacity:0.5">created by cihanozcan</p>
   </div>
 </div>
 
@@ -3415,6 +3520,8 @@ async function checkAuth() {
     await loadFirmaId();
     await updateFirmaHeader();
     hideLoginOverlay();
+    // Abonelik kontrolü yap
+    await checkSubscription();
     loadVehicles();
   } else {
     showLoginOverlay();
@@ -3427,13 +3534,184 @@ async function checkAuth() {
       await loadFirmaId();
       await updateFirmaHeader();
       hideLoginOverlay();
+      await checkSubscription();
     } else if (event === 'SIGNED_OUT') {
       _authToken = null;
+      currentFirmaId = null;
+      hideSubscriptionOverlay();
+      hideTrialBanner();
       showLoginOverlay();
     } else if (event === 'TOKEN_REFRESHED' && session) {
       _authToken = session.access_token;
     }
   });
+}
+
+/* ================================================================
+   ABONELİK / DENEME SÜRESİ KONTROL SİSTEMİ
+   ================================================================ */
+
+let _secilenSubPlan = 'aylik';
+
+async function checkSubscription() {
+  if (!currentFirmaId) return; // firma_id yoksa kontrol atla
+
+  try {
+    const sb = getSB();
+    if (!sb) return;
+
+    const { data, error } = await sb.rpc('firma_abonelik_durumu', {
+      p_firma_id: currentFirmaId
+    });
+
+    if (error) { console.warn('Abonelik kontrol hatası:', error.message); return; }
+
+    const durum      = data?.durum;
+    const kalanGun   = data?.kalan_gun ?? 0;
+    const bitis      = data?.bitis;
+
+    if (durum === 'aktif') {
+      // Aktif abonelik — banner gizli
+      hideSubscriptionOverlay();
+      hideTrialBanner();
+      // Biteceğe yakın uyarı (10 gün)
+      if (kalanGun <= 10) {
+        showToast(`⚠ Aboneliğiniz ${kalanGun} gün içinde sona eriyor.`, 'warning');
+      }
+      return;
+    }
+
+    if (durum === 'deneme') {
+      // Deneme süresi devam ediyor — banner göster
+      hideSubscriptionOverlay();
+      showTrialBanner(kalanGun, bitis);
+      return;
+    }
+
+    if (durum === 'suresi_dolmus') {
+      // Erişimi engelle
+      showSubscriptionOverlay('suresi_dolmus', kalanGun);
+      return;
+    }
+
+    // Bilinmeyen durum — sessize al
+    console.warn('Bilinmeyen abonelik durumu:', durum);
+
+  } catch (e) {
+    console.warn('Abonelik kontrolü atlandı:', e.message);
+  }
+}
+
+function showTrialBanner(kalanGun, bitis) {
+  const banner = document.getElementById('trial-banner');
+  const text   = document.getElementById('trial-banner-text');
+  if (!banner) return;
+
+  let renk = kalanGun <= 2 ? 'var(--red)' : (kalanGun <= 5 ? 'var(--yellow)' : 'var(--accent)');
+  let emoji = kalanGun <= 2 ? '🚨' : (kalanGun <= 5 ? '⚠' : '⏱');
+
+  const bitisTarih = bitis ? new Date(bitis).toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' }) : '';
+  text.innerHTML = `${emoji} <strong style="color:${renk}">Ücretsiz Deneme</strong> — <span style="color:var(--text2)">${kalanGun} gün kaldı${bitisTarih ? ' (' + bitisTarih + ')' : ''}</span>`;
+
+  banner.style.display = '';
+  banner.classList.remove('hidden');
+}
+
+function hideTrialBanner() {
+  const banner = document.getElementById('trial-banner');
+  if (banner) { banner.classList.add('hidden'); banner.style.display = 'none'; }
+}
+
+function showSubscriptionOverlay(neden, kalanGun) {
+  const overlay = document.getElementById('subscription-overlay');
+  if (!overlay) return;
+
+  const icon  = document.getElementById('sub-icon');
+  const title = document.getElementById('sub-title');
+  const msg   = document.getElementById('sub-msg');
+
+  if (neden === 'suresi_dolmus') {
+    if (icon)  icon.textContent  = '⏰';
+    if (title) title.textContent = 'Deneme Süreniz Doldu';
+    if (msg)   msg.textContent   = '7 günlük ücretsiz deneme süreniz sona erdi. Fleetly\'yi kullanmaya devam etmek için bir plan seçin.';
+  }
+
+  overlay.classList.remove('hidden');
+  overlay.style.display = 'flex';
+
+  // Başlangıçta aylık seçili
+  selectSubPlan('aylik');
+}
+
+function hideSubscriptionOverlay() {
+  const overlay = document.getElementById('subscription-overlay');
+  if (overlay) { overlay.classList.add('hidden'); overlay.style.display = 'none'; }
+}
+
+function openSubscriptionModal() {
+  // Deneme devam ederken "Abone Ol" butonuna basınca aynı overlay'i açar
+  showSubscriptionOverlay('manuel');
+}
+
+function selectSubPlan(plan) {
+  _secilenSubPlan = plan;
+  const aylik  = document.getElementById('sub-plan-aylik');
+  const yillik = document.getElementById('sub-plan-yillik');
+  if (aylik)  aylik.style.borderColor  = plan === 'aylik'  ? 'var(--accent)' : 'var(--border)';
+  if (yillik) yillik.style.borderColor = plan === 'yillik' ? 'var(--accent)' : 'var(--border)';
+  if (aylik)  aylik.style.background   = plan === 'aylik'  ? 'rgba(249,115,22,.06)' : 'var(--surface2)';
+  if (yillik) yillik.style.background  = plan === 'yillik' ? 'rgba(249,115,22,.06)' : 'var(--surface2)';
+}
+
+async function subPlanSatin() {
+  /*
+    ─────────────────────────────────────────────────────────────
+    ÖDEME ENTEGRASYONU YER TUTUCU
+    ─────────────────────────────────────────────────────────────
+    Gerçek üretime geçmeden önce bu fonksiyonu şu ödeme
+    sağlayıcılarından biriyle entegre edin:
+      • İyzico (Türkiye'nin en yaygın ödeme altyapısı)
+      • Stripe (uluslararası kartlar)
+      • PayTR, Sipay vb.
+
+    Entegrasyon akışı:
+      1. Backend sunucu (/api/odeme-baslat) endpoint'ini oluşturun.
+      2. Kullanıcı firma_id + plan_id gönderin.
+      3. Ödeme sağlayıcı token alın ve yönlendirin.
+      4. Başarılı ödeme webhook'unda abonelik_aktif_et() RPC'yi çağırın.
+      5. Kullanıcıyı uygulamaya geri yönlendirin.
+    ─────────────────────────────────────────────────────────────
+  */
+  const btn = document.getElementById('sub-buy-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Ödeme sayfasına yönlendiriliyorsunuz…';
+  }
+
+  // Test modu: 30 saniyelik simülasyon (üretimde kaldırın)
+  // Gerçek entegrasyonda backend'e POST isteği atın:
+  /*
+  try {
+    const res = await fetch('/api/odeme-baslat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
+      body: JSON.stringify({ firma_id: currentFirmaId, plan_id: _secilenSubPlan })
+    });
+    const { odeme_url } = await res.json();
+    window.location.href = odeme_url;
+  } catch(e) {
+    showToast('Ödeme başlatılamadı: ' + e.message, 'error');
+  }
+  */
+
+  // ── DEMO: Direkt aktivasyon (test için — üretimde kaldırın) ──
+  showToast('ℹ Ödeme modülü henüz entegre edilmedi. Lütfen yöneticiye başvurun.', 'info');
+  setTimeout(() => {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '💳 Satın Al ve Devam Et';
+    }
+  }, 3000);
 }
 
 function showLoginOverlay() {
@@ -3493,6 +3771,7 @@ async function doLogin() {
   await loadFirmaId();
   await updateFirmaHeader();
   hideLoginOverlay();
+  await checkSubscription();
   loadVehicles();
 }
 
@@ -3526,6 +3805,9 @@ async function doLogout() {
   try { seferData = []; } catch(e) {}
   try { masrafData = []; } catch(e) {}
   try { driverData = []; } catch(e) {}
+  // Abonelik ekranlarını gizle
+  hideSubscriptionOverlay();
+  hideTrialBanner();
   // Login ekranını göster, sayfayı yenileme
   document.getElementById('login-overlay').classList.remove('hidden');
   document.getElementById('header-subtitle').textContent = 'Araç Yönetim Sistemi';
