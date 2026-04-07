@@ -10114,55 +10114,243 @@ loadMasrafData();
 </script>
 
 <!-- =========================================================
-     MÜŞTERİ & SİPARİŞ MODÜLÜ — JAVASCRIPT
+     MÜŞTERİ & SİPARİŞ MODÜLÜ — JAVASCRIPT (Supabase entegreli)
      ========================================================= -->
 <script>
 /* ─── SAYFA AÇMA/KAPAMA ──────────────────────────────────── */
 function openMusteriPage() {
   document.getElementById('crm-page').classList.add('open');
   document.body.style.overflow = 'hidden';
-  crmRenderStats();
-  crmRenderMusteriler();
+  // Supabase'den yükle; yoksa localStorage cache'i kullan
+  crmLoadAll();
 }
 function closeMusteriPage() {
   document.getElementById('crm-page').classList.remove('open');
   document.body.style.overflow = '';
 }
 
-/* ─── VERİ ──────────────────────────────────────────────── */
+/* ─── VERİ KATMANI ──────────────────────────────────────── */
 const CRM_COLORS = ['#f97316','#38bdf8','#22c55e','#a78bfa','#f59e0b','#ef4444','#2dd4bf','#84cc16'];
 
 let crmEditingMusteriId = null;
 let crmChartCiro = null, crmChartTrend = null;
+let crmLoading = false;
 
-let crmMusteriler = JSON.parse(localStorage.getItem('crm_musteriler') || 'null') || [
-  { id:1, firma:'Güven Taşımacılık', yetkili:'Hasan Güven', sektor:'Perakende', tel:'0532 111 22 33', email:'info@guven.com', adres:'Bağcılar, İstanbul', vkn:'1234567890', vade:30, durum:'Aktif', not:'VIP müşteri' },
-  { id:2, firma:'Anadolu Market Zinciri', yetkili:'Fatma Çelik', sektor:'Gıda', tel:'0533 222 33 44', email:'lojistik@anadolu.com', adres:'Çerkezköy, Tekirdağ', vkn:'9876543210', vade:45, durum:'Aktif', not:'' },
-  { id:3, firma:'Özkan İnşaat', yetkili:'Murat Özkan', sektor:'İnşaat', tel:'0544 333 44 55', email:'murat@ozkan.com', adres:'Esenyurt, İstanbul', vkn:'1111111111', vade:15, durum:'Aktif', not:'Nakit ödeme tercih eder' },
-  { id:4, firma:'Delta Tekstil', yetkili:'Ayşe Doğan', sektor:'Tekstil', tel:'0555 444 55 66', email:'ayse@delta.com', adres:'Bursa Organize', vkn:'2222222222', vade:60, durum:'Pasif', not:'' },
-  { id:5, firma:'Kimya Plus Ltd.', yetkili:'Kerem Arslan', sektor:'Kimya', tel:'0506 555 66 77', email:'kerem@kimyaplus.com', adres:'Gebze, Kocaeli', vkn:'3333333333', vade:30, durum:'Potansiyel', not:'Fiyat teklifi bekleniyor' },
-];
+// Bellek içi cache (render için kullanılır)
+let crmMusteriler = [];
+let crmSiparisler = [];
 
-let crmSiparisler = JSON.parse(localStorage.getItem('crm_siparisler') || 'null') || [
-  { id:'SIP-001', musteriId:1, yukle:'İstanbul/Tuzla', teslim:'Ankara/Ostim', tarih:'2025-03-10', durum:'Teslim Edildi', tutar:18500, odeme:'Ödendi', yuk:'Paletli', agirlik:22, not:'' },
-  { id:'SIP-002', musteriId:2, yukle:'Tekirdağ/Çorlu', teslim:'İzmir/Torbalı', tarih:'2025-03-18', durum:'Teslim Edildi', tutar:24000, odeme:'Ödendi', yuk:'Dökme', agirlik:28, not:'' },
-  { id:'SIP-003', musteriId:1, yukle:'Kocaeli/Gebze', teslim:'Bursa/OSB', tarih:'2025-03-25', durum:'Yolda', tutar:15000, odeme:'Bekliyor', yuk:'Paletli', agirlik:18, not:'Acil' },
-  { id:'SIP-004', musteriId:3, yukle:'Esenyurt/İst.', teslim:'Sakarya/Adapazarı', tarih:'2025-04-01', durum:'Bekliyor', tutar:9500, odeme:'Bekliyor', yuk:'Kargo', agirlik:8, not:'' },
-  { id:'SIP-005', musteriId:2, yukle:'İstanbul/Merter', teslim:'Konya/OSB', tarih:'2025-04-02', durum:'Yolda', tutar:31000, odeme:'Kısmi', yuk:'Paletli', agirlik:24, not:'' },
-  { id:'SIP-006', musteriId:5, yukle:'Gebze/Kocaeli', teslim:'Adana/Sanayi', tarih:'2025-04-05', durum:'Bekliyor', tutar:42000, odeme:'Bekliyor', yuk:'Kimyasal', agirlik:20, not:'ADR belgesi gerekli' },
-];
+// ── localStorage cache (offline / hızlı yükleme) ────────────
+function crmSaveLocal() {
+  try {
+    localStorage.setItem('crm_musteriler', JSON.stringify(crmMusteriler));
+    localStorage.setItem('crm_siparisler', JSON.stringify(crmSiparisler));
+  } catch(e) {}
+}
+function crmLoadLocal() {
+  try {
+    crmMusteriler = JSON.parse(localStorage.getItem('crm_musteriler') || '[]');
+    crmSiparisler = JSON.parse(localStorage.getItem('crm_siparisler') || '[]');
+  } catch(e) { crmMusteriler = []; crmSiparisler = []; }
+}
 
-function crmSave() {
-  localStorage.setItem('crm_musteriler', JSON.stringify(crmMusteriler));
-  localStorage.setItem('crm_siparisler', JSON.stringify(crmSiparisler));
+// ── Supabase REST yardımcıları (app.html ile aynı pattern) ──
+function crmSbHeaders(extras={}) {
+  return {
+    'Content-Type' : 'application/json',
+    'apikey'       : CFG.SUPABASE_ANON,
+    'Authorization': 'Bearer ' + (_authToken || CFG.SUPABASE_ANON),
+    'Prefer'       : 'return=representation',
+    ...extras
+  };
+}
+function crmSbUrl(path) { return CFG.SUPABASE_URL + '/rest/v1/' + path; }
+
+// ── Tüm CRM verisini Supabase'den yükle ─────────────────────
+async function crmLoadAll() {
+  // Önce cache'i göster (hızlı)
+  crmLoadLocal();
+  crmRenderStats();
+  crmRenderMusteriler();
+
+  if (isLocalMode() || !currentFirmaId) return; // local mod
+
+  crmLoading = true;
+  try {
+    // Müşteriler
+    const mRes = await fetch(
+      crmSbUrl(`musteriler?firma_id=eq.${currentFirmaId}&order=firma.asc&select=*`),
+      { headers: crmSbHeaders() }
+    );
+    if (mRes.ok) {
+      const rows = await mRes.json();
+      // DB sütunları → JS nesnelerine map (musteri_id → id)
+      crmMusteriler = rows.map(r => ({
+        id      : r.id,
+        firma   : r.firma,
+        yetkili : r.yetkili || '',
+        sektor  : r.sektor  || 'Diğer',
+        tel     : r.tel     || '',
+        email   : r.email   || '',
+        adres   : r.adres   || '',
+        vkn     : r.vkn     || '',
+        vade    : r.vade    || 30,
+        durum   : r.durum   || 'Aktif',
+        not     : r.not     || ''
+      }));
+    }
+
+    // Siparişler
+    const sRes = await fetch(
+      crmSbUrl(`siparisler?firma_id=eq.${currentFirmaId}&order=tarih.desc&select=*`),
+      { headers: crmSbHeaders() }
+    );
+    if (sRes.ok) {
+      const rows = await sRes.json();
+      crmSiparisler = rows.map(r => ({
+        id        : r.id,
+        musteriId : r.musteri_id,
+        yukle     : r.yukle,
+        teslim    : r.teslim,
+        tarih     : r.tarih,
+        durum     : r.durum     || 'Bekliyor',
+        tutar     : r.tutar     || 0,
+        odeme     : r.odeme     || 'Bekliyor',
+        yuk       : r.yuk       || '',
+        agirlik   : r.agirlik   || 0,
+        not       : r.not       || ''
+      }));
+    }
+
+    crmSaveLocal();
+    crmRenderStats();
+    crmRenderMusteriler();
+  } catch(e) {
+    console.error('CRM veri yükleme hatası:', e);
+    showToast('Müşteri verisi yüklenemedi', 'error');
+  }
+  crmLoading = false;
+}
+
+// ── Müşteri Supabase CRUD ────────────────────────────────────
+async function crmInsertMusteri(obj) {
+  if (isLocalMode() || !currentFirmaId) return null;
+  try {
+    const { data: { user } } = await getSB().auth.getUser();
+    const row = {
+      firma_id: currentFirmaId,
+      user_id : user.id,
+      firma   : obj.firma,
+      yetkili : obj.yetkili || null,
+      sektor  : obj.sektor  || 'Diğer',
+      tel     : obj.tel     || null,
+      email   : obj.email   || null,
+      adres   : obj.adres   || null,
+      vkn     : obj.vkn     || null,
+      vade    : obj.vade    || 30,
+      durum   : obj.durum   || 'Aktif',
+      not     : obj.not     || null
+    };
+    const res = await fetch(crmSbUrl('musteriler'), {
+      method : 'POST',
+      headers: crmSbHeaders(),
+      body   : JSON.stringify(row)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const saved = await res.json();
+    return saved[0]?.id || null;
+  } catch(e) {
+    console.error('Müşteri ekleme hatası:', e);
+    return null;
+  }
+}
+
+async function crmUpdateMusteri(id, obj) {
+  if (isLocalMode() || !currentFirmaId) return;
+  try {
+    const row = {
+      firma   : obj.firma,
+      yetkili : obj.yetkili || null,
+      sektor  : obj.sektor,
+      tel     : obj.tel     || null,
+      email   : obj.email   || null,
+      adres   : obj.adres   || null,
+      vkn     : obj.vkn     || null,
+      vade    : obj.vade    || 30,
+      durum   : obj.durum,
+      not     : obj.not     || null
+    };
+    const res = await fetch(
+      crmSbUrl(`musteriler?id=eq.${id}&firma_id=eq.${currentFirmaId}`),
+      { method: 'PATCH', headers: crmSbHeaders(), body: JSON.stringify(row) }
+    );
+    if (!res.ok) throw new Error(await res.text());
+  } catch(e) {
+    console.error('Müşteri güncelleme hatası:', e);
+  }
+}
+
+async function crmDeleteMusteri(id) {
+  if (isLocalMode() || !currentFirmaId) return;
+  try {
+    // Siparişleri cascade'de siler (FK ON DELETE CASCADE)
+    const res = await fetch(
+      crmSbUrl(`musteriler?id=eq.${id}&firma_id=eq.${currentFirmaId}`),
+      { method: 'DELETE', headers: crmSbHeaders() }
+    );
+    if (!res.ok) throw new Error(await res.text());
+  } catch(e) {
+    console.error('Müşteri silme hatası:', e);
+  }
+}
+
+// ── Sipariş Supabase CRUD ────────────────────────────────────
+async function crmInsertSiparis(obj) {
+  if (isLocalMode() || !currentFirmaId) return null;
+  try {
+    const { data: { user } } = await getSB().auth.getUser();
+    const row = {
+      firma_id  : currentFirmaId,
+      user_id   : user.id,
+      musteri_id: obj.musteriId,
+      yukle     : obj.yukle,
+      teslim    : obj.teslim,
+      tarih     : obj.tarih,
+      durum     : obj.durum   || 'Bekliyor',
+      tutar     : obj.tutar   || 0,
+      odeme     : obj.odeme   || 'Bekliyor',
+      yuk       : obj.yuk     || null,
+      agirlik   : obj.agirlik || null,
+      not       : obj.not     || null
+    };
+    const res = await fetch(crmSbUrl('siparisler'), {
+      method : 'POST',
+      headers: crmSbHeaders(),
+      body   : JSON.stringify(row)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const saved = await res.json();
+    return saved[0]?.id || null; // DB'nin ürettiği SIP-XXXX ID'si
+  } catch(e) {
+    console.error('Sipariş ekleme hatası:', e);
+    return null;
+  }
+}
+
+async function crmDeleteSiparis(id) {
+  if (isLocalMode() || !currentFirmaId) return;
+  try {
+    const res = await fetch(
+      crmSbUrl(`siparisler?id=eq.${encodeURIComponent(id)}&firma_id=eq.${currentFirmaId}`),
+      { method: 'DELETE', headers: crmSbHeaders() }
+    );
+    if (!res.ok) throw new Error(await res.text());
+  } catch(e) {
+    console.error('Sipariş silme hatası:', e);
+  }
 }
 
 /* ─── YARDIMCI ──────────────────────────────────────────── */
-function crmNextId(arr) { return arr.length ? Math.max(...arr.map(x => typeof x.id === 'number' ? x.id : 0)) + 1 : 1; }
-function crmNextSipId() {
-  const nums = crmSiparisler.map(s => parseInt(s.id.replace('SIP-',''))||0);
-  return 'SIP-' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3,'0');
-}
 function crmFmt(n) { return (n||0).toLocaleString('tr-TR'); }
 function crmColor(str) { let h=0; for(let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))&0xffff; return CRM_COLORS[h%CRM_COLORS.length]; }
 function crmInitials(str) { return (str||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
@@ -10376,38 +10564,57 @@ function openCrmMusteriModal(id=null) {
 function closeCrmMusteriModal() { document.getElementById('crm-musteri-modal-bg').classList.add('hidden'); }
 function editCrmMusteri(id) { openCrmMusteriModal(id); }
 
-function saveCrmMusteri() {
+async function saveCrmMusteri() {
   const firma = document.getElementById('crm-m-firma').value.trim();
   if(!firma) { showToast('Firma adı zorunlu','error'); return; }
   const obj = {
-    firma, yetkili:document.getElementById('crm-m-yetkili').value.trim(),
-    sektor:document.getElementById('crm-m-sektor').value,
-    tel:document.getElementById('crm-m-tel').value.trim(),
-    email:document.getElementById('crm-m-email').value.trim(),
-    adres:document.getElementById('crm-m-adres').value.trim(),
-    vkn:document.getElementById('crm-m-vkn').value.trim(),
-    vade:parseInt(document.getElementById('crm-m-vade').value)||30,
-    durum:document.getElementById('crm-m-durum').value,
-    not:document.getElementById('crm-m-not').value.trim(),
+    firma,
+    yetkili : document.getElementById('crm-m-yetkili').value.trim(),
+    sektor  : document.getElementById('crm-m-sektor').value,
+    tel     : document.getElementById('crm-m-tel').value.trim(),
+    email   : document.getElementById('crm-m-email').value.trim(),
+    adres   : document.getElementById('crm-m-adres').value.trim(),
+    vkn     : document.getElementById('crm-m-vkn').value.trim(),
+    vade    : parseInt(document.getElementById('crm-m-vade').value)||30,
+    durum   : document.getElementById('crm-m-durum').value,
+    not     : document.getElementById('crm-m-not').value.trim(),
   };
+
   if(crmEditingMusteriId) {
+    // Bellekte güncelle
     const idx = crmMusteriler.findIndex(m=>m.id===crmEditingMusteriId);
-    crmMusteriler[idx] = { ...crmMusteriler[idx], ...obj };
+    if(idx !== -1) crmMusteriler[idx] = { ...crmMusteriler[idx], ...obj };
+    // Buluta yaz (asenkron, UI'ı bloke etmez)
+    crmUpdateMusteri(crmEditingMusteriId, obj);
     showToast('Müşteri güncellendi ✓');
   } else {
-    obj.id = crmNextId(crmMusteriler);
+    // Önce Supabase'e yaz → DB'nin ürettiği ID'yi al
+    const dbId = await crmInsertMusteri(obj);
+    // Local mod veya hata durumunda geçici ID üret
+    obj.id = dbId ?? (Date.now());
     crmMusteriler.push(obj);
     showToast('Müşteri eklendi ✓');
   }
-  crmSave(); closeCrmMusteriModal(); crmRenderMusteriler(); crmRenderStats();
+  crmSaveLocal();
+  closeCrmMusteriModal();
+  crmRenderMusteriler();
+  crmRenderStats();
+  // Activity log
+  addActivity('crm_musteri', obj.firma, crmEditingMusteriId ? 'güncellendi' : 'eklendi');
 }
 
-function deleteCrmMusteri(id) {
+async function deleteCrmMusteri(id) {
   if(!confirm('Bu müşteriyi silmek istiyor musunuz?')) return;
+  const m = crmMusteriler.find(x=>x.id===id);
   crmMusteriler = crmMusteriler.filter(m=>m.id!==id);
   crmSiparisler = crmSiparisler.filter(s=>s.musteriId!==id);
-  crmSave(); crmRenderMusteriler(); crmRenderStats();
+  crmSaveLocal();
+  crmRenderMusteriler();
+  crmRenderStats();
   showToast('Müşteri silindi','error');
+  // Buluttan sil
+  await crmDeleteMusteri(id);
+  addActivity('crm_musteri', m?.firma || '—', 'silindi');
 }
 
 /* ─── SİPARİŞ MODAL ─────────────────────────────────────── */
@@ -10426,34 +10633,49 @@ function openCrmSiparisModal() {
 }
 function closeCrmSiparisModal() { document.getElementById('crm-siparis-modal-bg').classList.add('hidden'); }
 
-function saveCrmSiparis() {
+async function saveCrmSiparis() {
   const musteriId = parseInt(document.getElementById('crm-s-musteri').value);
   const yukle = document.getElementById('crm-s-yukle').value.trim();
   const teslim = document.getElementById('crm-s-teslim').value.trim();
   if(!musteriId||!yukle||!teslim){ showToast('Müşteri, yükleme ve teslim noktası zorunlu','error'); return; }
+
   const obj = {
-    id: crmNextSipId(), musteriId,
+    musteriId,
     yukle, teslim,
-    tarih: document.getElementById('crm-s-tarih').value,
-    durum: document.getElementById('crm-s-durum').value,
-    tutar: parseFloat(document.getElementById('crm-s-tutar').value)||0,
-    odeme: document.getElementById('crm-s-odeme').value,
-    yuk: document.getElementById('crm-s-yuk').value.trim(),
-    agirlik: parseFloat(document.getElementById('crm-s-agirlik').value)||0,
-    not: document.getElementById('crm-s-not').value.trim(),
+    tarih   : document.getElementById('crm-s-tarih').value,
+    durum   : document.getElementById('crm-s-durum').value,
+    tutar   : parseFloat(document.getElementById('crm-s-tutar').value)||0,
+    odeme   : document.getElementById('crm-s-odeme').value,
+    yuk     : document.getElementById('crm-s-yuk').value.trim(),
+    agirlik : parseFloat(document.getElementById('crm-s-agirlik').value)||0,
+    not     : document.getElementById('crm-s-not').value.trim(),
   };
-  crmSiparisler.push(obj);
-  crmSave(); closeCrmSiparisModal();
+
+  // Supabase'e yaz → DB'den üretilen SIP-XXXX ID'sini al
+  const dbId = await crmInsertSiparis(obj);
+  // Local mod fallback
+  obj.id = dbId ?? ('SIP-' + String(Date.now()).slice(-4));
+  crmSiparisler.unshift(obj);
+
+  crmSaveLocal();
+  closeCrmSiparisModal();
   crmFillMusteriSelect('crm-siparis-musteri');
-  crmRenderSiparisler(); crmRenderStats();
+  crmRenderSiparisler();
+  crmRenderStats();
   showToast('Sipariş eklendi ✓');
+
+  const m = crmMusteriById(musteriId);
+  addActivity('crm_siparis', m?.firma || '—', `${yukle} → ${teslim}`);
 }
 
-function deleteCrmSiparis(id) {
+async function deleteCrmSiparis(id) {
   if(!confirm('Bu siparişi silmek istiyor musunuz?')) return;
   crmSiparisler = crmSiparisler.filter(s=>s.id!==id);
-  crmSave(); crmRenderSiparisler(); crmRenderStats();
+  crmSaveLocal();
+  crmRenderSiparisler();
+  crmRenderStats();
   showToast('Sipariş silindi','error');
+  await crmDeleteSiparis(id);
 }
 
 /* ─── DRAWER ─────────────────────────────────────────────── */
