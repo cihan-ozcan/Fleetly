@@ -9371,7 +9371,8 @@ function applyDashCards() {
   DASH_CARDS.forEach(card => {
     const el = document.getElementById(card.id);
     if (!el) return;
-    const visible = prefs[card.id] !== undefined ? prefs[card.id] : card.def;
+    // Eğer localStorage'da bu kart hiç kaydedilmemişse varsayılanı kullan (yeni eklenen kartlar her zaman görünür)
+    const visible = Object.prototype.hasOwnProperty.call(prefs, card.id) ? prefs[card.id] : card.def;
     el.style.display = visible ? '' : 'none';
   });
 }
@@ -9458,6 +9459,8 @@ checkAuth();
 
 // Dashboard kart tercihlerini uygula
 applyDashCards();
+// Müşteri kartı yeni eklendiği için eski localStorage'da olmayabilir — zorla göster
+(function(){ const el=document.getElementById('musteri-stat-card'); if(el) el.style.display=''; })();
 
 /* ================================================================
    SEFER TAKİBİ
