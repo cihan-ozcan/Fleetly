@@ -2782,11 +2782,11 @@
       </div>
     </div>
     <div style="display:flex;gap:8px;">
-      <button class="btn btn-ghost" onclick="exportCSV()">
+      <button class="btn btn-ghost" onclick="crmExportCSV()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         CSV İndir
       </button>
-      <button class="btn btn-accent" onclick="openMusteriModal()">
+      <button class="btn btn-accent" onclick="openCrmMusteriModal()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Müşteri
       </button>
@@ -2798,9 +2798,9 @@
 
   <!-- Tabs -->
   <div class="tab-bar">
-    <button class="tab-btn active" onclick="switchTab('musteriler', this)">🏢 Müşteriler</button>
-    <button class="tab-btn" onclick="switchTab('siparisler', this)">📦 Siparişler</button>
-    <button class="tab-btn" onclick="switchTab('analiz', this)">📊 Ciro Analizi</button>
+    <button class="tab-btn active" onclick="switchCrmTab('musteriler', this)">🏢 Müşteriler</button>
+    <button class="tab-btn" onclick="switchCrmTab('siparisler', this)">📦 Siparişler</button>
+    <button class="tab-btn" onclick="switchCrmTab('analiz', this)">📊 Ciro Analizi</button>
   </div>
 
   <!-- ── TAB: MÜŞTERİLER ── -->
@@ -2808,9 +2808,9 @@
     <div class="toolbar">
       <div class="search-wrap">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="search-input" id="crm-musteri-search" placeholder="Firma adı, yetkili..." oninput="renderMusteriler()" />
+        <input class="search-input" id="crm-musteri-search" placeholder="Firma adı, yetkili..." oninput="crmRenderMusteriler()" />
       </div>
-      <select class="select-input" id="crm-musteri-sektor" onchange="renderMusteriler()">
+      <select class="select-input" id="crm-musteri-sektor" onchange="crmRenderMusteriler()">
         <option value="">Tüm Sektörler</option>
         <option value="Perakende">Perakende</option>
         <option value="İnşaat">İnşaat</option>
@@ -2820,7 +2820,7 @@
         <option value="Elektrik">Elektrik</option>
         <option value="Diğer">Diğer</option>
       </select>
-      <select class="select-input" id="crm-musteri-durum" onchange="renderMusteriler()">
+      <select class="select-input" id="crm-musteri-durum" onchange="crmRenderMusteriler()">
         <option value="">Tüm Durumlar</option>
         <option value="Aktif">Aktif</option>
         <option value="Pasif">Pasif</option>
@@ -2852,20 +2852,20 @@
     <div class="toolbar">
       <div class="search-wrap">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="search-input" id="crm-siparis-search" placeholder="Müşteri, güzergah..." oninput="renderSiparisler()" />
+        <input class="search-input" id="crm-siparis-search" placeholder="Müşteri, güzergah..." oninput="crmRenderSiparisler()" />
       </div>
-      <select class="select-input" id="crm-siparis-durum" onchange="renderSiparisler()">
+      <select class="select-input" id="crm-siparis-durum" onchange="crmRenderSiparisler()">
         <option value="">Tüm Durumlar</option>
         <option value="Bekliyor">Bekliyor</option>
         <option value="Yolda">Yolda</option>
         <option value="Teslim Edildi">Teslim Edildi</option>
         <option value="İptal">İptal</option>
       </select>
-      <select class="select-input" id="crm-siparis-musteri" onchange="renderSiparisler()">
+      <select class="select-input" id="crm-siparis-musteri" onchange="crmRenderSiparisler()">
         <option value="">Tüm Müşteriler</option>
       </select>
       <span class="ml-auto"></span>
-      <button class="btn btn-accent" onclick="openSiparisModal()">
+      <button class="btn btn-accent" onclick="openCrmSiparisModal()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Sipariş
       </button>
@@ -2925,7 +2925,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">🏢 <span id="crm-musteri-modal-title">Yeni Müşteri</span></div>
-      <button class="icon-btn" onclick="closeMusteriModal()" style="width:30px;height:30px;">✕</button>
+      <button class="icon-btn" onclick="closeCrmMusteriModal()" style="width:30px;height:30px;">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-row">
@@ -2994,8 +2994,8 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeMusteriModal()">İptal</button>
-      <button class="btn btn-accent" onclick="saveMusterieri()">💾 Kaydet</button>
+      <button class="btn btn-ghost" onclick="closeCrmMusteriModal()">İptal</button>
+      <button class="btn btn-accent" onclick="saveCrmMusteri()">💾 Kaydet</button>
     </div>
   </div>
 </div>
@@ -3005,7 +3005,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">📦 Yeni Sipariş</div>
-      <button class="icon-btn" onclick="closeSiparisModal()" style="width:30px;height:30px;">✕</button>
+      <button class="icon-btn" onclick="closeCrmSiparisModal()" style="width:30px;height:30px;">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-row full">
@@ -3071,14 +3071,14 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeSiparisModal()">İptal</button>
-      <button class="btn btn-accent" onclick="saveSiparis()">💾 Kaydet</button>
+      <button class="btn btn-ghost" onclick="closeCrmSiparisModal()">İptal</button>
+      <button class="btn btn-accent" onclick="saveCrmSiparis()">💾 Kaydet</button>
     </div>
   </div>
 </div>
 
 <!-- ── MÜŞTERİ DRAWER ── -->
-<div class="crm-drawer-backdrop hidden" id="crm-drawer-bg" onclick="closeDrawer()"></div>
+<div class="crm-drawer-backdrop hidden" id="crm-drawer-bg" onclick="closeCrmDrawer()"></div>
 <div class="crm-drawer hidden" id="crm-musteri-drawer">
   <div class="drawer-header">
     <div style="display:flex;align-items:center;gap:10px;">
@@ -3088,7 +3088,7 @@
         <div id="crm-drawer-sektor" style="font-size:12px;color:var(--muted);"></div>
       </div>
     </div>
-    <button class="icon-btn" onclick="closeDrawer()" style="width:30px;height:30px;">✕</button>
+    <button class="icon-btn" onclick="closeCrmDrawer()" style="width:30px;height:30px;">✕</button>
   </div>
   <div class="drawer-body">
     <div class="drawer-section">
@@ -10507,7 +10507,7 @@ function closeMusteriPage() {
 }
 
 /* ─── VERİ ─────────────────────────────────────── */
-const CRM_CRM_COLORS = ['#f97316','#38bdf8','#22c55e','#a78bfa','#f59e0b','#ef4444','#06b6d4','#84cc16'];
+const CRM_COLORS = ['#f97316','#38bdf8','#22c55e','#a78bfa','#f59e0b','#ef4444','#06b6d4','#84cc16'];
 
 let crmEditingMusteriId = null;
 
@@ -10697,7 +10697,7 @@ function crmRenderAnaliz() {
 
   // Ciro bar chart
   const top5 = rows.slice(0,6);
-  if(chartCiro) crmChartCiro.destroy();
+  if(crmChartCiro) crmChartCiro.destroy();
   crmChartCiro = new Chart(document.getElementById('crm-chart-ciro'), {
     type:'bar',
     data:{
@@ -10719,8 +10719,8 @@ function crmRenderAnaliz() {
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
     aylar.push({k:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),l:d.toLocaleDateString('tr-TR',{month:'short'})});
   }
-  const counts = aylar.map(a=>siparisler.filter(s=>s.tarih.startsWith(a.k)&&s.durum!=='İptal').length);
-  if(chartTrend) crmChartTrend.destroy();
+  const counts = aylar.map(a=>crmSiparisler.filter(s=>s.tarih.startsWith(a.k)&&s.durum!=='İptal').length);
+  if(crmChartTrend) crmChartTrend.destroy();
   crmChartTrend = new Chart(document.getElementById('crm-chart-trend'), {
     type:'line',
     data:{
@@ -10737,7 +10737,7 @@ function crmRenderAnaliz() {
 }
 
 /* ─── TAB ─────────────────────────────────────── */
-function crmSwitchTab(name, btn) {
+function switchCrmTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   ['musteriler','siparisler','analiz'].forEach(t=>{
@@ -10754,7 +10754,7 @@ function openCrmMusteriModal(id=null) {
   const m = id ? crmMusteriler.find(x=>x.id===id) : null;
   document.getElementById('crm-musteri-modal-title').textContent = m ? 'Müşteriyi Düzenle' : 'Yeni Müşteri';
   ['firma','yetkili','tel','email','adres','vkn','not'].forEach(f=>{
-    document.getElementById('m-'+f).value = m ? (m[f]||'') : '';
+    document.getElementById('crm-m-'+f).value = m ? (m[f]||'') : '';
   });
   document.getElementById('crm-m-sektor').value = m ? (m.sektor||'Perakende') : 'Perakende';
   document.getElementById('crm-m-durum').value = m ? (m.durum||'Aktif') : 'Aktif';
@@ -10780,7 +10780,7 @@ function saveCrmMusteri() {
   };
   if(crmEditingMusteriId) {
     const idx = crmMusteriler.findIndex(m=>m.id===crmEditingMusteriId);
-    crmMusteriler[idx] = { ...musteriler[idx], ...obj };
+    crmMusteriler[idx] = { ...crmMusteriler[idx], ...obj };
     showToast('Müşteri güncellendi ✓');
   } else {
     obj.id = crmNextId(crmMusteriler);
@@ -10801,7 +10801,7 @@ function deleteCrmMusteri(id) {
 function openCrmSiparisModal() {
   crmFillMusteriSelect('crm-s-musteri');
   document.getElementById('crm-s-tarih').value = new Date().toISOString().slice(0,10);
-  ['yukle','teslim','yuk','not'].forEach(f=>{ document.getElementById('s-'+f).value=''; });
+  ['yukle','teslim','yuk','not'].forEach(f=>{ document.getElementById('crm-s-'+f).value=''; });
   document.getElementById('crm-s-tutar').value='';
   document.getElementById('crm-s-agirlik').value='';
   document.getElementById('crm-s-durum').value='Bekliyor';
