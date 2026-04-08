@@ -2623,6 +2623,33 @@
     </div>
 
     <!-- RAPORLAR KARTI -->
+    <div class="stat-card" id="musteri-stat-card" style="cursor:pointer;border-color:rgba(45,212,191,.2);box-shadow:0 0 0 1px rgba(45,212,191,.06)" onclick="openMusteriPage()" title="Müşteri & Sipariş modülünü açmak için tıklayın" onmouseover="this.style.borderColor='rgba(45,212,191,.5)';this.style.boxShadow='0 0 0 2px rgba(45,212,191,.15)'" onmouseout="this.style.borderColor='rgba(45,212,191,.2)';this.style.boxShadow='0 0 0 1px rgba(45,212,191,.06)'">
+      <div class="stat-card-top">
+        <div class="stat-icon" style="background:rgba(45,212,191,.12);color:#2dd4bf">🤝</div>
+        <span class="stat-trend ok" style="color:#2dd4bf">CRM</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:4px">
+        <div>
+          <div class="stat-value" id="stat-musteri-toplam" style="font-size:22px;color:#2dd4bf">—</div>
+          <div class="stat-label">Toplam Müşteri</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Aktif: </span>
+          <span style="color:var(--green);font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-musteri-aktif">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:#2dd4bf;flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Ciro: </span>
+          <span style="color:#2dd4bf;font-family:'JetBrains Mono',monospace;font-weight:700" id="stat-musteri-ciro">—</span>
+        </div>
+        <div style="margin-left:auto">
+          <span style="font-size:10px;color:rgba(45,212,191,.6);font-weight:600;letter-spacing:.03em">DETAY ›</span>
+        </div>
+      </div>
+    </div>
     <div class="stat-card" id="rapor-stat-card" style="cursor:pointer;border-color:rgba(232,121,249,.2);box-shadow:0 0 0 1px rgba(232,121,249,.06)" onclick="openRaporModal()" title="Raporları görmek için tıklayın" onmouseover="this.style.borderColor='rgba(232,121,249,.45)';this.style.boxShadow='0 0 0 2px rgba(232,121,249,.12)'" onmouseout="this.style.borderColor='rgba(232,121,249,.2)';this.style.boxShadow='0 0 0 1px rgba(232,121,249,.06)'">
       <div class="stat-card-top">
         <div class="stat-icon" style="background:rgba(232,121,249,.12);color:#e879f9">📊</div>
@@ -4924,7 +4951,7 @@ async function loadVehicles() {
   await loadSeferData();
   await loadMasrafData();
   updateRaporStat();
-  await renderActivityLog();
+  updateMusteriStat();
 }
 
 async function saveVehicles() {
@@ -9316,15 +9343,16 @@ async function downloadRaporPDF() {
    ================================================================ */
 
 const DASH_CARDS = [
-  { id: 'filo-stat-card',   label: 'Filo Özeti',       sub: 'Toplam araç, çekici, dorse sayıları',   icon: '🚛', color: 'rgba(34,197,94,.12)',    def: true },
-  { id: 'muayene-stat-card',label: 'Muayene Takibi',   sub: 'Muayenesi yaklaşan araçlar',            icon: '🔍', color: 'rgba(245,158,11,.12)',   def: true },
-  { id: 'sigorta-stat-card', label: 'Sigorta Takibi',  sub: 'Sigortası yaklaşan araçlar',            icon: '🛡', color: 'rgba(239,68,68,.12)',    def: true },
-  { id: 'yakit-stat-card',  label: 'Yakıt Yönetimi',   sub: 'Toplam yakıt tüketimi ve maliyeti',     icon: '⛽', color: 'rgba(249,115,22,.12)',   def: true },
-  { id: 'driver-stat-card', label: 'Sürücü Belgeleri', sub: 'Ehliyet, SRC, psikoteknik takibi',      icon: '👤', color: 'rgba(34,197,94,.12)',    def: true },
-  { id: 'maint-stat-card',  label: 'Bakım & Arıza',    sub: 'Bakım geçmişi ve arıza kayıtları',      icon: '🔧', color: 'rgba(56,189,248,.12)',   def: true },
-  { id: 'sefer-stat-card',  label: 'Sefer Takibi',     sub: 'Toplam sefer, ciro ve km bilgisi',      icon: '🗺', color: 'rgba(167,139,250,.12)',  def: true },
-  { id: 'masraf-stat-card', label: 'Masraf Takibi',    sub: 'Gider kayıtları ve kategori analizi',   icon: '💸', color: 'rgba(245,158,11,.12)',   def: true },
-  { id: 'rapor-stat-card',  label: 'Raporlar & Analiz',sub: 'Net kâr/zarar, ciro ve gider özeti',    icon: '📊', color: 'rgba(232,121,249,.12)',  def: true },
+  { id: 'filo-stat-card',    label: 'Filo Özeti',        sub: 'Toplam araç, çekici, dorse sayıları',   icon: '🚛', color: 'rgba(34,197,94,.12)',    def: true },
+  { id: 'musteri-stat-card', label: 'Müşteri & Sipariş', sub: 'Müşteri portföyü ve sipariş yönetimi',  icon: '🤝', color: 'rgba(45,212,191,.12)',   def: true },
+  { id: 'muayene-stat-card', label: 'Muayene Takibi',    sub: 'Muayenesi yaklaşan araçlar',            icon: '🔍', color: 'rgba(245,158,11,.12)',   def: true },
+  { id: 'sigorta-stat-card', label: 'Sigorta Takibi',    sub: 'Sigortası yaklaşan araçlar',            icon: '🛡', color: 'rgba(239,68,68,.12)',    def: true },
+  { id: 'yakit-stat-card',   label: 'Yakıt Yönetimi',    sub: 'Toplam yakıt tüketimi ve maliyeti',     icon: '⛽', color: 'rgba(249,115,22,.12)',   def: true },
+  { id: 'driver-stat-card',  label: 'Sürücü Belgeleri',  sub: 'Ehliyet, SRC, psikoteknik takibi',      icon: '👤', color: 'rgba(34,197,94,.12)',    def: true },
+  { id: 'maint-stat-card',   label: 'Bakım & Arıza',     sub: 'Bakım geçmişi ve arıza kayıtları',      icon: '🔧', color: 'rgba(56,189,248,.12)',   def: true },
+  { id: 'sefer-stat-card',   label: 'Sefer Takibi',      sub: 'Toplam sefer, ciro ve km bilgisi',      icon: '🗺', color: 'rgba(167,139,250,.12)',  def: true },
+  { id: 'masraf-stat-card',  label: 'Masraf Takibi',     sub: 'Gider kayıtları ve kategori analizi',   icon: '💸', color: 'rgba(245,158,11,.12)',   def: true },
+  { id: 'rapor-stat-card',   label: 'Raporlar & Analiz', sub: 'Net kâr/zarar, ciro ve gider özeti',    icon: '📊', color: 'rgba(232,121,249,.12)',  def: true },
 ];
 
 function loadDashPrefs() {
@@ -9970,6 +9998,16 @@ function updateRaporStat() {
   }
 }
 
+function updateMusteriStat() {
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  const toplam = crmMusteriler.length;
+  const aktif  = crmMusteriler.filter(m=>m.durum==='Aktif').length;
+  const ciro   = crmSiparisler.filter(s=>s.durum!=='İptal').reduce((a,s)=>a+(s.tutar||0),0);
+  set('stat-musteri-toplam', toplam || '—');
+  set('stat-musteri-aktif',  aktif);
+  set('stat-musteri-ciro',   ciro > 0 ? '₺'+ciro.toLocaleString('tr-TR',{maximumFractionDigits:0}) : '—');
+}
+
 /* ================================================================
    RAPORLAR
    ================================================================ */
@@ -10531,6 +10569,7 @@ let crmSiparisler = JSON.parse(localStorage.getItem('crm_siparisler') || 'null')
 function crmSave() {
   localStorage.setItem('crm_musteriler', JSON.stringify(crmMusteriler));
   localStorage.setItem('crm_siparisler', JSON.stringify(crmSiparisler));
+  updateMusteriStat();
 }
 
 /* ─── YARDIMCI ─────────────────────────────────── */
