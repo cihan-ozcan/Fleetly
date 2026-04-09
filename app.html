@@ -3134,422 +3134,39 @@
 </div>
 
 <script>
-/* ─── VERİ ─────────────────────────────────────── */
-const COLORS = ['#f97316','#38bdf8','#22c55e','#a78bfa','#f59e0b','#ef4444','#06b6d4','#84cc16'];
-
-let editingMusteriId = null;
-
-let musteriler = JSON.parse(localStorage.getItem('crm_musteriler') || 'null') || [
-  { id:1, firma:'Güven Taşımacılık', yetkili:'Hasan Güven', sektor:'Perakende', tel:'0532 111 22 33', email:'info@guven.com', adres:'Bağcılar, İstanbul', vkn:'1234567890', vade:30, durum:'Aktif', not:'VIP müşteri' },
-  { id:2, firma:'Anadolu Market Zinciri', yetkili:'Fatma Çelik', sektor:'Gıda', tel:'0533 222 33 44', email:'lojistik@anadolu.com', adres:'Çerkezköy, Tekirdağ', vkn:'9876543210', vade:45, durum:'Aktif', not:'' },
-  { id:3, firma:'Özkan İnşaat', yetkili:'Murat Özkan', sektor:'İnşaat', tel:'0544 333 44 55', email:'murat@ozkan.com', adres:'Esenyurt, İstanbul', vkn:'1111111111', vade:15, durum:'Aktif', not:'Nakit ödeme tercih eder' },
-  { id:4, firma:'Delta Tekstil', yetkili:'Ayşe Doğan', sektor:'Tekstil', tel:'0555 444 55 66', email:'ayse@delta.com', adres:'Bursa Organize', vkn:'2222222222', vade:60, durum:'Pasif', not:'' },
-  { id:5, firma:'Kimya Plus Ltd.', yetkili:'Kerem Arslan', sektor:'Kimya', tel:'0506 555 66 77', email:'kerem@kimyaplus.com', adres:'Gebze, Kocaeli', vkn:'3333333333', vade:30, durum:'Potansiyel', not:'Fiyat teklifi bekleniyor' },
-];
-
-let siparisler = JSON.parse(localStorage.getItem('crm_siparisler') || 'null') || [
-  { id:'SIP-001', musteriId:1, yukle:'İstanbul/Tuzla', teslim:'Ankara/Ostim', tarih:'2025-03-10', durum:'Teslim Edildi', tutar:18500, odeme:'Ödendi', yuk:'Paletli', agirlik:22, not:'' },
-  { id:'SIP-002', musteriId:2, yukle:'Tekirdağ/Çorlu', teslim:'İzmir/Torbalı', tarih:'2025-03-18', durum:'Teslim Edildi', tutar:24000, odeme:'Ödendi', yuk:'Dökme', agirlik:28, not:'' },
-  { id:'SIP-003', musteriId:1, yukle:'Kocaeli/Gebze', teslim:'Bursa/OSB', tarih:'2025-03-25', durum:'Yolda', tutar:15000, odeme:'Bekliyor', yuk:'Paletli', agirlik:18, not:'Acil' },
-  { id:'SIP-004', musteriId:3, yukle:'Esenyurt/İst.', teslim:'Sakarya/Adapazarı', tarih:'2025-04-01', durum:'Bekliyor', tutar:9500, odeme:'Bekliyor', yuk:'Kargo', agirlik:8, not:'' },
-  { id:'SIP-005', musteriId:2, yukle:'İstanbul/Merter', teslim:'Konya/OSB', tarih:'2025-04-02', durum:'Yolda', tutar:31000, odeme:'Kısmi', yuk:'Paletli', agirlik:24, not:'' },
-  { id:'SIP-006', musteriId:5, yukle:'Gebze/Kocaeli', teslim:'Adana/Sanayi', tarih:'2025-04-05', durum:'Bekliyor', tutar:42000, odeme:'Bekliyor', yuk:'Kimyasal', agirlik:20, not:'ADR belgesi gerekli' },
-];
-
-function save() {
-  localStorage.setItem('crm_musteriler', JSON.stringify(musteriler));
-  localStorage.setItem('crm_siparisler', JSON.stringify(siparisler));
-}
-
-/* ─── YARDIMCI ─────────────────────────────────── */
-function nextId(arr) { return arr.length ? Math.max(...arr.map(x => typeof x.id === 'number' ? x.id : 0)) + 1 : 1; }
-function nextSipId() {
-  const nums = siparisler.map(s => parseInt(s.id.replace('SIP-',''))||0);
-  return 'SIP-' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3,'0');
-}
-function fmt(n) { return (n||0).toLocaleString('tr-TR'); }
-function color(str) { let h=0; for(let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))&0xffff; return COLORS[h%COLORS.length]; }
-function initials(str) { return (str||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
-function durumBadge(d) {
-  const map = { 'Aktif':'badge-green','Pasif':'badge-muted','Potansiyel':'badge-blue','Bekliyor':'badge-yellow','Yolda':'badge-blue','Teslim Edildi':'badge-green','İptal':'badge-red','Ödendi':'badge-green','Kısmi':'badge-yellow' };
-  return `<span class="badge ${map[d]||'badge-muted'}">${d}</span>`;
-}
-function musteriById(id) { return musteriler.find(m=>m.id===id); }
-function siparisleriByMusteri(id) { return siparisler.filter(s=>s.musteriId===id); }
-function ciroByMusteri(id) { return siparisleriByMusteri(id).filter(s=>s.durum!=='İptal').reduce((a,s)=>a+(s.tutar||0),0); }
-
-function showToast(msg, type='success') {
-  const t = document.getElementById('toast');
-  const icon = document.getElementById('toast-icon');
-  const m = document.getElementById('toast-msg');
-  icon.textContent = type==='success'?'✓':type==='error'?'✕':'ℹ';
-  t.style.borderColor = type==='success'?'var(--green)':type==='error'?'var(--red)':'var(--blue)';
-  m.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2800);
-}
-
-/* ─── STAT KARTLARI ─────────────────────────────── */
-function renderStats() {
-  const aktif = musteriler.filter(m=>m.durum==='Aktif').length;
-  const toplamCiro = siparisler.filter(s=>s.durum!=='İptal').reduce((a,s)=>a+(s.tutar||0),0);
-  const bekleyen = siparisler.filter(s=>s.odeme==='Bekliyor'&&s.durum!=='İptal').reduce((a,s)=>a+(s.tutar||0),0);
-  const yolda = siparisler.filter(s=>s.durum==='Yolda').length;
-
-  const cards = [
-    { icon:'🏢', val: musteriler.length, lbl:'Toplam Müşteri', sub:`${aktif} aktif`, color:'var(--accent)' },
-    { icon:'📦', val: siparisler.length, lbl:'Toplam Sipariş', sub:`${yolda} yolda`, color:'var(--blue)' },
-    { icon:'💰', val:'₺'+fmt(toplamCiro), lbl:'Toplam Ciro', sub:'İptal hariç', color:'var(--green)' },
-    { icon:'⏳', val:'₺'+fmt(bekleyen), lbl:'Tahsilat Bekleyen', sub:'Açık bakiye', color:'var(--yellow)' },
-  ];
-  document.getElementById('stat-grid').innerHTML = cards.map(c=>`
-    <div class="stat-card">
-      <div class="stat-icon" style="background:${c.color}22;color:${c.color}">${c.icon}</div>
-      <div class="stat-val" style="color:${c.color}">${c.val}</div>
-      <div class="stat-lbl">${c.lbl}</div>
-      <div class="stat-sub">${c.sub}</div>
-    </div>`).join('');
-}
-
-/* ─── MÜŞTERİLER ─────────────────────────────── */
-function renderMusteriler() {
-  const q = document.getElementById('musteri-search').value.toLowerCase();
-  const sektor = document.getElementById('musteri-sektor').value;
-  const durum = document.getElementById('musteri-durum').value;
-
-  let list = musteriler.filter(m=>{
-    const match = m.firma.toLowerCase().includes(q) || (m.yetkili||'').toLowerCase().includes(q);
-    return match && (!sektor||m.sektor===sektor) && (!durum||m.durum===durum);
-  });
-
-  document.getElementById('musteri-count').textContent = `${list.length} kayıt`;
-
-  const tbody = document.getElementById('musteri-tbody');
-  if(!list.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">🏢</div><div class="empty-state-title">Müşteri bulunamadı</div></div></td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = list.map(m=>{
-    const sefers = siparisleriByMusteri(m.id);
-    const ciro = ciroByMusteri(m.id);
-    const sonSefer = sefers.sort((a,b)=>b.tarih.localeCompare(a.tarih))[0];
-    const bg = color(m.firma);
-    return `<tr>
-      <td>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div class="avatar" style="background:${bg}22;color:${bg}">${initials(m.firma)}</div>
-          <div>
-            <div style="font-weight:600;">${m.firma}</div>
-            <div style="font-size:11px;color:var(--muted);">${m.adres||''}</div>
-          </div>
-        </div>
-      </td>
-      <td style="color:var(--text2);">${m.yetkili||'—'}</td>
-      <td><span class="badge badge-muted">${m.sektor||'—'}</span></td>
-      <td>${durumBadge(m.durum)}</td>
-      <td class="mono">${sefers.length}</td>
-      <td class="mono" style="color:var(--green);">₺${fmt(ciro)}</td>
-      <td style="color:var(--text2);font-size:12px;">${sonSefer ? sonSefer.tarih : '—'}</td>
-      <td>
-        <div class="row-actions">
-          <button class="icon-btn" title="Detay" onclick="openDrawer(${m.id})">👁</button>
-          <button class="icon-btn" title="Düzenle" onclick="editMusteri(${m.id})">✏️</button>
-          <button class="icon-btn" title="Sil" onclick="deleteMusteri(${m.id})">🗑</button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-/* ─── SİPARİŞLER ─────────────────────────────── */
-function renderSiparisler() {
-  const q = document.getElementById('siparis-search').value.toLowerCase();
-  const durum = document.getElementById('siparis-durum').value;
-  const musteriId = parseInt(document.getElementById('siparis-musteri').value)||0;
-
-  let list = siparisler.filter(s=>{
-    const m = musteriById(s.musteriId);
-    const match = s.id.toLowerCase().includes(q) || (m&&m.firma.toLowerCase().includes(q))
-      || (s.yukle||'').toLowerCase().includes(q) || (s.teslim||'').toLowerCase().includes(q);
-    return match && (!durum||s.durum===durum) && (!musteriId||s.musteriId===musteriId);
-  }).sort((a,b)=>b.tarih.localeCompare(a.tarih));
-
-  const tbody = document.getElementById('siparis-tbody');
-  if(!list.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-title">Sipariş bulunamadı</div></div></td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = list.map(s=>{
-    const m = musteriById(s.musteriId);
-    return `<tr>
-      <td class="mono" style="color:var(--accent);">${s.id}</td>
-      <td style="font-weight:600;">${m?m.firma:'—'}</td>
-      <td style="color:var(--text2);font-size:12px;">${s.yukle} → ${s.teslim}</td>
-      <td style="color:var(--text2);font-size:12px;">${s.tarih}</td>
-      <td>${durumBadge(s.durum)}</td>
-      <td class="mono" style="color:var(--green);">₺${fmt(s.tutar)}</td>
-      <td>${durumBadge(s.odeme)}</td>
-      <td>
-        <div class="row-actions">
-          <button class="icon-btn" title="Sil" onclick="deleteSiparis('${s.id}')">🗑</button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-function fillMusteriSelect(selId) {
-  const sel = document.getElementById(selId);
-  if(!sel) return;
-  const cur = sel.value;
-  sel.innerHTML = musteriler.map(m=>`<option value="${m.id}">${m.firma}</option>`).join('');
-  if(cur) sel.value = cur;
-}
-
-/* ─── ANALİZ ─────────────────────────────────── */
-let chartCiro=null, chartTrend=null;
-function renderAnaliz() {
-  // Tablo
-  const tbody = document.getElementById('analiz-tbody');
-  const now = new Date();
-  const rows = musteriler.map(m=>{
-    const sefers = siparisleriByMusteri(m.id).filter(s=>s.durum!=='İptal');
-    const ciro = sefers.reduce((a,s)=>a+(s.tutar||0),0);
-    const son30 = sefers.filter(s=>{
-      const d = new Date(s.tarih); return (now-d)/864e5<=30;
-    }).reduce((a,s)=>a+(s.tutar||0),0);
-    const ort = sefers.length ? Math.round(ciro/sefers.length) : 0;
-    return { firma:m.firma, sefer:sefers.length, ciro, ort, son30, durum:m.durum };
-  }).sort((a,b)=>b.ciro-a.ciro);
-
-  tbody.innerHTML = rows.map(r=>`<tr>
-    <td style="font-weight:600;">${r.firma}</td>
-    <td class="mono">${r.sefer}</td>
-    <td class="mono" style="color:var(--green);">₺${fmt(r.ciro)}</td>
-    <td class="mono">₺${fmt(r.ort)}</td>
-    <td class="mono" style="color:var(--accent);">₺${fmt(r.son30)}</td>
-    <td>${durumBadge(r.durum)}</td>
-  </tr>`).join('');
-
-  // Ciro bar chart
-  const top5 = rows.slice(0,6);
-  if(chartCiro) chartCiro.destroy();
-  chartCiro = new Chart(document.getElementById('chart-ciro'), {
-    type:'bar',
-    data:{
-      labels: top5.map(r=>r.firma.split(' ')[0]),
-      datasets:[{ label:'Ciro (₺)', data: top5.map(r=>r.ciro),
-        backgroundColor: COLORS.slice(0,6).map(c=>c+'88'),
-        borderColor: COLORS.slice(0,6), borderWidth:2, borderRadius:6 }]
-    },
-    options:{ plugins:{legend:{display:false}}, scales:{
-      x:{ticks:{color:'#526070',font:{size:10}},grid:{color:'#252f3e'}},
-      y:{ticks:{color:'#526070',font:{size:10}},grid:{color:'#252f3e'},
-        callback:v=>'₺'+v.toLocaleString('tr-TR')}
-    }}
-  });
-
-  // Aylık trend
-  const aylar=[];
-  for(let i=5;i>=0;i--){
-    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    aylar.push({k:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),l:d.toLocaleDateString('tr-TR',{month:'short'})});
-  }
-  const counts = aylar.map(a=>siparisler.filter(s=>s.tarih.startsWith(a.k)&&s.durum!=='İptal').length);
-  if(chartTrend) chartTrend.destroy();
-  chartTrend = new Chart(document.getElementById('chart-trend'), {
-    type:'line',
-    data:{
-      labels:aylar.map(a=>a.l),
-      datasets:[{ label:'Sipariş', data:counts,
-        borderColor:'#f97316', backgroundColor:'rgba(249,115,22,.12)',
-        tension:.4, fill:true, pointBackgroundColor:'#f97316', pointRadius:4 }]
-    },
-    options:{ plugins:{legend:{display:false}}, scales:{
-      x:{ticks:{color:'#526070',font:{size:10}},grid:{color:'#252f3e'}},
-      y:{ticks:{color:'#526070',font:{size:10}},grid:{color:'#252f3e'},stepSize:1}
-    }}
-  });
-}
-
-/* ─── TAB ─────────────────────────────────────── */
+/* ─── CRM TAB GEÇİŞ (standalone tab ID'leri için uyumluluk katmanı) ─── */
+/* Bu tab'lar id="tab-musteriler" vb. kullanıyor; crm- prefix'li olanlar crmXxx fonksiyonlarına bağlı */
 function switchTab(name, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#crm-page .tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   ['musteriler','siparisler','analiz'].forEach(t=>{
-    const el=document.getElementById('tab-'+t);
+    const el = document.getElementById('tab-'+t);
     if(el) el.classList.toggle('section-hidden', t!==name);
   });
   if(name==='siparisler') { fillMusteriSelect('siparis-musteri'); renderSiparisler(); }
   if(name==='analiz') renderAnaliz();
 }
 
-/* ─── MÜŞTERİ MODAL ─────────────────────────── */
-function openMusteriModal(id=null) {
-  editingMusteriId = id;
-  const m = id ? musteriler.find(x=>x.id===id) : null;
-  document.getElementById('musteri-modal-title').textContent = m ? 'Müşteriyi Düzenle' : 'Yeni Müşteri';
-  ['firma','yetkili','tel','email','adres','vkn','not'].forEach(f=>{
-    document.getElementById('m-'+f).value = m ? (m[f]||'') : '';
-  });
-  document.getElementById('m-sektor').value = m ? (m.sektor||'Perakende') : 'Perakende';
-  document.getElementById('m-durum').value = m ? (m.durum||'Aktif') : 'Aktif';
-  document.getElementById('m-vade').value = m ? (m.vade||30) : 30;
-  document.getElementById('musteri-modal-bg').classList.remove('hidden');
-}
-function closeMusteriModal() { document.getElementById('musteri-modal-bg').classList.add('hidden'); }
-function editMusteri(id) { openMusteriModal(id); }
+/* Standalone HTML element'leri için köprü fonksiyonlar — tümü crmMusteriler/crmSiparisler'i kullanır */
+function renderStats() { crmRenderStats(); }
+function renderMusteriler() { crmRenderMusteriler(); }
+function renderSiparisler() { crmRenderSiparisler(); }
+function renderAnaliz() { crmRenderAnaliz(); }
+function fillMusteriSelect(id) { crmFillMusteriSelect(id); }
 
-function saveMusterieri() {
-  const firma = document.getElementById('m-firma').value.trim();
-  if(!firma) { showToast('Firma adı zorunlu','error'); return; }
-  const obj = {
-    firma, yetkili:document.getElementById('m-yetkili').value.trim(),
-    sektor:document.getElementById('m-sektor').value,
-    tel:document.getElementById('m-tel').value.trim(),
-    email:document.getElementById('m-email').value.trim(),
-    adres:document.getElementById('m-adres').value.trim(),
-    vkn:document.getElementById('m-vkn').value.trim(),
-    vade:parseInt(document.getElementById('m-vade').value)||30,
-    durum:document.getElementById('m-durum').value,
-    not:document.getElementById('m-not').value.trim(),
-  };
-  if(editingMusteriId) {
-    const idx = musteriler.findIndex(m=>m.id===editingMusteriId);
-    musteriler[idx] = { ...musteriler[idx], ...obj };
-    showToast('Müşteri güncellendi ✓');
-  } else {
-    obj.id = nextId(musteriler);
-    musteriler.push(obj);
-    showToast('Müşteri eklendi ✓');
-  }
-  save(); closeMusteriModal(); renderMusteriler(); renderStats();
-}
-
-function deleteMusteri(id) {
-  if(!confirm('Bu müşteriyi silmek istiyor musunuz?')) return;
-  musteriler = musteriler.filter(m=>m.id!==id);
-  siparisler = siparisler.filter(s=>s.musteriId!==id);
-  save(); renderMusteriler(); renderStats(); showToast('Müşteri silindi');
-}
-
-/* ─── SİPARİŞ MODAL ─────────────────────────── */
-function openSiparisModal() {
-  fillMusteriSelect('s-musteri');
-  document.getElementById('s-tarih').value = new Date().toISOString().slice(0,10);
-  ['yukle','teslim','yuk','not'].forEach(f=>{ document.getElementById('s-'+f).value=''; });
-  document.getElementById('s-tutar').value='';
-  document.getElementById('s-agirlik').value='';
-  document.getElementById('s-durum').value='Bekliyor';
-  document.getElementById('s-odeme').value='Bekliyor';
-  document.getElementById('siparis-modal-bg').classList.remove('hidden');
-}
-function closeSiparisModal() { document.getElementById('siparis-modal-bg').classList.add('hidden'); }
-
-function saveSiparis() {
-  const musteriId = parseInt(document.getElementById('s-musteri').value);
-  const yukle = document.getElementById('s-yukle').value.trim();
-  const teslim = document.getElementById('s-teslim').value.trim();
-  if(!musteriId||!yukle||!teslim){ showToast('Müşteri, yükleme ve teslim noktası zorunlu','error'); return; }
-  const obj = {
-    id: nextSipId(), musteriId,
-    yukle, teslim,
-    tarih: document.getElementById('s-tarih').value,
-    durum: document.getElementById('s-durum').value,
-    tutar: parseFloat(document.getElementById('s-tutar').value)||0,
-    odeme: document.getElementById('s-odeme').value,
-    yuk: document.getElementById('s-yuk').value.trim(),
-    agirlik: parseFloat(document.getElementById('s-agirlik').value)||0,
-    not: document.getElementById('s-not').value.trim(),
-  };
-  siparisler.push(obj);
-  save(); closeSiparisModal();
-  fillMusteriSelect('siparis-musteri');
-  renderSiparisler(); renderStats();
-  showToast('Sipariş eklendi ✓');
-}
-
-function deleteSiparis(id) {
-  if(!confirm('Bu siparişi silmek istiyor musunuz?')) return;
-  siparisler = siparisler.filter(s=>s.id!==id);
-  save(); renderSiparisler(); renderStats(); showToast('Sipariş silindi');
-}
-
-/* ─── DRAWER ─────────────────────────────────── */
-function openDrawer(id) {
-  const m = musteriById(id);
-  if(!m) return;
-  const sefers = siparisleriByMusteri(id).sort((a,b)=>b.tarih.localeCompare(a.tarih));
-  const ciro = sefers.filter(s=>s.durum!=='İptal').reduce((a,s)=>a+(s.tutar||0),0);
-  const bekleyen = sefers.filter(s=>s.odeme==='Bekliyor'&&s.durum!=='İptal').reduce((a,s)=>a+(s.tutar||0),0);
-  const bg = color(m.firma);
-
-  document.getElementById('drawer-avatar').textContent = initials(m.firma);
-  document.getElementById('drawer-avatar').style.background = bg+'22';
-  document.getElementById('drawer-avatar').style.color = bg;
-  document.getElementById('drawer-firma').textContent = m.firma;
-  document.getElementById('drawer-sektor').textContent = m.sektor + (m.durum ? ' · '+m.durum : '');
-
-  const detaylar = [
-    ['Yetkili', m.yetkili||'—'],
-    ['Telefon', m.tel||'—'],
-    ['E-Posta', m.email||'—'],
-    ['Adres', m.adres||'—'],
-    ['Vergi No', m.vkn||'—'],
-    ['Ödeme Vadesi', m.vade ? m.vade+' gün' : '—'],
-    ['Not', m.not||'—'],
-  ];
-  document.getElementById('drawer-detaylar').innerHTML = detaylar.map(([k,v])=>`
-    <div class="detail-row"><span class="detail-key">${k}</span><span class="detail-val">${v}</span></div>`).join('');
-
-  const son5 = sefers.slice(0,5);
-  document.getElementById('drawer-siparisler').innerHTML = son5.length ? son5.map(s=>`
-    <div class="siparis-row">
-      <div>
-        <div class="mono" style="color:var(--accent);font-size:11px;">${s.id}</div>
-        <div style="font-size:12px;color:var(--text2);">${s.yukle} → ${s.teslim}</div>
-        <div style="font-size:11px;color:var(--muted);">${s.tarih}</div>
-      </div>
-      <div style="text-align:right;">
-        ${durumBadge(s.durum)}
-        <div class="mono" style="color:var(--green);font-size:12px;margin-top:4px;">₺${fmt(s.tutar)}</div>
-      </div>
-    </div>`).join('') : '<div style="color:var(--muted);font-size:12px;">Henüz sipariş yok.</div>';
-
-  document.getElementById('drawer-mali').innerHTML = [
-    ['Toplam Sefer', sefers.length],
-    ['Toplam Ciro', '₺'+fmt(ciro)],
-    ['Tahsilat Bekleyen', '₺'+fmt(bekleyen)],
-    ['Ort. Sefer Tutarı', sefers.length ? '₺'+fmt(Math.round(ciro/sefers.length)) : '—'],
-  ].map(([k,v])=>`<div class="detail-row"><span class="detail-key">${k}</span><span class="detail-val" style="color:var(--green);">${v}</span></div>`).join('');
-
-  document.getElementById('drawer-bg').classList.remove('hidden');
-  document.getElementById('musteri-drawer').classList.remove('hidden');
-}
-function closeDrawer() {
-  document.getElementById('drawer-bg').classList.add('hidden');
-  document.getElementById('musteri-drawer').classList.add('hidden');
-}
-
-/* ─── CSV ─────────────────────────────────────── */
-function exportCSV() {
-  const rows = [['Firma','Yetkili','Sektör','Durum','Toplam Sefer','Toplam Ciro (₺)','Telefon','E-Posta']];
-  musteriler.forEach(m=>{
-    rows.push([m.firma,m.yetkili,m.sektor,m.durum,siparisleriByMusteri(m.id).length,ciroByMusteri(m.id),m.tel,m.email]);
-  });
-  const csv = rows.map(r=>r.map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
-  a.download = 'musteriler_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
-  showToast('CSV indirildi ✓');
-}
-
-/* ─── INIT ─────────────────────────────────────── */
-renderStats();
-renderMusteriler();
+/* Standalone modal ve drawer köprüleri */
+function openMusteriModal(id=null) { openCrmMusteriModal(id); }
+function closeMusteriModal() { closeCrmMusteriModal(); }
+function editMusteri(id) { openCrmMusteriModal(id); }
+function saveMusterieri() { saveCrmMusteri(); }
+function deleteMusteri(id) { deleteCrmMusteri(id); }
+function openSiparisModal() { openCrmSiparisModal(); }
+function closeSiparisModal() { closeCrmSiparisModal(); }
+function saveSiparis() { saveCrmSiparis(); }
+function deleteSiparis(id) { deleteCrmSiparis(id); }
+function openDrawer(id) { openCrmDrawer(id); }
+function closeDrawer() { closeCrmDrawer(); }
+function exportCSV() { crmExportCSV(); }
 </script>
   </div>
 </div>
@@ -10536,9 +10153,10 @@ loadMasrafData();
 <script>
 
 /* ─── CRM SAYFA AÇ/KAPA ──────────────────────── */
-function openMusteriPage() {
+async function openMusteriPage() {
   document.getElementById('crm-page').classList.add('open');
   document.body.style.overflow = 'hidden';
+  await crmLoadData();
   crmRenderStats();
   crmRenderMusteriler();
 }
@@ -10551,35 +10169,194 @@ function closeMusteriPage() {
 const CRM_COLORS = ['#f97316','#38bdf8','#22c55e','#a78bfa','#f59e0b','#ef4444','#06b6d4','#84cc16'];
 
 let crmEditingMusteriId = null;
+let crmMusteriler = [];
+let crmSiparisler = [];
 
-let crmMusteriler = JSON.parse(localStorage.getItem('crm_musteriler') || 'null') || [
-  { id:1, firma:'Güven Taşımacılık', yetkili:'Hasan Güven', sektor:'Perakende', tel:'0532 111 22 33', email:'info@guven.com', adres:'Bağcılar, İstanbul', vkn:'1234567890', vade:30, durum:'Aktif', not:'VIP müşteri' },
-  { id:2, firma:'Anadolu Market Zinciri', yetkili:'Fatma Çelik', sektor:'Gıda', tel:'0533 222 33 44', email:'lojistik@anadolu.com', adres:'Çerkezköy, Tekirdağ', vkn:'9876543210', vade:45, durum:'Aktif', not:'' },
-  { id:3, firma:'Özkan İnşaat', yetkili:'Murat Özkan', sektor:'İnşaat', tel:'0544 333 44 55', email:'murat@ozkan.com', adres:'Esenyurt, İstanbul', vkn:'1111111111', vade:15, durum:'Aktif', not:'Nakit ödeme tercih eder' },
-  { id:4, firma:'Delta Tekstil', yetkili:'Ayşe Doğan', sektor:'Tekstil', tel:'0555 444 55 66', email:'ayse@delta.com', adres:'Bursa Organize', vkn:'2222222222', vade:60, durum:'Pasif', not:'' },
-  { id:5, firma:'Kimya Plus Ltd.', yetkili:'Kerem Arslan', sektor:'Kimya', tel:'0506 555 66 77', email:'kerem@kimyaplus.com', adres:'Gebze, Kocaeli', vkn:'3333333333', vade:30, durum:'Potansiyel', not:'Fiyat teklifi bekleniyor' },
-];
+/* ─── SUPABASE CRM LOAD ─────────────────────────── */
+async function crmLoadData() {
+  // Önce localStorage'dan hızlı yükle
+  try {
+    const lsM = localStorage.getItem('crm_musteriler');
+    const lsS = localStorage.getItem('crm_siparisler');
+    if (lsM) crmMusteriler = JSON.parse(lsM);
+    if (lsS) crmSiparisler = JSON.parse(lsS);
+  } catch(e) {}
 
-let crmSiparisler = JSON.parse(localStorage.getItem('crm_siparisler') || 'null') || [
-  { id:'SIP-001', musteriId:1, yukle:'İstanbul/Tuzla', teslim:'Ankara/Ostim', tarih:'2025-03-10', durum:'Teslim Edildi', tutar:18500, odeme:'Ödendi', yuk:'Paletli', agirlik:22, not:'' },
-  { id:'SIP-002', musteriId:2, yukle:'Tekirdağ/Çorlu', teslim:'İzmir/Torbalı', tarih:'2025-03-18', durum:'Teslim Edildi', tutar:24000, odeme:'Ödendi', yuk:'Dökme', agirlik:28, not:'' },
-  { id:'SIP-003', musteriId:1, yukle:'Kocaeli/Gebze', teslim:'Bursa/OSB', tarih:'2025-03-25', durum:'Yolda', tutar:15000, odeme:'Bekliyor', yuk:'Paletli', agirlik:18, not:'Acil' },
-  { id:'SIP-004', musteriId:3, yukle:'Esenyurt/İst.', teslim:'Sakarya/Adapazarı', tarih:'2025-04-01', durum:'Bekliyor', tutar:9500, odeme:'Bekliyor', yuk:'Kargo', agirlik:8, not:'' },
-  { id:'SIP-005', musteriId:2, yukle:'İstanbul/Merter', teslim:'Konya/OSB', tarih:'2025-04-02', durum:'Yolda', tutar:31000, odeme:'Kısmi', yuk:'Paletli', agirlik:24, not:'' },
-  { id:'SIP-006', musteriId:5, yukle:'Gebze/Kocaeli', teslim:'Adana/Sanayi', tarih:'2025-04-05', durum:'Bekliyor', tutar:42000, odeme:'Bekliyor', yuk:'Kimyasal', agirlik:20, not:'ADR belgesi gerekli' },
-];
+  if (isLocalMode() || !_authToken) {
+    // Demo verisi yükle (ilk kullanım)
+    if (!crmMusteriler.length) {
+      crmMusteriler = [
+        { id:1, firma:'Güven Taşımacılık', yetkili:'Hasan Güven', sektor:'Perakende', tel:'0532 111 22 33', email:'info@guven.com', adres:'Bağcılar, İstanbul', vkn:'1234567890', vade:30, durum:'Aktif', notlar:'VIP müşteri' },
+        { id:2, firma:'Anadolu Market Zinciri', yetkili:'Fatma Çelik', sektor:'Gıda', tel:'0533 222 33 44', email:'lojistik@anadolu.com', adres:'Çerkezköy, Tekirdağ', vkn:'9876543210', vade:45, durum:'Aktif', notlar:'' },
+        { id:3, firma:'Özkan İnşaat', yetkili:'Murat Özkan', sektor:'İnşaat', tel:'0544 333 44 55', email:'murat@ozkan.com', adres:'Esenyurt, İstanbul', vkn:'1111111111', vade:15, durum:'Aktif', notlar:'Nakit ödeme tercih eder' },
+      ];
+      crmSiparisler = [
+        { id:'SIP-001', musteri_id:1, yukle:'İstanbul/Tuzla', teslim:'Ankara/Ostim', tarih:'2025-03-10', durum:'Teslim Edildi', tutar:18500, odeme:'Ödendi', yuk:'Paletli', agirlik:22, notlar:'' },
+        { id:'SIP-002', musteri_id:2, yukle:'Tekirdağ/Çorlu', teslim:'İzmir/Torbalı', tarih:'2025-03-18', durum:'Teslim Edildi', tutar:24000, odeme:'Ödendi', yuk:'Dökme', agirlik:28, notlar:'' },
+      ];
+      crmSaveLocal();
+    }
+    updateMusteriStat();
+    return;
+  }
 
-function crmSave() {
+  try {
+    // Müşterileri Supabase'den yükle
+    const resM = await fetch(sbUrl('musteriler?select=*&order=created_at.desc'), { headers: sbHeaders() });
+    if (resM.ok) {
+      const rows = await resM.json();
+      crmMusteriler = rows.map(r => ({
+        id      : r.id,
+        firma   : r.firma,
+        yetkili : r.yetkili || '',
+        sektor  : r.sektor  || 'Diğer',
+        tel     : r.tel     || '',
+        email   : r.email   || '',
+        adres   : r.adres   || '',
+        vkn     : r.vkn     || '',
+        vade    : r.vade    || 30,
+        durum   : r.durum   || 'Aktif',
+        notlar  : r.notlar  || '',
+      }));
+      localStorage.setItem('crm_musteriler', JSON.stringify(crmMusteriler));
+    }
+
+    // Siparişleri Supabase'den yükle
+    const resS = await fetch(sbUrl('siparisler?select=*&order=created_at.desc'), { headers: sbHeaders() });
+    if (resS.ok) {
+      const rows = await resS.json();
+      crmSiparisler = rows.map(r => ({
+        id         : r.id,
+        musteri_id : r.musteri_id,
+        yukle      : r.yukle   || '',
+        teslim     : r.teslim  || '',
+        tarih      : r.tarih   || '',
+        durum      : r.durum   || 'Bekliyor',
+        tutar      : r.tutar   || 0,
+        odeme      : r.odeme   || 'Bekliyor',
+        yuk        : r.yuk     || '',
+        agirlik    : r.agirlik || 0,
+        notlar     : r.notlar  || '',
+      }));
+      localStorage.setItem('crm_siparisler', JSON.stringify(crmSiparisler));
+    }
+  } catch(err) {
+    console.warn('CRM Supabase hatası, localStorage kullanılıyor:', err);
+  }
+  updateMusteriStat();
+}
+
+function crmSaveLocal() {
   localStorage.setItem('crm_musteriler', JSON.stringify(crmMusteriler));
   localStorage.setItem('crm_siparisler', JSON.stringify(crmSiparisler));
+}
+
+async function crmSaveMusteriCloud(obj, isEdit) {
+  if (isLocalMode() || !_authToken) return;
+  try {
+    const { data: { user } } = await getSB().auth.getUser();
+    if (!user) return;
+    const row = {
+      firma_id : currentFirmaId || undefined,
+      user_id  : user.id,
+      firma    : obj.firma,
+      yetkili  : obj.yetkili  || null,
+      sektor   : obj.sektor   || 'Diğer',
+      tel      : obj.tel      || null,
+      email    : obj.email    || null,
+      adres    : obj.adres    || null,
+      vkn      : obj.vkn      || null,
+      vade     : obj.vade     || 30,
+      durum    : obj.durum    || 'Aktif',
+      notlar   : obj.notlar   || null,
+    };
+    if (isEdit && typeof obj.id === 'number') {
+      // Supabase'de bigint ID ile güncelle
+      await fetch(sbUrl('musteriler?id=eq.' + obj.id), {
+        method : 'PATCH',
+        headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+        body   : JSON.stringify(row)
+      });
+    } else {
+      const res = await fetch(sbUrl('musteriler'), {
+        method : 'POST',
+        headers: { ...sbHeaders(), 'Prefer': 'return=representation' },
+        body   : JSON.stringify(row)
+      });
+      if (res.ok) {
+        const created = await res.json();
+        if (created && created[0]) obj.id = created[0].id; // Supabase'den dönen gerçek ID
+      }
+    }
+  } catch(err) { console.error('Müşteri buluta kaydedilemedi:', err); }
+}
+
+async function crmDeleteMusteriCloud(id) {
+  if (isLocalMode() || !_authToken) return;
+  try {
+    await fetch(sbUrl('musteriler?id=eq.' + id), { method: 'DELETE', headers: sbHeaders() });
+  } catch(err) { console.error('Müşteri buluttan silinemedi:', err); }
+}
+
+async function crmSaveSiparisCloud(obj, isEdit) {
+  if (isLocalMode() || !_authToken) return;
+  try {
+    const { data: { user } } = await getSB().auth.getUser();
+    if (!user) return;
+    const row = {
+      firma_id   : currentFirmaId || undefined,
+      user_id    : user.id,
+      musteri_id : obj.musteri_id,
+      yukle      : obj.yukle,
+      teslim     : obj.teslim,
+      tarih      : obj.tarih,
+      durum      : obj.durum   || 'Bekliyor',
+      tutar      : obj.tutar   || 0,
+      odeme      : obj.odeme   || 'Bekliyor',
+      yuk        : obj.yuk     || null,
+      agirlik    : obj.agirlik || null,
+      notlar     : obj.notlar  || null,
+    };
+    if (isEdit) {
+      await fetch(sbUrl('siparisler?id=eq.' + obj.id), {
+        method : 'PATCH',
+        headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+        body   : JSON.stringify(row)
+      });
+    } else {
+      const res = await fetch(sbUrl('siparisler'), {
+        method : 'POST',
+        headers: { ...sbHeaders(), 'Prefer': 'return=representation' },
+        body   : JSON.stringify(row)
+      });
+      if (res.ok) {
+        const created = await res.json();
+        if (created && created[0]) obj.id = created[0].id;
+      }
+    }
+  } catch(err) { console.error('Sipariş buluta kaydedilemedi:', err); }
+}
+
+async function crmDeleteSiparisCloud(id) {
+  if (isLocalMode() || !_authToken) return;
+  try {
+    await fetch(sbUrl('siparisler?id=eq.' + id), { method: 'DELETE', headers: sbHeaders() });
+  } catch(err) { console.error('Sipariş buluttan silinemedi:', err); }
+}
+
+function crmSave() {
+  crmSaveLocal();
   updateMusteriStat();
 }
 
 /* ─── YARDIMCI ─────────────────────────────────── */
 function crmNextId(arr) { return arr.length ? Math.max(...arr.map(x => typeof x.id === 'number' ? x.id : 0)) + 1 : 1; }
 function crmNextSipId() {
-  const nums = crmSiparisler.map(s => parseInt(s.id.replace('SIP-',''))||0);
-  return 'SIP-' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3,'0');
+  const nums = crmSiparisler.map(s => {
+    const n = parseInt((s.id||'').toString().replace(/[^0-9]/g,''));
+    return isNaN(n) ? 0 : n;
+  });
+  return 'SIP-' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(4,'0');
 }
 function crmFmt(n) { return (n||0).toLocaleString('tr-TR'); }
 function crmColor(str) { let h=0; for(let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))&0xffff; return CRM_COLORS[h%CRM_COLORS.length]; }
@@ -10588,8 +10365,8 @@ function crmDurumBadge(d) {
   const map = { 'Aktif':'badge-green','Pasif':'badge-muted','Potansiyel':'badge-blue','Bekliyor':'badge-yellow','Yolda':'badge-blue','Teslim Edildi':'badge-green','İptal':'badge-red','Ödendi':'badge-green','Kısmi':'badge-yellow' };
   return `<span class="badge ${map[d]||'badge-muted'}">${d}</span>`;
 }
-function crmMusteriById(id) { return crmMusteriler.find(m=>m.id===id); }
-function crmSiparisleriByMusteri(id) { return crmSiparisler.filter(s=>s.musteriId===id); }
+function crmMusteriById(id) { return crmMusteriler.find(m=>m.id==id); }
+function crmSiparisleriByMusteri(id) { return crmSiparisler.filter(s=>s.musteri_id==id); }
 function crmCiroByMusteri(id) { return crmSiparisleriByMusteri(id).filter(s=>s.durum!=='İptal').reduce((a,s)=>a+(s.tutar||0),0); }
 
 
@@ -10670,13 +10447,13 @@ function crmRenderMusteriler() {
 function crmRenderSiparisler() {
   const q = document.getElementById('crm-siparis-search').value.toLowerCase();
   const durum = document.getElementById('crm-siparis-durum').value;
-  const musteriId = parseInt(document.getElementById('crm-siparis-musteri').value)||0;
+  const filterMusteriId = parseInt(document.getElementById('crm-siparis-musteri').value)||0;
 
   let list = crmSiparisler.filter(s=>{
-    const m = crmMusteriById(s.musteriId);
-    const match = s.id.toLowerCase().includes(q) || (m&&m.firma.toLowerCase().includes(q))
+    const m = crmMusteriById(s.musteri_id);
+    const match = String(s.id).toLowerCase().includes(q) || (m&&m.firma.toLowerCase().includes(q))
       || (s.yukle||'').toLowerCase().includes(q) || (s.teslim||'').toLowerCase().includes(q);
-    return match && (!durum||s.durum===durum) && (!musteriId||s.musteriId===musteriId);
+    return match && (!durum||s.durum===durum) && (!filterMusteriId||s.musteri_id==filterMusteriId);
   }).sort((a,b)=>b.tarih.localeCompare(a.tarih));
 
   const tbody = document.getElementById('crm-siparis-tbody');
@@ -10686,7 +10463,7 @@ function crmRenderSiparisler() {
   }
 
   tbody.innerHTML = list.map(s=>{
-    const m = crmMusteriById(s.musteriId);
+    const m = crmMusteriById(s.musteri_id);
     return `<tr>
       <td class="mono" style="color:var(--accent);">${s.id}</td>
       <td style="font-weight:600;">${m?m.firma:'—'}</td>
@@ -10793,11 +10570,13 @@ function switchCrmTab(name, btn) {
 /* ─── MÜŞTERİ MODAL ─────────────────────────── */
 function openCrmMusteriModal(id=null) {
   crmEditingMusteriId = id;
-  const m = id ? crmMusteriler.find(x=>x.id===id) : null;
+  const m = id ? crmMusteriler.find(x=>x.id==id) : null;
   document.getElementById('crm-musteri-modal-title').textContent = m ? 'Müşteriyi Düzenle' : 'Yeni Müşteri';
-  ['firma','yetkili','tel','email','adres','vkn','not'].forEach(f=>{
+  ['firma','yetkili','tel','email','adres','vkn'].forEach(f=>{
     document.getElementById('crm-m-'+f).value = m ? (m[f]||'') : '';
   });
+  // notlar alanı - HTML input id'si crm-m-not ama veri alanı notlar
+  document.getElementById('crm-m-not').value = m ? (m.notlar||'') : '';
   document.getElementById('crm-m-sektor').value = m ? (m.sektor||'Perakende') : 'Perakende';
   document.getElementById('crm-m-durum').value = m ? (m.durum||'Aktif') : 'Aktif';
   document.getElementById('crm-m-vade').value = m ? (m.vade||30) : 30;
@@ -10810,33 +10589,41 @@ function saveCrmMusteri() {
   const firma = document.getElementById('crm-m-firma').value.trim();
   if(!firma) { showToast('Firma adı zorunlu','error'); return; }
   const obj = {
-    firma, yetkili:document.getElementById('crm-m-yetkili').value.trim(),
-    sektor:document.getElementById('crm-m-sektor').value,
-    tel:document.getElementById('crm-m-tel').value.trim(),
-    email:document.getElementById('crm-m-email').value.trim(),
-    adres:document.getElementById('crm-m-adres').value.trim(),
-    vkn:document.getElementById('crm-m-vkn').value.trim(),
-    vade:parseInt(document.getElementById('crm-m-vade').value)||30,
-    durum:document.getElementById('crm-m-durum').value,
-    not:document.getElementById('crm-m-not').value.trim(),
+    firma,
+    yetkili : document.getElementById('crm-m-yetkili').value.trim(),
+    sektor  : document.getElementById('crm-m-sektor').value,
+    tel     : document.getElementById('crm-m-tel').value.trim(),
+    email   : document.getElementById('crm-m-email').value.trim(),
+    adres   : document.getElementById('crm-m-adres').value.trim(),
+    vkn     : document.getElementById('crm-m-vkn').value.trim(),
+    vade    : parseInt(document.getElementById('crm-m-vade').value)||30,
+    durum   : document.getElementById('crm-m-durum').value,
+    notlar  : document.getElementById('crm-m-not').value.trim(),
   };
-  if(crmEditingMusteriId) {
+  const isEdit = !!crmEditingMusteriId;
+  if (isEdit) {
     const idx = crmMusteriler.findIndex(m=>m.id===crmEditingMusteriId);
     crmMusteriler[idx] = { ...crmMusteriler[idx], ...obj };
+    crmSaveMusteriCloud({ ...crmMusteriler[idx] }, true);
     showToast('Müşteri güncellendi ✓');
   } else {
     obj.id = crmNextId(crmMusteriler);
     crmMusteriler.push(obj);
+    crmSaveMusteriCloud(obj, false).then(() => {
+      crmSaveLocal(); // ID güncellenmiş olabilir
+      crmRenderMusteriler();
+    });
     showToast('Müşteri eklendi ✓');
   }
   crmSave(); closeCrmMusteriModal(); crmRenderMusteriler(); crmRenderStats();
 }
 
-function deleteCrmMusteri(id) {
+async function deleteCrmMusteri(id) {
   if(!confirm('Bu müşteriyi silmek istiyor musunuz?')) return;
-  crmMusteriler = crmMusteriler.filter(m=>m.id!==id);
-  crmSiparisler = crmSiparisler.filter(s=>s.musteriId!==id);
+  crmMusteriler = crmMusteriler.filter(m=>m.id!=id);
+  crmSiparisler = crmSiparisler.filter(s=>s.musteri_id!=id);
   crmSave(); crmRenderMusteriler(); crmRenderStats(); showToast('Müşteri silindi');
+  await crmDeleteMusteriCloud(id);
 }
 
 /* ─── SİPARİŞ MODAL ─────────────────────────── */
@@ -10853,32 +10640,35 @@ function openCrmSiparisModal() {
 function closeCrmSiparisModal() { document.getElementById('crm-siparis-modal-bg').classList.add('hidden'); }
 
 function saveCrmSiparis() {
-  const musteriId = parseInt(document.getElementById('crm-s-musteri').value);
+  const musteri_id = parseInt(document.getElementById('crm-s-musteri').value);
   const yukle = document.getElementById('crm-s-yukle').value.trim();
   const teslim = document.getElementById('crm-s-teslim').value.trim();
-  if(!musteriId||!yukle||!teslim){ showToast('Müşteri, yükleme ve teslim noktası zorunlu','error'); return; }
+  if(!musteri_id||!yukle||!teslim){ showToast('Müşteri, yükleme ve teslim noktası zorunlu','error'); return; }
   const obj = {
-    id: crmNextSipId(), musteriId,
+    id         : crmNextSipId(),
+    musteri_id,
     yukle, teslim,
-    tarih: document.getElementById('crm-s-tarih').value,
-    durum: document.getElementById('crm-s-durum').value,
-    tutar: parseFloat(document.getElementById('crm-s-tutar').value)||0,
-    odeme: document.getElementById('crm-s-odeme').value,
-    yuk: document.getElementById('crm-s-yuk').value.trim(),
+    tarih  : document.getElementById('crm-s-tarih').value,
+    durum  : document.getElementById('crm-s-durum').value,
+    tutar  : parseFloat(document.getElementById('crm-s-tutar').value)||0,
+    odeme  : document.getElementById('crm-s-odeme').value,
+    yuk    : document.getElementById('crm-s-yuk').value.trim(),
     agirlik: parseFloat(document.getElementById('crm-s-agirlik').value)||0,
-    not: document.getElementById('crm-s-not').value.trim(),
+    notlar : document.getElementById('crm-s-not').value.trim(),
   };
   crmSiparisler.push(obj);
+  crmSaveSiparisCloud(obj, false);
   crmSave(); closeCrmSiparisModal();
   crmFillMusteriSelect('crm-siparis-musteri');
   crmRenderSiparisler(); crmRenderStats();
   showToast('Sipariş eklendi ✓');
 }
 
-function deleteCrmSiparis(id) {
+async function deleteCrmSiparis(id) {
   if(!confirm('Bu siparişi silmek istiyor musunuz?')) return;
   crmSiparisler = crmSiparisler.filter(s=>s.id!==id);
   crmSave(); crmRenderSiparisler(); crmRenderStats(); showToast('Sipariş silindi');
+  await crmDeleteSiparisCloud(id);
 }
 
 /* ─── DRAWER ─────────────────────────────────── */
@@ -10903,7 +10693,7 @@ function openCrmDrawer(id) {
     ['Adres', m.adres||'—'],
     ['Vergi No', m.vkn||'—'],
     ['Ödeme Vadesi', m.vade ? m.vade+' gün' : '—'],
-    ['Not', m.not||'—'],
+    ['Not', m.notlar||'—'],
   ];
   document.getElementById('crm-drawer-detaylar').innerHTML = detaylar.map(([k,v])=>`
     <div class="detail-row"><span class="detail-key">${k}</span><span class="detail-val">${v}</span></div>`).join('');
