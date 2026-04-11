@@ -11672,7 +11672,10 @@ function opsSave()  { opsSaveLocal(); }
 function opsNextId() {
   return isEmirleri.length ? Math.max(...isEmirleri.map(e => e.id || 0)) + 1 : 1;
 }
-function opsById(id) { return isEmirleri.find(e => e.id === id); }
+function opsById(id) {
+  const sid = String(id);
+  return isEmirleri.find(e => String(e.id) === sid || (e._dbId != null && String(e._dbId) === sid));
+}
 
 // fotograflar alanı Supabase'den string JSON gelebilir, localStorage'dan array —
 // her durumda güvenli array döndür
@@ -11766,7 +11769,10 @@ async function opsLoadCloud() {
   if (isLocalMode() || !_authToken) return;
   try {
     let url = sbUrl('is_emirleri?select=*&order=id.desc');
-    if (currentFirmaId) url += '&firma_id=eq.' + currentFirmaId;
+    if (currentFirmaId) {
+      // firma_id eşleşen VEYA firma_id boş olan kayıtları al
+      url += '&or=(firma_id.eq.' + currentFirmaId + ',firma_id.is.null)';
+    }
     const res = await fetch(url, { headers: sbHeaders() });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const rows = await res.json();
@@ -11822,12 +11828,17 @@ async function opsSaveCloud(obj) {
       if (res.ok) {
         const created = await res.json();
         if (created?.[0]?.id) {
-          // Supabase'nin atadığı gerçek id'yi sakla
-          obj._dbId = created[0].id;
+          // Supabase'nin atadığı gerçek id'yi sakla — hem _dbId hem id güncelle
+          const realId = created[0].id;
+          obj._dbId = realId;
+          obj.id    = realId;
           const idx = isEmirleri.findIndex(e => e === obj);
-          if (idx !== -1) isEmirleri[idx]._dbId = created[0].id;
+          if (idx !== -1) {
+            isEmirleri[idx]._dbId = realId;
+            isEmirleri[idx].id    = realId;
+          }
           opsSaveLocal();
-          console.log('is_emirleri kayıt OK, Supabase id:', created[0].id);
+          console.log('is_emirleri kayıt OK, Supabase id:', realId);
         }
       } else {
         const err = await res.text();
@@ -12186,7 +12197,10 @@ function saveOpsIsEmri() {
   };
   isEmirleri.push(obj);
   opsSaveLocal();
-  opsSaveCloud(obj);
+  opsSaveCloud(obj).then(() => {
+    // Cloud'dan _dbId döndükten sonra local'i tekrar kaydet
+    opsSaveLocal();
+  });
   closeOpsIsEmriModal();
   opsRenderStats(); opsRenderTable(); opsRenderKanban();
   updateOpsStatCard();
@@ -12214,6 +12228,7 @@ function openOpsDrawer(id) {
   const e = opsById(id);
   if (!e) return;
   opsDrawerActiveId = id;
+  const eId = e._dbId ?? e.id; // gerçek Supabase id (inline onclick'lerde kullanılır)
 
   document.getElementById('ops-drawer-title').textContent = e.konteyner_no ? e.konteyner_no.split('\n')[0] + (e.konteyner_no.split('\n').length > 1 ? ` +${e.konteyner_no.split('\n').length-1}` : '') : ('İş Emri #' + e.id);
   document.getElementById('ops-drawer-sub').textContent   =
@@ -12283,13 +12298,13 @@ function openOpsDrawer(id) {
         <img src="${f.url}" alt="${f.tip}" onclick="window.open('${f.url}','_blank')" style="cursor:pointer;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
         <div style="display:none;align-items:center;justify-content:center;height:100%;font-size:24px;">📷</div>
         <div class="ops-foto-tip">${f.tip}</div>
-        <button onclick="event.stopPropagation();opsFotoSil(${e.id},${fi})" title="Fotoğrafı sil" style="position:absolute;top:4px;right:4px;background:rgba(239,68,68,.85);border:none;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:#fff;font-weight:900;line-height:1;padding:0;">✕</button>
+        <button onclick="event.stopPropagation();opsFotoSil(${eId},${fi})" title="Fotoğrafı sil" style="position:absolute;top:4px;right:4px;background:rgba(239,68,68,.85);border:none;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:#fff;font-weight:900;line-height:1;padding:0;">✕</button>
       </div>`).join('')}</div>` :
     `<div class="ops-foto-empty">📷<br>Henüz fotoğraf yüklenmedi</div>`) +
     `<div style="margin-top:10px;">
       <label style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
         📎 Fotoğraf Ekle
-        <input type="file" accept="image/*" multiple style="display:none;" onchange="opsFotoEkle(${e.id}, this)">
+        <input type="file" accept="image/*" multiple style="display:none;" onchange="opsFotoEkle(${eId}, this)">
       </label>
       <span style="font-size:10.5px;color:var(--muted);margin-left:8px;">JPG/PNG — cihazdan seç</span>
     </div>`;
@@ -12298,7 +12313,7 @@ function openOpsDrawer(id) {
   const durumSecenekler = ['Bekliyor','Yolda','Fabrikada','Teslim Edildi','İptal'].filter(d => d !== e.durum);
   document.getElementById('ops-drawer-actions').innerHTML = durumSecenekler.map(d => {
     const renk = { 'Bekliyor':'var(--yellow)','Yolda':'var(--blue)','Fabrikada':'var(--accent)','Teslim Edildi':'var(--green)','İptal':'var(--red)' }[d];
-    return `<button onclick="opsGuncelleDurum(${e.id},'${d}')" style="display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border2);color:${renk};border-radius:8px;padding:8px 14px;font-family:var(--font-body);font-size:12.5px;font-weight:600;cursor:pointer;transition:border-color .15s;width:100%;" onmouseover="this.style.borderColor='${renk}'" onmouseout="this.style.borderColor='var(--border2)'">
+    return `<button onclick="opsGuncelleDurum(${eId},'${d}')" style="display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border2);color:${renk};border-radius:8px;padding:8px 14px;font-family:var(--font-body);font-size:12.5px;font-weight:600;cursor:pointer;transition:border-color .15s;width:100%;" onmouseover="this.style.borderColor='${renk}'" onmouseout="this.style.borderColor='var(--border2)'">
       → ${d} olarak işaretle
     </button>`;
   }).join('');
@@ -12313,7 +12328,7 @@ function closeOpsDrawer() {
 }
 
 /* ── DURUM GÜNCELLE ─────────────────────────────────────── */
-function opsGuncelleDurum(id, yeniDurum) {
+async function opsGuncelleDurum(id, yeniDurum) {
   const e = opsById(id);
   if (!e) return;
   e.durum = yeniDurum;
@@ -12325,8 +12340,9 @@ function opsGuncelleDurum(id, yeniDurum) {
     e.fabrika_cikis = new Date().toISOString();
   }
   opsSaveLocal();
-  opsSaveCloud(e); // arka planda cloud'a yaz
-  // Teslim Edildi → otomatik sefer kaydı oluştur
+  // Cloud'a kaydet ve _dbId'nin geri dönmesini bekle (sefer için gerekli)
+  await opsSaveCloud(e);
+  // Teslim Edildi → otomatik sefer kaydı oluştur (_dbId artık hazır)
   if (yeniDurum === 'Teslim Edildi') {
     opsAutoCreateSefer(e);
   }
@@ -12335,7 +12351,7 @@ function opsGuncelleDurum(id, yeniDurum) {
   opsRenderKanban();
   opsRenderArsiv();
   updateOpsStatCard();
-  openOpsDrawer(id); // drawer'ı güncelle
+  openOpsDrawer(e._dbId ?? e.id); // drawer'ı güncel id ile aç
   logActivity(`📦 <strong>${e.konteyner_no||e.arac_plaka}</strong> → ${yeniDurum}`);
   showToast('Durum güncellendi: ' + yeniDurum);
 }
