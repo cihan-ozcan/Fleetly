@@ -3145,6 +3145,38 @@
         </div>
       </div>
     </div>
+    <div class="stat-card" id="ops-stat-card" style="cursor:pointer;border-color:rgba(232,82,26,.25);box-shadow:0 0 0 1px rgba(232,82,26,.08)" onclick="openOperasyonPage()" title="Operasyon modülünü açmak için tıklayın" onmouseover="this.style.borderColor='rgba(232,82,26,.55)';this.style.boxShadow='0 0 0 2px rgba(232,82,26,.15)'" onmouseout="this.style.borderColor='rgba(232,82,26,.25)';this.style.boxShadow='0 0 0 1px rgba(232,82,26,.08)'">
+      <div class="stat-card-top">
+        <div class="stat-icon" style="background:rgba(232,82,26,.12);color:var(--accent)">📦</div>
+        <span class="stat-trend" id="trend-ops" style="color:var(--accent)">Operasyon</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:4px">
+        <div>
+          <div class="stat-value" id="stat-ops-aktif" style="font-size:26px;color:var(--accent)">0</div>
+          <div class="stat-label">Aktif İş Emri</div>
+        </div>
+        <div style="width:1px;height:36px;background:var(--border);flex-shrink:0;margin-bottom:14px"></div>
+        <div>
+          <div class="stat-value green" id="stat-ops-teslim" style="font-size:22px">0</div>
+          <div class="stat-label">Teslim Edildi</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--yellow);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Yolda: </span>
+          <span style="color:var(--yellow);font-family:var(--font-mono);font-weight:700" id="stat-ops-yolda">0</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Fabrikada: </span>
+          <span style="color:var(--blue);font-family:var(--font-mono);font-weight:700" id="stat-ops-fabrika">0</span>
+        </div>
+        <div style="margin-left:auto">
+          <span style="font-size:10px;color:rgba(232,82,26,.6);font-weight:600;letter-spacing:.03em">DETAY ›</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 4b. ACİL DURUMLAR (tam genişlik) -->
@@ -4741,6 +4773,7 @@ async function checkAuth() {
     // Abonelik kontrolü yap
     await checkSubscription();
     loadVehicles();
+    opsLoadLocal(); // Adım 4b: operasyon stat kartı başlangıçta yüklensin
   } else {
     showLoginOverlay();
   }
@@ -5095,6 +5128,7 @@ async function doLogin() {
   hideLoginOverlay();
   await checkSubscription();
   loadVehicles();
+  opsLoadLocal(); // Adım 4b: operasyon stat kartı login sonrası yüklensin
 }
 
 async function doResetPassword() {
@@ -9637,6 +9671,7 @@ const DASH_CARDS = [
   { id: 'sefer-stat-card',   label: 'Sefer Takibi',      sub: 'Toplam sefer, ciro ve km bilgisi',      icon: '🗺', color: 'rgba(167,139,250,.12)',  def: true },
   { id: 'masraf-stat-card',  label: 'Masraf Takibi',     sub: 'Gider kayıtları ve kategori analizi',   icon: '💸', color: 'rgba(245,158,11,.12)',   def: true },
   { id: 'rapor-stat-card',   label: 'Raporlar & Analiz', sub: 'Net kâr/zarar, ciro ve gider özeti',    icon: '📊', color: 'rgba(232,121,249,.12)',  def: true },
+  { id: 'ops-stat-card',     label: 'Aktif Operasyonlar', sub: 'Bugün açık iş emirleri',               icon: '📦', color: 'rgba(232,82,26,.12)',    def: true },
 ];
 
 function loadDashPrefs() {
@@ -11421,6 +11456,8 @@ let opsDrawerActiveId = null;
 function opsLoadLocal() {
   try { isEmirleri = JSON.parse(localStorage.getItem('fleetly_is_emirleri') || '[]'); }
   catch(e) { isEmirleri = []; }
+  // Dashboard stat kartını güncelle
+  if (typeof updateOpsStatCard === 'function') updateOpsStatCard();
 }
 function opsSaveLocal() {
   localStorage.setItem('fleetly_is_emirleri', JSON.stringify(isEmirleri));
@@ -11893,6 +11930,27 @@ function opsKopyalaLink() {
   navigator.clipboard.writeText(url).then(() => showToast('Link panoya kopyalandı ✓')).catch(() => {
     prompt('Linki kopyalayın:', url);
   });
+}
+
+
+/* ─── OPS DASHBOARD STAT GÜNCELLEME ─────────────────────────── */
+function updateOpsStatCard() {
+  try {
+    const aktif   = isEmirleri.filter(e => e.durum !== 'Teslim Edildi' && e.durum !== 'İptal').length;
+    const teslim  = isEmirleri.filter(e => e.durum === 'Teslim Edildi').length;
+    const yolda   = isEmirleri.filter(e => e.durum === 'Yolda').length;
+    const fabrika = isEmirleri.filter(e => e.durum === 'Fabrikada').length;
+    const elAktif   = document.getElementById('stat-ops-aktif');
+    const elTeslim  = document.getElementById('stat-ops-teslim');
+    const elYolda   = document.getElementById('stat-ops-yolda');
+    const elFabrika = document.getElementById('stat-ops-fabrika');
+    const elTrend   = document.getElementById('trend-ops');
+    if (elAktif)   elAktif.textContent   = aktif;
+    if (elTeslim)  elTeslim.textContent  = teslim;
+    if (elYolda)   elYolda.textContent   = yolda;
+    if (elFabrika) elFabrika.textContent = fabrika;
+    if (elTrend)   elTrend.textContent   = aktif > 0 ? aktif + ' açık' : 'Hepsi teslim';
+  } catch(err) { /* sessiz hata */ }
 }
 
 /* ─── INIT ─────────────────────────────────────── */
