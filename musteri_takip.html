@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#08091a">
+  <title>Fleetly — Sevkiyat Takip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;700;800;900&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="config.js" onerror="console.warn('config.js yok')"></script>
+  <style>
+    :root {
+      --bg:       #08091a;
+      --surface:  #0e1025;
+      --surface2: #131428;
+      --surface3: #1a1c35;
+      --border:   rgba(255,255,255,.08);
+      --border2:  rgba(255,255,255,.16);
+      --accent:   #e8521a;
+      --accent2:  #ff7043;
+      --text:     #f0f0f8;
+      --text2:    #9899b8;
+      --muted:    #5a5b78;
+      --green:    #22c55e;
+      --yellow:   #eab308;
+      --red:      #ef4444;
+      --blue:     #38bdf8;
+      --purple:   #a78bfa;
+      --font-display: 'Big Shoulders Display', sans-serif;
+      --font-body:    'Instrument Sans', sans-serif;
+      --font-mono:    'IBM Plex Mono', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    .top-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo-mark {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
+    }
+    .top-bar-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+      flex: 1;
+    }
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(34,197,94,.1);
+      border: 1px solid rgba(34,197,94,.25);
+      border-radius: 99px;
+      padding: 3px 10px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--green);
+    }
+    .live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 1.5s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── DURUM BAR ── */
+    .durum-bar {
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    .durum-bar.bekliyor  { background: rgba(234,179,8,.07);   color: var(--yellow); }
+    .durum-bar.yolda     { background: rgba(56,189,248,.07);  color: var(--blue); }
+    .durum-bar.fabrikada { background: rgba(167,139,250,.07); color: var(--purple); }
+    .durum-bar.teslim    { background: rgba(34,197,94,.07);   color: var(--green); }
+    .durum-bar.iptal     { background: rgba(239,68,68,.07);   color: var(--red); }
+    .durum-bar-sub {
+      font-weight: 400;
+      opacity: .75;
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    /* ── LAYOUT ── */
+    .page {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 20px 20px 60px;
+    }
+
+    /* ── MAP ── */
+    .map-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 18px;
+      position: relative;
+    }
+    .map-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .map-header-label {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .map-last-update {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+    }
+    #harita {
+      width: 100%;
+      height: 280px;
+      background: var(--surface2);
+    }
+    .no-location {
+      height: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .no-location-icon { font-size: 36px; opacity: .5; }
+
+    /* ── INFO CARDS ── */
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .info-card.full { grid-column: span 2; }
+    .info-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .info-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    /* ── PROGRESS ── */
+    .progress-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding-bottom: 14px;
+      position: relative;
+    }
+    .step:last-child { padding-bottom: 0; }
+    .step::before {
+      content: '';
+      position: absolute;
+      left: 14px; top: 28px; bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .step:last-child::before { display: none; }
+    .step-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      z-index: 1;
+    }
+    .step-dot.done  { background: rgba(34,197,94,.12); border-color: var(--green); }
+    .step-dot.active {
+      background: rgba(232,82,26,.12); border-color: var(--accent);
+      animation: ring 2s infinite;
+    }
+    @keyframes ring {
+      0%,100% { box-shadow: 0 0 0 0 rgba(232,82,26,.4); }
+      50%      { box-shadow: 0 0 0 5px rgba(232,82,26,0); }
+    }
+    .step-info { flex: 1; padding-top: 4px; }
+    .step-label { font-size: 13px; font-weight: 600; color: var(--text2); }
+    .step-label.done   { color: var(--green); }
+    .step-label.active { color: var(--accent); }
+    .step-time {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── NOTLAR ── */
+    .notlar-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 18px;
+    }
+    .notlar-box p {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center;
+      padding: 20px 16px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .05em;
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+    }
+
+    /* ── ERROR / LOADING ── */
+    #loading-state, #error-state {
+      min-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      text-align: center;
+      padding: 40px 24px;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #error-state { display: none; }
+    #error-state .err-icon { font-size: 44px; }
+    #error-state h2 { font-family: var(--font-display); font-size: 22px; font-weight: 800; }
+    #error-state p  { font-size: 14px; color: var(--text2); max-width: 280px; }
+
+    #main-content { display: none; }
+  </style>
+</head>
+<body>
+
+<div id="loading-state">
+  <div class="spinner"></div>
+  <div style="color:var(--text2);font-size:14px;">Sevkiyat bilgileri yükleniyor…</div>
+</div>
+
+<div id="error-state">
+  <div class="err-icon">🔒</div>
+  <h2>Bulunamadı</h2>
+  <p id="error-msg">Bu takip linki geçersiz veya süresi dolmuş.</p>
+</div>
+
+<div id="main-content">
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="logo-mark">🚛</div>
+    <div class="top-bar-title">Sevkiyat Takip</div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <span>CANLI</span>
+    </div>
+  </div>
+
+  <!-- DURUM BAR -->
+  <div class="durum-bar bekliyor" id="durum-bar">
+    <span id="durum-icon">⏳</span>
+    <span id="durum-text">Yükleniyor…</span>
+    <span class="durum-bar-sub" id="durum-sub"></span>
+  </div>
+
+  <div class="page">
+
+    <!-- HARİTA -->
+    <div class="map-card">
+      <div class="map-header">
+        <span class="map-header-label">📍 Araç Konumu</span>
+        <span class="map-last-update" id="konum-zaman">—</span>
+      </div>
+      <div id="harita-wrap">
+        <div class="no-location" id="no-location">
+          <div class="no-location-icon">📡</div>
+          <div>Konum henüz paylaşılmadı</div>
+          <div style="font-size:11px;opacity:.6">Şoför yola çıktığında görünecek</div>
+        </div>
+        <iframe id="harita" style="display:none;border:none;" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+    </div>
+
+    <!-- SEVK BİLGİLERİ -->
+    <div class="section-title" style="margin-bottom:10px;">Sevkiyat Bilgileri</div>
+    <div class="info-grid">
+      <div class="info-card full">
+        <div class="info-label">Konteyner / Referans No</div>
+        <div class="info-value" id="inf-konteyner" style="font-family:var(--font-mono);letter-spacing:.05em;font-size:18px;">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Yükleme Yeri</div>
+        <div class="info-value" id="inf-yukle">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Teslim Yeri</div>
+        <div class="info-value" id="inf-teslim">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Araç Plakası</div>
+        <div class="info-value" id="inf-plaka" style="font-family:var(--font-mono);">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Mühür No</div>
+        <div class="info-value" id="inf-muhur" style="font-family:var(--font-mono);">—</div>
+      </div>
+    </div>
+
+    <!-- OPERASYON İLERLEMESİ -->
+    <div class="section-title" style="margin-bottom:10px;">Operasyon Aşamaları</div>
+    <div class="progress-card">
+      <div class="steps" id="steps-list"></div>
+    </div>
+
+    <!-- NOTLAR -->
+    <div id="notlar-wrap" style="display:none">
+      <div class="section-title" style="margin-bottom:8px;">Notlar</div>
+      <div class="notlar-box">
+        <p id="notlar-text"></p>
+      </div>
+    </div>
+
+  </div><!-- /page -->
+
+  <div class="footer">
+    Fleetly Sevkiyat Takip &nbsp;·&nbsp; Bu sayfa otomatik güncellenir &nbsp;·&nbsp; <span id="footer-firma">—</span>
+  </div>
+</div><!-- /main-content -->
+
+<script>
+/* ─── CONFIG ─── */
+const CFG     = (typeof window.FILO_CONFIG !== 'undefined') ? window.FILO_CONFIG : null;
+const SB_URL  = CFG?.SUPABASE_URL  || '';
+const SB_ANON = CFG?.SUPABASE_ANON || '';
+
+/* ─── STATE ─── */
+let isEmri = null;
+let isEmriId = null;
+let refreshTimer = null;
+
+/* ─── ZAMAN FORMAT ─── */
+function fmtTime(ts) {
+  if (!ts) return null;
+  try {
+    return new Date(ts).toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  } catch { return null; }
+}
+
+/* ─── RENDER ─── */
+const DURUM_META = {
+  'Bekliyor':      { icon:'⏳', cls:'bekliyor',  label:'Bekliyor — Araç Atandı' },
+  'Yolda':         { icon:'🚛', cls:'yolda',     label:'Yolda — Teslimata Gidiyor' },
+  'Fabrikada':     { icon:'🏭', cls:'fabrikada', label:'Fabrikada — İşlem Sürüyor' },
+  'Teslim Edildi': { icon:'✅', cls:'teslim',    label:'Teslim Edildi' },
+  'İptal':         { icon:'❌', cls:'iptal',     label:'İptal Edildi' },
+};
+
+function render() {
+  if (!isEmri) return;
+  const e = isEmri;
+  const durum = e.durum || 'Bekliyor';
+  const meta  = DURUM_META[durum] || DURUM_META['Bekliyor'];
+
+  // Durum bar
+  const bar = document.getElementById('durum-bar');
+  bar.className = 'durum-bar ' + meta.cls;
+  document.getElementById('durum-icon').textContent = meta.icon;
+  document.getElementById('durum-text').textContent = meta.label;
+
+  // Son güncelleme zamanı durum barında
+  const subText = e.konum_zaman ? ('Konum: ' + fmtTime(e.konum_zaman)) : '';
+  document.getElementById('durum-sub').textContent = subText;
+
+  // Bilgiler
+  document.getElementById('inf-konteyner').textContent = e.konteyner_no || ('İş #' + e.id);
+  document.getElementById('inf-yukle').textContent     = e.yukle_yeri   || '—';
+  document.getElementById('inf-teslim').textContent    = e.teslim_yeri  || '—';
+  document.getElementById('inf-plaka').textContent     = e.arac_plaka   || '—';
+  document.getElementById('inf-muhur').textContent     = e.muhur_no     || '—';
+  document.title = (e.konteyner_no || 'Sevkiyat') + ' Takip — Fleetly';
+
+  // Notlar (operatör notu varsa göster — şoför notu değil)
+  // Kısa notlar göster; hassas iç notları gizleyebilirsiniz buradan
+  if (e.notlar) {
+    document.getElementById('notlar-wrap').style.display = '';
+    document.getElementById('notlar-text').textContent = e.notlar;
+  }
+
+  // Footer firma
+  document.getElementById('footer-firma').textContent = e.musteri_adi || '';
+
+  // Harita
+  renderMap(e);
+
+  // Adımlar
+  renderSteps(e);
+}
+
+function renderMap(e) {
+  const lat = parseFloat(e.konum_lat);
+  const lng = parseFloat(e.konum_lng);
+  const noLoc = document.getElementById('no-location');
+  const iframe = document.getElementById('harita');
+  const timeEl = document.getElementById('konum-zaman');
+
+  if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+    noLoc.style.display = 'flex';
+    iframe.style.display = 'none';
+    timeEl.textContent = 'Konum yok';
+    return;
+  }
+
+  noLoc.style.display = 'none';
+  iframe.style.display = 'block';
+
+  // OpenStreetMap embed (ücretsiz, API key gerektirmez)
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.05},${lat-0.05},${lng+0.05},${lat+0.05}&layer=mapnik&marker=${lat},${lng}`;
+  if (iframe.src !== mapUrl) iframe.src = mapUrl;
+
+  timeEl.textContent = e.konum_zaman ? ('Güncellendi: ' + fmtTime(e.konum_zaman)) : '—';
+}
+
+function renderSteps(e) {
+  const steps = [
+    { label: 'Atama Yapıldı',       time: e.atama_zamani,   icon: '📋' },
+    { label: 'Yola Çıkıldı',        time: e.yola_zaman,     icon: '🚛' },
+    { label: 'Fabrikaya Girildi',    time: e.fabrika_giris,  icon: '🏭' },
+    { label: 'Fabrikadan Çıkıldı',   time: e.fabrika_cikis,  icon: '🔄' },
+    { label: 'Teslim Edildi',        time: e.teslim_zamani,  icon: '🎯' },
+  ];
+  const el = document.getElementById('steps-list');
+  el.innerHTML = steps.map((s, i) => {
+    const done  = !!s.time;
+    const next  = !done && steps.slice(0, i).every(p => !!p.time);
+    const cls   = done ? 'done' : (next ? 'active' : '');
+    return `
+      <div class="step">
+        <div class="step-dot ${cls}">${done ? '✓' : s.icon}</div>
+        <div class="step-info">
+          <div class="step-label ${cls}">${s.label}</div>
+          ${done ? `<div class="step-time">${fmtTime(s.time)}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ─── SUPABASE FETCH ─── */
+async function fetchIsEmri(id) {
+  if (!SB_URL || !SB_ANON) return null;
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/is_emirleri?id=eq.${id}&select=*`,
+      { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.[0] || null;
+  } catch { return null; }
+}
+
+/* ─── AUTO REFRESH ─── */
+async function refresh() {
+  if (!isEmriId) return;
+  const data = await fetchIsEmri(isEmriId);
+  if (data) {
+    isEmri = data;
+    render();
+  }
+}
+
+/* ─── INIT ─── */
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('m'); // müşteri token parametresi
+
+  if (!token) {
+    showError('Takip linki geçersiz. Lütfen operatörünüzden yeni link isteyin.');
+    return;
+  }
+
+  // Token decode: btoa('mtr_' + id + '_' + ts)
+  try {
+    const decoded = atob(token);
+    if (decoded.startsWith('mtr_')) {
+      isEmriId = decoded.split('_')[1];
+    }
+  } catch {
+    showError('Geçersiz link formatı.');
+    return;
+  }
+
+  if (!isEmriId) {
+    showError('İş emri bulunamadı.');
+    return;
+  }
+
+  // Supabase'den çek
+  const data = await fetchIsEmri(isEmriId);
+  if (!data) {
+    showError('Bu iş emrine erişilemiyor. Bağlantı kontrolü yapın veya operatörünüzle iletişime geçin.');
+    return;
+  }
+
+  isEmri = data;
+
+  // Loading gizle, içerik göster
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+
+  render();
+
+  // Her 30 saniyede otomatik güncelle
+  refreshTimer = setInterval(refresh, 30000);
+}
+
+function showError(msg) {
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('error-state').style.display = 'flex';
+  document.getElementById('error-msg').textContent = msg;
+}
+
+init();
+</script>
+</body>
+</html>
