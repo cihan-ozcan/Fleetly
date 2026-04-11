@@ -3423,6 +3423,14 @@
       </button>
       <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Link telefona gönderilir, şoför fotoğraf & saat damgası ekler</div>
     </div>
+    <!-- Müşteri takip linki -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Müşteri Takibi</div>
+      <button onclick="opsMusteriLinkKopyala()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);color:var(--blue);border-radius:9px;padding:10px;font-family:var(--font-body);font-size:12.5px;font-weight:600;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='rgba(56,189,248,.25)'">
+        📲 Müşteriye Takip Linki Kopyala
+      </button>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Müşteri iş durumu ve araç konumunu canlı izler</div>
+    </div>
   </div>
 </div>
 
@@ -12014,6 +12022,17 @@ function opsDrawerNotEkle() {
     });
   }
   showToast('Not eklendi ✓');
+}
+
+/* ── MÜŞTERİ TAKİP LİNKİ ─────────────────────────────────── */
+function opsMusteriLinkKopyala() {
+  if (!opsDrawerActiveId) return;
+  const token = btoa('mtr_' + opsDrawerActiveId + '_' + Date.now());
+  const url   = window.location.origin + '/musteri_takip.html?m=' + token;
+  localStorage.setItem('mtr_token_' + token, String(opsDrawerActiveId));
+  navigator.clipboard.writeText(url)
+    .then(() => showToast('📲 Müşteri takip linki kopyalandı ✓'))
+    .catch(() => { prompt('Müşteri takip linkini kopyalayın:', url); });
 }
 
 /* ── ŞOFÖRE LİNK ─────────────────────────────────────────── */
