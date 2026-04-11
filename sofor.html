@@ -631,6 +631,24 @@
         </div>
       </div>
 
+      <!-- GPS & MÜŞTERİ LİNKİ -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:24px;">
+        <div class="section-title" style="margin-bottom:10px;">Konum & Takip</div>
+        <div id="gps-status" style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:12px;font-family:var(--font-mono);">📡 Konum: Göreve başlayınca aktif olur</div>
+        <button id="btn-musteri-link"
+          onclick="msteriLinkKopyala()"
+          style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+                 background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);
+                 color:var(--blue);border-radius:10px;padding:11px;
+                 font-family:var(--font-body);font-size:13px;font-weight:700;
+                 cursor:pointer;transition:all .15s;"
+          onmouseover="this.style.borderColor='var(--blue)'"
+          onmouseout="this.style.borderColor='rgba(56,189,248,.3)'">
+          📲 Müşteriye Takip Linki Gönder
+        </button>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Müşteri konumunuzu ve iş durumunu canlı izleyebilir</div>
+      </div>
+
     </div>
 
     <div class="sofor-footer">Fleetly Operasyon &mdash; Tüm değişiklikler yerel olarak saklanır</div>
@@ -700,6 +718,58 @@ let isEmri   = null;
 let pendingSync = []; // offline queue
 let selectedFotoType = null;
 let isOnline = navigator.onLine;
+
+/* ─── GPS KONUM TAKİBİ ──────────────────────────────── */
+let _gpsWatchId   = null;
+let _gpsActive    = false;
+let _lastLat      = null;
+let _lastLng      = null;
+
+function startGPS() {
+  if (!navigator.geolocation) return;
+  if (_gpsActive) return;
+  _gpsActive = true;
+
+  _gpsWatchId = navigator.geolocation.watchPosition(
+    async (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      _lastLat = lat;
+      _lastLng = lng;
+      updateGpsUI(lat, lng);
+      await syncToCloud(isEmriId, {
+        konum_lat:  lat,
+        konum_lng:  lng,
+        konum_zaman: new Date().toISOString()
+      });
+    },
+    (err) => {
+      console.warn('GPS hatası:', err.message);
+      updateGpsUI(null, null, err.message);
+    },
+    { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 }
+  );
+}
+
+function stopGPS() {
+  if (_gpsWatchId !== null) {
+    navigator.geolocation.clearWatch(_gpsWatchId);
+    _gpsWatchId = null;
+  }
+  _gpsActive = false;
+}
+
+function updateGpsUI(lat, lng, hata) {
+  const el = document.getElementById('gps-status');
+  if (!el) return;
+  if (hata) {
+    el.textContent = '📡 Konum: Erişim yok';
+    el.style.color = 'var(--red)';
+  } else if (lat && lng) {
+    el.textContent = `📍 Konum aktif (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    el.style.color = 'var(--green)';
+  }
+}
 
 /* ─── TOAST ─────────────────────────────────────────── */
 let toastTimer;
@@ -866,6 +936,30 @@ function renderFotos(e) {
   grid.innerHTML = html || '<div style="color:var(--muted);font-size:12px;padding:10px 0">Henüz fotoğraf yok</div>';
 }
 
+/* ─── MÜŞTERİ TAKİP LİNKİ ────────────────────────────── */
+function msteriLinkKopyala() {
+  if (!isEmriId) return;
+  // Müşteri token — müşteri sayfası musteri_takip.html?m=TOKEN kullanır
+  const token = btoa('mtr_' + isEmriId + '_' + Date.now());
+  const url   = window.location.origin + '/musteri_takip.html?m=' + token;
+  // Token'ı localStorage'a yaz ki musteri_takip.html doğrulayabilsin
+  // (aynı origin'den erişiliyorsa; opsiyonel, supabase kontrolü yeterli)
+  try { localStorage.setItem('mtr_token_' + token, String(isEmriId)); } catch {}
+
+  if (navigator.share) {
+    navigator.share({ title: 'Sevkiyat Takip', url })
+      .catch(() => fallbackCopy(url));
+  } else {
+    fallbackCopy(url);
+  }
+}
+
+function fallbackCopy(url) {
+  navigator.clipboard.writeText(url)
+    .then(() => showToast('📲 Müşteri linki kopyalandı!', 'success'))
+    .catch(() => { prompt('Müşteri takip linkini kopyalayın:', url); });
+}
+
 /* ─── AKSİYONLAR ────────────────────────────────────── */
 async function doAction(action) {
   if (!isEmri) return;
@@ -875,6 +969,7 @@ async function doAction(action) {
 
   if (action === 'goreve_basla') {
     updates = { durum: 'Yolda', yola_zaman: now };
+    startGPS(); // 🛰️ Göreve başlayınca GPS aç
   } else if (action === 'fabrika_giris') {
     updates = { durum: 'Fabrikada', fabrika_giris: now };
   } else if (action === 'fabrika_cikis') {
@@ -895,6 +990,7 @@ async function confirmTeslim() {
   closeDialog();
   const now = new Date().toISOString();
   await applyUpdate({ durum: 'Teslim Edildi', teslim_zamani: now });
+  stopGPS(); // 🛰️ Teslimde GPS durdur
   showToast('🎯 Teslim kaydedildi!', 'success');
 }
 
