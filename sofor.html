@@ -11,6 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
+  <!-- config.js mevcutsa Supabase bilgilerini al -->
+  <script src="config.js" onerror="console.warn('config.js yüklenemedi, sadece localStorage modu')"></script>
   <style>
     :root {
       --bg:       #08091a;
@@ -673,12 +675,24 @@
 
 <script>
 /* ─── CONFIG ────────────────────────────────────────── */
-// Supabase config — fleetly.html ile aynı kaynaktan
-// config.js include edilirse window.FILO_CONFIG kullanılır
-// Yoksa sadece localStorage/offline modda çalışır
-const CFG = (typeof window.FILO_CONFIG !== 'undefined') ? window.FILO_CONFIG : null;
-const SB_URL  = CFG?.SUPABASE_URL || '';
+// config.js include edilmişse window.FILO_CONFIG kullanılır
+const CFG     = (typeof window.FILO_CONFIG !== 'undefined') ? window.FILO_CONFIG : null;
+const SB_URL  = CFG?.SUPABASE_URL  || '';
 const SB_ANON = CFG?.SUPABASE_ANON || '';
+
+// Auth token — fleetly.html'de oturum açılmışsa localStorage'da saklanır
+// Supabase JS SDK session'ından da okunabilir
+function getSBAuthToken() {
+  try {
+    // Supabase SDK'nın session key'i: sb-<proje>-auth-token
+    const keys = Object.keys(localStorage).filter(k => k.includes('auth-token') && k.startsWith('sb-'));
+    for (const key of keys) {
+      const session = JSON.parse(localStorage.getItem(key) || '{}');
+      if (session?.access_token) return session.access_token;
+    }
+  } catch {}
+  return SB_ANON; // fallback: anon key ile oku
+}
 
 /* ─── STATE ─────────────────────────────────────────── */
 let isEmriId = null;
@@ -989,12 +1003,13 @@ async function syncToCloud(id, updates) {
     updateSyncUI('pending');
     return;
   }
+  const token = getSBAuthToken();
   try {
     const res = await fetch(`${SB_URL}/rest/v1/is_emirleri?id=eq.${id}`, {
       method: 'PATCH',
       headers: {
         'apikey': SB_ANON,
-        'Authorization': `Bearer ${SB_ANON}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal',
       },
@@ -1009,11 +1024,12 @@ async function syncToCloud(id, updates) {
 
 async function fetchFromCloud(id) {
   if (!SB_URL || !SB_ANON) return null;
+  const token = getSBAuthToken();
   try {
     const res = await fetch(`${SB_URL}/rest/v1/is_emirleri?id=eq.${id}&select=*`, {
       headers: {
         'apikey': SB_ANON,
-        'Authorization': `Bearer ${SB_ANON}`,
+        'Authorization': `Bearer ${token}`,
       }
     });
     if (!res.ok) return null;
