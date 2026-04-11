@@ -11615,6 +11615,18 @@ function opsNextId() {
 }
 function opsById(id) { return isEmirleri.find(e => e.id === id); }
 
+// fotograflar alanı Supabase'den string JSON gelebilir, localStorage'dan array —
+// her durumda güvenli array döndür
+function opsFotoArray(e) {
+  if (!e) return [];
+  const f = e.fotograflar;
+  if (Array.isArray(f)) return f;
+  if (typeof f === 'string') {
+    try { const p = JSON.parse(f); return Array.isArray(p) ? p : []; } catch { return []; }
+  }
+  return [];
+}
+
 // Supabase satırını → uygulama objesine dönüştür
 function opsRowToObj(r) {
   return {
@@ -11667,7 +11679,12 @@ async function opsObjToRow(obj, isEdit) {
     fabrika_giris : obj.fabrika_giris || null,
     fabrika_cikis : obj.fabrika_cikis || null,
     teslim_zamani : obj.teslim_zamani || null,
-    fotograflar   : JSON.stringify(obj.fotograflar || []),
+    fotograflar   : (() => {
+      const f = obj.fotograflar;
+      if (Array.isArray(f)) return JSON.stringify(f);
+      if (typeof f === 'string') { try { JSON.parse(f); return f; } catch {} }
+      return '[]';
+    })(),
     notlar        : obj.notlar        || null,
   };
   // GENERATED ALWAYS AS IDENTITY — yeni kayıtta id GÖNDERİLMEZ
@@ -11892,7 +11909,7 @@ function opsRenderTable() {
       <td><span style="font-family:var(--font-mono);font-size:11.5px;">${opsFmtZaman(e.fabrika_giris)}</span></td>
       <td><span style="font-family:var(--font-mono);font-size:11.5px;">${opsFmtZaman(e.fabrika_cikis)}</span></td>
       <td><span style="font-family:var(--font-mono);font-size:11.5px;color:${e.fabrika_giris&&e.fabrika_cikis?'var(--yellow)':'var(--muted)'};">${opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)}</span></td>
-      <td><span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);padding:2px 7px;border-radius:99px;">${(e.fotograflar||[]).length} foto</span></td>
+      <td><span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);padding:2px 7px;border-radius:99px;">${opsFotoArray(e).length} foto</span></td>
       <td class="col-islem">
         <div style="display:flex;gap:4px;">
           <button onclick="openOpsDrawer(${e.id})" class="icon-btn" title="Detay" style="color:var(--accent);border-color:rgba(232,82,26,.25);">⊙</button>
@@ -11948,7 +11965,7 @@ function opsRenderArsiv() {
       <td><span style="font-family:var(--font-mono);font-weight:600;">${e.konteyner_no || '—'}</span></td>
       <td><span style="font-family:var(--font-mono);font-size:11.5px;">${opsFmtZaman(e.teslim_zamani)}</span></td>
       <td><span style="font-family:var(--font-mono);font-size:11.5px;color:var(--yellow);">${opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)}</span></td>
-      <td><span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);padding:2px 7px;border-radius:99px;">${(e.fotograflar||[]).length}</span></td>
+      <td><span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);padding:2px 7px;border-radius:99px;">${opsFotoArray(e).length}</span></td>
       <td class="col-islem">
         <button onclick="openOpsDrawer(${e.id})" class="icon-btn" title="Detay" style="color:var(--accent);border-color:rgba(232,82,26,.25);">⊙</button>
       </td>
@@ -12058,7 +12075,7 @@ function saveOpsIsEmri() {
     fabrika_giris  : null,
     fabrika_cikis  : null,
     teslim_zamani  : null,
-    fotograflar    : [],
+    fotograflar    : '[]',
   };
   isEmirleri.push(obj);
   opsSaveLocal();
@@ -12129,8 +12146,8 @@ function openOpsDrawer(id) {
       </div>`;
   }).join('');
 
-  // Fotoğraflar
-  const fotos = e.fotograflar || [];
+  // Fotoğraflar — fotograflar alanı string JSON veya array olabilir
+  const fotos = opsFotoArray(e);
   document.getElementById('ops-drawer-foto-count').textContent = fotos.length;
   document.getElementById('ops-drawer-fotograflar').innerHTML = fotos.length ?
     `<div class="ops-foto-grid">${fotos.map(f => `
