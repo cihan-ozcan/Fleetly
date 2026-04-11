@@ -2380,6 +2380,58 @@
   }
   #crm-page.open { display: flex; }
 
+  /* ── OPERASYON SAYFASI ──────────────────────────────────── */
+  #operasyon-page {
+    position: fixed; inset: 0; z-index: 300;
+    background: var(--bg);
+    display: none; flex-direction: column;
+    overflow: hidden;
+  }
+  #operasyon-page.open { display: flex; }
+  #operasyon-page .ops-scroll { flex: 1; overflow-y: auto; }
+  #operasyon-page .ops-page { position: relative; z-index: 1; padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+  /* Durum badge'leri */
+  .ops-badge { display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap; font-family:var(--font-mono); }
+  .ops-badge.bekliyor  { background:var(--yellow-dim); color:var(--yellow); }
+  .ops-badge.yolda     { background:var(--blue-dim);   color:var(--blue); }
+  .ops-badge.fabrikada { background:var(--accent-dim); color:var(--accent); }
+  .ops-badge.teslim    { background:var(--green-dim);  color:var(--green); }
+  .ops-badge.iptal     { background:var(--red-dim);    color:var(--red); }
+
+  /* Kanban kolonları */
+  .ops-kanban { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:4px; }
+  @media(max-width:900px){ .ops-kanban { grid-template-columns:repeat(2,1fr); } }
+  @media(max-width:560px){ .ops-kanban { grid-template-columns:1fr; } }
+  .ops-kanban-col { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px; min-height:200px; }
+  .ops-kanban-col-header { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between; }
+  .ops-kanban-count { font-family:var(--font-mono);background:var(--surface3);border-radius:99px;padding:1px 7px;font-size:10px; }
+  .ops-kcard { background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s; }
+  .ops-kcard:hover { border-color:var(--border2); }
+  .ops-kcard-plaka { font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--accent);margin-bottom:3px; }
+  .ops-kcard-cont  { font-size:11px;color:var(--text2);margin-bottom:2px; }
+  .ops-kcard-musteri { font-size:11px;color:var(--muted); }
+  .ops-kcard-time  { font-size:10px;color:var(--muted);margin-top:6px;font-family:var(--font-mono); }
+
+  /* Zaman çizelgesi drawer */
+  .ops-timeline { display:flex;flex-direction:column;gap:0; }
+  .ops-tl-item { display:flex;gap:12px;padding-bottom:16px;position:relative; }
+  .ops-tl-item:not(:last-child)::before { content:'';position:absolute;left:11px;top:24px;bottom:0;width:1px;background:var(--border); }
+  .ops-tl-dot { width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;border:2px solid var(--border2);background:var(--surface2); }
+  .ops-tl-dot.done { background:var(--green-dim);border-color:var(--green);color:var(--green); }
+  .ops-tl-dot.active { background:var(--accent-dim);border-color:var(--accent);color:var(--accent); }
+  .ops-tl-dot.pending { opacity:.35; }
+  .ops-tl-body { flex:1;padding-top:2px; }
+  .ops-tl-label { font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:2px; }
+  .ops-tl-time  { font-family:var(--font-mono);font-size:11px;color:var(--muted); }
+
+  /* Fotoğraf grid */
+  .ops-foto-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:10px; }
+  .ops-foto-card { aspect-ratio:1;border-radius:8px;overflow:hidden;position:relative;background:var(--surface3);border:1px solid var(--border);cursor:pointer; }
+  .ops-foto-card img { width:100%;height:100%;object-fit:cover; }
+  .ops-foto-tip { position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);font-size:9px;color:#fff;padding:3px 5px;text-align:center;font-weight:600; }
+  .ops-foto-empty { text-align:center;padding:24px;color:var(--muted);font-size:12px;border:1px dashed var(--border);border-radius:8px; }
+
   /* Tüm müşteri modülü stilleri #crm-page scope'unda */
   #crm-page .page { position: relative; z-index: 1; padding: 24px; max-width: 1400px; margin: 0 auto; }
   #crm-page .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
@@ -2701,6 +2753,10 @@
 
     <!-- ── NAV GROUP 1: CRM & İŞ ── -->
     <div class="nav-group">
+      <button class="nav-btn nav-orange" onclick="openOperasyonPage()" title="Konteyner Operasyonu">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M5 7V5a3 3 0 016 0v2M9 11v2m-3-1h6" stroke-linecap="round"/></svg>
+        <span>Operasyon</span>
+      </button>
       <button class="nav-btn nav-teal" onclick="openMusteriPage()" title="Müşteri & Sipariş">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M16 17a6 6 0 10-12 0"/><path d="M18 12h-4m2-2v4" stroke-linecap="round"/></svg>
         <span>Müşteri</span>
@@ -2778,6 +2834,7 @@
 <div id="mob-menu">
   <button class="btn-sm accent" onclick="openModal();closeMobMenu()">+ Araç Ekle</button>
   <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+  <button class="btn-sm" onclick="openOperasyonPage();closeMobMenu()" style="color:var(--accent)">📦 Operasyon</button>
   <button class="btn-sm" onclick="openMusteriPage();closeMobMenu()" style="color:#2dd4bf">🤝 Müşteri &amp; Sipariş</button>
   <button class="btn-sm" onclick="openSeferModal();closeMobMenu()" style="color:var(--purple)">🗺 Seferler</button>
   <button class="btn-sm" onclick="openMasrafModal();closeMobMenu()" style="color:var(--yellow)">💸 Masraflar</button>
@@ -3189,6 +3246,205 @@
 <!-- =========================================================
      MÜŞTERİ & SİPARİŞ MODÜLÜ
      ========================================================= -->
+<!-- =========================================================
+     OPERASYON SAYFASI
+     ========================================================= -->
+<div id="operasyon-page">
+  <!-- Üst Bar -->
+  <div class="crm-topbar" style="box-shadow:inset 3px 0 0 var(--accent);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="crm-back-btn" onclick="closeOperasyonPage()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Ana Sayfa
+      </button>
+      <div style="width:1px;height:28px;background:var(--border);margin:0 2px"></div>
+      <div style="width:34px;height:34px;background:rgba(232,82,26,.12);border:1px solid rgba(232,82,26,.2);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;">📦</div>
+      <div>
+        <div style="font-size:15px;font-weight:800;letter-spacing:-.02em;color:var(--text)">Konteyner Operasyonu</div>
+        <div style="font-size:11px;color:var(--muted)">İş emri yönetimi & saha takibi</div>
+      </div>
+    </div>
+    <button onclick="openOpsIsEmriModal()" style="display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:none;cursor:pointer;border-radius:8px;padding:8px 16px;font-family:var(--font-display);font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;box-shadow:0 2px 10px rgba(232,82,26,.35);transition:background .15s;" onmouseover="this.style.background='var(--accent2)'" onmouseout="this.style.background='var(--accent)'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      İŞ EMRİ OLUŞTur
+    </button>
+  </div>
+
+  <!-- Stat Satırı -->
+  <div id="ops-stat-bar" style="display:flex;gap:10px;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap;"></div>
+
+  <!-- İçerik -->
+  <div class="ops-scroll">
+    <div class="ops-page">
+
+      <!-- Sekme Bar -->
+      <div style="display:flex;gap:0;background:var(--surface3);border-radius:10px;padding:3px;margin-bottom:20px;width:fit-content;">
+        <button class="srm-tab active" id="ops-tab-emirler"  onclick="switchOpsTab('emirler',this)">📋 İş Emirleri</button>
+        <button class="srm-tab"        id="ops-tab-canli"    onclick="switchOpsTab('canli',this)">🔴 Canlı Takip</button>
+        <button class="srm-tab"        id="ops-tab-arsiv"    onclick="switchOpsTab('arsiv',this)">🗂 Arşiv</button>
+      </div>
+
+      <!-- SEKme 1: İş Emirleri Tablosu -->
+      <div id="ops-panel-emirler" class="srm-panel active">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="position:relative;flex:1;min-width:200px;">
+            <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;">🔍</span>
+            <input id="ops-search" class="srm-inp" style="padding-left:34px;width:100%;" placeholder="Konteyner no, müşteri, araç..." oninput="opsRenderTable()">
+          </div>
+          <select id="ops-filter-durum" class="srm-inp" style="width:auto;min-width:140px;" onchange="opsRenderTable()">
+            <option value="">Tüm Durumlar</option>
+            <option value="Bekliyor">Bekliyor</option>
+            <option value="Yolda">Yolda</option>
+            <option value="Fabrikada">Fabrikada</option>
+            <option value="Teslim Edildi">Teslim Edildi</option>
+            <option value="İptal">İptal</option>
+          </select>
+          <span id="ops-table-count" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);"></span>
+        </div>
+        <div class="srm-table-wrap">
+          <table class="srm-table" id="ops-table">
+            <thead><tr>
+              <th>ID</th>
+              <th>Müşteri</th>
+              <th>Araç</th>
+              <th>Konteyner No</th>
+              <th>Mühür No</th>
+              <th>Durum</th>
+              <th>Fab. Giriş</th>
+              <th>Fab. Çıkış</th>
+              <th>Bekleme</th>
+              <th>Fotoğraf</th>
+              <th class="col-islem">İşlem</th>
+            </tr></thead>
+            <tbody id="ops-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SEKME 2: Canlı Takip Kanban -->
+      <div id="ops-panel-canli" class="srm-panel">
+        <div class="ops-kanban" id="ops-kanban"></div>
+      </div>
+
+      <!-- SEKME 3: Arşiv -->
+      <div id="ops-panel-arsiv" class="srm-panel">
+        <div class="srm-table-wrap">
+          <table class="srm-table" id="ops-arsiv-table">
+            <thead><tr>
+              <th>ID</th><th>Müşteri</th><th>Araç</th><th>Konteyner No</th>
+              <th>Teslim Tarihi</th><th>Bekleme Süresi</th><th>Fotoğraf</th><th class="col-islem">İşlem</th>
+            </tr></thead>
+            <tbody id="ops-arsiv-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── OPS DRAWER ───────────────────────────────── -->
+<div id="ops-drawer-bg" class="hidden" style="position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);" onclick="closeOpsDrawer()"></div>
+<div id="ops-drawer" class="crm-drawer hidden">
+  <div class="drawer-header">
+    <div>
+      <div id="ops-drawer-title" style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:2px;"></div>
+      <div id="ops-drawer-sub" style="font-size:11px;color:var(--muted);"></div>
+    </div>
+    <button class="modal-close" onclick="closeOpsDrawer()">✕</button>
+  </div>
+  <div class="drawer-body">
+    <!-- Durum & özet -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Durum & Konteyner</div>
+      <div id="ops-drawer-durum-row" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;"></div>
+      <div id="ops-drawer-detaylar"></div>
+    </div>
+    <!-- Zaman çizelgesi -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Zaman Çizelgesi</div>
+      <div class="ops-timeline" id="ops-drawer-timeline"></div>
+    </div>
+    <!-- Fotoğraflar -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Fotoğraflar <span id="ops-drawer-foto-count" style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></div>
+      <div id="ops-drawer-fotograflar"></div>
+    </div>
+    <!-- Manuel durum güncelle -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Durum Güncelle</div>
+      <div style="display:flex;flex-direction:column;gap:6px;" id="ops-drawer-actions"></div>
+    </div>
+    <!-- Paylaşım linki -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Şoför Erişimi</div>
+      <button onclick="opsKopyalaLink()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:9px;padding:10px;font-family:var(--font-body);font-size:12.5px;font-weight:600;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+        🔗 Şoföre Link Kopyala
+      </button>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Link telefona gönderilir, şoför fotoğraf & saat damgası ekler</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── OPS İŞ EMRİ MODAL ──────────────────────── -->
+<div id="ops-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)closeOpsIsEmriModal()">
+  <div class="srm-modal" style="max-width:680px;">
+    <div class="srm-header">
+      <div class="srm-title">
+        <span style="width:30px;height:30px;background:var(--accent-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">📦</span>
+        <span class="maint-modal-title" style="color:var(--accent);">YENİ İŞ EMRİ</span>
+      </div>
+      <button class="modal-close" onclick="closeOpsIsEmriModal()">✕</button>
+    </div>
+    <div class="srm-body">
+      <div class="srm-grid">
+        <div class="srm-group">
+          <label>Müşteri</label>
+          <select id="ops-m-musteri" class="srm-inp"></select>
+        </div>
+        <div class="srm-group">
+          <label>Araç (Plaka)</label>
+          <select id="ops-m-arac" class="srm-inp"></select>
+        </div>
+        <div class="srm-group">
+          <label>Sürücü Adı</label>
+          <input id="ops-m-sofor" class="srm-inp" placeholder="Ad Soyad" />
+        </div>
+        <div class="srm-group">
+          <label>Sürücü Telefon</label>
+          <input id="ops-m-sofor-tel" class="srm-inp" placeholder="0500 000 00 00" type="tel" />
+        </div>
+        <div class="srm-group">
+          <label>Konteyner No</label>
+          <input id="ops-m-konteyner" class="srm-inp" placeholder="ABCU1234567" style="font-family:var(--font-mono);font-weight:600;letter-spacing:.05em;" />
+        </div>
+        <div class="srm-group">
+          <label>Mühür No</label>
+          <input id="ops-m-muhur" class="srm-inp" placeholder="M-12345" style="font-family:var(--font-mono);font-weight:600;" />
+        </div>
+        <div class="srm-group">
+          <label>Yükleme Yeri</label>
+          <input id="ops-m-yukle" class="srm-inp" placeholder="Liman, depo adı..." />
+        </div>
+        <div class="srm-group">
+          <label>Teslim Yeri</label>
+          <input id="ops-m-teslim" class="srm-inp" placeholder="Fabrika, adres..." />
+        </div>
+        <div class="srm-group full">
+          <label>Notlar</label>
+          <textarea id="ops-m-notlar" class="srm-inp" rows="2" placeholder="Özel talimatlar, dikkat edilecekler..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeOpsIsEmriModal()">İptal</button>
+      <button onclick="saveOpsIsEmri()" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;cursor:pointer;border-radius:8px;padding:9px 20px;font-family:var(--font-body);font-size:13px;font-weight:700;box-shadow:0 2px 10px rgba(232,82,26,.3);transition:background .15s;" onmouseover="this.style.background='var(--accent2)'" onmouseout="this.style.background='var(--accent)'">
+        ✓ İş Emri Oluştur
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="crm-page">
   <!-- CRM Üst Bar -->
   <div class="crm-topbar">
@@ -11150,6 +11406,360 @@ function crmExportCSV() {
   a.download = 'musteriler_'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();
   showToast('CSV indirildi ✓');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   OPERASYON MODÜLÜ
+   ═══════════════════════════════════════════════════════════ */
+
+let isEmirleri = [];
+let opsDrawerActiveId = null;
+
+/* ── VERİ ────────────────────────────────────────────────── */
+function opsLoad() {
+  try { isEmirleri = JSON.parse(localStorage.getItem('fleetly_is_emirleri') || '[]'); } catch(e) { isEmirleri = []; }
+}
+function opsSave() {
+  localStorage.setItem('fleetly_is_emirleri', JSON.stringify(isEmirleri));
+}
+function opsNextId() {
+  return isEmirleri.length ? Math.max(...isEmirleri.map(e => e.id || 0)) + 1 : 1;
+}
+function opsById(id) { return isEmirleri.find(e => e.id === id); }
+
+/* ── SAYFA AÇ/KAPAT ─────────────────────────────────────── */
+function openOperasyonPage() {
+  opsLoad();
+  document.getElementById('operasyon-page').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  opsRenderStats();
+  opsRenderTable();
+  opsRenderKanban();
+  opsRenderArsiv();
+}
+function closeOperasyonPage() {
+  document.getElementById('operasyon-page').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ── SEKME ───────────────────────────────────────────────── */
+function switchOpsTab(name, btn) {
+  document.querySelectorAll('#operasyon-page .srm-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#operasyon-page .srm-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('ops-panel-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'canli')  opsRenderKanban();
+  if (name === 'arsiv')  opsRenderArsiv();
+}
+
+/* ── STAT ÇUBUĞU ─────────────────────────────────────────── */
+function opsRenderStats() {
+  const toplam    = isEmirleri.length;
+  const bekliyor  = isEmirleri.filter(e => e.durum === 'Bekliyor').length;
+  const yolda     = isEmirleri.filter(e => e.durum === 'Yolda').length;
+  const fabrikada = isEmirleri.filter(e => e.durum === 'Fabrikada').length;
+  const teslim    = isEmirleri.filter(e => e.durum === 'Teslim Edildi').length;
+  const stats = [
+    { val: toplam,    lbl: 'Toplam',     color: 'var(--text2)' },
+    { val: bekliyor,  lbl: 'Bekliyor',   color: 'var(--yellow)' },
+    { val: yolda,     lbl: 'Yolda',      color: 'var(--blue)' },
+    { val: fabrikada, lbl: 'Fabrikada',  color: 'var(--accent)' },
+    { val: teslim,    lbl: 'Teslim',     color: 'var(--green)' },
+  ];
+  document.getElementById('ops-stat-bar').innerHTML = stats.map(s => `
+    <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;">
+      <span style="font-family:var(--font-display);font-size:26px;font-weight:900;color:${s.color};line-height:1;">${s.val}</span>
+      <span style="font-family:var(--font-mono);font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;">${s.lbl}</span>
+    </div>`).join('');
+}
+
+/* ── DURUM BADGE HTML ────────────────────────────────────── */
+function opsDurumBadge(durum) {
+  const map = { 'Bekliyor':'bekliyor','Yolda':'yolda','Fabrikada':'fabrikada','Teslim Edildi':'teslim','İptal':'iptal' };
+  return `<span class="ops-badge ${map[durum]||'bekliyor'}">${durum}</span>`;
+}
+
+/* ── BEKLEME SÜRESİ HESAPLA ─────────────────────────────── */
+function opsBeklemeSuresi(giris, cikis) {
+  if (!giris || !cikis) return '—';
+  const dk = Math.round((new Date(cikis) - new Date(giris)) / 60000);
+  if (dk < 0) return '—';
+  const h = Math.floor(dk / 60), m = dk % 60;
+  return h > 0 ? `${h}s ${m}dk` : `${m}dk`;
+}
+
+/* ── ZAMAN FORMATLA ──────────────────────────────────────── */
+function opsFmtZaman(z) {
+  if (!z) return '—';
+  const d = new Date(z);
+  return d.toLocaleDateString('tr-TR', { day:'2-digit', month:'2-digit' }) + ' ' +
+         d.toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' });
+}
+
+/* ── TABLO ───────────────────────────────────────────────── */
+function opsRenderTable() {
+  const q      = (document.getElementById('ops-search')?.value || '').toLowerCase();
+  const durumF = document.getElementById('ops-filter-durum')?.value || '';
+  const aktif  = isEmirleri.filter(e => e.durum !== 'Teslim Edildi' && e.durum !== 'İptal');
+  const filtered = aktif.filter(e => {
+    const match = !q || [e.konteyner_no, e.muhur_no, e.arac_plaka, e.musteri_adi, e.sofor].join(' ').toLowerCase().includes(q);
+    const durumMatch = !durumF || e.durum === durumF;
+    return match && durumMatch;
+  });
+  const sorted = [...filtered].sort((a, b) => b.id - a.id);
+  document.getElementById('ops-table-count').textContent = sorted.length + ' kayıt';
+  const tbody = document.getElementById('ops-table-body');
+  if (!sorted.length) {
+    tbody.innerHTML = `<tr><td colspan="11" class="srm-empty"><div style="text-align:center;padding:32px;color:var(--muted);">Henüz aktif iş emri yok. <button onclick="openOpsIsEmriModal()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-family:var(--font-body);font-size:13px;font-weight:600;">+ Yeni oluştur</button></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sorted.map(e => `
+    <tr>
+      <td><span class="mono" style="color:var(--accent);">#${e.id}</span></td>
+      <td>${e.musteri_adi || '—'}</td>
+      <td><span class="plate-cell">${e.arac_plaka || '—'}</span></td>
+      <td><span style="font-family:var(--font-mono);font-weight:600;letter-spacing:.04em;">${e.konteyner_no || '—'}</span></td>
+      <td><span style="font-family:var(--font-mono);">${e.muhur_no || '—'}</span></td>
+      <td>${opsDurumBadge(e.durum)}</td>
+      <td><span style="font-family:var(--font-mono);font-size:11.5px;">${opsFmtZaman(e.fabrika_giris)}</span></td>
+      <td><span style="font-family:var(--font-mono);font-size:11.5px;">${opsFmtZaman(e.fabrika_cikis)}</span></td>
+      <td><span style="font-family:var(--font-mono);font-size:11.5px;color:${e.fabrika_giris&&e.fabrika_cikis?'var(--yellow)':'var(--muted)'};">${opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)}</span></td>
+      <td><span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);padding:2px 7px;border-radius:99px;">${(e.fotograflar||[]).length} foto</span></td>
+      <td class="col-islem">
+        <div style="display:flex;gap:4px;">
+          <button onclick="openOpsDrawer(${e.id})" class="icon-btn" title="Detay" style="color:var(--accent);border-color:rgba(232,82,26,.25);">⊙</button>
+          <button onclick="deleteOpsIsEmri(${e.id})" class="icon-btn del" title="Sil">🗑</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+/* ── KANBAN ──────────────────────────────────────────────── */
+function opsRenderKanban() {
+  const kolonlar = [
+    { key: 'Bekliyor',  label: 'Bekliyor',   color: 'var(--yellow)' },
+    { key: 'Yolda',     label: 'Yolda',      color: 'var(--blue)' },
+    { key: 'Fabrikada', label: 'Fabrikada',  color: 'var(--accent)' },
+    { key: 'Teslim Edildi', label: 'Teslim', color: 'var(--green)' },
+  ];
+  const aktif = isEmirleri.filter(e => e.durum !== 'İptal');
+  document.getElementById('ops-kanban').innerHTML = kolonlar.map(kol => {
+    const kartlar = aktif.filter(e => e.durum === kol.key);
+    return `
+      <div class="ops-kanban-col">
+        <div class="ops-kanban-col-header">
+          <span style="color:${kol.color};">${kol.label}</span>
+          <span class="ops-kanban-count" style="color:${kol.color};">${kartlar.length}</span>
+        </div>
+        ${kartlar.length ? kartlar.map(e => `
+          <div class="ops-kcard" onclick="openOpsDrawer(${e.id})">
+            <div class="ops-kcard-plaka">${e.arac_plaka || '—'}</div>
+            <div class="ops-kcard-cont">📦 ${e.konteyner_no || '—'}</div>
+            <div class="ops-kcard-musteri">${e.musteri_adi || '—'}</div>
+            <div class="ops-kcard-time">${opsFmtZaman(e.atama_zamani)}</div>
+          </div>`).join('') :
+          `<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Boş</div>`}
+      </div>`;
+  }).join('');
+}
+
+/* ── ARŞİV ───────────────────────────────────────────────── */
+function opsRenderArsiv() {
+  const arsiv = isEmirleri.filter(e => e.durum === 'Teslim Edildi' || e.durum === 'İptal').sort((a,b) => b.id - a.id);
+  const tbody = document.getElementById('ops-arsiv-body');
+  if (!arsiv.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted);">Arşivde kayıt yok.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = arsiv.map(e => `
+    <tr>
+      <td><span class="mono" style="color:var(--accent);">#${e.id}</span></td>
+      <td>${e.musteri_adi || '—'}</td>
+      <td><span class="plate-cell">${e.arac_plaka || '—'}</span></td>
+      <td><span style="font-family:var(--font-mono);font-weight:600;">${e.konteyner_no || '—'}</span></td>
+      <td><span style="font-family:var(--font-mono);font-size:11.5px;">${opsFmtZaman(e.teslim_zamani)}</span></td>
+      <td><span style="font-family:var(--font-mono);font-size:11.5px;color:var(--yellow);">${opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)}</span></td>
+      <td><span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);padding:2px 7px;border-radius:99px;">${(e.fotograflar||[]).length}</span></td>
+      <td class="col-islem">
+        <button onclick="openOpsDrawer(${e.id})" class="icon-btn" title="Detay" style="color:var(--accent);border-color:rgba(232,82,26,.25);">⊙</button>
+      </td>
+    </tr>`).join('');
+}
+
+/* ── İŞ EMRİ MODAL ───────────────────────────────────────── */
+function openOpsIsEmriModal() {
+  // Müşteri dropdown doldur
+  const mSel = document.getElementById('ops-m-musteri');
+  mSel.innerHTML = '<option value="">Müşteri seçin...</option>' +
+    (typeof crmMusteriler !== 'undefined' ? crmMusteriler.filter(m => m.durum !== 'Pasif').map(m => `<option value="${m.id}">${m.firma}</option>`).join('') : '');
+
+  // Araç dropdown doldur
+  const aSel = document.getElementById('ops-m-arac');
+  aSel.innerHTML = '<option value="">Araç seçin...</option>' +
+    (typeof vehicles !== 'undefined' ? vehicles.map(v => `<option value="${v.plaka}">${v.plaka} — ${v.marka||''} ${v.model||''}</option>`).join('') : '');
+
+  ['sofor','sofor-tel','konteyner','muhur','yukle','teslim','notlar'].forEach(f => {
+    const el = document.getElementById('ops-m-' + f);
+    if (el) el.value = '';
+  });
+  document.getElementById('ops-modal-bg').classList.remove('hidden');
+}
+function closeOpsIsEmriModal() {
+  document.getElementById('ops-modal-bg').classList.add('hidden');
+}
+function saveOpsIsEmri() {
+  const musteriId = document.getElementById('ops-m-musteri').value;
+  const aracPlaka = document.getElementById('ops-m-arac').value;
+  if (!musteriId || !aracPlaka) { showToast('Müşteri ve araç zorunlu', 'error'); return; }
+
+  const musteriObj = typeof crmMusteriler !== 'undefined' ? crmMusteriler.find(m => m.id == musteriId) : null;
+  const obj = {
+    id             : opsNextId(),
+    musteri_id     : parseInt(musteriId),
+    musteri_adi    : musteriObj ? musteriObj.firma : '',
+    arac_plaka     : aracPlaka,
+    sofor          : document.getElementById('ops-m-sofor').value.trim(),
+    sofor_tel      : document.getElementById('ops-m-sofor-tel').value.trim(),
+    konteyner_no   : document.getElementById('ops-m-konteyner').value.trim().toUpperCase(),
+    muhur_no       : document.getElementById('ops-m-muhur').value.trim(),
+    yukle_yeri     : document.getElementById('ops-m-yukle').value.trim(),
+    teslim_yeri    : document.getElementById('ops-m-teslim').value.trim(),
+    notlar         : document.getElementById('ops-m-notlar').value.trim(),
+    durum          : 'Bekliyor',
+    atama_zamani   : new Date().toISOString(),
+    fabrika_giris  : null,
+    fabrika_cikis  : null,
+    teslim_zamani  : null,
+    fotograflar    : [],
+  };
+  isEmirleri.push(obj);
+  opsSave();
+  closeOpsIsEmriModal();
+  opsRenderStats();
+  opsRenderTable();
+  opsRenderKanban();
+  logActivity(`📦 İş emri oluşturuldu — <strong>${obj.konteyner_no || obj.arac_plaka}</strong> · ${obj.musteri_adi}`);
+  showToast('İş emri oluşturuldu ✓');
+}
+
+/* ── SİL ─────────────────────────────────────────────────── */
+function deleteOpsIsEmri(id) {
+  if (!confirm('Bu iş emrini silmek istiyor musunuz?')) return;
+  isEmirleri = isEmirleri.filter(e => e.id !== id);
+  opsSave();
+  opsRenderStats();
+  opsRenderTable();
+  showToast('İş emri silindi');
+}
+
+/* ── DRAWER ──────────────────────────────────────────────── */
+function openOpsDrawer(id) {
+  const e = opsById(id);
+  if (!e) return;
+  opsDrawerActiveId = id;
+
+  document.getElementById('ops-drawer-title').textContent = e.konteyner_no || ('İş Emri #' + e.id);
+  document.getElementById('ops-drawer-sub').textContent   = (e.arac_plaka || '') + ' · ' + (e.musteri_adi || '') + ' · ' + (e.sofor || '');
+
+  // Durum + konteyner/mühür
+  document.getElementById('ops-drawer-durum-row').innerHTML =
+    opsDurumBadge(e.durum) +
+    (e.muhur_no ? `<span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);border:1px solid var(--border);padding:2px 8px;border-radius:5px;">Mühür: ${e.muhur_no}</span>` : '');
+
+  document.getElementById('ops-drawer-detaylar').innerHTML = [
+    ['Müşteri',       e.musteri_adi || '—'],
+    ['Araç',          e.arac_plaka  || '—'],
+    ['Sürücü',        e.sofor       || '—'],
+    ['Sürücü Tel',    e.sofor_tel   || '—'],
+    ['Yükleme Yeri',  e.yukle_yeri  || '—'],
+    ['Teslim Yeri',   e.teslim_yeri || '—'],
+    ['Bekleme Süresi',opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)],
+    ['Notlar',        e.notlar      || '—'],
+  ].map(([k,v]) => `<div class="detail-row"><span class="detail-key">${k}</span><span class="detail-val">${v}</span></div>`).join('');
+
+  // Zaman çizelgesi
+  const milestones = [
+    { label: 'İş Emri Atandı',    zaman: e.atama_zamani,  },
+    { label: 'Yola Çıkıldı',      zaman: e.yola_zaman,    },
+    { label: 'Fabrika Girişi',     zaman: e.fabrika_giris, },
+    { label: 'Fabrikadan Çıkış',   zaman: e.fabrika_cikis, },
+    { label: 'Teslim Tamamlandı',  zaman: e.teslim_zamani, },
+  ];
+  const durumSira = ['Bekliyor','Yolda','Fabrikada','Fabrikada','Teslim Edildi'];
+  const aktifIdx  = durumSira.indexOf(e.durum);
+  document.getElementById('ops-drawer-timeline').innerHTML = milestones.map((m, i) => {
+    const cls = m.zaman ? 'done' : (i === aktifIdx ? 'active' : 'pending');
+    const icon = m.zaman ? '✓' : (i === aktifIdx ? '●' : '○');
+    return `
+      <div class="ops-tl-item">
+        <div class="ops-tl-dot ${cls}">${icon}</div>
+        <div class="ops-tl-body">
+          <div class="ops-tl-label">${m.label}</div>
+          <div class="ops-tl-time">${m.zaman ? opsFmtZaman(m.zaman) : '—'}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Fotoğraflar
+  const fotos = e.fotograflar || [];
+  document.getElementById('ops-drawer-foto-count').textContent = fotos.length;
+  document.getElementById('ops-drawer-fotograflar').innerHTML = fotos.length ?
+    `<div class="ops-foto-grid">${fotos.map(f => `
+      <div class="ops-foto-card" onclick="window.open('${f.url}','_blank')">
+        <img src="${f.url}" alt="${f.tip}" onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;\'>📷</div>'" />
+        <div class="ops-foto-tip">${f.tip}</div>
+      </div>`).join('')}</div>` :
+    `<div class="ops-foto-empty">📷<br>Henüz fotoğraf yüklenmedi</div>`;
+
+  // Durum güncelleme butonları
+  const durumSecenekler = ['Bekliyor','Yolda','Fabrikada','Teslim Edildi','İptal'].filter(d => d !== e.durum);
+  document.getElementById('ops-drawer-actions').innerHTML = durumSecenekler.map(d => {
+    const renk = { 'Bekliyor':'var(--yellow)','Yolda':'var(--blue)','Fabrikada':'var(--accent)','Teslim Edildi':'var(--green)','İptal':'var(--red)' }[d];
+    return `<button onclick="opsGuncelleDurum(${e.id},'${d}')" style="display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border2);color:${renk};border-radius:8px;padding:8px 14px;font-family:var(--font-body);font-size:12.5px;font-weight:600;cursor:pointer;transition:border-color .15s;width:100%;" onmouseover="this.style.borderColor='${renk}'" onmouseout="this.style.borderColor='var(--border2)'">
+      → ${d} olarak işaretle
+    </button>`;
+  }).join('');
+
+  document.getElementById('ops-drawer-bg').classList.remove('hidden');
+  document.getElementById('ops-drawer').classList.remove('hidden');
+}
+function closeOpsDrawer() {
+  document.getElementById('ops-drawer-bg').classList.add('hidden');
+  document.getElementById('ops-drawer').classList.add('hidden');
+  opsDrawerActiveId = null;
+}
+
+/* ── DURUM GÜNCELLE ─────────────────────────────────────── */
+function opsGuncelleDurum(id, yeniDurum) {
+  const e = opsById(id);
+  if (!e) return;
+  e.durum = yeniDurum;
+  if (yeniDurum === 'Yolda'         && !e.yola_zaman)    e.yola_zaman    = new Date().toISOString();
+  if (yeniDurum === 'Fabrikada'     && !e.fabrika_giris) e.fabrika_giris = new Date().toISOString();
+  if (yeniDurum === 'Teslim Edildi' && !e.teslim_zamani) e.teslim_zamani = new Date().toISOString();
+  // fabrika çıkışı — Fabrikada'dan başka duruma geçince otomatik kapat
+  if (e.fabrika_giris && !e.fabrika_cikis && yeniDurum !== 'Fabrikada') {
+    e.fabrika_cikis = new Date().toISOString();
+  }
+  opsSave();
+  opsRenderStats();
+  opsRenderTable();
+  opsRenderKanban();
+  opsRenderArsiv();
+  openOpsDrawer(id); // drawer'ı güncelle
+  logActivity(`📦 <strong>${e.konteyner_no||e.arac_plaka}</strong> → ${yeniDurum}`);
+  showToast('Durum güncellendi: ' + yeniDurum);
+}
+
+/* ── ŞOFÖRE LİNK ─────────────────────────────────────────── */
+function opsKopyalaLink() {
+  if (!opsDrawerActiveId) return;
+  const token = btoa('ops_' + opsDrawerActiveId + '_' + Date.now());
+  const url   = window.location.origin + '/sofor.html?t=' + token;
+  localStorage.setItem('ops_token_' + token, String(opsDrawerActiveId));
+  navigator.clipboard.writeText(url).then(() => showToast('Link panoya kopyalandı ✓')).catch(() => {
+    prompt('Linki kopyalayın:', url);
+  });
 }
 
 /* ─── INIT ─────────────────────────────────────── */
