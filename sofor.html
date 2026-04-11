@@ -634,10 +634,14 @@
         <span id="sync-label">CANLI</span>
       </div>
       <div class="konteyner-no" id="hdr-konteyner">—</div>
-      <div class="header-meta">
+      <div class="header-meta" style="margin-bottom:6px;">
         <span class="meta-chip" id="hdr-plaka">🚛 —</span>
         <span class="meta-chip" id="hdr-musteri">🏢 —</span>
+        <span class="meta-chip" id="hdr-kont-tip" style="display:none;color:var(--accent);border-color:rgba(232,82,26,.3);"></span>
+        <span class="meta-chip" id="hdr-kont-durum" style="display:none;"></span>
       </div>
+      <!-- Çoklu konteyner varsa liste -->
+      <div id="hdr-kont-list" style="display:none;margin-top:8px;"></div>
     </div>
 
     <!-- DURUM BANNER -->
@@ -650,18 +654,42 @@
 
       <!-- BİLGİ KARTLARI -->
       <div class="info-grid" id="info-grid">
+        <!-- Konteyner No(lar) — tam genişlik -->
+        <div class="info-card full" id="kont-card-full" style="display:none;">
+          <div class="info-label">Konteyner No(lar)</div>
+          <div class="info-value" id="inf-konteyner-list" style="font-family:var(--font-mono);font-size:13px;letter-spacing:.04em;line-height:1.8;">—</div>
+        </div>
+        <!-- Referans -->
+        <div class="info-card" id="referans-card" style="display:none;">
+          <div class="info-label">Referans No</div>
+          <div class="info-value" id="inf-referans" style="font-family:var(--font-mono);font-size:14px;letter-spacing:.04em;">—</div>
+        </div>
+        <!-- Boş Dönüş -->
+        <div class="info-card" id="bos-donus-card" style="display:none;">
+          <div class="info-label">↩ Boş Dönüş</div>
+          <div class="info-value" id="inf-bos-donus" style="color:var(--teal,#2dd4bf);">—</div>
+        </div>
+        <!-- Alım Noktası -->
         <div class="info-card">
-          <div class="info-label">Yükleme Yeri</div>
+          <div class="info-label">Alım Noktası</div>
           <div class="info-value" id="inf-yukle">—</div>
         </div>
+        <!-- Teslim Yeri -->
         <div class="info-card">
           <div class="info-label">Teslim Yeri</div>
           <div class="info-value" id="inf-teslim">—</div>
         </div>
+        <!-- Boşaltma Zamanı -->
+        <div class="info-card" id="boslama-card" style="display:none;">
+          <div class="info-label">⏰ Boşaltma Zamanı</div>
+          <div class="info-value" id="inf-boslama" style="color:var(--yellow);font-family:var(--font-mono);font-size:13px;">—</div>
+        </div>
+        <!-- Mühür No -->
         <div class="info-card">
           <div class="info-label">Mühür No</div>
           <div class="info-value" id="inf-muhur" style="font-family:var(--font-mono)">—</div>
         </div>
+        <!-- Şoför Tel -->
         <div class="info-card">
           <div class="info-label">Şoför Tel</div>
           <div class="info-value" id="inf-tel">—</div>
@@ -870,25 +898,84 @@ function render() {
   const durum = e.durum || 'Bekliyor';
   const meta  = DURUM_META[durum] || DURUM_META['Bekliyor'];
 
-  // Header
-  document.getElementById('hdr-konteyner').textContent = e.konteyner_no || ('İş Emri #' + e.id);
+  // ── Header ──
+  // Konteyner no — çoklu satır varsa ilkini göster
+  const kontNolar = (e.konteyner_no || '').split('\n').map(s=>s.trim()).filter(Boolean);
+  const kontTitle = kontNolar.length > 0 ? kontNolar[0] + (kontNolar.length > 1 ? ` +${kontNolar.length-1}` : '') : ('İş Emri #' + e.id);
+  document.getElementById('hdr-konteyner').textContent = kontTitle;
   document.getElementById('hdr-plaka').textContent    = '🚛 ' + (e.arac_plaka || 'Araç Yok');
   document.getElementById('hdr-musteri').textContent  = '🏢 ' + (e.musteri_adi || '—');
-  document.title = (e.konteyner_no || 'İş Emri') + ' — Fleetly';
+  document.title = kontTitle + ' — Fleetly';
 
-  // Durum banner
+  // Konteyner tipi chip
+  const tipEl = document.getElementById('hdr-kont-tip');
+  if (e.kont_tip) { tipEl.textContent = '📦 ' + e.kont_tip; tipEl.style.display = ''; }
+  else              { tipEl.style.display = 'none'; }
+
+  // Dolu/Boş chip
+  const durumEl = document.getElementById('hdr-kont-durum');
+  if (e.kont_durum) {
+    durumEl.textContent = e.kont_durum === 'Boş' ? '🔲 Boş Alım' : '📦 Dolu Alım';
+    durumEl.style.color = e.kont_durum === 'Boş' ? 'var(--text2)' : 'var(--accent)';
+    durumEl.style.display = '';
+  } else { durumEl.style.display = 'none'; }
+
+  // Çoklu konteyner listesi
+  const kontListEl = document.getElementById('hdr-kont-list');
+  if (kontNolar.length > 1) {
+    kontListEl.style.display = '';
+    kontListEl.innerHTML = kontNolar.map((k,i) => `
+      <div style="display:inline-block;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:3px 10px;margin:3px 4px 3px 0;font-family:var(--font-mono);font-size:12px;color:${i===0?'var(--accent)':'var(--text2)'};">
+        ${k}
+      </div>`).join('');
+  } else { kontListEl.style.display = 'none'; }
+
+  // ── Durum banner ──
   const banner = document.getElementById('durum-banner');
   banner.className = 'durum-banner ' + meta.cls;
   document.getElementById('durum-icon').textContent = meta.icon;
   document.getElementById('durum-text').textContent = meta.label;
 
-  // Info
+  // ── Info kartları ──
+  // Çoklu konteyner kartı
+  const kontCardFull = document.getElementById('kont-card-full');
+  if (kontNolar.length > 1) {
+    kontCardFull.style.display = '';
+    document.getElementById('inf-konteyner-list').innerHTML =
+      kontNolar.map(k => `<div>${k}</div>`).join('');
+  } else { kontCardFull.style.display = 'none'; }
+
+  // Referans
+  const refCard = document.getElementById('referans-card');
+  if (e.referans_no) {
+    refCard.style.display = '';
+    document.getElementById('inf-referans').textContent = e.referans_no;
+  } else { refCard.style.display = 'none'; }
+
+  // Boş dönüş
+  const bosCard = document.getElementById('bos-donus-card');
+  if (e.bos_donus) {
+    bosCard.style.display = '';
+    document.getElementById('inf-bos-donus').textContent = '↩ ' + e.bos_donus;
+  } else { bosCard.style.display = 'none'; }
+
+  // Boşaltma zamanı
+  const boslamaCard = document.getElementById('boslama-card');
+  if (e.boslama_zaman) {
+    boslamaCard.style.display = '';
+    try {
+      const d = new Date(e.boslama_zaman);
+      document.getElementById('inf-boslama').textContent =
+        d.toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    } catch { document.getElementById('inf-boslama').textContent = e.boslama_zaman; }
+  } else { boslamaCard.style.display = 'none'; }
+
   document.getElementById('inf-yukle').textContent  = e.yukle_yeri  || '—';
   document.getElementById('inf-teslim').textContent = e.teslim_yeri || '—';
   document.getElementById('inf-muhur').textContent  = e.muhur_no    || '—';
   document.getElementById('inf-tel').textContent    = e.sofor_tel   || '—';
 
-  // Notlar
+  // ── Notlar ──
   if (e.notlar) {
     document.getElementById('notlar-wrapper').style.display = '';
     document.getElementById('notlar-text').textContent = e.notlar;
