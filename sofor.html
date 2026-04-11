@@ -976,7 +976,11 @@ function renderActions(e) {
 
 function renderFotos(e) {
   let fotos = [];
-  try { fotos = JSON.parse(e.fotograflar || '[]'); } catch {}
+  if (Array.isArray(e.fotograflar)) {
+    fotos = e.fotograflar;
+  } else {
+    try { fotos = JSON.parse(e.fotograflar || '[]'); } catch { fotos = []; }
+  }
   const count = fotos.length;
   document.getElementById('foto-count-badge').textContent = count;
 
@@ -1119,15 +1123,20 @@ document.getElementById('foto-input').addEventListener('change', async function(
       url = await fileToBase64(file);
     }
 
-    // Mevcut fotoğraflara ekle
+    // Mevcut fotograflara ekle — fotograflar her zaman array (fetchFromCloud normalize etti)
     let fotos = [];
-    try { fotos = JSON.parse(isEmri.fotograflar || '[]'); } catch {}
-    fotos.push({ url, tip: _pendingFotoType || 'Diğer', ts: new Date().toISOString() });
-    isEmri.fotograflar = JSON.stringify(fotos);
+    if (Array.isArray(isEmri.fotograflar)) {
+      fotos = isEmri.fotograflar;
+    } else {
+      try { fotos = JSON.parse(isEmri.fotograflar || '[]'); } catch { fotos = []; }
+    }
+    fotos.push({ url, tip: _pendingFotoType || 'Diger', ts: new Date().toISOString() });
+    isEmri.fotograflar = fotos; // array olarak sakla (render icin)
 
     saveLocal();
     render();
-    await syncToCloud(isEmri.id, { fotograflar: isEmri.fotograflar });
+    // Cloud'a JSON string olarak gonder (DB column tipi text)
+    await syncToCloud(isEmri.id, { fotograflar: JSON.stringify(fotos) });
     showToast('📸 Fotoğraf eklendi!', 'success');
   } catch (err) {
     showToast('Fotoğraf yüklenemedi', 'error');
@@ -1148,9 +1157,14 @@ function fileToBase64(file) {
 function saveLocal() {
   try {
     const all = JSON.parse(localStorage.getItem('fleetly_is_emirleri') || '[]');
+    // fotograflar'i saklamadan once normalize et
+    const toSave = Object.assign({}, isEmri);
+    if (Array.isArray(toSave.fotograflar)) {
+      // localStorage'da array olarak sakla, JSON.stringify zaten halleder
+    }
     const idx = all.findIndex(e => String(e.id) === String(isEmriId));
-    if (idx >= 0) all[idx] = isEmri;
-    else all.push(isEmri);
+    if (idx >= 0) all[idx] = toSave;
+    else all.push(toSave);
     localStorage.setItem('fleetly_is_emirleri', JSON.stringify(all));
   } catch {}
 }
@@ -1163,9 +1177,11 @@ async function syncToCloud(id, updates) {
     updateSyncUI('pending');
     return;
   }
+  // isEmri'nin gerçek Supabase id'sini kullan (_dbId varsa), yoksa verilen id
+  const dbId = (isEmri && isEmri._dbId) ? isEmri._dbId : id;
   const token = getSBAuthToken();
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/is_emirleri?id=eq.${id}`, {
+    const res = await fetch(`${SB_URL}/rest/v1/is_emirleri?id=eq.${dbId}`, {
       method: 'PATCH',
       headers: {
         'apikey': SB_ANON,
@@ -1175,9 +1191,20 @@ async function syncToCloud(id, updates) {
       },
       body: JSON.stringify(updates)
     });
-    if (res.ok) updateSyncUI('synced');
-  } catch {
-    pendingSync.push({ id, updates });
+    if (res.ok) {
+      updateSyncUI('synced');
+    } else {
+      const errText = await res.text().catch(() => '');
+      console.warn(`syncToCloud PATCH hata [${res.status}]:`, errText);
+      if (res.status === 401 || res.status === 403) {
+        console.warn('Fleetly: RLS policy eksik. Supabase Dashboard > is_emirleri > UPDATE policy ekleyin.');
+      }
+      pendingSync.push({ id: dbId, updates });
+      updateSyncUI('pending');
+    }
+  } catch (err) {
+    console.warn('syncToCloud ag hatasi:', err);
+    pendingSync.push({ id: dbId, updates });
     updateSyncUI('pending');
   }
 }
@@ -1192,10 +1219,26 @@ async function fetchFromCloud(id) {
         'Authorization': `Bearer ${token}`,
       }
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn('fetchFromCloud hata:', res.status);
+      return null;
+    }
     const data = await res.json();
-    return data?.[0] || null;
-  } catch { return null; }
+    const row = data?.[0] || null;
+    if (!row) return null;
+    // fotograflar alanini her zaman array'e normalize et
+    if (typeof row.fotograflar === 'string') {
+      try { row.fotograflar = JSON.parse(row.fotograflar || '[]'); } catch { row.fotograflar = []; }
+    } else if (!Array.isArray(row.fotograflar)) {
+      row.fotograflar = [];
+    }
+    // _dbId kaydet (syncToCloud icin)
+    row._dbId = row.id;
+    return row;
+  } catch (err) {
+    console.warn('fetchFromCloud exception:', err);
+    return null;
+  }
 }
 
 function updateSyncUI(state) {
