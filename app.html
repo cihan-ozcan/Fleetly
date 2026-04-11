@@ -4782,6 +4782,12 @@ async function checkAuth() {
     await checkSubscription();
     loadVehicles();
     opsLoadLocal(); // Adım 4b: operasyon stat kartı başlangıçta yüklensin
+    // Müşteri stat kartı ve operasyon modal listesi için arka planda yükle
+    crmLoadData().then(() => {
+      updateMusteriStat();
+      // Operasyon modalı açıksa select'i güncelle
+      _opsPopulateMusteriSelect();
+    }).catch(() => {});
   } else {
     showLoginOverlay();
   }
@@ -4801,6 +4807,11 @@ async function checkAuth() {
       await updateFirmaHeader();
       hideLoginOverlay();
       await checkSubscription();
+      // Müşteri verisini arka planda çek
+      crmLoadData().then(() => {
+        updateMusteriStat();
+        _opsPopulateMusteriSelect();
+      }).catch(() => {});
     } else if (event === 'SIGNED_OUT') {
       _isLoggingOut = false;
       _authToken = null;
@@ -11615,6 +11626,17 @@ async function opsSaveCloud(obj) {
   } catch(err) { console.error('is_emirleri buluta kaydedilemedi:', err); }
 }
 
+// ---- MUSTERI SELECT YENİLE (modal kapalıyken de çağrılabilir) ----
+function _opsPopulateMusteriSelect() {
+  const mSel = document.getElementById('ops-m-musteri');
+  if (!mSel) return;
+  const current = mSel.value;
+  mSel.innerHTML = '<option value="">Müşteri seçin...</option>' +
+    (crmMusteriler || []).filter(m => m.durum !== 'Pasif')
+      .map(m => `<option value="${m.id}">${m.firma}</option>`).join('');
+  if (current) mSel.value = current;
+}
+
 // ---- CLOUD DELETE ----
 async function opsDeleteCloud(id) {
   if (isLocalMode()) return;
@@ -11818,10 +11840,13 @@ function openOpsIsEmriModal(duzenlemeObj) {
   const titleEl = document.querySelector('#ops-modal-bg .maint-modal-title');
   if (titleEl) titleEl.textContent = _opsDuzenlemeId ? 'İŞ EMRİ DÜZENLE' : 'YENİ İŞ EMRİ';
 
-  // Müşteri dropdown doldur
+  // Müşteri dropdown doldur (crmLoadData bitmemişse arka planda tamamlanır)
+  _opsPopulateMusteriSelect();
   const mSel = document.getElementById('ops-m-musteri');
-  mSel.innerHTML = '<option value="">Müşteri seçin...</option>' +
-    (typeof crmMusteriler !== 'undefined' ? crmMusteriler.filter(m => m.durum !== 'Pasif').map(m => `<option value="${m.id}">${m.firma}</option>`).join('') : '');
+  // Müşteri listesi boşsa arka planda yükle
+  if (!crmMusteriler.length) {
+    crmLoadData().then(() => _opsPopulateMusteriSelect()).catch(() => {});
+  }
 
   // Araç dropdown doldur (şoförü otomatik doldur)
   const aSel = document.getElementById('ops-m-arac');
