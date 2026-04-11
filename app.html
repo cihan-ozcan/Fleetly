@@ -11415,23 +11415,153 @@ function crmExportCSV() {
 let isEmirleri = [];
 let opsDrawerActiveId = null;
 
-/* ── VERİ ────────────────────────────────────────────────── */
-function opsLoad() {
-  try { isEmirleri = JSON.parse(localStorage.getItem('fleetly_is_emirleri') || '[]'); } catch(e) { isEmirleri = []; }
+/* ── VERİ KATMANI ────────────────────────────────────────── */
+
+// ---- LocalStorage yedek ----
+function opsLoadLocal() {
+  try { isEmirleri = JSON.parse(localStorage.getItem('fleetly_is_emirleri') || '[]'); }
+  catch(e) { isEmirleri = []; }
 }
-function opsSave() {
+function opsSaveLocal() {
   localStorage.setItem('fleetly_is_emirleri', JSON.stringify(isEmirleri));
 }
+// Geriye dönük uyumluluk
+function opsLoad()  { opsLoadLocal(); }
+function opsSave()  { opsSaveLocal(); }
+
 function opsNextId() {
   return isEmirleri.length ? Math.max(...isEmirleri.map(e => e.id || 0)) + 1 : 1;
 }
 function opsById(id) { return isEmirleri.find(e => e.id === id); }
 
+// Supabase satırını → uygulama objesine dönüştür
+function opsRowToObj(r) {
+  return {
+    id            : r.id,
+    musteri_id    : r.musteri_id    || null,
+    musteri_adi   : r.musteri_adi   || '',
+    arac_plaka    : r.arac_plaka    || '',
+    sofor         : r.sofor         || '',
+    sofor_tel     : r.sofor_tel     || '',
+    konteyner_no  : r.konteyner_no  || '',
+    muhur_no      : r.muhur_no      || '',
+    yukle_yeri    : r.yukle_yeri    || '',
+    teslim_yeri   : r.teslim_yeri   || '',
+    durum         : r.durum         || 'Bekliyor',
+    atama_zamani  : r.atama_zamani  || null,
+    yola_zaman    : r.yola_zaman    || null,
+    fabrika_giris : r.fabrika_giris || null,
+    fabrika_cikis : r.fabrika_cikis || null,
+    teslim_zamani : r.teslim_zamani || null,
+    fotograflar   : (() => { try { return JSON.parse(r.fotograflar || '[]'); } catch(e) { return []; } })(),
+    notlar        : r.notlar        || '',
+  };
+}
+
+// Uygulama objesini → Supabase satırına dönüştür
+async function opsObjToRow(obj) {
+  const { data: { user } } = await getSB().auth.getUser();
+  return {
+    id            : typeof obj.id === 'number' ? obj.id : undefined,
+    firma_id      : currentFirmaId || null,
+    user_id       : user.id,
+    musteri_id    : obj.musteri_id    || null,
+    musteri_adi   : obj.musteri_adi   || null,
+    arac_plaka    : obj.arac_plaka    || null,
+    sofor         : obj.sofor         || null,
+    sofor_tel     : obj.sofor_tel     || null,
+    konteyner_no  : obj.konteyner_no  || null,
+    muhur_no      : obj.muhur_no      || null,
+    yukle_yeri    : obj.yukle_yeri    || null,
+    teslim_yeri   : obj.teslim_yeri   || null,
+    durum         : obj.durum         || 'Bekliyor',
+    atama_zamani  : obj.atama_zamani  || null,
+    yola_zaman    : obj.yola_zaman    || null,
+    fabrika_giris : obj.fabrika_giris || null,
+    fabrika_cikis : obj.fabrika_cikis || null,
+    teslim_zamani : obj.teslim_zamani || null,
+    fotograflar   : JSON.stringify(obj.fotograflar || []),
+    notlar        : obj.notlar        || null,
+  };
+}
+
+// ---- CLOUD LOAD ----
+async function opsLoadCloud() {
+  if (isLocalMode() || !_authToken) return;
+  try {
+    let url = sbUrl('is_emirleri?select=*&order=id.desc');
+    if (currentFirmaId) url += '&firma_id=eq.' + currentFirmaId;
+    const res = await fetch(url, { headers: sbHeaders() });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    isEmirleri = rows.map(opsRowToObj);
+    opsSaveLocal();
+  } catch(err) {
+    console.warn('is_emirleri cloud yüklenemedi, localStorage kullanılıyor:', err);
+    opsLoadLocal();
+  }
+}
+
+// ---- CLOUD UPSERT (yeni kayıt veya güncelleme) ----
+async function opsSaveCloud(obj) {
+  opsSaveLocal(); // önce yerel yedek
+  if (isLocalMode() || !_authToken) return;
+  try {
+    const row    = await opsObjToRow(obj);
+    const isEdit = typeof obj.id === 'number';
+    if (isEdit) {
+      await fetch(sbUrl('is_emirleri?id=eq.' + obj.id), {
+        method : 'PATCH',
+        headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+        body   : JSON.stringify(row),
+      });
+    } else {
+      const res = await fetch(sbUrl('is_emirleri'), {
+        method : 'POST',
+        headers: { ...sbHeaders(), 'Prefer': 'return=representation' },
+        body   : JSON.stringify(row),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        if (created?.[0]?.id) {
+          // Supabase'den dönen gerçek ID'yi güncelle
+          const idx = isEmirleri.findIndex(e => e === obj);
+          if (idx !== -1) isEmirleri[idx].id = created[0].id;
+          obj.id = created[0].id;
+          opsSaveLocal();
+        }
+      }
+    }
+  } catch(err) { console.error('is_emirleri buluta kaydedilemedi:', err); }
+}
+
+// ---- CLOUD DELETE ----
+async function opsDeleteCloud(id) {
+  if (isLocalMode() || !_authToken) return;
+  try {
+    await fetch(sbUrl('is_emirleri?id=eq.' + id), {
+      method : 'DELETE',
+      headers: sbHeaders(),
+    });
+  } catch(err) { console.error('is_emirleri buluttan silinemedi:', err); }
+}
+
+// ---- FULL LOAD (local önce, cloud sonra) ----
+async function opsLoadData() {
+  opsLoadLocal(); // hızlı ilk render için
+  await opsLoadCloud(); // sonra buluttan güncel veriyi al
+}
+
 /* ── SAYFA AÇ/KAPAT ─────────────────────────────────────── */
-function openOperasyonPage() {
-  opsLoad();
+async function openOperasyonPage() {
+  opsLoadLocal();
   document.getElementById('operasyon-page').classList.add('open');
   document.body.style.overflow = 'hidden';
+  opsRenderStats();
+  opsRenderTable();
+  opsRenderKanban();
+  opsRenderArsiv();
+  await opsLoadCloud();
   opsRenderStats();
   opsRenderTable();
   opsRenderKanban();
@@ -11633,7 +11763,8 @@ function saveOpsIsEmri() {
     fotograflar    : [],
   };
   isEmirleri.push(obj);
-  opsSave();
+  opsSaveLocal();
+  opsSaveCloud(obj); // arka planda cloud'a yaz
   closeOpsIsEmriModal();
   opsRenderStats();
   opsRenderTable();
@@ -11646,7 +11777,8 @@ function saveOpsIsEmri() {
 function deleteOpsIsEmri(id) {
   if (!confirm('Bu iş emrini silmek istiyor musunuz?')) return;
   isEmirleri = isEmirleri.filter(e => e.id !== id);
-  opsSave();
+  opsSaveLocal();
+  opsDeleteCloud(id);
   opsRenderStats();
   opsRenderTable();
   showToast('İş emri silindi');
@@ -11741,7 +11873,8 @@ function opsGuncelleDurum(id, yeniDurum) {
   if (e.fabrika_giris && !e.fabrika_cikis && yeniDurum !== 'Fabrikada') {
     e.fabrika_cikis = new Date().toISOString();
   }
-  opsSave();
+  opsSaveLocal();
+  opsSaveCloud(e); // arka planda cloud'a yaz
   opsRenderStats();
   opsRenderTable();
   opsRenderKanban();
