@@ -327,6 +327,18 @@
   <div class="err-icon">🔒</div>
   <h2>Bulunamadı</h2>
   <p id="error-msg">Bu takip linki geçersiz veya süresi dolmuş.</p>
+  <!-- RLS ipucu — sadece erişim hatalarında gösterilir -->
+  <div id="rls-hint" style="display:none;margin-top:16px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);border-radius:10px;padding:14px 16px;max-width:340px;text-align:left;">
+    <div style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:8px;">⚠️ Operatör için: RLS Policy Gerekli</div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.7;">
+      Supabase Dashboard &rarr; <b>Table Editor &rarr; is_emirleri &rarr; RLS Policies</b> kısmına şu policy'yi ekleyin:<br><br>
+      <code style="font-family:monospace;font-size:10px;background:var(--surface3);padding:6px 8px;border-radius:6px;display:block;word-break:break-all;">
+        CREATE POLICY "musteri_takip_okuma"<br>
+        ON public.is_emirleri FOR SELECT<br>
+        TO anon USING (true);
+      </code>
+    </div>
+  </div>
 </div>
 
 <div id="main-content">
@@ -530,16 +542,55 @@ function renderSteps(e) {
 
 /* ─── SUPABASE FETCH ─── */
 async function fetchIsEmri(id) {
-  if (!SB_URL || !SB_ANON) return null;
-  try {
-    const res = await fetch(
-      `${SB_URL}/rest/v1/is_emirleri?id=eq.${id}&select=*`,
-      { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.[0] || null;
-  } catch { return null; }
+  if (!SB_URL || !SB_ANON) {
+    console.error('Fleetly: SB_URL veya SB_ANON tanımlı değil — config.js yüklü mü?');
+    return null;
+  }
+
+  // Önce view'dan dene (RLS bypass için önerilen yol)
+  // Eğer view yoksa doğrudan tablodan dene
+  const endpoints = [
+    `${SB_URL}/rest/v1/musteri_takip_view?id=eq.${id}&select=*`,
+    `${SB_URL}/rest/v1/is_emirleri?id=eq.${id}&select=id,musteri_adi,arac_plaka,konteyner_no,muhur_no,yukle_yeri,teslim_yeri,durum,atama_zamani,yola_zaman,fabrika_giris,fabrika_cikis,teslim_zamani,konum_lat,konum_lng,konum_zaman,notlar`,
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'apikey': SB_ANON,
+          'Authorization': 'Bearer ' + SB_ANON,
+          'Accept': 'application/json',
+        }
+      });
+
+      console.log(`Fleetly fetch [${res.status}]:`, url);
+
+      if (res.status === 401 || res.status === 403) {
+        console.warn('Fleetly: RLS engeli — Supabase Dashboard > Authentication > Policies > is_emirleri tablosuna anon SELECT policy ekleyin');
+        _showRlsHint();
+        return null;
+      }
+
+      if (!res.ok) {
+        const errBody = await res.text();
+        console.warn('Fleetly fetch hata:', res.status, errBody);
+        continue; // sonraki endpoint'i dene
+      }
+
+      const data = await res.json();
+      if (data && data.length > 0) return data[0];
+    } catch (err) {
+      console.warn('Fleetly fetch exception:', err);
+    }
+  }
+
+  return null;
+}
+
+function _showRlsHint() {
+  const hint = document.getElementById('rls-hint');
+  if (hint) hint.style.display = 'block';
 }
 
 /* ─── AUTO REFRESH ─── */
@@ -555,45 +606,57 @@ async function refresh() {
 /* ─── INIT ─── */
 async function init() {
   const params = new URLSearchParams(window.location.search);
-  const token  = params.get('m'); // müşteri token parametresi
+  const token  = params.get('m');
 
   if (!token) {
     showError('Takip linki geçersiz. Lütfen operatörünüzden yeni link isteyin.');
     return;
   }
 
-  // Token decode: btoa('mtr_' + id + '_' + ts)
+  // Token decode — btoa('mtr_' + id + '_' + timestamp)
+  // id kısmı sayısal olduğu için split('_')[1] yeterli
+  let decoded = '';
   try {
-    const decoded = atob(token);
-    if (decoded.startsWith('mtr_')) {
-      isEmriId = decoded.split('_')[1];
-    }
+    decoded = atob(token);
   } catch {
+    showError('Link bozuk — lütfen operatörünüzden yeni link isteyin.');
+    return;
+  }
+
+  console.log('Fleetly token decoded:', decoded);
+
+  if (decoded.startsWith('mtr_')) {
+    // format: mtr_<id>_<timestamp>
+    const parts = decoded.split('_');
+    isEmriId = parts[1]; // ikinci parça = id
+  } else {
     showError('Geçersiz link formatı.');
     return;
   }
 
   if (!isEmriId) {
-    showError('İş emri bulunamadı.');
+    showError('İş emri ID alınamadı.');
     return;
   }
 
-  // Supabase'den çek
+  console.log('Fleetly isEmriId:', isEmriId);
+
   const data = await fetchIsEmri(isEmriId);
+
   if (!data) {
-    showError('Bu iş emrine erişilemiyor. Bağlantı kontrolü yapın veya operatörünüzle iletişime geçin.');
+    showError(
+      'Bu iş emrine erişilemiyor.\n\n' +
+      'Supabase\'de RLS policy eksik olabilir. ' +
+      'Tarayıcı konsolunu (F12) kontrol edin.'
+    );
     return;
   }
 
   isEmri = data;
-
-  // Loading gizle, içerik göster
   document.getElementById('loading-state').style.display = 'none';
   document.getElementById('main-content').style.display = 'block';
-
   render();
 
-  // Her 30 saniyede otomatik güncelle
   refreshTimer = setInterval(refresh, 30000);
 }
 
