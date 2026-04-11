@@ -3407,6 +3407,14 @@
       <div class="drawer-section-title">Durum Güncelle</div>
       <div style="display:flex;flex-direction:column;gap:6px;" id="ops-drawer-actions"></div>
     </div>
+    <!-- Not Ekle -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Not Ekle</div>
+      <div style="display:flex;gap:6px;">
+        <input id="ops-drawer-not-inp" class="srm-inp" placeholder="Yeni not..." style="flex:1;font-size:12.5px;" onkeydown="if(event.key==='Enter')opsDrawerNotEkle()" />
+        <button onclick="opsDrawerNotEkle()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-family:var(--font-body);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Ekle</button>
+      </div>
+    </div>
     <!-- Paylaşım linki -->
     <div class="drawer-section">
       <div class="drawer-section-title">Şoför Erişimi</div>
@@ -11603,6 +11611,7 @@ async function openOperasyonPage() {
   opsRenderTable();
   opsRenderKanban();
   opsRenderArsiv();
+  updateOpsStatCard();
 }
 function closeOperasyonPage() {
   document.getElementById('operasyon-page').classList.remove('open');
@@ -11695,6 +11704,7 @@ function opsRenderTable() {
       <td class="col-islem">
         <div style="display:flex;gap:4px;">
           <button onclick="openOpsDrawer(${e.id})" class="icon-btn" title="Detay" style="color:var(--accent);border-color:rgba(232,82,26,.25);">⊙</button>
+          <button onclick="openOpsIsEmriDuzenle(${e.id})" class="icon-btn" title="Düzenle" style="color:var(--blue);border-color:rgba(56,189,248,.25);">✎</button>
           <button onclick="deleteOpsIsEmri(${e.id})" class="icon-btn del" title="Sil">🗑</button>
         </div>
       </td>
@@ -11754,22 +11764,52 @@ function opsRenderArsiv() {
 }
 
 /* ── İŞ EMRİ MODAL ───────────────────────────────────────── */
-function openOpsIsEmriModal() {
+let _opsDuzenlemeId = null; // null = yeni kayıt, number = düzenleme
+
+function openOpsIsEmriModal(duzenlemeObj) {
+  _opsDuzenlemeId = duzenlemeObj ? duzenlemeObj.id : null;
+
+  // Başlık güncelle
+  const titleEl = document.querySelector('#ops-modal-bg .maint-modal-title');
+  if (titleEl) titleEl.textContent = _opsDuzenlemeId ? 'İŞ EMRİ DÜZENLE' : 'YENİ İŞ EMRİ';
+
   // Müşteri dropdown doldur
   const mSel = document.getElementById('ops-m-musteri');
   mSel.innerHTML = '<option value="">Müşteri seçin...</option>' +
     (typeof crmMusteriler !== 'undefined' ? crmMusteriler.filter(m => m.durum !== 'Pasif').map(m => `<option value="${m.id}">${m.firma}</option>`).join('') : '');
 
-  // Araç dropdown doldur
+  // Araç dropdown doldur (şoförü otomatik doldur)
   const aSel = document.getElementById('ops-m-arac');
   aSel.innerHTML = '<option value="">Araç seçin...</option>' +
-    (typeof vehicles !== 'undefined' ? vehicles.map(v => `<option value="${v.plaka}">${v.plaka} — ${v.marka||''} ${v.model||''}</option>`).join('') : '');
+    (typeof vehicles !== 'undefined' ? vehicles.map(v => `<option value="${v.plaka}" data-sofor="${v.sofor||''}" data-tel="${v.telefon||''}">${v.plaka}${v.sofor?' — '+v.sofor:''}</option>`).join('') : '');
 
-  ['sofor','sofor-tel','konteyner','muhur','yukle','teslim','notlar'].forEach(f => {
-    const el = document.getElementById('ops-m-' + f);
-    if (el) el.value = '';
+  // Araç değişince şoförü otomatik doldur
+  aSel.onchange = function() {
+    const opt = this.options[this.selectedIndex];
+    const soforEl = document.getElementById('ops-m-sofor');
+    const telEl   = document.getElementById('ops-m-sofor-tel');
+    if (soforEl && !soforEl.value && opt.dataset.sofor) soforEl.value = opt.dataset.sofor;
+    if (telEl   && !telEl.value   && opt.dataset.tel)   telEl.value   = opt.dataset.tel;
+  };
+
+  // Alanları temizle / duzenleme için doldur
+  const d = duzenlemeObj || {};
+  if (d.musteri_id) mSel.value = d.musteri_id;
+  if (d.arac_plaka) aSel.value = d.arac_plaka;
+  const map = { sofor: d.sofor, 'sofor-tel': d.sofor_tel, konteyner: d.konteyner_no,
+                muhur: d.muhur_no, yukle: d.yukle_yeri, teslim: d.teslim_yeri, notlar: d.notlar };
+  Object.entries(map).forEach(([k, v]) => {
+    const el = document.getElementById('ops-m-' + k);
+    if (el) el.value = v || '';
   });
+
   document.getElementById('ops-modal-bg').classList.remove('hidden');
+}
+
+function openOpsIsEmriDuzenle(id) {
+  const e = opsById(id);
+  if (!e) return;
+  openOpsIsEmriModal(e);
 }
 function closeOpsIsEmriModal() {
   document.getElementById('ops-modal-bg').classList.add('hidden');
@@ -11780,6 +11820,31 @@ function saveOpsIsEmri() {
   if (!musteriId || !aracPlaka) { showToast('Müşteri ve araç zorunlu', 'error'); return; }
 
   const musteriObj = typeof crmMusteriler !== 'undefined' ? crmMusteriler.find(m => m.id == musteriId) : null;
+
+  if (_opsDuzenlemeId !== null) {
+    // Düzenleme modu
+    const e = opsById(_opsDuzenlemeId);
+    if (!e) return;
+    e.musteri_id   = parseInt(musteriId);
+    e.musteri_adi  = musteriObj ? musteriObj.firma : e.musteri_adi;
+    e.arac_plaka   = aracPlaka;
+    e.sofor        = document.getElementById('ops-m-sofor').value.trim();
+    e.sofor_tel    = document.getElementById('ops-m-sofor-tel').value.trim();
+    e.konteyner_no = document.getElementById('ops-m-konteyner').value.trim().toUpperCase();
+    e.muhur_no     = document.getElementById('ops-m-muhur').value.trim();
+    e.yukle_yeri   = document.getElementById('ops-m-yukle').value.trim();
+    e.teslim_yeri  = document.getElementById('ops-m-teslim').value.trim();
+    e.notlar       = document.getElementById('ops-m-notlar').value.trim();
+    opsSaveLocal();
+    opsSaveCloud(e);
+    closeOpsIsEmriModal();
+    opsRenderStats(); opsRenderTable(); opsRenderKanban(); opsRenderArsiv();
+    logActivity(`📝 İş emri güncellendi — <strong>${e.konteyner_no || e.arac_plaka}</strong>`);
+    showToast('İş emri güncellendi ✓');
+    return;
+  }
+
+  // Yeni kayıt modu
   const obj = {
     id             : opsNextId(),
     musteri_id     : parseInt(musteriId),
@@ -11794,6 +11859,7 @@ function saveOpsIsEmri() {
     notlar         : document.getElementById('ops-m-notlar').value.trim(),
     durum          : 'Bekliyor',
     atama_zamani   : new Date().toISOString(),
+    yola_zaman     : null,
     fabrika_giris  : null,
     fabrika_cikis  : null,
     teslim_zamani  : null,
@@ -11801,11 +11867,10 @@ function saveOpsIsEmri() {
   };
   isEmirleri.push(obj);
   opsSaveLocal();
-  opsSaveCloud(obj); // arka planda cloud'a yaz
+  opsSaveCloud(obj);
   closeOpsIsEmriModal();
-  opsRenderStats();
-  opsRenderTable();
-  opsRenderKanban();
+  opsRenderStats(); opsRenderTable(); opsRenderKanban();
+  updateOpsStatCard();
   logActivity(`📦 İş emri oluşturuldu — <strong>${obj.konteyner_no || obj.arac_plaka}</strong> · ${obj.musteri_adi}`);
   showToast('İş emri oluşturuldu ✓');
 }
@@ -11916,9 +11981,39 @@ function opsGuncelleDurum(id, yeniDurum) {
   opsRenderTable();
   opsRenderKanban();
   opsRenderArsiv();
+  updateOpsStatCard();
   openOpsDrawer(id); // drawer'ı güncelle
   logActivity(`📦 <strong>${e.konteyner_no||e.arac_plaka}</strong> → ${yeniDurum}`);
   showToast('Durum güncellendi: ' + yeniDurum);
+}
+
+/* ── DRAWER NOT EKLE ────────────────────────────────────── */
+function opsDrawerNotEkle() {
+  if (!opsDrawerActiveId) return;
+  const inp = document.getElementById('ops-drawer-not-inp');
+  if (!inp) return;
+  const notMetin = inp.value.trim();
+  if (!notMetin) { showToast('Not boş olamaz', 'error'); return; }
+  const e = opsById(opsDrawerActiveId);
+  if (!e) return;
+  const tarih = new Date().toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  e.notlar = (e.notlar ? e.notlar + '\n' : '') + '[' + tarih + '] ' + notMetin;
+  opsSaveLocal();
+  opsSaveCloud(e);
+  inp.value = '';
+  // Drawer detaylar bölümünü güncelle
+  const detaylar = document.getElementById('ops-drawer-detaylar');
+  if (detaylar) {
+    const rows = detaylar.querySelectorAll('.detail-row');
+    rows.forEach(r => {
+      const key = r.querySelector('.detail-key');
+      if (key && key.textContent === 'Notlar') {
+        const val = r.querySelector('.detail-val');
+        if (val) val.textContent = e.notlar;
+      }
+    });
+  }
+  showToast('Not eklendi ✓');
 }
 
 /* ── ŞOFÖRE LİNK ─────────────────────────────────────────── */
