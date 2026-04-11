@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Fleetly — Araç & Bilgi Yönetim Sistemi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -1024,6 +1024,8 @@
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     padding: 0 28px;
+    padding-left: max(28px, env(safe-area-inset-left));
+    padding-right: max(28px, env(safe-area-inset-right));
     height: 62px;
     display: flex; align-items: center; justify-content: space-between;
     position: sticky; top: 0; z-index: 100;
@@ -2537,6 +2539,129 @@
     #crm-page .modal { max-width: 100%; border-radius: 20px 20px 0 0; max-height: 95vh; }
     #crm-page .modal-backdrop { align-items: flex-end; padding: 0; }
     #crm-page .modal-header { border-radius: 20px 20px 0 0; }
+  }
+
+  /* ═══════════════════════════════════════════════════
+     MOBİL GENEL İYİLEŞTİRMELER (Ek)
+     ═══════════════════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* ── Driver Modal — tam ekran ── */
+    .driver-modal-backdrop {
+      padding: 0;
+      align-items: flex-end;
+    }
+    .driver-modal {
+      max-width: 100% !important;
+      width: 100% !important;
+      max-height: 95vh;
+      border-radius: 20px 20px 0 0 !important;
+    }
+    .driver-modal-header {
+      border-radius: 20px 20px 0 0 !important;
+    }
+    .driver-modal-body {
+      padding: 14px 16px;
+    }
+
+    /* ── SRM Modal — tam ekran ── */
+    .srm-modal {
+      max-width: 100% !important;
+      width: 100% !important;
+      max-height: 95vh;
+      border-radius: 20px 20px 0 0 !important;
+    }
+    .srm-header {
+      border-radius: 20px 20px 0 0 !important;
+      padding: 14px 16px;
+    }
+    .srm-body { padding: 14px 16px; }
+    .srm-grid { grid-template-columns: 1fr 1fr !important; }
+    .srm-stat-val { font-size: 18px; }
+
+    /* SRM backdrop — altta aç */
+    [class*="srm-backdrop"], .vehicle-select-backdrop {
+      padding: 0 !important;
+      align-items: flex-end !important;
+    }
+
+    /* ── Operasyon Kanban — tek sütun ── */
+    .ops-kanban { grid-template-columns: 1fr !important; }
+
+    /* ── Stats grid küçük ekran ── */
+    .srm-stats { grid-template-columns: repeat(2, 1fr); }
+
+    /* ── CRM chart container ── */
+    #crm-page canvas {
+      max-width: 100%;
+      height: auto !important;
+    }
+
+    /* ── Genel tablo wrap scroll ── */
+    .table-section, .srm-table-wrap, .maint-table, .fuel-table {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Modal body scroll ── */
+    .modal-body, .fuel-modal-body, .maint-modal-body, .driver-modal-body, .srm-body {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Input / select tam genişlik ── */
+    .srm-inp, .fuel-inp, .maint-inp {
+      font-size: 16px !important; /* iOS zoom önleme */
+    }
+    input[type="text"], input[type="number"], input[type="date"],
+    input[type="email"], input[type="tel"], select, textarea {
+      font-size: 16px !important; /* iOS zoom önleme */
+    }
+
+    /* ── SRM tabs küçük ── */
+    .srm-tab { font-size: 10.5px; padding: 6px 6px; }
+
+    /* ── Araç kartı — küçük ekran düzeltme ── */
+    .mob-card-body { grid-template-columns: 1fr 1fr; }
+
+    /* ── Masraf/Sefer modal backdrop ── */
+    .ops-modal-backdrop, [class$="-backdrop"]:not(.hidden) {
+      padding: 0 !important;
+      align-items: flex-end !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    /* ── Stat kartları — tam 2 sütun ── */
+    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+    /* ── SRM grid — tek sütun ── */
+    .srm-grid { grid-template-columns: 1fr !important; }
+    .srm-stats { grid-template-columns: repeat(2, 1fr); }
+
+    /* ── Header yükseklik küçült ── */
+    header { height: 52px !important; padding: 0 10px !important; }
+
+    /* ── mob menu butonu erişilebilir ── */
+    #mob-menu-btn { padding: 6px; }
+
+    /* ── Nav CTA küçük ── */
+    .nav-cta { padding: 5px 8px !important; font-size: 10px !important; }
+
+    /* ── Tablo araç bar ── */
+    .table-toolbar { padding: 10px 12px !important; }
+
+    /* ── Toast — tam genişlik ── */
+    #toast-msg, .toast {
+      left: 12px !important; right: 12px !important;
+      transform: none !important; width: auto !important;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .srm-stats { grid-template-columns: 1fr 1fr; }
+    .driver-modal-body { padding: 10px 12px; }
+    .srm-tab { font-size: 9.5px; padding: 5px 4px; }
   }
 
 </style>
