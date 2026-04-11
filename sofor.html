@@ -546,6 +546,70 @@
     }
     .sync-dot.pending { background: var(--yellow); }
     .sync-dot.offline { background: var(--red); animation: none; }
+
+    /* ─── MOBİL İYİLEŞTİRMELER ──── */
+    /* iOS safe area (notch / home bar) */
+    .sofor-header {
+      padding-top: max(16px, env(safe-area-inset-top));
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+    }
+    .content {
+      padding-bottom: max(100px, calc(80px + env(safe-area-inset-bottom)));
+    }
+    .sofor-footer {
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+
+    /* iOS input zoom önleme */
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+
+    /* Buton dokunma alanı */
+    .action-btn {
+      min-height: 60px;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* Sheet ve dialog iOS uyumu */
+    .sheet {
+      padding-bottom: max(40px, env(safe-area-inset-bottom));
+    }
+    .dialog-btns button {
+      min-height: 48px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Fotoğraf ekleme butonu daha büyük dokunma alanı */
+    .foto-add-btn {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* Sheet seçenekleri */
+    .sheet-option {
+      min-height: 72px;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* Küçük ekranlar */
+    @media (max-width: 380px) {
+      .konteyner-no { font-size: 28px; }
+      .action-btn { font-size: 17px; }
+      .content { padding: 16px 14px 100px; }
+      .info-grid { gap: 8px; }
+      .info-card { padding: 10px 12px; }
+    }
+
+    /* Landscape mod */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .konteyner-no { font-size: 24px; }
+      .sofor-header { padding-top: 10px; padding-bottom: 8px; }
+      .action-btn { min-height: 48px; font-size: 16px; }
+    }
   </style>
 </head>
 
