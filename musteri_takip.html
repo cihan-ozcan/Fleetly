@@ -314,6 +314,48 @@
     #error-state p  { font-size: 14px; color: var(--text2); max-width: 280px; }
 
     #main-content { display: none; }
+
+    /* ─── MOBİL İYİLEŞTİRMELER ──── */
+    /* iOS safe area */
+    .top-bar {
+      padding-top: max(14px, env(safe-area-inset-top));
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+    }
+    .footer {
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+    .page {
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+    }
+
+    /* Harita yüksekliği ekrana göre */
+    #harita { height: clamp(200px, 40vw, 320px); }
+
+    /* Küçük ekran düzenlemeleri */
+    @media (max-width: 480px) {
+      .top-bar-title { font-size: 15px; }
+      .info-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .info-card { padding: 10px 12px; }
+      .info-value { font-size: 13px; }
+      .page { padding: 14px 14px 50px; }
+      .durum-bar { padding: 9px 14px; font-size: 12px; }
+      #harita { height: 200px; }
+    }
+
+    @media (max-width: 380px) {
+      .info-grid { grid-template-columns: 1fr; }
+      .info-card.full { grid-column: span 1; }
+      .top-bar { padding: max(12px, env(safe-area-inset-top)) 14px 12px; gap: 8px; }
+      .logo-mark { width: 28px; height: 28px; font-size: 14px; border-radius: 7px; }
+    }
+
+    /* Landscape */
+    @media (max-height: 500px) and (orientation: landscape) {
+      #harita { height: 150px; }
+      .top-bar { padding-top: 8px; padding-bottom: 8px; }
+    }
   </style>
 </head>
 <body>
