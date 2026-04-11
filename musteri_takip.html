@@ -531,23 +531,47 @@
     <!-- SEVK BİLGİLERİ -->
     <div class="section-title" style="margin-bottom:10px;">Sevkiyat Bilgileri</div>
     <div class="info-grid">
+      <!-- Konteyner No — tam genişlik, mono büyük -->
       <div class="info-card full">
-        <div class="info-label">Konteyner / Referans No</div>
-        <div class="info-value" id="inf-konteyner" style="font-family:var(--font-mono);letter-spacing:.05em;font-size:18px;">—</div>
+        <div class="info-label">Konteyner No(lar)</div>
+        <div class="info-value" id="inf-konteyner" style="font-family:var(--font-mono);letter-spacing:.05em;font-size:16px;line-height:1.7;">—</div>
       </div>
+      <!-- Konteyner Tipi + Dolu/Boş yan yana -->
+      <div class="info-card" id="inf-kont-tip-card" style="display:none;">
+        <div class="info-label">Konteyner Tipi</div>
+        <div class="info-value" id="inf-kont-tip" style="font-family:var(--font-mono);">—</div>
+      </div>
+      <div class="info-card" id="inf-kont-durum-card" style="display:none;">
+        <div class="info-label">Dolu / Boş</div>
+        <div class="info-value" id="inf-kont-durum">—</div>
+      </div>
+      <!-- Referans No -->
+      <div class="info-card" id="inf-referans-card" style="display:none;">
+        <div class="info-label">Referans No</div>
+        <div class="info-value" id="inf-referans" style="font-family:var(--font-mono);">—</div>
+      </div>
+      <!-- Alım Noktası -->
       <div class="info-card">
-        <div class="info-label">Yükleme Yeri</div>
+        <div class="info-label">Alım Noktası</div>
         <div class="info-value" id="inf-yukle">—</div>
       </div>
+      <!-- Teslim Yeri -->
       <div class="info-card">
         <div class="info-label">Teslim Yeri</div>
         <div class="info-value" id="inf-teslim">—</div>
       </div>
+      <!-- Boş Dönüş — sadece dolu varsa göster -->
+      <div class="info-card" id="inf-bos-donus-card" style="display:none;">
+        <div class="info-label">Boş Dönüş</div>
+        <div class="info-value" id="inf-bos-donus" style="color:#2dd4bf;">—</div>
+      </div>
+      <!-- Araç Plakası -->
       <div class="info-card">
         <div class="info-label">Araç Plakası</div>
         <div class="info-value" id="inf-plaka" style="font-family:var(--font-mono);">—</div>
       </div>
-      <div class="info-card">
+      <!-- Mühür No -->
+      <div class="info-card" id="inf-muhur-card">
         <div class="info-label">Mühür No</div>
         <div class="info-value" id="inf-muhur" style="font-family:var(--font-mono);">—</div>
       </div>
@@ -632,16 +656,52 @@ function render() {
   const subText = e.konum_zaman ? ('Konum: ' + fmtTime(e.konum_zaman)) : '';
   document.getElementById('durum-sub').textContent = subText;
 
-  // Bilgiler
-  document.getElementById('inf-konteyner').textContent = e.konteyner_no || ('İş #' + e.id);
-  document.getElementById('inf-yukle').textContent     = e.yukle_yeri   || '—';
-  document.getElementById('inf-teslim').textContent    = e.teslim_yeri  || '—';
-  document.getElementById('inf-plaka').textContent     = e.arac_plaka   || '—';
-  document.getElementById('inf-muhur').textContent     = e.muhur_no     || '—';
-  document.title = (e.konteyner_no || 'Sevkiyat') + ' Takip — Fleetly';
+  // ── Konteyner No(lar) ──
+  const kontNolar = (e.konteyner_no || '').split('\n').map(s=>s.trim()).filter(Boolean);
+  const kontEl = document.getElementById('inf-konteyner');
+  if (kontNolar.length > 1) {
+    kontEl.innerHTML = kontNolar.map((k,i) =>
+      `<div style="color:${i===0?'inherit':'var(--text2)'};">${k}</div>`).join('');
+  } else {
+    kontEl.textContent = kontNolar[0] || ('İş #' + e.id);
+  }
+  document.title = (kontNolar[0] || 'Sevkiyat') + ' Takip — Fleetly';
 
-  // Notlar (operatör notu varsa göster — şoför notu değil)
-  // Kısa notlar göster; hassas iç notları gizleyebilirsiniz buradan
+  // ── Konteyner Tipi ──
+  const tipCard = document.getElementById('inf-kont-tip-card');
+  if (e.kont_tip) { tipCard.style.display = ''; document.getElementById('inf-kont-tip').textContent = e.kont_tip; }
+  else { tipCard.style.display = 'none'; }
+
+  // ── Dolu/Boş ──
+  const durumCard = document.getElementById('inf-kont-durum-card');
+  if (e.kont_durum) {
+    durumCard.style.display = '';
+    const durumEl = document.getElementById('inf-kont-durum');
+    durumEl.textContent  = e.kont_durum === 'Boş' ? '🔲 Boş Alım' : '📦 Dolu Alım';
+    durumEl.style.color  = e.kont_durum === 'Boş' ? 'var(--text2)' : 'var(--accent)';
+  } else { durumCard.style.display = 'none'; }
+
+  // ── Referans No ──
+  const refCard = document.getElementById('inf-referans-card');
+  if (e.referans_no) { refCard.style.display = ''; document.getElementById('inf-referans').textContent = e.referans_no; }
+  else { refCard.style.display = 'none'; }
+
+  // ── Boş Dönüş ──
+  const bosCard = document.getElementById('inf-bos-donus-card');
+  if (e.bos_donus) { bosCard.style.display = ''; document.getElementById('inf-bos-donus').textContent = '↩ ' + e.bos_donus; }
+  else { bosCard.style.display = 'none'; }
+
+  // ── Diğer alanlar ──
+  document.getElementById('inf-yukle').textContent  = e.yukle_yeri  || '—';
+  document.getElementById('inf-teslim').textContent = e.teslim_yeri || '—';
+  document.getElementById('inf-plaka').textContent  = e.arac_plaka  || '—';
+  document.getElementById('inf-muhur').textContent  = e.muhur_no    || '—';
+
+  // Mühür kartı — mühür yoksa gizle
+  const muhurCard = document.getElementById('inf-muhur-card');
+  if (muhurCard) muhurCard.style.display = e.muhur_no ? '' : 'none';
+
+  // Notlar
   if (e.notlar) {
     document.getElementById('notlar-wrap').style.display = '';
     document.getElementById('notlar-text').textContent = e.notlar;
@@ -765,7 +825,7 @@ async function fetchIsEmri(id) {
   // Eğer view yoksa doğrudan tablodan dene
   const endpoints = [
     `${SB_URL}/rest/v1/musteri_takip_view?id=eq.${id}&select=*`,
-    `${SB_URL}/rest/v1/is_emirleri?id=eq.${id}&select=id,musteri_adi,arac_plaka,konteyner_no,muhur_no,yukle_yeri,teslim_yeri,durum,atama_zamani,yola_zaman,fabrika_giris,fabrika_cikis,teslim_zamani,konum_lat,konum_lng,konum_zaman,notlar`,
+    `${SB_URL}/rest/v1/is_emirleri?id=eq.${id}&select=id,musteri_adi,arac_plaka,konteyner_no,kont_tip,kont_durum,referans_no,muhur_no,yukle_yeri,teslim_yeri,bos_donus,boslama_zaman,durum,atama_zamani,yola_zaman,fabrika_giris,fabrika_cikis,teslim_zamani,konum_lat,konum_lng,konum_zaman,notlar`,
   ];
 
   for (const url of endpoints) {
