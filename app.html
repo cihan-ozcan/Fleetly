@@ -3423,14 +3423,6 @@
       </button>
       <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Link telefona gönderilir, şoför fotoğraf & saat damgası ekler</div>
     </div>
-    <!-- Müşteri takip linki -->
-    <div class="drawer-section">
-      <div class="drawer-section-title">Müşteri Takibi</div>
-      <button onclick="opsMusteriLinkKopyala()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);color:var(--blue);border-radius:9px;padding:10px;font-family:var(--font-body);font-size:12.5px;font-weight:600;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='rgba(56,189,248,.25)'">
-        📲 Müşteriye Takip Linki Kopyala
-      </button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Müşteri iş durumu ve araç konumunu canlı izler</div>
-    </div>
   </div>
 </div>
 
@@ -11491,6 +11483,7 @@ function opsById(id) { return isEmirleri.find(e => e.id === id); }
 function opsRowToObj(r) {
   return {
     id            : r.id,
+    _dbId         : r.id,  // gerçek Supabase id — güncelleme için
     musteri_id    : r.musteri_id    || null,
     musteri_adi   : r.musteri_adi   || '',
     arac_plaka    : r.arac_plaka    || '',
@@ -11512,12 +11505,17 @@ function opsRowToObj(r) {
 }
 
 // Uygulama objesini → Supabase satırına dönüştür
-async function opsObjToRow(obj) {
-  const { data: { user } } = await getSB().auth.getUser();
-  return {
-    id            : typeof obj.id === 'number' ? obj.id : undefined,
+async function opsObjToRow(obj, isEdit) {
+  // Auth token yoksa getSB().auth.getUser() yerine mevcut token'dan user_id al
+  let userId = null;
+  try {
+    const { data: { user } } = await getSB().auth.getUser();
+    userId = user?.id || null;
+  } catch(e) { console.warn('opsObjToRow getUser hata:', e); }
+
+  const row = {
     firma_id      : currentFirmaId || null,
-    user_id       : user.id,
+    user_id       : userId,
     musteri_id    : obj.musteri_id    || null,
     musteri_adi   : obj.musteri_adi   || null,
     arac_plaka    : obj.arac_plaka    || null,
@@ -11536,6 +11534,9 @@ async function opsObjToRow(obj) {
     fotograflar   : JSON.stringify(obj.fotograflar || []),
     notlar        : obj.notlar        || null,
   };
+  // GENERATED ALWAYS AS IDENTITY — yeni kayıtta id GÖNDERİLMEZ
+  // Düzenleme modunda (isEdit=true) id URL parametresine gider, body'e değil
+  return row;
 }
 
 // ---- CLOUD LOAD ----
@@ -11558,17 +11559,39 @@ async function opsLoadCloud() {
 // ---- CLOUD UPSERT (yeni kayıt veya güncelleme) ----
 async function opsSaveCloud(obj) {
   opsSaveLocal(); // önce yerel yedek
-  if (isLocalMode() || !_authToken) return;
+  if (isLocalMode()) return;
+
+  // _authToken yoksa Supabase SDK'dan taze token al
+  if (!_authToken) {
+    try {
+      const { data: { session } } = await getSB().auth.getSession();
+      if (session?.access_token) _authToken = session.access_token;
+    } catch(e) {}
+  }
+  if (!_authToken) {
+    console.warn('opsSaveCloud: auth token yok, kayıt erteleniyor');
+    return;
+  }
+
   try {
-    const row    = await opsObjToRow(obj);
-    const isEdit = typeof obj.id === 'number';
+    // isEdit: obj._dbId varsa (Supabase'den yüklenmiş gerçek id), güncelleme
+    // obj.id geçici local id olabilir; obj._dbId gerçek Supabase id'si
+    const dbId   = obj._dbId ?? (typeof obj.id === 'number' && obj.id < 1e9 ? null : obj.id);
+    const isEdit = !!dbId;
+    const row    = await opsObjToRow(obj, isEdit);
+
     if (isEdit) {
-      await fetch(sbUrl('is_emirleri?id=eq.' + obj.id), {
+      const res = await fetch(sbUrl('is_emirleri?id=eq.' + dbId), {
         method : 'PATCH',
         headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
         body   : JSON.stringify(row),
       });
+      if (!res.ok) {
+        const err = await res.text();
+        console.error('PATCH hatası:', res.status, err);
+      }
     } else {
+      // YENİ KAYIT — id body'e eklenmez, Supabase otomatik atar
       const res = await fetch(sbUrl('is_emirleri'), {
         method : 'POST',
         headers: { ...sbHeaders(), 'Prefer': 'return=representation' },
@@ -11577,12 +11600,16 @@ async function opsSaveCloud(obj) {
       if (res.ok) {
         const created = await res.json();
         if (created?.[0]?.id) {
-          // Supabase'den dönen gerçek ID'yi güncelle
+          // Supabase'nin atadığı gerçek id'yi sakla
+          obj._dbId = created[0].id;
           const idx = isEmirleri.findIndex(e => e === obj);
-          if (idx !== -1) isEmirleri[idx].id = created[0].id;
-          obj.id = created[0].id;
+          if (idx !== -1) isEmirleri[idx]._dbId = created[0].id;
           opsSaveLocal();
+          console.log('is_emirleri kayıt OK, Supabase id:', created[0].id);
         }
+      } else {
+        const err = await res.text();
+        console.error('POST hatası:', res.status, err);
       }
     }
   } catch(err) { console.error('is_emirleri buluta kaydedilemedi:', err); }
@@ -11590,9 +11617,19 @@ async function opsSaveCloud(obj) {
 
 // ---- CLOUD DELETE ----
 async function opsDeleteCloud(id) {
-  if (isLocalMode() || !_authToken) return;
+  if (isLocalMode()) return;
+  if (!_authToken) {
+    try {
+      const { data: { session } } = await getSB().auth.getSession();
+      if (session?.access_token) _authToken = session.access_token;
+    } catch(e) {}
+  }
+  if (!_authToken) return;
+  // _dbId'yi bul — silinecek kaydın gerçek Supabase id'si
+  const obj = isEmirleri.find(e => e.id === id || e._dbId === id);
+  const dbId = obj?._dbId ?? id;
   try {
-    await fetch(sbUrl('is_emirleri?id=eq.' + id), {
+    await fetch(sbUrl('is_emirleri?id=eq.' + dbId), {
       method : 'DELETE',
       headers: sbHeaders(),
     });
@@ -12022,17 +12059,6 @@ function opsDrawerNotEkle() {
     });
   }
   showToast('Not eklendi ✓');
-}
-
-/* ── MÜŞTERİ TAKİP LİNKİ ─────────────────────────────────── */
-function opsMusteriLinkKopyala() {
-  if (!opsDrawerActiveId) return;
-  const token = btoa('mtr_' + opsDrawerActiveId + '_' + Date.now());
-  const url   = window.location.origin + '/musteri_takip.html?m=' + token;
-  localStorage.setItem('mtr_token_' + token, String(opsDrawerActiveId));
-  navigator.clipboard.writeText(url)
-    .then(() => showToast('📲 Müşteri takip linki kopyalandı ✓'))
-    .catch(() => { prompt('Müşteri takip linkini kopyalayın:', url); });
 }
 
 /* ── ŞOFÖRE LİNK ─────────────────────────────────────────── */
