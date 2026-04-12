@@ -1490,7 +1490,23 @@
         </div>
         <div class="form-group">
             <label for="container">Konteyner No</label>
-            <input type="text" id="container" placeholder="Örn: YMMU752015-1" required>
+            <div style="position:relative; display:flex; align-items:center; gap:8px;">
+                <input type="text" id="container" placeholder="Örn: YMMU752015-1" required style="flex:1;">
+                <button type="button" id="ocrBtn" onclick="triggerOCR()" title="Fotoğraftan oku" style="
+                    flex-shrink:0;
+                    width:48px; height:48px;
+                    background:linear-gradient(135deg,#0ea5e9,#0284c7);
+                    border:none; border-radius:var(--radius-md);
+                    display:flex; align-items:center; justify-content:center;
+                    cursor:pointer; transition:all var(--transition);
+                    box-shadow:0 4px 12px rgba(14,165,233,0.35);
+                ">
+                    <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M12 15.2A3.2 3.2 0 1 0 12 8.8a3.2 3.2 0 0 0 0 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                </button>
+                <input type="file" id="ocrFileInput" accept="image/*" capture="environment" style="display:none" onchange="handleOCRFile(event)">
+            </div>
+            <!-- OCR durum mesajı -->
+            <div id="ocrStatus" style="display:none; margin-top:6px; padding:8px 12px; border-radius:var(--radius-sm); font-size:0.82rem; font-weight:600;"></div>
         </div>
         <div class="row">
             <div class="form-group">
@@ -2912,6 +2928,88 @@ function triggerInstallFromSettings() {
 }
 function closeIosModal() { document.getElementById('iosInstallModal').classList.remove('active'); }
 if(isStandalone) { const b=document.getElementById('settingsInstallBtn'); if(b) b.style.display='none'; }
+</script>
+<!-- Tesseract.js OCR -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+function triggerOCR() {
+    document.getElementById('ocrFileInput').click();
+}
+
+async function handleOCRFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const btn = document.getElementById('ocrBtn');
+    const status = document.getElementById('ocrStatus');
+    const input = document.getElementById('container');
+
+    // Yükleniyor göster
+    btn.style.opacity = '0.6';
+    btn.disabled = true;
+    status.style.display = 'block';
+    status.style.background = 'var(--bg-card-2)';
+    status.style.color = 'var(--text-secondary)';
+    status.style.border = '1px solid var(--border-color)';
+    status.textContent = '🔍 Fotoğraf okunuyor...';
+
+    try {
+        const { data: { text } } = await Tesseract.recognize(file, 'eng', {
+            logger: m => {
+                if (m.status === 'recognizing text') {
+                    const pct = Math.round(m.progress * 100);
+                    status.textContent = `🔍 Okunuyor... %${pct}`;
+                }
+            }
+        });
+
+        // Konteyner numarası formatı: 4 harf + 6-7 rakam + opsiyonel kontrol hanesi
+        // Örnek: CAXU9669794 veya ARKU2540591 veya YMMU 752015-1
+        const temiz = text.replace(/\s/g, ' ').toUpperCase();
+        const match = temiz.match(/\b([A-Z]{3}[UJZ])\s*(\d{6,7})\s*[\-\.]?\s*(\d)?\b/);
+
+        if (match) {
+            const prefix = match[1];
+            const numbers = match[2];
+            const check = match[3] || '';
+            const konteynerNo = check ? `${prefix}${numbers}-${check}` : `${prefix}${numbers}`;
+            
+            input.value = konteynerNo;
+            input.focus();
+            input.style.borderColor = '#22c55e';
+            input.style.boxShadow = '0 0 0 3px rgba(34,197,94,0.15)';
+            setTimeout(() => {
+                input.style.borderColor = '';
+                input.style.boxShadow = '';
+            }, 2500);
+
+            status.style.background = '#f0fdf4';
+            status.style.color = '#15803d';
+            status.style.border = '1px solid #bbf7d0';
+            status.textContent = `✅ Bulundu: ${konteynerNo}`;
+            
+            [data-theme="dark"] && (status.style.background = 'rgba(34,197,94,0.12)');
+        } else {
+            // Bulunamadıysa ham metni göster, kullanıcı seçsin
+            const satirlar = text.split('\n').map(s => s.trim()).filter(s => s.length > 3);
+            const enIyiSatir = satirlar.find(s => /[A-Z]{3,4}\s*\d{4,}/.test(s)) || '';
+            
+            status.style.background = '#fef9c3';
+            status.style.color = '#854d0e';
+            status.style.border = '1px solid #fde68a';
+            status.textContent = `⚠️ Otomatik okunamadı. OCR metni: "${enIyiSatir || text.substring(0,60).trim()}"`;
+        }
+    } catch (err) {
+        status.style.background = '#fef2f2';
+        status.style.color = '#b91c1c';
+        status.style.border = '1px solid #fecaca';
+        status.textContent = '❌ Hata oluştu, tekrar deneyin.';
+    } finally {
+        btn.style.opacity = '1';
+        btn.disabled = false;
+        event.target.value = ''; // Aynı fotoğrafı tekrar seçebilmek için sıfırla
+    }
+}
 </script>
 <!-- Analytics -->
 <script async src="https://plausible.io/js/pa-Z_X3ayUwGzf2_kHeRNLPl.js"></script>
