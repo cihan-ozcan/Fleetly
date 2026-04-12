@@ -1,1 +1,1860 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleetly — Araç Filosunuzu Kontrol Altına Alın</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
 
+  <style>
+    :root {
+      --bg:        #08091a;
+      --bg2:       #0c0e22;
+      --surface:   #10142a;
+      --surface2:  #161b34;
+      --surface3:  #1c2240;
+      --border:    #222844;
+      --border2:   #2c3558;
+      --accent:    #e8521a;
+      --accent2:   #ff7340;
+      --accent-dim:#5c1f08;
+      --text:      #e6eeff;
+      --text2:     #a8b8d8;
+      --muted:     #506080;
+      --green:     #22c55e;
+      --green-dim: #0f3d20;
+      --yellow:    #d4a847;
+      --blue:      #38bdf8;
+      --teal:      #2dd4bf;
+      --red:       #ef4444;
+      --font-display: 'Big Shoulders Display', sans-serif;
+      --font-body:    'Instrument Sans', sans-serif;
+      --font-mono:    'IBM Plex Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── DIAGONAL TEXTURE ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        repeating-linear-gradient(
+          -55deg,
+          transparent,
+          transparent 60px,
+          rgba(232,82,26,.025) 60px,
+          rgba(232,82,26,.025) 61px
+        ),
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 120px 120px, 80px 80px, 80px 80px;
+      pointer-events: none;
+    }
+
+    /* ── AMBER TOP GLOW ── */
+    body::after {
+      content: '';
+      position: fixed; top: -120px; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 280px; z-index: 0;
+      background: radial-gradient(ellipse at center, rgba(232,82,26,.14) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 99px; }
+
+    /* ── LAYOUT UTILITIES ── */
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 32px;
+      position: relative; z-index: 1;
+    }
+
+    /* ══════════════════════════════════════
+       NAV
+    ══════════════════════════════════════ */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(8,9,26,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: inset 0 -1px 0 rgba(232,82,26,.08);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      width: 36px; height: 36px;
+    }
+
+    .brand-name {
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 800;
+      color: var(--text);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .brand-name span {
+      color: var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text2);
+      text-decoration: none;
+      transition: color .2s;
+    }
+
+    .nav-links a:hover { color: var(--accent2); }
+
+    .nav-cta {
+      background: var(--accent);
+      color: white !important;
+      padding: 8px 18px;
+      border-radius: 7px;
+      font-family: var(--font-display) !important;
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      letter-spacing: .08em !important;
+      text-transform: uppercase !important;
+      transition: background .2s, transform .1s !important;
+    }
+
+    .nav-cta:hover {
+      background: var(--accent2) !important;
+      transform: translateY(-1px);
+      color: white !important;
+    }
+
+    /* ══════════════════════════════════════
+       HERO
+    ══════════════════════════════════════ */
+    .hero {
+      padding: 120px 0 100px;
+      position: relative; z-index: 1;
+      overflow: hidden;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(232,82,26,.1);
+      border: 1px solid rgba(232,82,26,.3);
+      border-radius: 99px;
+      padding: 6px 16px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 28px;
+    }
+
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .6; transform: scale(.8); }
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(52px, 8vw, 96px);
+      font-weight: 900;
+      line-height: .95;
+      letter-spacing: -1px;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .hero-title .accent-line {
+      color: var(--accent);
+      display: block;
+    }
+
+    .hero-title .ghost-line {
+      -webkit-text-stroke: 1px rgba(232,82,26,.3);
+      color: transparent;
+      display: block;
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--text2);
+      line-height: 1.65;
+      max-width: 540px;
+      margin: 28px 0 44px;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: white;
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 14px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      border: none; cursor: pointer;
+      box-shadow: 0 0 0 0 rgba(232,82,26,0);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent2);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(232,82,26,.35);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--text2);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 14px 24px;
+      border-radius: 8px;
+      border: 1px solid var(--border2);
+      text-decoration: none;
+      transition: border-color .2s, color .2s;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent2);
+    }
+
+    /* Hero stats */
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      margin-top: 72px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .hero-stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .hero-stat-value {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .hero-stat-value span {
+      color: var(--accent);
+    }
+
+    /* Hero visual — mock dashboard panel */
+    .hero-visual {
+      position: absolute;
+      right: -40px; top: 50%; transform: translateY(-50%);
+      width: 480px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 40px 120px rgba(0,0,0,.7), 0 0 0 1px rgba(232,82,26,.06);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px 40px;
+    }
+
+    .hv-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hv-title {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .hv-live {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .1em;
+      color: var(--green);
+      text-transform: uppercase;
+    }
+
+    .hv-live-dot {
+      width: 5px; height: 5px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .mini-stat {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .mini-stat-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .mini-stat-val {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .mini-stat-sub {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .mini-stat-sub.green { color: var(--green); }
+    .mini-stat-sub.yellow { color: var(--yellow); }
+    .mini-stat-sub.red { color: var(--red); }
+    .mini-stat-sub.blue { color: var(--blue); }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: var(--accent);
+      transition: width .6s ease;
+    }
+
+    .progress-fill.green { background: var(--green); }
+    .progress-fill.blue { background: var(--blue); }
+
+    .mock-plate-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mock-plate-row:last-child { border-bottom: none; }
+
+    .mock-plate {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .mock-badge {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .mock-badge.active { background: rgba(34,197,94,.15); color: var(--green); }
+    .mock-badge.yolda { background: rgba(56,189,248,.12); color: var(--blue); }
+    .mock-badge.bakim { background: rgba(212,168,71,.12); color: var(--yellow); }
+    .mock-badge.bos { background: rgba(80,96,128,.15); color: var(--muted); }
+
+    /* ══════════════════════════════════════
+       SECTION HEADINGS
+    ══════════════════════════════════════ */
+    .section-tag {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .section-tag::before {
+      content: '';
+      display: block;
+      width: 24px; height: 1px;
+      background: var(--accent);
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -1px;
+      line-height: .95;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-size: 16px;
+      color: var(--text2);
+      max-width: 480px;
+      line-height: 1.65;
+    }
+
+    /* ══════════════════════════════════════
+       FEATURES
+    ══════════════════════════════════════ */
+    .features-section {
+      padding: 120px 0;
+      position: relative; z-index: 1;
+    }
+
+    .features-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: end;
+      margin-bottom: 80px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      padding: 32px 28px;
+      transition: background .2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .3s;
+    }
+
+    .feature-card:hover { background: var(--surface2); }
+    .feature-card:hover::before { transform: scaleX(1); }
+
+    .feature-icon-wrap {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .feature-icon-wrap.orange { background: rgba(232,82,26,.15); border: 1px solid rgba(232,82,26,.25); }
+    .feature-icon-wrap.blue   { background: rgba(56,189,248,.1);  border: 1px solid rgba(56,189,248,.2); }
+    .feature-icon-wrap.green  { background: rgba(34,197,94,.1);   border: 1px solid rgba(34,197,94,.2); }
+    .feature-icon-wrap.yellow { background: rgba(212,168,71,.1);  border: 1px solid rgba(212,168,71,.2); }
+    .feature-icon-wrap.teal   { background: rgba(45,212,191,.1);  border: 1px solid rgba(45,212,191,.2); }
+    .feature-icon-wrap.purple { background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.2); }
+
+    .feature-name {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .feature-desc {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.6;
+    }
+
+    .feature-tag {
+      display: inline-block;
+      margin-top: 14px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--surface3);
+      color: var(--muted);
+      border: 1px solid var(--border2);
+    }
+
+    /* ══════════════════════════════════════
+       MODULES — TABBED SHOWCASE
+    ══════════════════════════════════════ */
+    .modules-section {
+      padding: 100px 0 120px;
+      position: relative; z-index: 1;
+    }
+
+    .module-tabs {
+      display: flex;
+      gap: 2px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 40px;
+      width: fit-content;
+    }
+
+    .module-tab {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: 9px 18px;
+      border-radius: 7px;
+      cursor: pointer;
+      color: var(--muted);
+      border: none;
+      background: transparent;
+      transition: background .2s, color .2s;
+    }
+
+    .module-tab.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .module-tab:hover:not(.active) {
+      background: var(--surface2);
+      color: var(--text2);
+    }
+
+    .module-panels > div { display: none; }
+    .module-panels > div.active { display: block; }
+
+    .module-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    .module-panel-info h3 {
+      font-family: var(--font-display);
+      font-size: 36px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -.5px;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .module-panel-info p {
+      color: var(--text2);
+      font-size: 15px;
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+
+    .module-feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .module-feature-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13.5px;
+      color: var(--text2);
+    }
+
+    .module-feature-list li::before {
+      content: '→';
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .mock-screen {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,.5);
+    }
+
+    .mock-topbar {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mock-topbar-title {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .mock-topbar-badge {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(232,82,26,.15);
+      color: var(--accent2);
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .mock-body {
+      padding: 16px;
+    }
+
+    .mock-table-header {
+      display: grid;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: var(--surface2);
+      margin-bottom: 6px;
+    }
+
+    .mock-table-row {
+      display: grid;
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      transition: background .15s;
+    }
+
+    .mock-table-row:hover { background: var(--surface2); }
+    .mock-table-row:last-child { border-bottom: none; }
+
+    .mock-th {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .mock-td {
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .mock-td.plate {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--text);
+    }
+
+    /* ══════════════════════════════════════
+       WORKFLOW / HOW IT WORKS
+    ══════════════════════════════════════ */
+    .workflow-section {
+      padding: 100px 0;
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border);
+    }
+
+    .workflow-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-top: 64px;
+      position: relative;
+    }
+
+    .workflow-steps::before {
+      content: '';
+      position: absolute;
+      top: 28px; left: calc(12.5% + 28px); right: calc(12.5% + 28px);
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent), var(--border), var(--border), var(--accent));
+      z-index: 0;
+    }
+
+    .workflow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0 20px;
+      position: relative; z-index: 1;
+    }
+
+    .step-num-circle {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 2px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--accent);
+      margin-bottom: 20px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .workflow-step:hover .step-num-circle {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px rgba(232,82,26,.2);
+    }
+
+    .workflow-step h4 {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .workflow-step p {
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ══════════════════════════════════════
+       PRICING
+    ══════════════════════════════════════ */
+    .pricing-section {
+      padding: 100px 0 120px;
+      position: relative; z-index: 1;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-top: 64px;
+    }
+
+    .pricing-card {
+      background: var(--surface);
+      padding: 36px 32px;
+      position: relative;
+    }
+
+    .pricing-card.featured {
+      background: var(--surface2);
+    }
+
+    .pricing-card.featured::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .pricing-plan {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .pricing-price {
+      font-family: var(--font-display);
+      font-size: 48px;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .pricing-price sub {
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .pricing-period {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    .pricing-divider {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 28px;
+    }
+
+    .pricing-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .pricing-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text2);
+    }
+
+    .pricing-features li::before {
+      content: '✓';
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--green);
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+
+    .pricing-features li.muted { color: var(--muted); }
+    .pricing-features li.muted::before { content: '—'; color: var(--muted); }
+
+    .btn-plan {
+      display: block;
+      width: 100%;
+      text-align: center;
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 12px;
+      border-radius: 7px;
+      text-decoration: none;
+      transition: background .2s, color .2s;
+      border: 1px solid var(--border2);
+      cursor: pointer;
+    }
+
+    .btn-plan.outline {
+      background: transparent;
+      color: var(--text2);
+    }
+
+    .btn-plan.outline:hover {
+      border-color: var(--accent);
+      color: var(--accent2);
+    }
+
+    .btn-plan.filled {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .btn-plan.filled:hover {
+      background: var(--accent2);
+    }
+
+    .pricing-badge {
+      position: absolute;
+      top: 20px; right: 20px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 4px;
+      background: rgba(232,82,26,.15);
+      color: var(--accent2);
+      border: 1px solid rgba(232,82,26,.25);
+    }
+
+    /* ══════════════════════════════════════
+       TESTIMONIALS
+    ══════════════════════════════════════ */
+    .testimonials-section {
+      padding: 100px 0;
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border);
+    }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 64px;
+    }
+
+    .testimonial-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 28px 24px;
+      position: relative;
+    }
+
+    .testimonial-card::before {
+      content: '"';
+      position: absolute;
+      top: 16px; right: 20px;
+      font-family: var(--font-display);
+      font-size: 60px;
+      font-weight: 900;
+      color: rgba(232,82,26,.12);
+      line-height: 1;
+    }
+
+    .testimonial-text {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .author-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .author-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .author-role {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .06em;
+    }
+
+    /* ══════════════════════════════════════
+       CTA BANNER
+    ══════════════════════════════════════ */
+    .cta-section {
+      padding: 100px 0;
+      position: relative; z-index: 1;
+    }
+
+    .cta-box {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      padding: 80px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: -100px; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 300px;
+      background: radial-gradient(ellipse at center, rgba(232,82,26,.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-box h2 {
+      font-family: var(--font-display);
+      font-size: clamp(40px, 6vw, 72px);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -1px;
+      line-height: .95;
+      color: var(--text);
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .cta-box p {
+      font-size: 16px;
+      color: var(--text2);
+      margin-bottom: 40px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .cta-note {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-top: 20px;
+    }
+
+    /* ══════════════════════════════════════
+       FOOTER
+    ══════════════════════════════════════ */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px 0;
+      position: relative; z-index: 1;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color .2s;
+    }
+
+    .footer-links a:hover { color: var(--accent2); }
+
+    .footer-copy {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: .06em;
+      color: var(--muted);
+    }
+
+    /* ══════════════════════════════════════
+       ANIMATIONS
+    ══════════════════════════════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-up {
+      animation: fadeUp .6s ease forwards;
+    }
+
+    .fade-up-2 { animation-delay: .1s; opacity: 0; animation: fadeUp .6s .1s ease forwards; }
+    .fade-up-3 { animation-delay: .2s; opacity: 0; animation: fadeUp .6s .2s ease forwards; }
+    .fade-up-4 { animation-delay: .35s; opacity: 0; animation: fadeUp .6s .35s ease forwards; }
+
+    /* ══════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════ */
+    @media (max-width: 960px) {
+      .nav-links { display: none; }
+      .hero { padding: 80px 0 60px; }
+      .hero-visual { display: none; }
+      .features-header { grid-template-columns: 1fr; gap: 24px; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .module-panel { grid-template-columns: 1fr; }
+      .workflow-steps { grid-template-columns: 1fr 1fr; }
+      .workflow-steps::before { display: none; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .cta-box { padding: 48px 32px; }
+      .hero-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 0 20px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .workflow-steps { grid-template-columns: 1fr; }
+      .module-tabs { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════ NAV ═══════════════════════ -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#" class="brand">
+        <svg class="brand-logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <rect width="120" height="120" rx="22" fill="#e8521a"/>
+          <polygon points="60,8 108,34 108,86 60,112 12,86 12,34" fill="none" stroke="white" stroke-width="3" opacity="0.35"/>
+          <line x1="22" y1="96" x2="60" y2="26" stroke="white" stroke-width="5.5" stroke-linecap="round"/>
+          <line x1="40" y1="106" x2="78" y2="22" stroke="white" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+          <line x1="58" y1="112" x2="96" y2="30" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.28"/>
+          <circle cx="96" cy="30" r="7" fill="white"/>
+          <circle cx="22" cy="96" r="10" fill="white" opacity="0.9"/>
+        </svg>
+        <span class="brand-name">FLEET<span>LY</span></span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#ozellikler">Özellikler</a></li>
+        <li><a href="#moduller">Modüller</a></li>
+        <li><a href="#fiyatlar">Fiyatlar</a></li>
+        <li><a href="register.html" class="nav-cta">Ücretsiz Başla</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════ HERO ═══════════════════════ -->
+<section class="hero">
+  <div class="container" style="display: grid; grid-template-columns: 1fr 480px; gap: 60px; align-items: center;">
+    <div>
+      <div class="hero-badge fade-up">
+        <span class="hero-badge-dot"></span>
+        Türkiye'nin #1 Filo Yönetim Platformu
+      </div>
+
+      <h1 class="hero-title fade-up-2">
+        Filoyu
+        <span class="accent-line">Kontrol</span>
+        <span class="ghost-line">Et.</span>
+      </h1>
+
+      <p class="hero-sub fade-up-3">
+        Araçlarınızı, yakıtı, bakımları, seferleri ve muhasebe kayıtlarını tek panelden yönetin.
+        Gerçek zamanlı verilerle karar alın, maliyetleri düşürün.
+      </p>
+
+      <div class="hero-actions fade-up-4">
+        <a href="register.html" class="btn-primary">
+          7 Gün Ücretsiz Dene
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#ozellikler" class="btn-secondary">Özellikleri İncele</a>
+      </div>
+
+      <div class="hero-stats fade-up-4">
+        <div>
+          <div class="hero-stat-label">Aktif Araç</div>
+          <div class="hero-stat-value">2.4<span>K+</span></div>
+        </div>
+        <div>
+          <div class="hero-stat-label">Aylık Sefer</div>
+          <div class="hero-stat-value">18<span>K</span></div>
+        </div>
+        <div>
+          <div class="hero-stat-label">Yakıt Tasarrufu</div>
+          <div class="hero-stat-value"><span>%</span>23</div>
+        </div>
+        <div>
+          <div class="hero-stat-label">Uptime</div>
+          <div class="hero-stat-value">99<span>.9%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOCK DASHBOARD -->
+    <div class="hero-visual">
+      <div class="hv-header">
+        <span class="hv-title">Filo Özeti</span>
+        <span class="hv-live"><span class="hv-live-dot"></span>Canlı</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+        <div class="mini-stat">
+          <div class="mini-stat-label">Toplam Araç</div>
+          <div class="mini-stat-val">34</div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 78%"></div></div>
+          <div class="mini-stat-sub green">↑ 3 bu ay eklendi</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-label">Aktif Sefer</div>
+          <div class="mini-stat-val">12</div>
+          <div class="progress-bar"><div class="progress-fill blue" style="width: 55%"></div></div>
+          <div class="mini-stat-sub blue">→ 4 teslimatta</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-label">Aylık Yakıt</div>
+          <div class="mini-stat-val">₺48K</div>
+          <div class="mini-stat-sub green">↓ %12 geçen aya göre</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-label">Bakım Bekleyen</div>
+          <div class="mini-stat-val">3</div>
+          <div class="mini-stat-sub yellow">⚠ Kritik: 1</div>
+        </div>
+      </div>
+
+      <div style="background: var(--surface2); border-radius: 8px; overflow: hidden;">
+        <div style="padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);">Son Hareketler</span>
+          <span style="font-family: var(--font-mono); font-size: 9px; color: var(--accent2);">Tümü →</span>
+        </div>
+        <div style="padding: 4px 0;">
+          <div class="mock-plate-row" style="padding: 8px 12px;">
+            <span class="mock-plate">34 TF 4821</span>
+            <span class="mock-badge yolda">Yolda</span>
+          </div>
+          <div class="mock-plate-row" style="padding: 8px 12px;">
+            <span class="mock-plate">06 AB 1234</span>
+            <span class="mock-badge active">Teslim Edildi</span>
+          </div>
+          <div class="mock-plate-row" style="padding: 8px 12px;">
+            <span class="mock-plate">41 KA 7712</span>
+            <span class="mock-badge bakim">Bakımda</span>
+          </div>
+          <div class="mock-plate-row" style="padding: 8px 12px;">
+            <span class="mock-plate">16 BM 0095</span>
+            <span class="mock-badge bos">Boşta</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ FEATURES ═══════════════════════ -->
+<section class="features-section" id="ozellikler">
+  <div class="container">
+    <div class="features-header">
+      <div>
+        <div class="section-tag">Özellikler</div>
+        <h2 class="section-title">Her Şey<br>Tek Yerde</h2>
+      </div>
+      <p class="section-sub">Filo yönetiminde ihtiyaç duyduğunuz tüm araçlar — birbirine entegre, gerçek zamanlı, sade.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon-wrap orange">🚛</div>
+        <div class="feature-name">Araç Takip</div>
+        <div class="feature-desc">Plaka, model, sigorta, muayene — her aracın tam kaydı. Durum değişikliklerini anlık görün.</div>
+        <span class="feature-tag">Gerçek Zamanlı</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap blue">⛽</div>
+        <div class="feature-name">Yakıt Yönetimi</div>
+        <div class="feature-desc">Yakıt giderlerini km bazlı analiz edin. Anormal tüketimleri otomatik tespit edin.</div>
+        <span class="feature-tag">Analitik</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap green">🔧</div>
+        <div class="feature-name">Bakım Planlaması</div>
+        <div class="feature-desc">Periyodik bakım hatırlatıcıları, masraf kayıtları ve servis geçmişi tek ekranda.</div>
+        <span class="feature-tag">Otomatik Uyarı</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap yellow">📦</div>
+        <div class="feature-name">Sefer & Ops</div>
+        <div class="feature-desc">İş emirleri, konteyner takibi, fabrika giriş/çıkış zamanları ve sürücü koordinasyonu.</div>
+        <span class="feature-tag">Kanban + Liste</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap teal">👥</div>
+        <div class="feature-name">CRM & Müşteriler</div>
+        <div class="feature-desc">Müşteri profilleri, iletişim geçmişi ve masraf takibini satış odaklı yönetin.</div>
+        <span class="feature-tag">CRM Entegre</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap purple">📊</div>
+        <div class="feature-name">Raporlama</div>
+        <div class="feature-desc">PDF raporlar, Chart.js grafikleri ve KPI panelleriyle tüm filoyu kağıda dökmeden analiz edin.</div>
+        <span class="feature-tag">PDF + Grafik</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ MODULES ═══════════════════════ -->
+<section class="modules-section" id="moduller">
+  <div class="container">
+    <div class="section-tag">Modüller</div>
+    <h2 class="section-title" style="margin-bottom: 40px;">Detaylı<br>İnceleyin</h2>
+
+    <div class="module-tabs" id="moduleTabs">
+      <button class="module-tab active" data-panel="araclar">Araçlar</button>
+      <button class="module-tab" data-panel="sefer">Seferler</button>
+      <button class="module-tab" data-panel="yakit">Yakıt</button>
+      <button class="module-tab" data-panel="crm">CRM</button>
+    </div>
+
+    <div class="module-panels">
+      <!-- ARAÇLAR -->
+      <div id="panel-araclar" class="active">
+        <div class="module-panel">
+          <div class="module-panel-info">
+            <h3>Araç Filosu</h3>
+            <p>Filonuzdaki her aracı plaka, model, yıl, sigorta bitiş tarihi ve mevcut duruma göre yönetin. Anlık durum güncellemeleriyle hangi araç nerede, ne yapıyor bilgisine erişin.</p>
+            <ul class="module-feature-list">
+              <li>Araç ekleme, düzenleme, arşivleme</li>
+              <li>Sigorta & muayene tarih uyarıları</li>
+              <li>Aktif / Bakımda / Boşta durum takibi</li>
+              <li>Her araca özel masraf geçmişi</li>
+            </ul>
+          </div>
+          <div class="mock-screen">
+            <div class="mock-topbar">
+              <span class="mock-topbar-title">Araç Listesi</span>
+              <span class="mock-topbar-badge">34 Araç</span>
+            </div>
+            <div class="mock-body">
+              <div class="mock-table-header" style="grid-template-columns: 1.2fr 1fr .8fr .8fr; gap: 8px;">
+                <span class="mock-th">Plaka</span>
+                <span class="mock-th">Model</span>
+                <span class="mock-th">Durum</span>
+                <span class="mock-th">Sigorta</span>
+              </div>
+              <div class="mock-table-row" style="grid-template-columns: 1.2fr 1fr .8fr .8fr; gap: 8px;">
+                <span class="mock-td plate">34 TF 4821</span>
+                <span class="mock-td">Ford Cargo</span>
+                <span><span class="mock-badge yolda">Yolda</span></span>
+                <span class="mock-td" style="color: var(--green); font-size: 11px;">92 gün</span>
+              </div>
+              <div class="mock-table-row" style="grid-template-columns: 1.2fr 1fr .8fr .8fr; gap: 8px;">
+                <span class="mock-td plate">06 AB 1234</span>
+                <span class="mock-td">MAN TGX</span>
+                <span><span class="mock-badge active">Aktif</span></span>
+                <span class="mock-td" style="color: var(--yellow); font-size: 11px;">12 gün</span>
+              </div>
+              <div class="mock-table-row" style="grid-template-columns: 1.2fr 1fr .8fr .8fr; gap: 8px;">
+                <span class="mock-td plate">41 KA 7712</span>
+                <span class="mock-td">Volvo FH</span>
+                <span><span class="mock-badge bakim">Bakımda</span></span>
+                <span class="mock-td" style="color: var(--green); font-size: 11px;">180 gün</span>
+              </div>
+              <div class="mock-table-row" style="grid-template-columns: 1.2fr 1fr .8fr .8fr; gap: 8px;">
+                <span class="mock-td plate">16 BM 0095</span>
+                <span class="mock-td">Scania R</span>
+                <span><span class="mock-badge bos">Boşta</span></span>
+                <span class="mock-td" style="color: var(--red); font-size: 11px;">3 gün</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEFER -->
+      <div id="panel-sefer">
+        <div class="module-panel">
+          <div class="module-panel-info">
+            <h3>Sefer & İş Emirleri</h3>
+            <p>Konteyner numarasından sürücüye, fabrika giriş/çıkış saatinden teslim noktasına kadar tüm operasyonu anlık takip edin. Kanban görünümüyle iş emirlerini kolayca yönetin.</p>
+            <ul class="module-feature-list">
+              <li>Kanban + Liste görünümü</li>
+              <li>Fabrika giriş/çıkış zamanlama</li>
+              <li>Sürücü WhatsApp link paylaşımı</li>
+              <li>Fotoğraf ekleme ve arşiv</li>
+            </ul>
+          </div>
+          <div class="mock-screen">
+            <div class="mock-topbar">
+              <span class="mock-topbar-title">Aktif Seferler</span>
+              <span class="mock-topbar-badge">12 Aktif</span>
+            </div>
+            <div class="mock-body">
+              <div style="display: flex; gap: 10px;">
+                <div style="flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+                  <div style="font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--yellow); margin-bottom: 8px;">● Bekliyor</div>
+                  <div style="background: var(--surface3); border-radius: 6px; padding: 8px; margin-bottom: 6px;">
+                    <div style="font-family: var(--font-mono); font-size: 10px; color: var(--text); margin-bottom: 3px;">CNTR-4821</div>
+                    <div style="font-size: 10px; color: var(--muted);">34 TF 4821</div>
+                  </div>
+                </div>
+                <div style="flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+                  <div style="font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px;">→ Yolda</div>
+                  <div style="background: var(--surface3); border-radius: 6px; padding: 8px; margin-bottom: 6px;">
+                    <div style="font-family: var(--font-mono); font-size: 10px; color: var(--text); margin-bottom: 3px;">CNTR-7713</div>
+                    <div style="font-size: 10px; color: var(--muted);">06 AB 1234</div>
+                  </div>
+                  <div style="background: var(--surface3); border-radius: 6px; padding: 8px;">
+                    <div style="font-family: var(--font-mono); font-size: 10px; color: var(--text); margin-bottom: 3px;">CNTR-0042</div>
+                    <div style="font-size: 10px; color: var(--muted);">16 BM 0095</div>
+                  </div>
+                </div>
+                <div style="flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+                  <div style="font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--green); margin-bottom: 8px;">✓ Teslim</div>
+                  <div style="background: var(--surface3); border-radius: 6px; padding: 8px;">
+                    <div style="font-family: var(--font-mono); font-size: 10px; color: var(--text); margin-bottom: 3px;">CNTR-3390</div>
+                    <div style="font-size: 10px; color: var(--muted);">41 KA 7712</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- YAKIT -->
+      <div id="panel-yakit">
+        <div class="module-panel">
+          <div class="module-panel-info">
+            <h3>Yakıt Analizi</h3>
+            <p>Her araç için yakıt tüketimini km başına hesaplayın, aylık ve yıllık karşılaştırmalar yapın. Anormal tüketimleri otomatik olarak tespit edin.</p>
+            <ul class="module-feature-list">
+              <li>Km başına yakıt hesaplama</li>
+              <li>Araç bazlı karşılaştırma grafikleri</li>
+              <li>Anormal tüketim otomatik uyarısı</li>
+              <li>PDF yakıt raporu</li>
+            </ul>
+          </div>
+          <div class="mock-screen">
+            <div class="mock-topbar">
+              <span class="mock-topbar-title">Yakıt — Nisan 2025</span>
+              <span class="mock-topbar-badge">₺48.200</span>
+            </div>
+            <div class="mock-body">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                <div class="mini-stat">
+                  <div class="mini-stat-label">Toplam Litre</div>
+                  <div class="mini-stat-val" style="font-size: 20px;">6.840</div>
+                  <div class="mini-stat-sub green">↓ %8 önceki ay</div>
+                </div>
+                <div class="mini-stat">
+                  <div class="mini-stat-label">Ort. Tüketim</div>
+                  <div class="mini-stat-val" style="font-size: 20px;">28.4</div>
+                  <div class="mini-stat-sub">lt/100km</div>
+                </div>
+              </div>
+              <div style="background: var(--surface2); border-radius: 8px; padding: 10px;">
+                <div style="font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px;">Araç Bazlı</div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text2); width: 80px;">34 TF 4821</span>
+                  <div style="flex: 1; background: var(--border); border-radius: 99px; height: 4px;"><div style="width: 65%; background: var(--accent); height: 100%; border-radius: 99px;"></div></div>
+                  <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text2);">31.2</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text2); width: 80px;">06 AB 1234</span>
+                  <div style="flex: 1; background: var(--border); border-radius: 99px; height: 4px;"><div style="width: 45%; background: var(--green); height: 100%; border-radius: 99px;"></div></div>
+                  <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text2);">26.8</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text2); width: 80px;">41 KA 7712</span>
+                  <div style="flex: 1; background: var(--border); border-radius: 99px; height: 4px;"><div style="width: 52%; background: var(--blue); height: 100%; border-radius: 99px;"></div></div>
+                  <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text2);">27.1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CRM -->
+      <div id="panel-crm">
+        <div class="module-panel">
+          <div class="module-panel-info">
+            <h3>Müşteri CRM</h3>
+            <p>Müşteri portföyünüzü güçlü bir CRM ile yönetin. İletişim geçmişini, ödeme durumlarını ve aktif iş emirlerini tek çekmeceye toplayın.</div>
+            <ul class="module-feature-list">
+              <li>Müşteri kartı ve iletişim geçmişi</li>
+              <li>Aktif iş emri ve masraf bağlantısı</li>
+              <li>Ödeme takibi ve durum etiketleri</li>
+              <li>Müşteri bazlı sefer raporu</li>
+            </ul>
+          </div>
+          <div class="mock-screen">
+            <div class="mock-topbar">
+              <span class="mock-topbar-title">Müşteri Detayı</span>
+              <span class="mock-topbar-badge" style="background: rgba(45,212,191,.1); color: var(--teal);">Aktif</span>
+            </div>
+            <div class="mock-body">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border);">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(45,212,191,.15); border: 1px solid rgba(45,212,191,.25); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; color: var(--teal); font-size: 16px;">AK</div>
+                <div>
+                  <div style="font-weight: 600; font-size: 13px; color: var(--text);">Akdağ Lojistik A.Ş.</div>
+                  <div style="font-family: var(--font-mono); font-size: 10px; color: var(--muted);">+90 532 000 00 00</div>
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div class="mini-stat">
+                  <div class="mini-stat-label">Toplam Sefer</div>
+                  <div class="mini-stat-val" style="font-size: 20px;">127</div>
+                </div>
+                <div class="mini-stat">
+                  <div class="mini-stat-label">Ciro</div>
+                  <div class="mini-stat-val" style="font-size: 20px;">₺842K</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ WORKFLOW ═══════════════════════ -->
+<section class="workflow-section">
+  <div class="container">
+    <div class="section-tag">Nasıl Çalışır</div>
+    <h2 class="section-title">4 Adımda<br>Hazır</h2>
+
+    <div class="workflow-steps">
+      <div class="workflow-step">
+        <div class="step-num-circle">01</div>
+        <h4>Kayıt Ol</h4>
+        <p>7 günlük ücretsiz denemenizi başlatın. Kredi kartı gerektirmez.</p>
+      </div>
+      <div class="workflow-step">
+        <div class="step-num-circle">02</div>
+        <h4>Araçları Ekle</h4>
+        <p>Filonuzdaki araçları tek tek veya toplu olarak sisteme aktarın.</p>
+      </div>
+      <div class="workflow-step">
+        <div class="step-num-circle">03</div>
+        <h4>Sürücüleri Ata</h4>
+        <p>Sürücü profillerini oluşturun, seferlere anlık olarak atayın.</p>
+      </div>
+      <div class="workflow-step">
+        <div class="step-num-circle">04</div>
+        <h4>Analiz Et</h4>
+        <p>Gerçek zamanlı verilerle maliyet analizi yapın, raporları PDF olarak indirin.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ PRICING ═══════════════════════ -->
+<section class="pricing-section" id="fiyatlar">
+  <div class="container">
+    <div style="text-align: center;">
+      <div class="section-tag" style="justify-content: center;">Fiyatlandırma</div>
+      <h2 class="section-title">Şeffaf,<br>Sürprizsiz</h2>
+      <p class="section-sub" style="margin: 16px auto 0; text-align: center;">İlk 7 gün tüm özellikler ücretsiz. Sonra işinize en uygun planı seçin.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="pricing-plan">Başlangıç</div>
+        <div class="pricing-price">₺490<sub>/ay</sub></div>
+        <div class="pricing-period">5 araca kadar · Aylık yenilenebilir</div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>5 araç kapasitesi</li>
+          <li>Araç & yakıt takibi</li>
+          <li>Temel bakım modülü</li>
+          <li>Aylık PDF rapor</li>
+          <li class="muted">CRM modülü</li>
+          <li class="muted">Ops / İş Emirleri</li>
+          <li class="muted">API erişimi</li>
+        </ul>
+        <a href="register.html" class="btn-plan outline">Ücretsiz Başla</a>
+      </div>
+
+      <div class="pricing-card featured">
+        <div class="pricing-badge">En Popüler</div>
+        <div class="pricing-plan">Pro</div>
+        <div class="pricing-price">₺990<sub>/ay</sub></div>
+        <div class="pricing-period">Sınırsız araç · Tüm modüller</div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>Sınırsız araç kapasitesi</li>
+          <li>Tüm modüller dahil</li>
+          <li>CRM + Ops + Muhasebe</li>
+          <li>Gelişmiş analitik & grafikler</li>
+          <li>Öncelikli destek</li>
+          <li>Günlük PDF & Excel rapor</li>
+          <li class="muted">API erişimi</li>
+        </ul>
+        <a href="register.html" class="btn-plan filled">7 Gün Ücretsiz Dene</a>
+      </div>
+
+      <div class="pricing-card">
+        <div class="pricing-plan">Kurumsal</div>
+        <div class="pricing-price" style="font-size: 36px; padding-top: 6px;">Teklif Al</div>
+        <div class="pricing-period">Özel fiyat · SLA garantisi</div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>Çok şirket / çok kullanıcı</li>
+          <li>Özel entegrasyonlar</li>
+          <li>API tam erişimi</li>
+          <li>Dedicated destek hattı</li>
+          <li>On-premise kurulum opsiyonu</li>
+          <li>SLA & uptime garantisi</li>
+          <li>Özel eğitim & onboarding</li>
+        </ul>
+        <a href="mailto:info@fleetly.fit" class="btn-plan outline">İletişime Geç</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ TESTIMONIALS ═══════════════════════ -->
+<section class="testimonials-section">
+  <div class="container">
+    <div class="section-tag">Kullanıcılar</div>
+    <h2 class="section-title">Sahadan<br>Sesler</h2>
+
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <p class="testimonial-text">Fleetly'e geçmeden önce Excel tablolarında boğuluyorduk. Şimdi sabah kahvemi içerken tüm filoyu telefondan takip edebiliyorum.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background: rgba(232,82,26,.15); color: var(--accent);">KA</div>
+          <div>
+            <div class="author-name">Kadir Arslan</div>
+            <div class="author-role">Filo Müdürü · Arslan Nakliyat</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <p class="testimonial-text">Yakıt modülü sayesinde 3 aydaki anormal tüketimi tespit ettik. Bir yılda ₺80K tasarruf ettik, bu para aboneliğin 6 yıllık bedelini karşılıyor.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background: rgba(56,189,248,.1); color: var(--blue);">SÇ</div>
+          <div>
+            <div class="author-name">Serkan Çelik</div>
+            <div class="author-role">Operasyon Direktörü · Çelik Lojistik</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <p class="testimonial-text">CRM modülü beklediğimizden çok daha güçlü çıktı. Müşteri bazlı sefer raporları artık satış toplantılarımızın vazgeçilmez parçası.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background: rgba(45,212,191,.1); color: var(--teal);">ME</div>
+          <div>
+            <div class="author-name">Merve Erdoğan</div>
+            <div class="author-role">Genel Müdür · Erdoğan Ulaşım</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CTA ═══════════════════════ -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-box">
+      <h2>Filoyu<br>Devral.</h2>
+      <p>7 gün boyunca tüm özellikleri ücretsiz deneyin. Kredi kartı gerekmez, kurulum yok.</p>
+      <div class="cta-actions">
+        <a href="register.html" class="btn-primary" style="font-size: 18px; padding: 16px 40px;">
+          Hemen Başla
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="mailto:info@fleetly.fit" class="btn-secondary">Demo Talep Et</a>
+      </div>
+      <div class="cta-note">🔒 SSL Şifreleme &nbsp;·&nbsp; 🛡 KVKK Uyumlu &nbsp;·&nbsp; 🇹🇷 Türk Sunucuları</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <a href="#" class="brand" style="text-decoration: none;">
+        <svg width="28" height="28" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <rect width="120" height="120" rx="22" fill="#e8521a"/>
+          <line x1="22" y1="96" x2="60" y2="26" stroke="white" stroke-width="5.5" stroke-linecap="round"/>
+          <circle cx="96" cy="30" r="7" fill="white"/>
+          <circle cx="22" cy="96" r="10" fill="white" opacity="0.9"/>
+        </svg>
+        <span class="brand-name" style="font-size: 16px;">FLEET<span>LY</span></span>
+      </a>
+
+      <ul class="footer-links">
+        <li><a href="#ozellikler">Özellikler</a></li>
+        <li><a href="#fiyatlar">Fiyatlar</a></li>
+        <li><a href="#">Gizlilik</a></li>
+        <li><a href="#">KVKK</a></li>
+        <li><a href="mailto:info@fleetly.fit">İletişim</a></li>
+      </ul>
+
+      <div class="footer-copy">© 2026 Fleetly. Tüm hakları saklıdır.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Module tabs
+  const tabs = document.querySelectorAll('.module-tab');
+  const panels = document.querySelectorAll('.module-panels > div');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      panels.forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+      tab.classList.add('active');
+      const panel = document.getElementById('panel-' + tab.dataset.panel);
+      if (panel) { panel.classList.add('active'); panel.style.display = 'block'; }
+    });
+  });
+
+  // Initialize panels
+  panels.forEach((p, i) => { if (i > 0) p.style.display = 'none'; });
+
+  // Scroll-triggered number counters
+  const counters = document.querySelectorAll('.hero-stat-value');
+  let counted = false;
+
+  const observer = new IntersectionObserver(entries => {
+    if (!counted && entries[0].isIntersecting) {
+      counted = true;
+    }
+  }, { threshold: 0.5 });
+
+  const heroStats = document.querySelector('.hero-stats');
+  if (heroStats) observer.observe(heroStats);
+
+  // Smooth appear on scroll
+  const fadeEls = document.querySelectorAll('.feature-card, .workflow-step, .pricing-card, .testimonial-card');
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  fadeEls.forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(16px)';
+    el.style.transition = 'opacity .5s ease, transform .5s ease';
+    io.observe(el);
+  });
+</script>
+
+</body>
+</html>
