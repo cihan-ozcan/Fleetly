@@ -1,6 +1,16 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TABLE public.abonelik_planlari (
+  id text NOT NULL,
+  ad text NOT NULL,
+  fiyat numeric NOT NULL,
+  sure_gun integer NOT NULL,
+  aciklama text,
+  aktif boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT abonelik_planlari_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.activity_log (
   id text NOT NULL,
   type text NOT NULL,
@@ -62,7 +72,61 @@ CREATE TABLE public.firmalar (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   ad text NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
+  deneme_bitis timestamp with time zone,
+  abonelik_durumu text DEFAULT 'deneme'::text,
+  abonelik_plani text,
+  abonelik_bitis timestamp with time zone,
+  odeme_ref text,
+  max_arac integer DEFAULT 50,
+  iletisim_email text,
+  telefon text,
+  vergi_no text,
   CONSTRAINT firmalar_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.is_emirleri (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  firma_id uuid,
+  user_id uuid NOT NULL,
+  musteri_id bigint,
+  musteri_adi text,
+  arac_plaka text,
+  sofor text,
+  sofor_tel text,
+  konteyner_no text,
+  muhur_no text,
+  yukle_yeri text,
+  teslim_yeri text,
+  durum text NOT NULL DEFAULT 'Bekliyor'::text CHECK (durum = ANY (ARRAY['Bekliyor'::text, 'Yolda'::text, 'Fabrikada'::text, 'Teslim Edildi'::text, 'İptal'::text])),
+  atama_zamani timestamp with time zone DEFAULT now(),
+  yola_zaman timestamp with time zone,
+  fabrika_giris timestamp with time zone,
+  fabrika_cikis timestamp with time zone,
+  teslim_zamani timestamp with time zone,
+  fotograflar text DEFAULT '[]'::text,
+  notlar text,
+  created_at timestamp with time zone DEFAULT now(),
+  konum_lat double precision,
+  konum_lng double precision,
+  konum_zaman timestamp with time zone,
+  kont_tip text,
+  kont_durum text DEFAULT 'Dolu'::text CHECK (kont_durum IS NULL OR (kont_durum = ANY (ARRAY['Dolu'::text, 'Boş'::text]))),
+  referans_no text,
+  bos_donus text,
+  boslama_zaman timestamp with time zone,
+  CONSTRAINT is_emirleri_pkey PRIMARY KEY (id),
+  CONSTRAINT is_emirleri_firma_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
+  CONSTRAINT is_emirleri_user_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT is_emirleri_musteri_fkey FOREIGN KEY (musteri_id) REFERENCES public.musteriler(id)
+);
+CREATE TABLE public.kayit_log (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  firma_id uuid,
+  user_id uuid,
+  olay text NOT NULL,
+  detay jsonb,
+  ip_adresi text,
+  ts timestamp with time zone DEFAULT now(),
+  CONSTRAINT kayit_log_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.masraflar (
   id text NOT NULL,
@@ -80,6 +144,41 @@ CREATE TABLE public.masraflar (
   CONSTRAINT masraflar_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT masraflar_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id)
 );
+CREATE TABLE public.musteriler (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  firma_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  firma text NOT NULL,
+  yetkili text,
+  sektor text DEFAULT 'Diger'::text,
+  tel text,
+  email text,
+  adres text,
+  vkn text,
+  vade integer DEFAULT 30,
+  durum text DEFAULT 'Aktif'::text CHECK (durum = ANY (ARRAY['Aktif'::text, 'Pasif'::text, 'Potansiyel'::text])),
+  notlar text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT musteriler_pkey PRIMARY KEY (id),
+  CONSTRAINT musteriler_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
+  CONSTRAINT musteriler_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.odeme_gecmisi (
+  id text NOT NULL DEFAULT (gen_random_uuid())::text,
+  firma_id uuid NOT NULL,
+  plan_id text NOT NULL,
+  tutar numeric NOT NULL,
+  para_birimi text DEFAULT 'TRY'::text,
+  durum text DEFAULT 'bekliyor'::text,
+  odeme_ref text,
+  baslangic timestamp with time zone NOT NULL DEFAULT now(),
+  bitis timestamp with time zone NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  notlar text,
+  CONSTRAINT odeme_gecmisi_pkey PRIMARY KEY (id),
+  CONSTRAINT odeme_gecmisi_plan_fkey FOREIGN KEY (plan_id) REFERENCES public.abonelik_planlari(id),
+  CONSTRAINT odeme_gecmisi_firma_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id)
+);
 CREATE TABLE public.seferler (
   id text NOT NULL,
   user_id uuid NOT NULL,
@@ -95,9 +194,31 @@ CREATE TABLE public.seferler (
   ucret numeric DEFAULT 0,
   notlar text,
   created_at timestamp with time zone DEFAULT now(),
+  ops_id bigint,
   CONSTRAINT seferler_pkey PRIMARY KEY (id),
   CONSTRAINT seferler_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT seferler_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id)
+  CONSTRAINT seferler_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
+  CONSTRAINT seferler_ops_id_fkey FOREIGN KEY (ops_id) REFERENCES public.is_emirleri(id)
+);
+CREATE TABLE public.siparisler (
+  id text NOT NULL DEFAULT ('SIP-'::text || lpad((nextval('siparisler_seq'::regclass))::text, 4, '0'::text)),
+  firma_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  musteri_id bigint NOT NULL,
+  yukle text NOT NULL,
+  teslim text NOT NULL,
+  tarih date NOT NULL DEFAULT CURRENT_DATE,
+  durum text DEFAULT 'Bekliyor'::text CHECK (durum = ANY (ARRAY['Bekliyor'::text, 'Yolda'::text, 'Teslim Edildi'::text, 'Iptal'::text])),
+  tutar numeric DEFAULT 0,
+  odeme text DEFAULT 'Bekliyor'::text CHECK (odeme = ANY (ARRAY['Bekliyor'::text, 'Kismi'::text, 'Odendi'::text])),
+  yuk text,
+  agirlik numeric,
+  notlar text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT siparisler_pkey PRIMARY KEY (id),
+  CONSTRAINT siparisler_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
+  CONSTRAINT siparisler_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT siparisler_musteri_id_fkey FOREIGN KEY (musteri_id) REFERENCES public.musteriler(id)
 );
 CREATE TABLE public.surucu_belgeler (
   id text NOT NULL,
@@ -113,8 +234,8 @@ CREATE TABLE public.surucu_belgeler (
   takograf date,
   CONSTRAINT surucu_belgeler_pkey PRIMARY KEY (id),
   CONSTRAINT surucu_belgeler_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT surucu_belgeler_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
-  CONSTRAINT surucu_belgeler_arac_id_fkey FOREIGN KEY (arac_id) REFERENCES public.araclar(id)
+  CONSTRAINT surucu_belgeler_arac_id_fkey FOREIGN KEY (arac_id) REFERENCES public.araclar(id),
+  CONSTRAINT surucu_belgeler_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id)
 );
 CREATE TABLE public.yakit_girisleri (
   id text NOT NULL,
