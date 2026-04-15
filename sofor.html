@@ -471,16 +471,73 @@ const IS_PC = window.matchMedia('(min-width:900px)').matches;
 
 /* ─── GPS ─── */
 let _gpsWatch=null, _gpsOn=false;
+let _lastEtaCalc=0; // throttle OSRM calls — max 1/60s per GPS update
+const OSRM_URL='https://router.project-osrm.org/route/v1/driving';
+
 function startGPS(){
   if(!navigator.geolocation||_gpsOn)return; _gpsOn=true;
   _gpsWatch=navigator.geolocation.watchPosition(
-    async p=>{const la=p.coords.latitude,ln=p.coords.longitude;setGps(`📍 ${la.toFixed(4)}, ${ln.toFixed(4)}`,'var(--green)');await syncCloud(isEmriId,{konum_lat:la,konum_lng:ln,konum_zaman:new Date().toISOString()});},
+    async p=>{
+      const la=p.coords.latitude, ln=p.coords.longitude;
+      const now=new Date().toISOString();
+      setGps(`📍 ${la.toFixed(4)}, ${ln.toFixed(4)}`,'var(--green)');
+      // 1. Update current position in is_emirleri
+      await syncCloud(isEmriId,{konum_lat:la,konum_lng:ln,konum_zaman:now});
+      // 2. Write breadcrumb to konum_izleri (best-effort, fire-and-forget)
+      writeKonumIzi(la, ln, p.coords.speed);
+      // 3. Recalculate ETA via OSRM (throttled to once per 60 s)
+      const ts = Date.now();
+      if(ts - _lastEtaCalc > 60000){
+        _lastEtaCalc = ts;
+        cacheEtaFromOSRM(la, ln);
+      }
+    },
     e=>setGps('📡 GPS: Erişim yok','var(--red)'),
     {enableHighAccuracy:true,maximumAge:15000,timeout:30000}
   );
 }
 function stopGPS(){if(_gpsWatch!==null){navigator.geolocation.clearWatch(_gpsWatch);_gpsWatch=null;}_gpsOn=false;}
 function setGps(t,c){['gps-status','pc-gps'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=t;el.style.color=c;}});}
+
+/* ─── BREADCRUMB: konum_izleri INSERT ─── */
+async function writeKonumIzi(lat, lng, hiz){
+  if(!SB_URL||!SB_ANON||!isEmri) return;
+  const dbId=(isEmri._dbId||isEmriId);
+  try{
+    await fetch(`${SB_URL}/rest/v1/konum_izleri`,{
+      method:'POST',
+      headers:{
+        'apikey':SB_ANON,
+        'Authorization':`Bearer ${getSBToken()}`,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'
+      },
+      body:JSON.stringify({is_emri_id:dbId, lat, lng, hiz: hiz!=null?Math.round(hiz*3.6):null})
+    });
+  }catch{ /* fire-and-forget, sessizce geç */ }
+}
+
+/* ─── ETA CACHE: OSRM → is_emirleri ─── */
+async function cacheEtaFromOSRM(curLat, curLng){
+  if(!isEmri) return;
+  const tLat=parseFloat(isEmri.teslim_lat), tLng=parseFloat(isEmri.teslim_lng);
+  if(!isFinite(tLat)||!isFinite(tLng)) return; // teslim koordinatı yoksa atla
+  try{
+    const url=`${OSRM_URL}/${curLng},${curLat};${tLng},${tLat}?overview=full&geometries=polyline`;
+    const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+    if(!r.ok) return;
+    const d=await r.json();
+    const route=d.routes?.[0]; if(!route) return;
+    const etaIso=new Date(Date.now()+route.duration*1000).toISOString();
+    const kalanKm=Math.round(route.distance/100)/10; // 1 ondalık
+    const poly=route.geometry; // polyline5 string
+    await syncCloud(isEmriId,{
+      eta_iso: etaIso,
+      kalan_km: kalanKm,
+      rota_polyline: poly
+    });
+  }catch{ /* OSRM erişilemez — sessizce geç */ }
+}
 
 /* ─── TOAST ─── */
 let _tt;
@@ -731,44 +788,27 @@ async function confirmTeslim(){
   showToast('⏳ Teslim kaydediliyor…');
   const imzaUrl = await uploadImza(imzaData);
   await applyUpdate({
-    durum:'Teslim Edildi',
-    teslim_zamani:new Date().toISOString(),
-    teslim_alan_ad: alan,
+    durum          : 'Teslim Edildi',
+    teslim_zamani  : new Date().toISOString(),
+    teslim_alan_ad : alan,
     teslim_not_musteri: not || null,
-    imza_url: imzaUrl
+    imza_url       : imzaUrl,
+    // ETA önbelleğini temizle — müşteri sayfasında "Teslim" görünsün
+    eta_iso        : null,
+    kalan_km       : 0,
+    rota_polyline  : null
   });
-  stopGPS();
+  stopGPS();           // GPS izlemeyi durdur
+  _lastEtaCalc = Infinity; // OSRM çağrısının yeniden tetiklenmesini engelle
   showToast('🎯 Teslim kaydedildi!','success');
 }
 
-/* ─── GEOCODE — alım/teslim koordinatlarını bir kez çözümle ─── */
-async function geocodeAddress(addr){
-  if(!addr) return null;
-  try{
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addr)}`,
-      { headers:{'Accept-Language':'tr'} });
-    if(!r.ok) return null;
-    const arr = await r.json();
-    if(!arr?.length) return null;
-    return { lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon) };
-  }catch{ return null; }
-}
+/* ─── COORDS: alım/teslim koordinatları app.html'de manuel
+   girilen Google Maps linklerinden gelir (parseKonumUrl).
+   Şoför ekranında ek geocoding yapılmaz — DB değerleri yeterli. ─── */
 async function ensureCoords(){
-  if(!isEmri) return;
-  const e = isEmri, patch = {};
-  if(e.yukle_yeri && (!e.yukle_lat || !e.yukle_lng)){
-    const r = await geocodeAddress(e.yukle_yeri);
-    if(r){ e.yukle_lat = r.lat; e.yukle_lng = r.lng; patch.yukle_lat=r.lat; patch.yukle_lng=r.lng; await new Promise(r=>setTimeout(r,1100)); }
-  }
-  if(e.teslim_yeri && (!e.teslim_lat || !e.teslim_lng)){
-    const r = await geocodeAddress(e.teslim_yeri);
-    if(r){ e.teslim_lat = r.lat; e.teslim_lng = r.lng; patch.teslim_lat=r.lat; patch.teslim_lng=r.lng; }
-  }
-  if(Object.keys(patch).length){
-    saveLocal();
-    render();
-    await syncCloud(isEmri.id, patch);
-  }
+  // Koordinatlar artık iş emri oluşturulurken app.html'de parse ediliyor.
+  // Bu fonksiyon geriye dönük uyumluluk için boş bırakıldı.
 }
 
 /* ─── AKSİYONLAR ─── */
