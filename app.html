@@ -10250,22 +10250,34 @@ function renderSeferTable() {
     tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--muted)">Henüz sefer kaydı yok. ➕ Yeni Sefer sekmesinden ekleyin.</td></tr>`;
     return;
   }
-  tbody.innerHTML = sorted.map(s=>`
+  tbody.innerHTML = sorted.map(s=>{
+    // Ops bağlantısı varsa ilgili iş emrini bul (müşteri adı için)
+    const bagliOps = s._opsId ? isEmirleri.find(e => String(e._dbId||e.id) === String(s._opsId)) : null;
+    const musteriAdi = bagliOps?.musteri_adi || '';
+    const kmStr  = s.km   > 0 ? s.km.toLocaleString('tr-TR')+' km' : '—';
+    const ucretStr = s.ucret > 0 ? '₺'+s.ucret.toLocaleString('tr-TR',{minimumFractionDigits:0}) : '—';
+    return `
     <tr>
       <td>${fmtDate(s.tarih)}</td>
       <td><span style="font-family:var(--font-mono);font-weight:700;color:var(--accent)">${s.plaka||'—'}</span></td>
       <td>${s.sofor||'—'}</td>
-      <td>${s.kalkis}</td>
-      <td>${s.varis}</td>
-      <td style="font-family:var(--font-mono);color:var(--blue)">${s.km?s.km.toLocaleString('tr')+' km':'—'}</td>
-      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${s.yuk||'—'}</td>
-      <td style="font-family:var(--font-mono);color:var(--green);font-weight:700">${s.ucret?'₺'+s.ucret.toLocaleString('tr',{minimumFractionDigits:0}):'—'}</td>
-      <td style="color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis">
-        ${s._opsId ? `<span title="Konteyner Operasyonu #${s._opsId}" style="display:inline-flex;align-items:center;gap:3px;background:rgba(249,115,22,.12);color:var(--accent);font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;margin-bottom:2px;cursor:pointer;" onclick="closeSeferModal();setTimeout(()=>{ openOperasyonPage(); setTimeout(()=>openOpsDrawer(${s._opsId}),600); },100)">📦 Ops #${s._opsId}</span><br>` : ''}
-        ${s.not||''}
+      <td style="color:var(--text2)">${s.kalkis}</td>
+      <td style="color:var(--text2)">${s.varis}</td>
+      <td style="font-family:var(--font-mono);color:var(--blue)">${kmStr}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;">
+        ${musteriAdi ? `<div style="font-weight:600;color:var(--text);margin-bottom:1px;">${musteriAdi}</div>` : ''}
+        <div style="color:var(--muted)">${s.yuk||'—'}</div>
+      </td>
+      <td style="font-family:var(--font-mono);color:var(--green);font-weight:700">${ucretStr}</td>
+      <td>
+        ${s._opsId
+          ? `<span title="Operasyon #${s._opsId}" style="display:inline-flex;align-items:center;gap:3px;background:rgba(249,115,22,.12);color:var(--accent);font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:4px;cursor:pointer;white-space:nowrap;" onclick="closeSeferModal();setTimeout(()=>{openOperasyonPage();setTimeout(()=>openOpsDrawer(${s._opsId}),600)},100)">📦 Ops #${s._opsId}</span>`
+          : `<span style="font-size:11px;color:var(--muted);">${s.not||''}</span>`
+        }
       </td>
       <td><button class="srm-del-btn" onclick="deleteSeferEntry('${s.id}')">✕</button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function renderSeferStats() {
@@ -10288,30 +10300,56 @@ function renderSeferStats() {
 function renderSeferOzet() {
   const el = document.getElementById('sefer-ozet-content');
   if(!el) return;
-  // Araç bazlı özet
+
+  function barChart(rows, colorFrom, colorTo, keyFn, lbl1Fn, lbl2Fn) {
+    if (!rows.length) return '<p style="color:var(--muted);font-size:13px">Henüz sefer kaydı yok.</p>';
+    const maxU = rows[0].ucret || 1;
+    return rows.map(r=>`
+      <div class="rapor-row">
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${keyFn(r)}</div>
+          <div style="color:var(--muted);font-size:10.5px;margin-top:1px;">${lbl1Fn(r)}${lbl2Fn(r)?` · ${lbl2Fn(r)}`:''}</div>
+          <div class="rapor-bar-track"><div class="rapor-bar-fill" style="width:${Math.round((r.ucret||0)/maxU*100)}%;background:linear-gradient(90deg,${colorFrom},${colorTo})"></div></div>
+        </div>
+        <div class="rapor-row-val" style="color:var(--green);flex-shrink:0;">₺${(r.ucret||0).toLocaleString('tr-TR',{minimumFractionDigits:0})}</div>
+      </div>`).join('');
+  }
+
+  // ── Araç bazlı ────────────────────────────────────────────
   const byArac = {};
   seferData.forEach(s=>{
-    if(!byArac[s.aracId]) byArac[s.aracId]={plaka:s.plaka||s.aracId,sefer:0,km:0,ucret:0};
-    byArac[s.aracId].sefer++;
-    byArac[s.aracId].km += s.km||0;
-    byArac[s.aracId].ucret += s.ucret||0;
+    const k = s.plaka || s.aracId || '—';
+    if(!byArac[k]) byArac[k]={plaka:k,sefer:0,km:0,ucret:0};
+    byArac[k].sefer++;
+    byArac[k].km    += s.km   ||0;
+    byArac[k].ucret += s.ucret||0;
   });
-  const rows = Object.values(byArac).sort((a,b)=>b.ucret-a.ucret);
-  const maxUcret = rows[0]?.ucret||1;
+  const aracRows = Object.values(byArac).sort((a,b)=>b.ucret-a.ucret);
+
+  // ── Müşteri bazlı (ops bağlantısı olan seferler) ─────────
+  const byMusteri = {};
+  seferData.forEach(s=>{
+    if(!s._opsId) return; // sadece operasyona bağlı seferler
+    const ops = isEmirleri.find(e=>String(e._dbId||e.id)===String(s._opsId));
+    const k   = ops?.musteri_adi || ops?.musteri_id || null;
+    if(!k) return;
+    if(!byMusteri[k]) byMusteri[k]={musteri:k,sefer:0,km:0,ucret:0};
+    byMusteri[k].sefer++;
+    byMusteri[k].km    += s.km   ||0;
+    byMusteri[k].ucret += s.ucret||0;
+  });
+  const musteriRows = Object.values(byMusteri).sort((a,b)=>b.ucret-a.ucret);
+
   el.innerHTML = `
     <div class="rapor-card" style="margin-bottom:16px">
       <div class="rapor-card-title" style="color:var(--purple)">🚛 Araç Bazlı Sefer Özeti</div>
-      ${rows.length===0?'<p style="color:var(--muted);font-size:13px">Henüz sefer kaydı yok.</p>':
-        rows.map(r=>`
-        <div class="rapor-row">
-          <div>
-            <div style="font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px">${r.plaka}</div>
-            <div style="color:var(--muted);font-size:11px">${r.sefer} sefer · ${r.km.toLocaleString('tr')} km</div>
-            <div class="rapor-bar-track"><div class="rapor-bar-fill" style="width:${Math.round(r.ucret/maxUcret*100)}%;background:linear-gradient(90deg,var(--purple),#c4b5fd)"></div></div>
-          </div>
-          <div class="rapor-row-val" style="color:var(--green)">₺${r.ucret.toLocaleString('tr',{minimumFractionDigits:0})}</div>
-        </div>`).join('')}
-    </div>`;
+      ${barChart(aracRows,'var(--purple)','#c4b5fd',r=>r.plaka,r=>`${r.sefer} sefer`,r=>r.km>0?r.km.toLocaleString('tr-TR')+' km':'')}
+    </div>
+    ${musteriRows.length ? `
+    <div class="rapor-card">
+      <div class="rapor-card-title" style="color:var(--blue)">🏢 Müşteri Bazlı Sefer Özeti</div>
+      ${barChart(musteriRows,'var(--blue)','#7dd3fc',r=>r.musteri,r=>`${r.sefer} sefer`,r=>r.km>0?r.km.toLocaleString('tr-TR')+' km':'')}
+    </div>` : ''}`;
 }
 
 function updateSeferStat() {
@@ -12642,13 +12680,18 @@ function openOpsDrawer(id) {
     ['Bekleme Süresi',    opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)],
     ['Notlar',            e.notlar      || '—'],
   ].map(([k,v]) => `<div class="detail-row"><span class="detail-key">${k}</span><span class="detail-val">${v}</span></div>`).join('') +
-  (bagliSefer ? `<div class="detail-row" style="margin-top:8px;background:rgba(167,139,250,.08);border-radius:7px;padding:6px 10px;border:1px solid rgba(167,139,250,.2);">
-    <span class="detail-key" style="color:var(--purple)">🗺 Sefer Kaydı</span>
-    <span class="detail-val">
-      <span style="color:var(--purple);font-weight:700;">${bagliSefer.kalkis} → ${bagliSefer.varis}</span>
-      <button onclick="closeOpsDrawer();openSeferModal()" style="margin-left:8px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.3);color:var(--purple);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;">Görüntüle →</button>
-    </span>
-  </div>` : (e.durum === 'Teslim Edildi' ? '' : `<div class="detail-row" style="margin-top:8px;opacity:.5;font-size:11px;color:var(--muted);padding:4px 0;">🗺 Sefer kaydı "Teslim Edildi" durumunda otomatik oluşturulur</div>`));
+  (bagliSefer ? `<div style="margin-top:8px;background:rgba(167,139,250,.08);border-radius:9px;padding:10px 12px;border:1px solid rgba(167,139,250,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <span style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.05em;">🗺 Sefer Kaydı</span>
+      <button onclick="closeOpsDrawer();openSeferModal()" style="background:rgba(167,139,250,.18);border:1px solid rgba(167,139,250,.35);color:var(--purple);border-radius:5px;padding:2px 9px;font-size:10px;font-weight:700;cursor:pointer;">Görüntüle →</button>
+    </div>
+    <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;">${bagliSefer.kalkis} → ${bagliSefer.varis}</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      ${bagliSefer.km > 0   ? `<span style="font-family:var(--font-mono);font-size:11.5px;color:var(--blue);">📏 ${bagliSefer.km} km</span>` : ''}
+      ${bagliSefer.ucret > 0 ? `<span style="font-family:var(--font-mono);font-size:11.5px;color:var(--green);font-weight:700;">₺${(bagliSefer.ucret||0).toLocaleString('tr-TR')}</span>` : ''}
+      ${bagliSefer.tarih    ? `<span style="font-size:11px;color:var(--muted);">${bagliSefer.tarih}</span>` : ''}
+    </div>
+  </div>` : (e.durum === 'Teslim Edildi' ? '' : `<div style="margin-top:8px;opacity:.5;font-size:11px;color:var(--muted);padding:4px 0;">🗺 Sefer kaydı "Teslim Edildi" durumunda otomatik oluşturulur</div>`));
 
   // Zaman çizelgesi
   const milestones = [
@@ -12935,22 +12978,63 @@ function opsAutoCreateSefer(e) {
   const mevcutSefer = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
   if (mevcutSefer) return; // zaten var
 
-  // Araç bilgisini vehicles'tan bul
+  // ── 1) KM: koordinatlardan haversine mesafesi ──────────────
+  function _haversine(la1,ln1,la2,ln2) {
+    const R=6371,r=x=>x*Math.PI/180;
+    const dLa=r(la2-la1),dLn=r(ln2-ln1);
+    const a=Math.sin(dLa/2)**2+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLn/2)**2;
+    return 2*R*Math.asin(Math.sqrt(a));
+  }
+  let km = 0;
+  const yLat=parseFloat(e.yukle_lat), yLng=parseFloat(e.yukle_lng);
+  const tLat=parseFloat(e.teslim_lat), tLng=parseFloat(e.teslim_lng);
+  if (isFinite(yLat) && isFinite(yLng) && isFinite(tLat) && isFinite(tLng)) {
+    km = Math.round(_haversine(yLat, yLng, tLat, tLng));
+  }
+
+  // ── 2) ÜCRET: CRM siparişlerinden müşteri eşleştirmesi ─────
+  // Bu ayın ya da en yakın tarihteki açık siparişin tutarını al
+  let ucret = 0;
+  if (e.musteri_id && crmSiparisler.length) {
+    const musteriSiparisleri = crmSiparisler
+      .filter(s => s.musteri_id == e.musteri_id && s.durum !== 'İptal' && (s.tutar||0) > 0)
+      .sort((a,b) => b.tarih.localeCompare(a.tarih)); // en yeniden başla
+    if (musteriSiparisleri.length) {
+      ucret = musteriSiparisleri[0].tutar || 0;
+    }
+  }
+
+  // ── 3) YÜK: konteyner bilgisi + müşteri ───────────────────
+  const konteynerler = (e.konteyner_no || '').split('\n').map(s=>s.trim()).filter(Boolean);
+  const yukStr = [
+    konteynerler.join(', ') || null,
+    e.kont_tip              || null,
+    e.musteri_adi           || null,
+  ].filter(Boolean).join(' · ');
+
+  // ── 4) NOT: operasyon özeti ────────────────────────────────
+  const notParcalar = [`Ops #${e.id}`];
+  if (e.referans_no)  notParcalar.push(`Ref: ${e.referans_no}`);
+  if (e.muhur_no)     notParcalar.push(`Mühür: ${e.muhur_no}`);
+  if (e.kont_durum)   notParcalar.push(e.kont_durum);
+  if (ucret > 0)      notParcalar.push(`CRM: ₺${ucret.toLocaleString('tr-TR')}`);
+
+  // ── 5) ARAÇ ───────────────────────────────────────────────
   const veh = vehicles.find(v => v.plaka === e.arac_plaka);
 
   const seferEntry = {
-    id      : uid(),
-    _opsId  : e._dbId ?? e.id,          // bağlantı referansı
-    tarih   : e.teslim_zamani ? e.teslim_zamani.slice(0, 10) : new Date().toISOString().slice(0, 10),
-    aracId  : veh ? veh.id : '',
-    plaka   : e.arac_plaka  || '',
-    sofor   : e.sofor       || '',
-    kalkis  : e.yukle_yeri  || '—',
-    varis   : e.teslim_yeri || '—',
-    km      : 0,
-    yuk     : (e.konteyner_no || '').replace(/\n/g, ', ') + (e.kont_tip ? ' (' + e.kont_tip + ')' : ''),
-    ucret   : 0,
-    not     : `Operasyon #${e.id}${e.musteri_adi ? ' · ' + e.musteri_adi : ''}${e.referans_no ? ' · Ref: ' + e.referans_no : ''}`,
+    id     : uid(),
+    _opsId : e._dbId ?? e.id,
+    tarih  : e.teslim_zamani ? e.teslim_zamani.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    aracId : veh ? veh.id : '',
+    plaka  : e.arac_plaka || '',
+    sofor  : e.sofor      || '',
+    kalkis : e.yukle_yeri  || '—',
+    varis  : e.teslim_yeri || '—',
+    km,
+    yuk    : yukStr,
+    ucret,
+    not    : notParcalar.join(' · '),
   };
 
   seferData.push(seferEntry);
@@ -12959,7 +13043,9 @@ function opsAutoCreateSefer(e) {
   updateSeferStat();
   addActivity('sefer_ekle', seferEntry.plaka || '—', seferEntry.kalkis + ' → ' + seferEntry.varis);
 
-  showToast(`✅ Sefer kaydı otomatik oluşturuldu — ${seferEntry.kalkis} → ${seferEntry.varis}`, 'success');
+  const kmStr   = km   > 0 ? ` · ${km} km`       : '';
+  const ucretStr = ucret > 0 ? ` · ₺${ucret.toLocaleString('tr-TR')}` : '';
+  showToast(`✅ Sefer kaydı oluşturuldu — ${seferEntry.kalkis} → ${seferEntry.varis}${kmStr}${ucretStr}`, 'success');
 }
 
 
