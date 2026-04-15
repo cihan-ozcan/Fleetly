@@ -23,6 +23,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <!-- Leaflet (filo haritası) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <!-- Gizli config — .gitignore'da, repoya GİTMEZ -->
@@ -2429,6 +2432,29 @@
   /* Fotoğraf grid */
   .ops-foto-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:10px; }
   .ops-foto-card { aspect-ratio:1;border-radius:8px;overflow:hidden;position:relative;background:var(--surface3);border:1px solid var(--border); }
+
+  /* ── FİLO HARİTASI ────────────────────────────────────── */
+  #ops-fleet-map-wrap { position:relative; }
+  #ops-fleet-map { height:520px;border-radius:14px;overflow:hidden;border:1px solid var(--border); }
+  @media(max-width:600px){ #ops-fleet-map { height:340px; } }
+  .fleet-map-toolbar { display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap; }
+  .fleet-map-legend { display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text2);padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);margin-bottom:12px; }
+  .fleet-map-legend-item { display:flex;align-items:center;gap:5px;font-weight:500; }
+  .fleet-dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+  .fleet-map-refresh-btn { margin-left:auto;display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 12px;font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;transition:border-color .15s; }
+  .fleet-map-refresh-btn:hover { border-color:var(--accent); }
+  /* Leaflet popup override */
+  #ops-fleet-map .leaflet-popup-content-wrapper { background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.25); }
+  #ops-fleet-map .leaflet-popup-tip { background:var(--surface); }
+  .fleet-popup-plaka { font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px;margin-bottom:4px; }
+  .fleet-popup-row { font-size:11.5px;color:var(--text2);margin-bottom:2px; }
+  .fleet-popup-btn { display:inline-block;margin-top:8px;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-family:var(--font-body);font-size:11.5px;font-weight:700;cursor:pointer; }
+  /* Truck marker */
+  .fleet-truck-icon { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2.5px solid;box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  .fleet-truck-icon.yolda     { background:#1e40af22;border-color:#3b82f6; }
+  .fleet-truck-icon.fabrikada { background:#e8521a22;border-color:#e8521a; }
+  .fleet-truck-icon.bekliyor  { background:#a16207aa;border-color:#ca8a04; }
+  .fleet-truck-icon.teslim    { background:#14532d55;border-color:#22c55e; }
   .ops-foto-card img { width:100%;height:100%;object-fit:cover;cursor:pointer;transition:opacity .15s; }
   .ops-foto-card img:hover { opacity:.85; }
   .ops-foto-tip { position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);font-size:9px;color:#fff;padding:3px 5px;text-align:center;font-weight:600; }
@@ -2930,6 +2956,7 @@
         <div class="settings-item" id="settings-pwa-item" onclick="pwaInstall();closeSettings()" style="display:none">📲 Ana Ekrana Ekle</div>
         <div class="settings-sep" id="settings-pwa-sep" style="display:none"></div>
         <div class="settings-item" onclick="openDashEdit();closeSettings()">🎛 Dashboard Düzenle</div>
+        <div class="settings-item" onclick="openBrandingModal();closeSettings()">🎨 Marka &amp; Portal Ayarları</div>
         <div class="settings-sep"></div>
         <div class="settings-item" onclick="exportJSON();closeSettings()">⬇ Dışa Aktar</div>
         <label class="settings-item" style="cursor:pointer">⬆ İçe Aktar<input type="file" accept=".json" style="display:none" onchange="importJSON(this);closeSettings()" /></label>
@@ -3433,6 +3460,7 @@
       <div style="display:flex;gap:0;background:var(--surface3);border-radius:10px;padding:3px;margin-bottom:20px;width:fit-content;">
         <button class="srm-tab active" id="ops-tab-emirler"  onclick="switchOpsTab('emirler',this)">📋 İş Emirleri</button>
         <button class="srm-tab"        id="ops-tab-canli"    onclick="switchOpsTab('canli',this)">🔴 Canlı Takip</button>
+        <button class="srm-tab"        id="ops-tab-harita"   onclick="switchOpsTab('harita',this)">🗺 Filo Haritası</button>
         <button class="srm-tab"        id="ops-tab-arsiv"    onclick="switchOpsTab('arsiv',this)">🗂 Arşiv</button>
       </div>
 
@@ -3482,7 +3510,29 @@
         <div class="ops-kanban" id="ops-kanban"></div>
       </div>
 
-      <!-- SEKME 3: Arşiv -->
+      <!-- SEKME 3: Filo Haritası -->
+      <div id="ops-panel-harita" class="srm-panel">
+        <div id="ops-fleet-map-wrap">
+          <!-- Legend -->
+          <div class="fleet-map-legend">
+            <div class="fleet-map-legend-item"><span class="fleet-dot" style="background:#3b82f6;"></span>Yolda</div>
+            <div class="fleet-map-legend-item"><span class="fleet-dot" style="background:#e8521a;"></span>Fabrikada</div>
+            <div class="fleet-map-legend-item"><span class="fleet-dot" style="background:#ca8a04;"></span>Bekliyor</div>
+            <div class="fleet-map-legend-item"><span class="fleet-dot" style="background:#22c55e;"></span>Teslim Edildi</div>
+            <div class="fleet-map-legend-item" style="margin-left:auto;">
+              <span id="fleet-map-count" style="font-family:var(--font-mono);color:var(--accent);font-weight:700;"></span>
+            </div>
+            <button class="fleet-map-refresh-btn" onclick="opsRenderFleetMap()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Yenile
+            </button>
+          </div>
+          <!-- Map -->
+          <div id="ops-fleet-map"></div>
+        </div>
+      </div>
+
+      <!-- SEKME 4: Arşiv -->
       <div id="ops-panel-arsiv" class="srm-panel">
         <div class="srm-table-wrap">
           <table class="srm-table" id="ops-arsiv-table">
@@ -3551,6 +3601,15 @@
         🔗 Şoföre Link Kopyala
       </button>
       <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">WhatsApp: iş detayları anında şoföre iletilir</div>
+    </div>
+    <!-- Müşteri Portalı linki -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Müşteri Portalı</div>
+      <button onclick="opsPortalLink()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--accent),#6366f1);border:none;color:#fff;border-radius:9px;padding:11px;font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;letter-spacing:.01em;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Müşteriye Portal Linki Kopyala
+      </button>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Müşteri tüm sevkiyatlarını takip edebilir</div>
     </div>
   </div>
 </div>
@@ -4051,6 +4110,17 @@
     <div class="drawer-section">
       <div class="drawer-section-title">Mali Özet</div>
       <div id="crm-drawer-mali"></div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Müşteri Portalı</div>
+      <button id="crm-drawer-portal-btn" onclick="crmPortalLink()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--accent),#6366f1);border:none;color:#fff;border-radius:9px;padding:11px;font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;letter-spacing:.01em;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Portal Linki Kopyala
+      </button>
+      <button onclick="crmPortalLinkOpen()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:9px;padding:10px;font-family:var(--font-body);font-size:12.5px;font-weight:600;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+        🌐 Portalı Aç
+      </button>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Müşteri tüm sevkiyatlarını takip edebilir</div>
     </div>
   </div>
 </div>
@@ -11616,6 +11686,7 @@ async function deleteCrmSiparis(id) {
 function openCrmDrawer(id) {
   const m = crmMusteriById(id);
   if(!m) return;
+  _crmDrawerActiveMusteriId = id;
   const sefers = crmSiparisleriByMusteri(id).sort((a,b)=>b.tarih.localeCompare(a.tarih));
   const ciro = sefers.filter(s=>s.durum!=='İptal').reduce((a,s)=>a+(s.tutar||0),0);
   const bekleyen = sefers.filter(s=>s.odeme==='Bekliyor'&&s.durum!=='İptal').reduce((a,s)=>a+(s.tutar||0),0);
@@ -11666,6 +11737,27 @@ function openCrmDrawer(id) {
 function closeCrmDrawer() {
   document.getElementById('crm-drawer-bg').classList.add('hidden');
   document.getElementById('crm-musteri-drawer').classList.add('hidden');
+  _crmDrawerActiveMusteriId = null;
+}
+
+/* ─── MÜŞTERİ PORTAL LİNKİ (CRM drawer) ──────── */
+let _crmDrawerActiveMusteriId = null;
+
+function _crmPortalUrl(musteriId) {
+  const tok  = btoa('mtp_' + musteriId + '_' + (currentFirmaId || ''));
+  const base = window.location.href.replace(/[^/]*$/, '');
+  return base + 'portal.html?c=' + tok;
+}
+function crmPortalLink() {
+  if (!_crmDrawerActiveMusteriId) return;
+  const url = _crmPortalUrl(_crmDrawerActiveMusteriId);
+  navigator.clipboard.writeText(url)
+    .then(() => showToast('📋 Müşteri portal linki kopyalandı!', 'success'))
+    .catch(() => { prompt('Müşteri portal linki:', url); });
+}
+function crmPortalLinkOpen() {
+  if (!_crmDrawerActiveMusteriId) return;
+  window.open(_crmPortalUrl(_crmDrawerActiveMusteriId), '_blank');
 }
 
 /* ─── CSV ─────────────────────────────────────── */
@@ -11951,6 +12043,7 @@ function switchOpsTab(name, btn) {
   btn.classList.add('active');
   if (name === 'canli')  opsRenderKanban();
   if (name === 'arsiv')  opsRenderArsiv();
+  if (name === 'harita') opsRenderFleetMap();
 }
 
 /* ── STAT ÇUBUĞU ─────────────────────────────────────────── */
@@ -12077,6 +12170,109 @@ function opsRenderKanban() {
           `<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Boş</div>`}
       </div>`;
   }).join('');
+}
+
+/* ── FİLO HARİTASI ──────────────────────────────────────── */
+let _fleetMap = null;
+let _fleetMarkers = [];
+let _fleetRefreshTimer = null;
+
+function opsRenderFleetMap() {
+  // Init Leaflet map once
+  if (!_fleetMap) {
+    _fleetMap = L.map('ops-fleet-map', { zoomControl: true, attributionControl: false })
+      .setView([39.9, 32.8], 6); // Türkiye merkezi
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18
+    }).addTo(_fleetMap);
+    L.control.attribution({ prefix: '© OpenStreetMap' }).addTo(_fleetMap);
+  }
+  setTimeout(() => _fleetMap.invalidateSize(), 80);
+
+  // Remove old markers
+  _fleetMarkers.forEach(m => _fleetMap.removeLayer(m));
+  _fleetMarkers = [];
+
+  // Only vehicles with valid coordinates
+  const withLoc = isEmirleri.filter(e =>
+    e.durum !== 'İptal' &&
+    isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng))
+  );
+
+  // Update count badge
+  const aktifKonum = withLoc.filter(e => !['Teslim Edildi'].includes(e.durum)).length;
+  const countEl = document.getElementById('fleet-map-count');
+  if (countEl) countEl.textContent = aktifKonum + ' aktif araç';
+
+  if (!withLoc.length) {
+    // Show TR center, nothing else
+    return;
+  }
+
+  const bounds = [];
+
+  withLoc.forEach(e => {
+    const lat = parseFloat(e.konum_lat), lng = parseFloat(e.konum_lng);
+    const durum = (e.durum || 'Bekliyor').toLowerCase().replace(' ', '');
+    const durumKey = durum === 'teslimedileddi' ? 'teslim' : durum;
+    const cls = { 'yolda':'yolda', 'fabrikada':'fabrikada', 'bekliyor':'bekliyor', 'teslimedileddi':'teslim', 'teslim edildi':'teslim' }[e.durum?.toLowerCase()] || 'bekliyor';
+
+    // Truck icon
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="fleet-truck-icon ${cls}" title="${e.arac_plaka||''}">🚛</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+      popupAnchor: [0, -18]
+    });
+
+    // ETA line
+    let etaLine = '';
+    if (e.eta_iso && e.durum === 'Yolda') {
+      const ms = Date.parse(e.eta_iso) - Date.now();
+      if (ms > 0) {
+        const min = Math.round(ms / 60000);
+        etaLine = min < 60
+          ? `<div class="fleet-popup-row">⏱ ETA: <b>${min} dk</b></div>`
+          : `<div class="fleet-popup-row">⏱ ETA: <b>${Math.floor(min/60)}s ${min%60}dk</b></div>`;
+      }
+    } else if (e.kalan_km && e.durum === 'Yolda') {
+      etaLine = `<div class="fleet-popup-row">📏 Kalan: <b>${e.kalan_km} km</b></div>`;
+    }
+
+    // Age of last position
+    let ageStr = '';
+    if (e.konum_zaman) {
+      const ageSec = Math.round((Date.now() - Date.parse(e.konum_zaman)) / 1000);
+      ageStr = ageSec < 60 ? `${ageSec}s önce` : ageSec < 3600 ? `${Math.round(ageSec/60)} dk önce` : `${Math.round(ageSec/3600)} sa önce`;
+    }
+
+    const popup = `
+      <div class="fleet-popup-plaka">${e.arac_plaka || '—'}</div>
+      <div class="fleet-popup-row">👤 ${e.sofor || '—'}</div>
+      <div class="fleet-popup-row">📦 ${(e.konteyner_no||'—').split('\n')[0]}</div>
+      <div class="fleet-popup-row">🏢 ${e.musteri_adi || '—'}</div>
+      <div class="fleet-popup-row">📍 ${opsDurumLabel(e.durum)}${ageStr?' · '+ageStr:''}</div>
+      ${etaLine}
+      <button class="fleet-popup-btn" onclick="_fleetMap.closePopup();openOpsDrawer(${e.id})">Detay →</button>`;
+
+    const marker = L.marker([lat, lng], { icon })
+      .addTo(_fleetMap)
+      .bindPopup(popup, { maxWidth: 240 });
+
+    _fleetMarkers.push(marker);
+    bounds.push([lat, lng]);
+  });
+
+  if (bounds.length === 1) {
+    _fleetMap.setView(bounds[0], 12);
+  } else if (bounds.length > 1) {
+    _fleetMap.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+  }
+}
+
+function opsDurumLabel(d) {
+  return { 'Yolda':'🔵 Yolda','Fabrikada':'🟠 Fabrikada','Bekliyor':'🟡 Bekliyor','Teslim Edildi':'🟢 Teslim' }[d] || d || '—';
 }
 
 /* ── ARŞİV ───────────────────────────────────────────────── */
@@ -12584,6 +12780,19 @@ function opsKopyalaLink() {
   });
 }
 
+/* ── MÜŞTERİ PORTAL LİNKİ (ops drawer) ──────────────────── */
+function opsPortalLink() {
+  if (!opsDrawerActiveId) return;
+  const e = opsById(opsDrawerActiveId);
+  if (!e || !e.musteri_id) { showToast('Bu iş emrinde müşteri atanmamış', 'error'); return; }
+  const tok = btoa('mtp_' + e.musteri_id + '_' + (currentFirmaId || ''));
+  const base = window.location.href.replace(/[^/]*$/, '');
+  const url  = base + 'portal.html?c=' + tok;
+  navigator.clipboard.writeText(url)
+    .then(() => showToast('📋 Müşteri portal linki kopyalandı!', 'success'))
+    .catch(() => { prompt('Müşteri portal linki:', url); });
+}
+
 /* ── ARAÇ ARAMA (Autocomplete) ───────────────────────────── */
 function opsAracAra(q) {
   const dd = document.getElementById('ops-arac-dropdown');
@@ -12775,7 +12984,131 @@ function updateOpsStatCard() {
 }
 
 /* ─── INIT ─────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════════
+   MARKA & PORTAL AYARLARI MODALI
+══════════════════════════════════════════════════════════════ */
+async function openBrandingModal() {
+  // Pre-fill from DB if possible
+  let firma = '', logoUrl = '', markaRengi = '#e8521a';
+  if (SB_URL && SB_ANON && currentFirmaId) {
+    try {
+      const r = await fetch(sbUrl(`firmalar?id=eq.${currentFirmaId}&select=firma,logo_url,marka_rengi`), { headers: sbHeaders() });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.[0]) { firma = d[0].firma||''; logoUrl = d[0].logo_url||''; markaRengi = d[0].marka_rengi||'#e8521a'; }
+      }
+    } catch {}
+  }
+  document.getElementById('branding-firma').value      = firma;
+  document.getElementById('branding-logo').value       = logoUrl;
+  document.getElementById('branding-renk').value       = markaRengi;
+  document.getElementById('branding-renk-hex').value   = markaRengi;
+  brandingPreview();
+  document.getElementById('branding-modal-bg').classList.remove('hidden');
+}
+function closeBrandingModal() {
+  document.getElementById('branding-modal-bg').classList.add('hidden');
+}
+function brandingPreview() {
+  const c = document.getElementById('branding-renk').value;
+  document.getElementById('branding-hex-preview').style.background = c;
+  document.getElementById('branding-renk-hex').value = c;
+  const logoUrl = document.getElementById('branding-logo').value.trim();
+  const mark = document.getElementById('branding-mark-preview');
+  if (logoUrl) {
+    mark.innerHTML = `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;" onerror="this.style.display='none'">`;
+    mark.style.background = '#fff';
+  } else {
+    const firma = document.getElementById('branding-firma').value.trim();
+    mark.innerHTML = firma ? firma.charAt(0).toUpperCase() : '⬡';
+    mark.style.background = `linear-gradient(135deg,${c},${c}cc)`;
+  }
+}
+function brandingHexInput() {
+  const hex = document.getElementById('branding-renk-hex').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    document.getElementById('branding-renk').value = hex;
+    brandingPreview();
+  }
+}
+async function saveBranding() {
+  const firma      = document.getElementById('branding-firma').value.trim();
+  const logo_url   = document.getElementById('branding-logo').value.trim() || null;
+  const marka_rengi= document.getElementById('branding-renk').value;
+  if (!firma) { showToast('Firma adı boş olamaz', 'error'); return; }
+  if (!SB_URL || !SB_ANON || !currentFirmaId) {
+    showToast('Supabase bağlantısı yok — demo modda kaydedilemez', 'error');
+    closeBrandingModal(); return;
+  }
+  try {
+    const r = await fetch(sbUrl(`firmalar?id=eq.${currentFirmaId}`), {
+      method: 'PATCH',
+      headers: { ...sbHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ firma, logo_url, marka_rengi })
+    });
+    if (r.ok) {
+      showToast('✅ Marka ayarları kaydedildi!', 'success');
+      closeBrandingModal();
+    } else {
+      showToast('Kayıt hatası: ' + r.status, 'error');
+    }
+  } catch { showToast('Bağlantı hatası', 'error'); }
+}
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MARKA & PORTAL AYARLARI MODALI
+     ═══════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop hidden" id="branding-modal-bg" onclick="if(event.target===this)closeBrandingModal()">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">🎨 Marka &amp; Portal Ayarları</div>
+      <button class="icon-btn" onclick="closeBrandingModal()" style="width:30px;height:30px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Preview strip -->
+      <div style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);margin-bottom:18px;">
+        <div id="branding-mark-preview" style="width:44px;height:44px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.25);transition:background .2s;"></div>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--text);" id="branding-preview-name">Portal Önizleme</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Müşteri takip sayfasında ve portalda bu görünür</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Firma / Lojistik Şirketi Adı *</label>
+          <input class="form-input" id="branding-firma" placeholder="Ör: Atlas Lojistik A.Ş." oninput="brandingPreview();document.getElementById('branding-preview-name').textContent=this.value||'Portal Önizleme'">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Logo URL <span style="font-size:10px;color:var(--muted);">(opsiyonel — CDN veya imgbb linki)</span></label>
+          <input class="form-input" id="branding-logo" placeholder="https://cdn.example.com/logo.png" oninput="brandingPreview()">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Marka Rengi</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="color" id="branding-renk" value="#e8521a" oninput="brandingPreview()" style="width:44px;height:36px;padding:2px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:transparent;">
+            <input class="form-input" id="branding-renk-hex" placeholder="#e8521a" maxlength="7" oninput="brandingHexInput()" style="width:110px;font-family:var(--font-mono);letter-spacing:.04em;">
+            <div id="branding-hex-preview" style="width:36px;height:36px;border-radius:8px;flex-shrink:0;border:1px solid var(--border);transition:background .15s;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:12px 14px;background:var(--surface3);border-radius:8px;font-size:11.5px;color:var(--muted);line-height:1.6;">
+        💡 <b style="color:var(--text2);">Bu ayarlar portal.html ve musteri_takip.html sayfalarına otomatik uygulanır.</b>
+        Logo için CDN URL yerine doğrudan publik bir görsel linki kullanın. İmgBB, Cloudinary veya Supabase Storage uygun seçeneklerdir.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeBrandingModal()">İptal</button>
+      <button class="btn btn-accent" onclick="saveBranding()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
