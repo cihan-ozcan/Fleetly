@@ -1,954 +1,1250 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="theme-color" content="#08091a">
-  <title>Fleetly — Sevkiyat Takip</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;700;800;900&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <script src="config.js" onerror="console.warn('config.js yok')"></script>
-  <style>
-    :root {
-      --bg:       #08091a;
-      --surface:  #0e1025;
-      --surface2: #131428;
-      --surface3: #1a1c35;
-      --border:   rgba(255,255,255,.08);
-      --border2:  rgba(255,255,255,.16);
-      --accent:   #e8521a;
-      --accent2:  #ff7043;
-      --text:     #f0f0f8;
-      --text2:    #9899b8;
-      --muted:    #5a5b78;
-      --green:    #22c55e;
-      --yellow:   #eab308;
-      --red:      #ef4444;
-      --blue:     #38bdf8;
-      --purple:   #a78bfa;
-      --font-display: 'Big Shoulders Display', sans-serif;
-      --font-body:    'Instrument Sans', sans-serif;
-      --font-mono:    'IBM Plex Mono', monospace;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      min-height: 100dvh;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-body);
-      font-size: 15px;
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#08091a">
+<meta name="description" content="Canlı sevkiyat takibi — konteyner operasyonu, tahmini varış, rota ve teslim raporu">
+<meta property="og:title" content="Sevkiyat Takip — Fleetly">
+<meta property="og:description" content="Konteyner sevkiyatınızı canlı izleyin.">
+<meta property="og:type" content="website">
+<title>Sevkiyat Takip — Fleetly</title>
 
-    /* ── HEADER ── */
-    .top-bar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .logo-mark {
-      width: 34px; height: 34px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 17px; flex-shrink: 0;
-    }
-    .top-bar-title {
-      font-family: var(--font-display);
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--text);
-      flex: 1;
-    }
-    .live-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: rgba(34,197,94,.1);
-      border: 1px solid rgba(34,197,94,.25);
-      border-radius: 99px;
-      padding: 3px 10px;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--green);
-    }
-    .live-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--green);
-      animation: blink 1.5s infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;700;800;900&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
-    /* ── DURUM BAR ── */
-    .durum-bar {
-      padding: 10px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: .02em;
-    }
-    .durum-bar.bekliyor  { background: rgba(234,179,8,.07);   color: var(--yellow); }
-    .durum-bar.yolda     { background: rgba(56,189,248,.07);  color: var(--blue); }
-    .durum-bar.fabrikada { background: rgba(167,139,250,.07); color: var(--purple); }
-    .durum-bar.teslim    { background: rgba(34,197,94,.07);   color: var(--green); }
-    .durum-bar.iptal     { background: rgba(239,68,68,.07);   color: var(--red); }
-    .durum-bar-sub {
-      font-weight: 400;
-      opacity: .75;
-      margin-left: auto;
-      font-family: var(--font-mono);
-      font-size: 11px;
-    }
+<!-- Leaflet (interaktif harita) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
 
-    /* ── LAYOUT ── */
-    .page {
-      max-width: 520px;
-      margin: 0 auto;
-      padding: 20px 20px 60px;
-    }
+<script src="config.js" onerror="console.warn('config.js yok')"></script>
 
-    /* ── MAP ── */
-    .map-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-      margin-bottom: 18px;
-      position: relative;
-    }
-    .map-header {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .map-header-label {
-      font-family: var(--font-display);
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      letter-spacing: .07em;
-      text-transform: uppercase;
-    }
-    .map-last-update {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--muted);
-    }
-    #harita {
-      width: 100%;
-      height: 280px;
-      background: var(--surface2);
-    }
-    .no-location {
-      height: 180px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .no-location-icon { font-size: 36px; opacity: .5; }
+<style>
+:root{
+  --bg:#08091a; --surface:#0e1025; --surface2:#131428; --surface3:#1a1c35;
+  --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.16);
+  --accent:#e8521a; --accent2:#ff7043;
+  --text:#f0f0f8; --text2:#9899b8; --muted:#5a5b78;
+  --green:#22c55e; --yellow:#eab308; --red:#ef4444;
+  --blue:#38bdf8; --purple:#a78bfa; --teal:#2dd4bf;
+  --fd:'Big Shoulders Display',sans-serif;
+  --fb:'Instrument Sans',sans-serif;
+  --fm:'IBM Plex Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+a{color:inherit;text-decoration:none;}
 
-    /* ── INFO CARDS ── */
-    .section-title {
-      font-family: var(--font-display);
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 18px;
-    }
-    .info-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 14px;
-    }
-    .info-card.full { grid-column: span 2; }
-    .info-label {
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--muted);
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-    .info-value {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      line-height: 1.3;
-    }
+/* ══════════ TOP BAR ══════════ */
+.topbar{
+  background:linear-gradient(180deg,var(--surface) 0,var(--surface2) 100%);
+  border-bottom:1px solid var(--border);
+  padding:max(12px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-left)) 12px max(18px,env(safe-area-inset-right));
+  display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:1000;
+  backdrop-filter:blur(12px);
+}
+.brand{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.brand-mark{
+  width:36px;height:36px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#fff;font-weight:900;
+  box-shadow:0 4px 16px rgba(232,82,26,.35);
+}
+.brand-mark img{width:100%;height:100%;object-fit:cover;border-radius:10px;}
+.brand-text{min-width:0;}
+.brand-title{font-family:var(--fd);font-size:16px;font-weight:800;letter-spacing:.02em;line-height:1.1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.brand-sub{font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-top:2px;}
+.live-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);
+  border-radius:99px;padding:4px 11px;
+  font-family:var(--fm);font-size:10px;font-weight:600;letter-spacing:.06em;
+  color:var(--green);flex-shrink:0;
+}
+.live-pill.off{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red);}
+.live-pill.pnd{background:rgba(234,179,8,.1);border-color:rgba(234,179,8,.3);color:var(--yellow);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1.6s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.lang-btn{
+  font-family:var(--fm);font-size:10px;font-weight:700;letter-spacing:.08em;
+  background:var(--surface3);border:1px solid var(--border2);
+  border-radius:8px;padding:6px 9px;color:var(--text2);
+  flex-shrink:0;
+}
+.lang-btn:hover{color:var(--text);}
 
-    /* ── PROGRESS ── */
-    .progress-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 18px;
-    }
-    .steps {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
-    .step {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding-bottom: 14px;
-      position: relative;
-    }
-    .step:last-child { padding-bottom: 0; }
-    .step::before {
-      content: '';
-      position: absolute;
-      left: 14px; top: 28px; bottom: 0;
-      width: 2px;
-      background: var(--border);
-    }
-    .step:last-child::before { display: none; }
-    .step-dot {
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      border: 2px solid var(--border);
-      background: var(--surface2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px;
-      flex-shrink: 0;
-      z-index: 1;
-    }
-    .step-dot.done  { background: rgba(34,197,94,.12); border-color: var(--green); }
-    .step-dot.active {
-      background: rgba(232,82,26,.12); border-color: var(--accent);
-      animation: ring 2s infinite;
-    }
-    @keyframes ring {
-      0%,100% { box-shadow: 0 0 0 0 rgba(232,82,26,.4); }
-      50%      { box-shadow: 0 0 0 5px rgba(232,82,26,0); }
-    }
-    .step-info { flex: 1; padding-top: 4px; }
-    .step-label { font-size: 13px; font-weight: 600; color: var(--text2); }
-    .step-label.done   { color: var(--green); }
-    .step-label.active { color: var(--accent); }
-    .step-time {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
+/* ══════════ HERO / STATUS ══════════ */
+.hero{
+  padding:20px max(18px,env(safe-area-inset-left)) 18px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+.hero-durum{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 16px;border-radius:16px;
+  background:var(--surface2);border:1px solid var(--border);
+  margin-bottom:14px;
+}
+.hero-durum.bekliyor{border-color:rgba(234,179,8,.3);background:rgba(234,179,8,.06);}
+.hero-durum.yolda{border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.06);}
+.hero-durum.fabrikada{border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.06);}
+.hero-durum.teslim{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.07);}
+.hero-durum.iptal{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.07);}
+.hero-icon{font-size:30px;flex-shrink:0;}
+.hero-txt{flex:1;min-width:0;}
+.hero-label{font-family:var(--fm);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.hero-title{font-family:var(--fd);font-size:22px;font-weight:900;color:var(--text);line-height:1.1;}
+.hero-title.bekliyor{color:var(--yellow);}
+.hero-title.yolda{color:var(--blue);}
+.hero-title.fabrikada{color:var(--purple);}
+.hero-title.teslim{color:var(--green);}
+.hero-title.iptal{color:var(--red);}
 
-    /* ── NOTLAR ── */
-    .notlar-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 18px;
-    }
-    .notlar-box p {
-      font-size: 14px;
-      color: var(--text2);
-      line-height: 1.7;
-      white-space: pre-wrap;
-    }
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.metric{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;padding:10px 12px;text-align:center;
+}
+.metric-val{font-family:var(--fd);font-size:22px;font-weight:900;line-height:1;color:var(--text);}
+.metric-val.green{color:var(--green);}
+.metric-val.blue{color:var(--blue);}
+.metric-val.orange{color:var(--accent);}
+.metric-unit{font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-top:2px;}
+.metric-lbl{font-family:var(--fm);font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:4px;}
 
-    /* ── FOOTER ── */
-    .footer {
-      text-align: center;
-      padding: 20px 16px;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: .05em;
-      border-top: 1px solid var(--border);
-      margin-top: 20px;
-    }
+/* ══════════ ACTION BAR ══════════ */
+.action-bar{
+  position:sticky;top:0;z-index:5;
+  display:flex;gap:8px;padding:10px max(16px,env(safe-area-inset-left));
+  background:var(--surface);border-bottom:1px solid var(--border);
+  overflow-x:auto;scrollbar-width:none;
+  padding-left:max(16px,env(safe-area-inset-left));
+  padding-right:max(16px,env(safe-area-inset-right));
+}
+.action-bar::-webkit-scrollbar{display:none;}
+.act-btn{
+  flex:1;min-width:90px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  background:var(--surface2);border:1.5px solid var(--border2);
+  border-radius:12px;padding:10px 12px;
+  font-size:13px;font-weight:700;color:var(--text);
+  transition:transform .1s,border-color .15s;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  white-space:nowrap;
+}
+.act-btn:active{transform:scale(.97);}
+.act-btn.call{border-color:rgba(34,197,94,.4);color:var(--green);background:rgba(34,197,94,.08);}
+.act-btn.whatsapp{border-color:rgba(34,197,94,.4);color:#25d366;background:rgba(37,211,102,.08);}
+.act-btn.share{border-color:rgba(56,189,248,.4);color:var(--blue);background:rgba(56,189,248,.08);}
+.act-btn.pod{border-color:rgba(232,82,26,.4);color:var(--accent);background:rgba(232,82,26,.08);}
+.act-btn.disabled{opacity:.35;pointer-events:none;}
+.act-icon{font-size:16px;}
 
-    /* ── ERROR / LOADING ── */
-    #loading-state, #error-state {
-      min-height: 60vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      text-align: center;
-      padding: 40px 24px;
-    }
-    .spinner {
-      width: 36px; height: 36px;
-      border: 3px solid var(--border2);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #error-state { display: none; }
-    #error-state .err-icon { font-size: 44px; }
-    #error-state h2 { font-family: var(--font-display); font-size: 22px; font-weight: 800; }
-    #error-state p  { font-size: 14px; color: var(--text2); max-width: 280px; }
+/* ══════════ PAGE CONTENT ══════════ */
+.page{max-width:720px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-left)) 60px max(16px,env(safe-area-inset-right));}
 
-    #main-content { display: none; }
+/* ══════════ MAP ══════════ */
+.map-wrap{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;margin-bottom:18px;
+  box-shadow:0 4px 20px rgba(0,0,0,.25);
+}
+.map-head{
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.map-head-lbl{font-family:var(--fd);font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text);}
+.map-head-time{font-family:var(--fm);font-size:10px;color:var(--muted);}
+#harita{width:100%;height:340px;background:#1a1c35;z-index:1;}
+.no-loc{
+  height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;color:var(--muted);font-size:13px;text-align:center;padding:20px;
+}
+.no-loc-icon{font-size:42px;opacity:.45;}
 
-    /* ─── MOBİL İYİLEŞTİRMELER ──── */
-    /* iOS safe area */
-    .top-bar {
-      padding-top: max(14px, env(safe-area-inset-top));
-      padding-left: max(20px, env(safe-area-inset-left));
-      padding-right: max(20px, env(safe-area-inset-right));
-    }
-    .footer {
-      padding-bottom: max(20px, env(safe-area-inset-bottom));
-    }
-    .page {
-      padding-left: max(20px, env(safe-area-inset-left));
-      padding-right: max(20px, env(safe-area-inset-right));
-    }
+/* Leaflet marker tuning */
+.leaflet-container{background:#0c0e1e!important;font-family:var(--fb)!important;}
+.leaflet-tile{filter:brightness(.85) contrast(1.05) saturate(.9);}
+.leaflet-control-attribution{background:rgba(14,16,37,.85)!important;color:var(--muted)!important;font-size:9px!important;}
+.leaflet-control-attribution a{color:var(--text2)!important;}
+.leaflet-popup-content-wrapper{background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border2)!important;border-radius:10px!important;}
+.leaflet-popup-tip{background:var(--surface)!important;}
+.leaflet-popup-content{margin:10px 14px!important;font-size:13px!important;}
+.truck-marker{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:18px;font-weight:900;
+  border:3px solid #fff;
+  box-shadow:0 2px 14px rgba(232,82,26,.55),0 0 0 6px rgba(232,82,26,.2);
+  animation:truckPulse 2s infinite;
+}
+@keyframes truckPulse{0%,100%{box-shadow:0 2px 14px rgba(232,82,26,.55),0 0 0 6px rgba(232,82,26,.15);}50%{box-shadow:0 2px 14px rgba(232,82,26,.6),0 0 0 14px rgba(232,82,26,0);}}
+.pin-marker{
+  width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid #fff;color:#fff;font-size:12px;font-weight:900;
+  box-shadow:0 2px 8px rgba(0,0,0,.35);
+}
+.pin-marker.start{background:var(--green);}
+.pin-marker.end{background:var(--red);}
+.pin-marker > *{transform:rotate(45deg);}
 
-    /* Harita yüksekliği ekrana göre */
-    #harita { height: clamp(200px, 40vw, 320px); }
+/* ══════════ SECTIONS ══════════ */
+.sec-title{font-family:var(--fd);font-size:13px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:6px;}
 
-    /* Küçük ekran düzenlemeleri */
-    @media (max-width: 480px) {
-      .top-bar-title { font-size: 15px; }
-      .info-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-      .info-card { padding: 10px 12px; }
-      .info-value { font-size: 13px; }
-      .page { padding: 14px 14px 50px; }
-      .durum-bar { padding: 9px 14px; font-size: 12px; }
-      #harita { height: 200px; }
-    }
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.info-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+.info-card.full{grid-column:span 2;}
+.info-label{font-family:var(--fm);font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px;}
+.info-value{font-size:14px;font-weight:600;color:var(--text);line-height:1.35;}
+.info-value.mn{font-family:var(--fm);letter-spacing:.03em;}
 
-    @media (max-width: 380px) {
-      .info-grid { grid-template-columns: 1fr; }
-      .info-card.full { grid-column: span 1; }
-      .top-bar { padding: max(12px, env(safe-area-inset-top)) 14px 12px; gap: 8px; }
-      .logo-mark { width: 28px; height: 28px; font-size: 14px; border-radius: 7px; }
-    }
+/* Progress */
+.progress-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px;}
+.step{display:flex;align-items:flex-start;gap:12px;padding-bottom:14px;position:relative;}
+.step:last-child{padding-bottom:0;}
+.step::before{content:'';position:absolute;left:14px;top:30px;bottom:0;width:2px;background:var(--border);}
+.step:last-child::before{display:none;}
+.step-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;z-index:1;}
+.step-dot.done{background:rgba(34,197,94,.12);border-color:var(--green);color:var(--green);}
+.step-dot.active{background:rgba(232,82,26,.12);border-color:var(--accent);color:var(--accent);animation:ring 2s infinite;}
+@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(232,82,26,.4);}50%{box-shadow:0 0 0 7px rgba(232,82,26,0);}}
+.step-info{flex:1;padding-top:4px;}
+.step-label{font-size:13px;font-weight:600;color:var(--text2);}
+.step-label.done{color:var(--green);}.step-label.active{color:var(--accent);}
+.step-time{font-family:var(--fm);font-size:11px;color:var(--muted);margin-top:2px;}
 
-    /* Landscape */
-    @media (max-height: 500px) and (orientation: landscape) {
-      #harita { height: 150px; }
-      .top-bar { padding-top: 8px; padding-bottom: 8px; }
-    }
+/* Photos */
+.foto-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px;}
+.foto-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.foto-count{font-family:var(--fm);font-size:10px;background:var(--surface3);border:1px solid var(--border2);border-radius:99px;padding:3px 10px;color:var(--muted);}
+.foto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+@media(min-width:560px){.foto-grid{grid-template-columns:repeat(4,1fr);}}
+.foto-item{position:relative;aspect-ratio:1;border-radius:9px;overflow:hidden;background:var(--surface3);border:1px solid var(--border);cursor:pointer;transition:transform .15s,border-color .15s;}
+.foto-item:hover{transform:scale(1.02);border-color:var(--border2);}
+.foto-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.foto-item-lbl{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(8,9,26,.85));font-family:var(--fm);font-size:9px;font-weight:600;color:#fff;text-align:center;padding:10px 4px 4px;letter-spacing:.04em;text-transform:uppercase;}
 
-    /* ── FOTO GALERİ ── */
-    .foto-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 18px;
-    }
-    .foto-section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-    .foto-count-badge {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 600;
-      background: var(--surface3);
-      border: 1px solid var(--border2);
-      border-radius: 99px;
-      padding: 2px 10px;
-      color: var(--muted);
-    }
-    .foto-gallery {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-    .foto-item {
-      position: relative;
-      aspect-ratio: 1;
-      border-radius: 8px;
-      overflow: hidden;
-      background: var(--surface3);
-      border: 1px solid var(--border);
-      cursor: pointer;
-    }
-    .foto-item img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      transition: transform .2s;
-    }
-    .foto-item:hover img { transform: scale(1.04); }
-    .foto-item-label {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      background: rgba(8,9,26,.75);
-      backdrop-filter: blur(4px);
-      font-family: var(--font-mono);
-      font-size: 9px;
-      font-weight: 600;
-      color: var(--text2);
-      text-align: center;
-      padding: 3px 4px;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-    }
-    .foto-empty {
-      text-align: center;
-      padding: 24px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    /* Foto lightbox */
-    .foto-lightbox {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.92);
-      z-index: 999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 12px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .2s;
-    }
-    .foto-lightbox.open { opacity: 1; pointer-events: all; }
-    .foto-lightbox img {
-      max-width: 92vw;
-      max-height: 80vh;
-      object-fit: contain;
-      border-radius: 10px;
-    }
-    .foto-lightbox-label {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: rgba(255,255,255,.6);
-      text-transform: uppercase;
-      letter-spacing: .08em;
-    }
-    .foto-lightbox-close {
-      position: absolute;
-      top: 20px; right: 20px;
-      width: 36px; height: 36px;
-      background: rgba(255,255,255,.1);
-      border: none;
-      border-radius: 50%;
-      color: white;
-      font-size: 18px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-    }
+/* POD panel */
+.pod-card{
+  background:linear-gradient(180deg,rgba(34,197,94,.06),rgba(34,197,94,.02));
+  border:1px solid rgba(34,197,94,.3);
+  border-radius:14px;padding:18px;margin-bottom:20px;
+}
+.pod-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.pod-hdr-icon{font-size:24px;}
+.pod-hdr-title{font-family:var(--fd);font-size:18px;font-weight:900;color:var(--green);}
+.pod-hdr-sub{font-family:var(--fm);font-size:11px;color:var(--text2);margin-top:2px;}
+.pod-row{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;margin-bottom:8px;}
+.pod-row-lbl{font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding-top:2px;}
+.pod-row-val{font-size:14px;font-weight:600;color:var(--text);}
+.pod-imza{margin-top:10px;background:#fff;border-radius:10px;padding:8px;max-width:260px;}
+.pod-imza img{width:100%;height:auto;display:block;}
 
-  </style>
+/* Notlar */
+.notlar-box{background:var(--surface);border:1px solid rgba(234,179,8,.25);border-left:3px solid var(--yellow);border-radius:12px;padding:14px;margin-bottom:20px;}
+.notlar-box p{font-size:14px;color:var(--text2);line-height:1.7;white-space:pre-wrap;}
+.notlar-ttl{font-family:var(--fm);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--yellow);margin-bottom:8px;}
+
+/* Footer */
+.footer{text-align:center;padding:24px 16px max(24px,env(safe-area-inset-bottom));font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:.05em;border-top:1px solid var(--border);margin-top:20px;}
+.footer a{color:var(--accent);}
+
+/* Loading / error */
+#loading-state,#error-state{min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:40px 24px;}
+.spinner{width:38px;height:38px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#error-state{display:none;}
+#error-state h2{font-family:var(--fd);font-size:24px;font-weight:900;}
+#error-state p{font-size:14px;color:var(--text2);max-width:320px;line-height:1.6;}
+#error-state .err-icon{font-size:50px;}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:700;color:var(--text);z-index:9999;opacity:0;transition:all .3s;pointer-events:none;max-width:calc(100vw - 32px);}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+#toast.success{border-color:rgba(34,197,94,.5);color:var(--green);}
+#toast.error{border-color:rgba(239,68,68,.5);color:var(--red);}
+
+/* Lightbox */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:1001;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;opacity:0;pointer-events:none;transition:opacity .2s;padding:20px;}
+.lightbox.open{opacity:1;pointer-events:all;}
+.lightbox img{max-width:94vw;max-height:80vh;object-fit:contain;border-radius:10px;}
+.lightbox-lbl{font-family:var(--fm);font-size:11px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.08em;}
+.lightbox-close{position:absolute;top:max(20px,env(safe-area-inset-top));right:20px;width:40px;height:40px;background:rgba(255,255,255,.1);border-radius:50%;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;}
+
+/* Share sheet */
+.share-sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1002;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s;}
+.share-sheet-bg.open{opacity:1;pointer-events:all;}
+.share-sheet{background:var(--surface);border-radius:22px 22px 0 0;padding:24px 20px max(24px,env(safe-area-inset-bottom));width:100%;max-width:520px;margin:0 auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,0,.67,0);}
+.share-sheet-bg.open .share-sheet{transform:translateY(0);}
+.share-title{font-family:var(--fd);font-size:18px;font-weight:900;margin-bottom:14px;text-align:center;}
+.share-list{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
+.share-list::-webkit-scrollbar{display:none;}
+.share-opt{min-width:78px;flex-shrink:0;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text2);}
+.share-opt:active{border-color:var(--accent);}
+.share-opt-icon{font-size:26px;}
+.share-link-row{display:flex;gap:8px;margin-top:14px;}
+.share-link-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:var(--fm);font-size:12px;color:var(--text);outline:none;}
+.share-copy-btn{background:var(--accent);color:#fff;border-radius:10px;padding:10px 14px;font-weight:800;font-size:13px;}
+
+/* Small screens */
+@media(max-width:420px){
+  .metrics{grid-template-columns:repeat(3,1fr);gap:6px;}
+  .metric{padding:8px 6px;}
+  .metric-val{font-size:18px;}
+  .info-grid{grid-template-columns:1fr;}
+  .info-card.full{grid-column:span 1;}
+  #harita{height:270px;}
+  .hero-title{font-size:19px;}
+}
+
+/* ══════════ PRINT / POD PDF ══════════ */
+@media print{
+  @page{size:A4;margin:12mm;}
+  html,body{background:#fff!important;color:#000!important;font-size:12px;}
+  .topbar,.action-bar,.map-wrap,.lightbox,.share-sheet-bg,#toast,.footer,.foto-card,.notlar-box,.progress-card,.sec-title{display:none!important;}
+  .page{max-width:100%!important;padding:0!important;}
+  .hero{background:#fff!important;border-bottom:2px solid #000!important;padding:0 0 12px 0!important;}
+  .hero-durum{background:#fff!important;border:2px solid #000!important;color:#000!important;}
+  .hero-title{color:#000!important;}
+  .metric{background:#fff!important;border:1px solid #000!important;}
+  .metric-val,.metric-lbl,.metric-unit{color:#000!important;}
+  .info-card{background:#fff!important;border:1px solid #000!important;color:#000!important;break-inside:avoid;}
+  .info-label,.info-value{color:#000!important;}
+  .pod-card{background:#fff!important;border:2px solid #000!important;color:#000!important;break-inside:avoid;}
+  .pod-hdr-title,.pod-hdr-sub,.pod-row-lbl,.pod-row-val{color:#000!important;}
+  .print-only{display:block!important;}
+  .print-header{display:flex!important;justify-content:space-between;align-items:center;padding:10px 0 12px;border-bottom:2px solid #000;margin-bottom:16px;}
+  .print-header h1{font-family:var(--fd);font-size:22px;font-weight:900;}
+  .print-header .sub{font-size:11px;color:#333;}
+}
+.print-only{display:none;}
+</style>
 </head>
+
 <body>
 
+<!-- LOADING -->
 <div id="loading-state">
   <div class="spinner"></div>
-  <div style="color:var(--text2);font-size:14px;">Sevkiyat bilgileri yükleniyor…</div>
+  <div style="color:var(--text2);font-size:14px;" id="loading-text">Sevkiyat bilgileri yükleniyor…</div>
 </div>
 
+<!-- ERROR -->
 <div id="error-state">
   <div class="err-icon">🔒</div>
-  <h2>Bulunamadı</h2>
+  <h2 id="error-title">Bulunamadı</h2>
   <p id="error-msg">Bu takip linki geçersiz veya süresi dolmuş.</p>
-  <!-- RLS ipucu — sadece erişim hatalarında gösterilir -->
-  <div id="rls-hint" style="display:none;margin-top:16px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);border-radius:10px;padding:14px 16px;max-width:340px;text-align:left;">
-    <div style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:8px;">⚠️ Operatör için: RLS Policy Gerekli</div>
-    <div style="font-size:11px;color:var(--text2);line-height:1.7;">
-      Supabase Dashboard &rarr; <b>Table Editor &rarr; is_emirleri &rarr; RLS Policies</b> kısmına şu policy'yi ekleyin:<br><br>
-      <code style="font-family:monospace;font-size:10px;background:var(--surface3);padding:6px 8px;border-radius:6px;display:block;word-break:break-all;">
-        CREATE POLICY "musteri_takip_okuma"<br>
-        ON public.is_emirleri FOR SELECT<br>
-        TO anon USING (true);
-      </code>
-    </div>
-  </div>
 </div>
 
-<div id="main-content">
-  <!-- TOP BAR -->
-  <div class="top-bar">
-    <div class="logo-mark">🚛</div>
-    <div class="top-bar-title">Sevkiyat Takip</div>
-    <div class="live-badge">
-      <div class="live-dot"></div>
-      <span>CANLI</span>
+<!-- MAIN -->
+<div id="main-content" style="display:none;">
+
+  <!-- PRINT HEADER (only visible in print) -->
+  <div class="print-only print-header">
+    <div>
+      <h1>TESLİMAT RAPORU (POD)</h1>
+      <div class="sub" id="print-sub">—</div>
+    </div>
+    <div class="sub" id="print-date">—</div>
+  </div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark" id="brand-mark">⬡</div>
+      <div class="brand-text">
+        <div class="brand-title" id="brand-title" data-i18n="brand_title">Sevkiyat Takip</div>
+        <div class="brand-sub" id="brand-sub">—</div>
+      </div>
+    </div>
+    <div class="live-pill" id="live-pill"><div class="live-dot"></div><span data-i18n="live">CANLI</span></div>
+    <button class="lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+  </div>
+
+  <!-- HERO STATUS + METRICS -->
+  <div class="hero">
+    <div class="hero-durum" id="hero-durum">
+      <div class="hero-icon" id="hero-icon">⏳</div>
+      <div class="hero-txt">
+        <div class="hero-label" data-i18n="hero_label">Mevcut Durum</div>
+        <div class="hero-title" id="hero-title">Yükleniyor…</div>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-val blue" id="m-eta">—</div>
+        <div class="metric-lbl" data-i18n="m_eta">Tahmini Varış</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val orange" id="m-km">—</div>
+        <div class="metric-lbl" data-i18n="m_km">Kalan Mesafe</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val green" id="m-ilerleme">—</div>
+        <div class="metric-lbl" data-i18n="m_progress">İlerleme</div>
+      </div>
     </div>
   </div>
 
-  <!-- DURUM BAR -->
-  <div class="durum-bar bekliyor" id="durum-bar">
-    <span id="durum-icon">⏳</span>
-    <span id="durum-text">Yükleniyor…</span>
-    <span class="durum-bar-sub" id="durum-sub"></span>
+  <!-- ACTION BAR -->
+  <div class="action-bar">
+    <button class="act-btn call" id="btn-call" onclick="callDriver()">
+      <span class="act-icon">📞</span><span data-i18n="btn_call">Şoförü Ara</span>
+    </button>
+    <button class="act-btn whatsapp" id="btn-wa" onclick="whatsappDriver()">
+      <span class="act-icon">💬</span><span data-i18n="btn_wa">WhatsApp</span>
+    </button>
+    <button class="act-btn share" id="btn-share" onclick="openShareSheet()">
+      <span class="act-icon">🔗</span><span data-i18n="btn_share">Paylaş</span>
+    </button>
+    <button class="act-btn pod disabled" id="btn-pod" onclick="printPOD()">
+      <span class="act-icon">📄</span><span data-i18n="btn_pod">POD İndir</span>
+    </button>
   </div>
 
   <div class="page">
 
-    <!-- HARİTA -->
-    <div class="map-card">
-      <div class="map-header">
-        <span class="map-header-label">📍 Araç Konumu</span>
-        <span class="map-last-update" id="konum-zaman">—</span>
+    <!-- MAP -->
+    <div class="map-wrap">
+      <div class="map-head">
+        <span class="map-head-lbl" data-i18n="map_head">Canlı Rota</span>
+        <span class="map-head-time" id="konum-zaman">—</span>
       </div>
       <div id="harita-wrap">
-        <div class="no-location" id="no-location">
-          <div class="no-location-icon">📡</div>
-          <div>Konum henüz paylaşılmadı</div>
-          <div style="font-size:11px;opacity:.6">Şoför yola çıktığında görünecek</div>
+        <div class="no-loc" id="no-location">
+          <div class="no-loc-icon">📡</div>
+          <div data-i18n="no_loc_1">Konum henüz paylaşılmadı</div>
+          <div style="font-size:11px;opacity:.6;" data-i18n="no_loc_2">Şoför yola çıktığında rota burada görünecek</div>
         </div>
-        <iframe id="harita" style="display:none;border:none;" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <div id="harita" style="display:none;"></div>
       </div>
     </div>
 
-    <!-- SEVK BİLGİLERİ -->
-    <div class="section-title" style="margin-bottom:10px;">Sevkiyat Bilgileri</div>
+    <!-- INFO -->
+    <div class="sec-title" data-i18n="sec_info">Sevkiyat Bilgileri</div>
     <div class="info-grid">
-      <!-- Konteyner No — tam genişlik, mono büyük -->
       <div class="info-card full">
-        <div class="info-label">Konteyner No(lar)</div>
-        <div class="info-value" id="inf-konteyner" style="font-family:var(--font-mono);letter-spacing:.05em;font-size:16px;line-height:1.7;">—</div>
+        <div class="info-label" data-i18n="lbl_konteyner">Konteyner No(lar)</div>
+        <div class="info-value mn" id="inf-konteyner" style="font-size:16px;line-height:1.7;letter-spacing:.05em;">—</div>
       </div>
-      <!-- Konteyner Tipi + Dolu/Boş yan yana -->
       <div class="info-card" id="inf-kont-tip-card" style="display:none;">
-        <div class="info-label">Konteyner Tipi</div>
-        <div class="info-value" id="inf-kont-tip" style="font-family:var(--font-mono);">—</div>
+        <div class="info-label" data-i18n="lbl_tip">Konteyner Tipi</div>
+        <div class="info-value mn" id="inf-kont-tip">—</div>
       </div>
       <div class="info-card" id="inf-kont-durum-card" style="display:none;">
-        <div class="info-label">Dolu / Boş</div>
+        <div class="info-label" data-i18n="lbl_durum">Dolu / Boş</div>
         <div class="info-value" id="inf-kont-durum">—</div>
       </div>
-      <!-- Referans No -->
       <div class="info-card" id="inf-referans-card" style="display:none;">
-        <div class="info-label">Referans No</div>
-        <div class="info-value" id="inf-referans" style="font-family:var(--font-mono);">—</div>
+        <div class="info-label" data-i18n="lbl_ref">Referans No</div>
+        <div class="info-value mn" id="inf-referans">—</div>
       </div>
-      <!-- Alım Noktası -->
       <div class="info-card">
-        <div class="info-label">Alım Noktası</div>
+        <div class="info-label" data-i18n="lbl_yukle">Alım Noktası</div>
         <div class="info-value" id="inf-yukle">—</div>
       </div>
-      <!-- Teslim Yeri -->
       <div class="info-card">
-        <div class="info-label">Teslim Yeri</div>
+        <div class="info-label" data-i18n="lbl_teslim">Teslim Yeri</div>
         <div class="info-value" id="inf-teslim">—</div>
       </div>
-      <!-- Boş Dönüş — sadece dolu varsa göster -->
       <div class="info-card" id="inf-bos-donus-card" style="display:none;">
-        <div class="info-label">Boş Dönüş</div>
-        <div class="info-value" id="inf-bos-donus" style="color:#2dd4bf;">—</div>
+        <div class="info-label" data-i18n="lbl_bos">Boş Dönüş</div>
+        <div class="info-value" id="inf-bos-donus" style="color:var(--teal);">—</div>
       </div>
-      <!-- Araç Plakası -->
       <div class="info-card">
-        <div class="info-label">Araç Plakası</div>
-        <div class="info-value" id="inf-plaka" style="font-family:var(--font-mono);">—</div>
+        <div class="info-label" data-i18n="lbl_plaka">Araç Plakası</div>
+        <div class="info-value mn" id="inf-plaka">—</div>
       </div>
-      <!-- Mühür No -->
       <div class="info-card" id="inf-muhur-card">
-        <div class="info-label">Mühür No</div>
-        <div class="info-value" id="inf-muhur" style="font-family:var(--font-mono);">—</div>
+        <div class="info-label" data-i18n="lbl_muhur">Mühür No</div>
+        <div class="info-value mn" id="inf-muhur">—</div>
+      </div>
+      <div class="info-card" id="inf-sofor-card" style="display:none;">
+        <div class="info-label" data-i18n="lbl_sofor">Şoför</div>
+        <div class="info-value" id="inf-sofor">—</div>
       </div>
     </div>
 
-    <!-- OPERASYON İLERLEMESİ -->
-    <div class="section-title" style="margin-bottom:10px;">Operasyon Aşamaları</div>
-    <div class="progress-card">
-      <div class="steps" id="steps-list"></div>
+    <!-- POD (only when delivered) -->
+    <div id="pod-wrap" style="display:none;">
+      <div class="pod-card">
+        <div class="pod-hdr">
+          <span class="pod-hdr-icon">✅</span>
+          <div>
+            <div class="pod-hdr-title" data-i18n="pod_title">Teslimat Tamamlandı</div>
+            <div class="pod-hdr-sub" id="pod-sub">—</div>
+          </div>
+        </div>
+        <div class="pod-row">
+          <div class="pod-row-lbl" data-i18n="pod_teslim_alan">Teslim Alan</div>
+          <div class="pod-row-val" id="pod-teslim-alan">—</div>
+          <div class="pod-row-lbl" data-i18n="pod_teslim_zaman">Teslim Zamanı</div>
+          <div class="pod-row-val" id="pod-teslim-zaman">—</div>
+        </div>
+        <div id="pod-not-wrap" style="display:none;">
+          <div class="pod-row-lbl" style="margin-top:10px;" data-i18n="pod_not">Müşteri Notu</div>
+          <div class="pod-row-val" id="pod-not" style="margin-top:4px;">—</div>
+        </div>
+        <div id="pod-imza-wrap" style="display:none;margin-top:12px;">
+          <div class="pod-row-lbl" data-i18n="pod_imza">İmza</div>
+          <div class="pod-imza"><img id="pod-imza" src="" alt="İmza"></div>
+        </div>
+      </div>
     </div>
 
+    <!-- PROGRESS -->
+    <div class="sec-title" data-i18n="sec_adim">Operasyon Aşamaları</div>
+    <div class="progress-card">
+      <div id="steps-list"></div>
+    </div>
 
-    <!-- FOTOĞRAFLAR -->
-    <div id="foto-wrap" style="display:none">
+    <!-- PHOTOS -->
+    <div id="foto-wrap" style="display:none;">
       <div class="foto-card">
-        <div class="foto-section-header">
-          <div class="section-title" style="margin-bottom:0;">Sevkiyat Fotoğrafları</div>
-          <span class="foto-count-badge" id="foto-count">0</span>
+        <div class="foto-hdr">
+          <div class="sec-title" style="margin:0;" data-i18n="sec_foto">Sevkiyat Fotoğrafları</div>
+          <span class="foto-count" id="foto-count">0</span>
         </div>
-        <div class="foto-gallery" id="foto-gallery">
-          <div class="foto-empty">Fotoğraf yükleniyor…</div>
-        </div>
+        <div class="foto-grid" id="foto-gallery"></div>
       </div>
     </div>
 
     <!-- NOTLAR -->
-    <div id="notlar-wrap" style="display:none">
-      <div class="section-title" style="margin-bottom:8px;">Notlar</div>
+    <div id="notlar-wrap" style="display:none;">
       <div class="notlar-box">
+        <div class="notlar-ttl">📝 <span data-i18n="sec_not">Operasyon Notu</span></div>
         <p id="notlar-text"></p>
       </div>
     </div>
 
-  </div><!-- /page -->
+  </div>
 
   <div class="footer">
-    Fleetly Sevkiyat Takip &nbsp;·&nbsp; Bu sayfa otomatik güncellenir &nbsp;·&nbsp; <span id="footer-firma">—</span>
+    <span data-i18n="footer_live">Bu sayfa otomatik güncellenir</span>
+    &nbsp;·&nbsp;
+    <span id="footer-firma">Fleetly</span>
+    &nbsp;·&nbsp;
+    <a href="#" onclick="location.reload();return false;" data-i18n="footer_refresh">Yenile</a>
   </div>
-</div><!-- /main-content -->
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="if(event.target===this)closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-lbl" id="lightbox-lbl"></div>
+</div>
+
+<!-- Share Sheet -->
+<div class="share-sheet-bg" id="share-sheet" onclick="if(event.target===this)closeShareSheet()">
+  <div class="share-sheet">
+    <div class="share-title" data-i18n="share_title">Takip Linkini Paylaş</div>
+    <div class="share-list">
+      <button class="share-opt" onclick="shareVia('wa')"><span class="share-opt-icon">💬</span>WhatsApp</button>
+      <button class="share-opt" onclick="shareVia('sms')"><span class="share-opt-icon">📱</span>SMS</button>
+      <button class="share-opt" onclick="shareVia('mail')"><span class="share-opt-icon">✉️</span>E-posta</button>
+      <button class="share-opt" onclick="shareVia('tg')"><span class="share-opt-icon">✈️</span>Telegram</button>
+      <button class="share-opt" onclick="shareVia('native')"><span class="share-opt-icon">📤</span>Diğer</button>
+    </div>
+    <div class="share-link-row">
+      <input type="text" class="share-link-input" id="share-link-input" readonly>
+      <button class="share-copy-btn" onclick="copyShareLink()" data-i18n="share_copy">Kopyala</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 
 <script>
-/* ─── CONFIG ─── */
+/* ══════════════════════════════════════════════════════════════
+   CONFIG
+══════════════════════════════════════════════════════════════ */
 const CFG     = (typeof window.FILO_CONFIG !== 'undefined') ? window.FILO_CONFIG : null;
 const SB_URL  = CFG?.SUPABASE_URL  || '';
 const SB_ANON = CFG?.SUPABASE_ANON || '';
 
-/* ─── STATE ─── */
+const OSRM_URL = 'https://router.project-osrm.org/route/v1/driving';
+const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
+const REFRESH_MS = 20000;        // 20 saniye
+const STORAGE_LANG = 'fleetly_takip_lang';
+
+/* ══════════════════════════════════════════════════════════════
+   I18N
+══════════════════════════════════════════════════════════════ */
+const I18N = {
+  tr:{
+    brand_title:'Sevkiyat Takip', live:'CANLI', offline:'ÇEVRİMDIŞI',
+    hero_label:'Mevcut Durum',
+    m_eta:'Tahmini Varış', m_km:'Kalan Mesafe', m_progress:'İlerleme',
+    btn_call:'Şoförü Ara', btn_wa:'WhatsApp', btn_share:'Paylaş', btn_pod:'POD İndir',
+    map_head:'Canlı Rota',
+    no_loc_1:'Konum henüz paylaşılmadı', no_loc_2:'Şoför yola çıktığında rota burada görünecek',
+    sec_info:'Sevkiyat Bilgileri', sec_adim:'Operasyon Aşamaları', sec_foto:'Sevkiyat Fotoğrafları', sec_not:'Operasyon Notu',
+    lbl_konteyner:'Konteyner No(lar)', lbl_tip:'Konteyner Tipi', lbl_durum:'Dolu / Boş', lbl_ref:'Referans No',
+    lbl_yukle:'Alım Noktası', lbl_teslim:'Teslim Yeri', lbl_bos:'Boş Dönüş',
+    lbl_plaka:'Araç Plakası', lbl_muhur:'Mühür No', lbl_sofor:'Şoför',
+    pod_title:'Teslimat Tamamlandı', pod_teslim_alan:'Teslim Alan', pod_teslim_zaman:'Teslim Zamanı',
+    pod_not:'Müşteri Notu', pod_imza:'İmza',
+    share_title:'Takip Linkini Paylaş', share_copy:'Kopyala',
+    footer_live:'Bu sayfa otomatik güncellenir', footer_refresh:'Yenile',
+    durum_Bekliyor:'Bekliyor — Araç Atandı', durum_Yolda:'Yolda — Teslimata Gidiyor',
+    durum_Fabrikada:'Fabrikada — İşlem Sürüyor', durum_Teslim:'Teslim Edildi', durum_Iptal:'İptal Edildi',
+    adim:['Atama Yapıldı','Yola Çıkıldı','Fabrikaya Girildi','Fabrikadan Çıkıldı','Teslim Edildi'],
+    toast_copy:'📋 Link kopyalandı!', toast_err:'Bir sorun oluştu',
+    call_no_phone:'Şoför telefonu tanımlı değil',
+    wa_prefill:'Merhaba, konteyner %s ile ilgili arıyorum.',
+    eta_now:'Şimdi', eta_soon:'Çok yakında',
+    pct_arr:'Varıldı',
+  },
+  en:{
+    brand_title:'Shipment Tracking', live:'LIVE', offline:'OFFLINE',
+    hero_label:'Current Status',
+    m_eta:'Estimated Arrival', m_km:'Distance Remaining', m_progress:'Progress',
+    btn_call:'Call Driver', btn_wa:'WhatsApp', btn_share:'Share', btn_pod:'Download POD',
+    map_head:'Live Route',
+    no_loc_1:'Location not shared yet', no_loc_2:'Route will appear when driver starts',
+    sec_info:'Shipment Details', sec_adim:'Operation Stages', sec_foto:'Shipment Photos', sec_not:'Operation Notes',
+    lbl_konteyner:'Container No(s)', lbl_tip:'Container Type', lbl_durum:'Laden / Empty', lbl_ref:'Reference No',
+    lbl_yukle:'Pickup Location', lbl_teslim:'Delivery Location', lbl_bos:'Empty Return',
+    lbl_plaka:'Vehicle Plate', lbl_muhur:'Seal No', lbl_sofor:'Driver',
+    pod_title:'Delivery Completed', pod_teslim_alan:'Received By', pod_teslim_zaman:'Delivered At',
+    pod_not:'Customer Note', pod_imza:'Signature',
+    share_title:'Share Tracking Link', share_copy:'Copy',
+    footer_live:'This page updates automatically', footer_refresh:'Refresh',
+    durum_Bekliyor:'Waiting — Vehicle Assigned', durum_Yolda:'En route to delivery',
+    durum_Fabrikada:'At Facility — Processing', durum_Teslim:'Delivered', durum_Iptal:'Cancelled',
+    adim:['Assigned','Started','Entered Facility','Left Facility','Delivered'],
+    toast_copy:'📋 Link copied!', toast_err:'Something went wrong',
+    call_no_phone:'Driver phone not available',
+    wa_prefill:'Hello, I am calling about container %s.',
+    eta_now:'Now', eta_soon:'Very soon',
+    pct_arr:'Arrived',
+  }
+};
+let LANG = (localStorage.getItem(STORAGE_LANG) || (navigator.language||'tr').slice(0,2).toLowerCase());
+if(!I18N[LANG]) LANG = 'tr';
+function t(key){ return I18N[LANG][key] ?? I18N.tr[key] ?? key; }
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n');
+    if(I18N[LANG][k]!=null) el.textContent = I18N[LANG][k];
+  });
+  document.getElementById('lang-btn').textContent = LANG==='tr' ? 'EN' : 'TR';
+  document.documentElement.lang = LANG;
+}
+function toggleLang(){ LANG = LANG==='tr'?'en':'tr'; localStorage.setItem(STORAGE_LANG, LANG); applyI18n(); render(); }
+
+/* ══════════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════════ */
 let isEmri = null;
 let isEmriId = null;
 let refreshTimer = null;
+let map = null, truckMarker = null, startMarker = null, endMarker = null, routeLine = null;
+let lastRouteKey = null; // avoid re-fetching OSRM unnecessarily
 
-/* ─── ZAMAN FORMAT ─── */
-function fmtTime(ts) {
-  if (!ts) return null;
-  try {
-    return new Date(ts).toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-  } catch { return null; }
+/* ══════════════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════════════ */
+function fmtTime(ts){
+  if(!ts) return null;
+  try{
+    const d = new Date(ts);
+    return d.toLocaleString(LANG==='tr'?'tr-TR':'en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  }catch{ return null; }
+}
+function fmtDuration(minutes){
+  if(minutes==null||!isFinite(minutes)||minutes<0) return '—';
+  if(minutes<1) return t('eta_now');
+  if(minutes<60) return Math.round(minutes)+' <span class="metric-unit">dk</span>';
+  const h = Math.floor(minutes/60), m = Math.round(minutes%60);
+  return h+'<span class="metric-unit">sa</span> '+(m?m+'<span class="metric-unit">dk</span>':'');
+}
+function fmtKm(km){
+  if(km==null||!isFinite(km)) return '—';
+  if(km<1) return Math.round(km*1000)+' <span class="metric-unit">m</span>';
+  if(km<10) return km.toFixed(1)+' <span class="metric-unit">km</span>';
+  return Math.round(km)+' <span class="metric-unit">km</span>';
+}
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371, toRad=x=>x*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
 }
 
-/* ─── RENDER ─── */
+/* Google's polyline5 decoder — compact, public algorithm */
+function decodePolyline(str){
+  const coords=[]; let index=0, lat=0, lng=0;
+  while(index<str.length){
+    let b, shift=0, result=0;
+    do{ b=str.charCodeAt(index++)-63; result|=(b&0x1f)<<shift; shift+=5; } while(b>=0x20);
+    const dlat = (result&1) ? ~(result>>1) : (result>>1); lat+=dlat;
+    shift=0; result=0;
+    do{ b=str.charCodeAt(index++)-63; result|=(b&0x1f)<<shift; shift+=5; } while(b>=0x20);
+    const dlng = (result&1) ? ~(result>>1) : (result>>1); lng+=dlng;
+    coords.push([lat/1e5, lng/1e5]);
+  }
+  return coords;
+}
+
+function showToast(msg, kind='info'){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show '+kind;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>{ el.className=''; }, 3000);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DURUM META
+══════════════════════════════════════════════════════════════ */
 const DURUM_META = {
-  'Bekliyor':      { icon:'⏳', cls:'bekliyor',  label:'Bekliyor — Araç Atandı' },
-  'Yolda':         { icon:'🚛', cls:'yolda',     label:'Yolda — Teslimata Gidiyor' },
-  'Fabrikada':     { icon:'🏭', cls:'fabrikada', label:'Fabrikada — İşlem Sürüyor' },
-  'Teslim Edildi': { icon:'✅', cls:'teslim',    label:'Teslim Edildi' },
-  'İptal':         { icon:'❌', cls:'iptal',     label:'İptal Edildi' },
+  'Bekliyor':     { icon:'⏳', cls:'bekliyor',   tkey:'durum_Bekliyor' },
+  'Yolda':        { icon:'🚛', cls:'yolda',      tkey:'durum_Yolda' },
+  'Fabrikada':    { icon:'🏭', cls:'fabrikada',  tkey:'durum_Fabrikada' },
+  'Teslim Edildi':{ icon:'✅', cls:'teslim',     tkey:'durum_Teslim' },
+  'İptal':        { icon:'❌', cls:'iptal',      tkey:'durum_Iptal' },
 };
 
-function render() {
-  if (!isEmri) return;
+/* ══════════════════════════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════════════════════════ */
+function render(){
+  if(!isEmri) return;
+  applyI18n();
   const e = isEmri;
   const durum = e.durum || 'Bekliyor';
-  const meta  = DURUM_META[durum] || DURUM_META['Bekliyor'];
+  const meta = DURUM_META[durum] || DURUM_META['Bekliyor'];
 
-  // Durum bar
-  const bar = document.getElementById('durum-bar');
-  bar.className = 'durum-bar ' + meta.cls;
-  document.getElementById('durum-icon').textContent = meta.icon;
-  document.getElementById('durum-text').textContent = meta.label;
+  // Hero
+  const heroDurum = document.getElementById('hero-durum');
+  heroDurum.className = 'hero-durum '+meta.cls;
+  document.getElementById('hero-icon').textContent = meta.icon;
+  const heroTitle = document.getElementById('hero-title');
+  heroTitle.textContent = t(meta.tkey);
+  heroTitle.className = 'hero-title '+meta.cls;
 
-  // Son güncelleme zamanı durum barında
-  const subText = e.konum_zaman ? ('Konum: ' + fmtTime(e.konum_zaman)) : '';
-  document.getElementById('durum-sub').textContent = subText;
-
-  // ── Konteyner No(lar) ──
+  // Title / brand
   const kontNolar = (e.konteyner_no || '').split('\n').map(s=>s.trim()).filter(Boolean);
+  const mainTitle = kontNolar[0] || ('#'+e.id);
+  document.title = mainTitle + (LANG==='tr'?' — Sevkiyat Takip':' — Shipment Tracking');
+  document.getElementById('brand-title').textContent = mainTitle;
+  document.getElementById('brand-sub').textContent = e.musteri_adi || 'Fleetly';
+  document.getElementById('print-sub').textContent = (e.musteri_adi||'') + ' · ' + mainTitle;
+  document.getElementById('print-date').textContent = fmtTime(new Date().toISOString()) || '';
+
+  // Konteyner no
   const kontEl = document.getElementById('inf-konteyner');
-  if (kontNolar.length > 1) {
-    kontEl.innerHTML = kontNolar.map((k,i) =>
-      `<div style="color:${i===0?'inherit':'var(--text2)'};">${k}</div>`).join('');
+  if(kontNolar.length>1){
+    kontEl.innerHTML = kontNolar.map((k,i)=>`<div style="color:${i===0?'inherit':'var(--text2)'};">${k}</div>`).join('');
   } else {
-    kontEl.textContent = kontNolar[0] || ('İş #' + e.id);
+    kontEl.textContent = kontNolar[0] || ('#'+e.id);
   }
-  document.title = (kontNolar[0] || 'Sevkiyat') + ' Takip — Fleetly';
 
-  // ── Konteyner Tipi ──
-  const tipCard = document.getElementById('inf-kont-tip-card');
-  if (e.kont_tip) { tipCard.style.display = ''; document.getElementById('inf-kont-tip').textContent = e.kont_tip; }
-  else { tipCard.style.display = 'none'; }
-
-  // ── Dolu/Boş ──
-  const durumCard = document.getElementById('inf-kont-durum-card');
-  if (e.kont_durum) {
-    durumCard.style.display = '';
-    const durumEl = document.getElementById('inf-kont-durum');
-    durumEl.textContent  = e.kont_durum === 'Boş' ? '🔲 Boş Alım' : '📦 Dolu Alım';
-    durumEl.style.color  = e.kont_durum === 'Boş' ? 'var(--text2)' : 'var(--accent)';
-  } else { durumCard.style.display = 'none'; }
-
-  // ── Referans No ──
-  const refCard = document.getElementById('inf-referans-card');
-  if (e.referans_no) { refCard.style.display = ''; document.getElementById('inf-referans').textContent = e.referans_no; }
-  else { refCard.style.display = 'none'; }
-
-  // ── Boş Dönüş ──
-  const bosCard = document.getElementById('inf-bos-donus-card');
-  if (e.bos_donus) { bosCard.style.display = ''; document.getElementById('inf-bos-donus').textContent = '↩ ' + e.bos_donus; }
-  else { bosCard.style.display = 'none'; }
-
-  // ── Diğer alanlar ──
+  // Info cards
+  const setCard = (cardId,valId,val)=>{
+    const card = document.getElementById(cardId), v = document.getElementById(valId);
+    if(val){ card.style.display=''; v.textContent = val; } else { card.style.display='none'; }
+  };
+  setCard('inf-kont-tip-card','inf-kont-tip', e.kont_tip);
+  if(e.kont_durum){
+    document.getElementById('inf-kont-durum-card').style.display='';
+    const dEl = document.getElementById('inf-kont-durum');
+    dEl.innerHTML = e.kont_durum==='Boş' ? '🔲 '+(LANG==='tr'?'Boş Alım':'Empty Pickup') : '📦 '+(LANG==='tr'?'Dolu Alım':'Laden');
+    dEl.style.color = e.kont_durum==='Boş' ? 'var(--text2)' : 'var(--accent)';
+  } else { document.getElementById('inf-kont-durum-card').style.display='none'; }
+  setCard('inf-referans-card','inf-referans', e.referans_no);
   document.getElementById('inf-yukle').textContent  = e.yukle_yeri  || '—';
   document.getElementById('inf-teslim').textContent = e.teslim_yeri || '—';
+  if(e.bos_donus){ document.getElementById('inf-bos-donus-card').style.display=''; document.getElementById('inf-bos-donus').textContent = '↩ '+e.bos_donus; } else { document.getElementById('inf-bos-donus-card').style.display='none'; }
   document.getElementById('inf-plaka').textContent  = e.arac_plaka  || '—';
   document.getElementById('inf-muhur').textContent  = e.muhur_no    || '—';
+  document.getElementById('inf-muhur-card').style.display = e.muhur_no ? '' : 'none';
+  if(e.sofor){ document.getElementById('inf-sofor-card').style.display=''; document.getElementById('inf-sofor').textContent = e.sofor; } else { document.getElementById('inf-sofor-card').style.display='none'; }
 
-  // Mühür kartı — mühür yoksa gizle
-  const muhurCard = document.getElementById('inf-muhur-card');
-  if (muhurCard) muhurCard.style.display = e.muhur_no ? '' : 'none';
+  // Action bar state
+  const hasPhone = !!(e.sofor_tel || e.sofor_whatsapp);
+  document.getElementById('btn-call').classList.toggle('disabled', !hasPhone);
+  document.getElementById('btn-wa').classList.toggle('disabled', !hasPhone);
+  document.getElementById('btn-pod').classList.toggle('disabled', durum!=='Teslim Edildi');
 
-  // Notlar
-  if (e.notlar) {
-    document.getElementById('notlar-wrap').style.display = '';
-    document.getElementById('notlar-text').textContent = e.notlar;
-  }
+  // Footer
+  document.getElementById('footer-firma').textContent = e.musteri_adi || 'Fleetly';
 
-  // Footer firma
-  document.getElementById('footer-firma').textContent = e.musteri_adi || '';
+  // Live pill
+  const pill = document.getElementById('live-pill');
+  if(!navigator.onLine){ pill.className='live-pill off'; pill.querySelector('span').textContent = t('offline'); }
+  else { pill.className='live-pill'; pill.querySelector('span').textContent = t('live'); }
 
-  // Harita
-  renderMap(e);
+  // Konum zaman
+  document.getElementById('konum-zaman').textContent = e.konum_zaman ? ((LANG==='tr'?'Güncellendi: ':'Updated: ')+fmtTime(e.konum_zaman)) : (LANG==='tr'?'Konum yok':'No location');
 
-  // Adımlar
+  // Map + metrics
+  renderMapAndMetrics(e);
+
+  // Steps
   renderSteps(e);
 
-  // Fotograflar
+  // Photos
   renderFotos(e);
+
+  // Notes
+  if(e.notlar){ document.getElementById('notlar-wrap').style.display=''; document.getElementById('notlar-text').textContent = e.notlar; }
+  else document.getElementById('notlar-wrap').style.display='none';
+
+  // POD
+  renderPOD(e);
 }
 
-function renderMap(e) {
-  const lat = parseFloat(e.konum_lat);
-  const lng = parseFloat(e.konum_lng);
-  const noLoc = document.getElementById('no-location');
-  const iframe = document.getElementById('harita');
-  const timeEl = document.getElementById('konum-zaman');
-
-  if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-    noLoc.style.display = 'flex';
-    iframe.style.display = 'none';
-    timeEl.textContent = 'Konum yok';
-    return;
-  }
-
-  noLoc.style.display = 'none';
-  iframe.style.display = 'block';
-
-  // OpenStreetMap embed (ücretsiz, API key gerektirmez)
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.05},${lat-0.05},${lng+0.05},${lat+0.05}&layer=mapnik&marker=${lat},${lng}`;
-  if (iframe.src !== mapUrl) iframe.src = mapUrl;
-
-  timeEl.textContent = e.konum_zaman ? ('Güncellendi: ' + fmtTime(e.konum_zaman)) : '—';
-}
-
-function renderSteps(e) {
+function renderSteps(e){
   const steps = [
-    { label: 'Atama Yapıldı',       time: e.atama_zamani,   icon: '📋' },
-    { label: 'Yola Çıkıldı',        time: e.yola_zaman,     icon: '🚛' },
-    { label: 'Fabrikaya Girildi',    time: e.fabrika_giris,  icon: '🏭' },
-    { label: 'Fabrikadan Çıkıldı',   time: e.fabrika_cikis,  icon: '🔄' },
-    { label: 'Teslim Edildi',        time: e.teslim_zamani,  icon: '🎯' },
+    { time: e.atama_zamani, icon:'📋' },
+    { time: e.yola_zaman,   icon:'🚛' },
+    { time: e.fabrika_giris, icon:'🏭' },
+    { time: e.fabrika_cikis, icon:'🔄' },
+    { time: e.teslim_zamani, icon:'🎯' },
   ];
+  const labels = I18N[LANG].adim;
   const el = document.getElementById('steps-list');
-  el.innerHTML = steps.map((s, i) => {
+  el.innerHTML = steps.map((s,i)=>{
     const done  = !!s.time;
-    const next  = !done && steps.slice(0, i).every(p => !!p.time);
+    const next  = !done && steps.slice(0,i).every(p=>!!p.time);
     const cls   = done ? 'done' : (next ? 'active' : '');
     return `
       <div class="step">
-        <div class="step-dot ${cls}">${done ? '✓' : s.icon}</div>
+        <div class="step-dot ${cls}">${done?'✓':s.icon}</div>
         <div class="step-info">
-          <div class="step-label ${cls}">${s.label}</div>
-          ${done ? `<div class="step-time">${fmtTime(s.time)}</div>` : ''}
+          <div class="step-label ${cls}">${labels[i]}</div>
+          ${done?`<div class="step-time">${fmtTime(s.time)}</div>`:''}
         </div>
       </div>`;
   }).join('');
 }
 
-
-/* ─── FOTOĞRAF GALERİ ─── */
-function parseFotos(e) {
-  const f = e.fotograflar;
-  if (Array.isArray(f)) return f;
-  if (typeof f === 'string') {
-    try { const p = JSON.parse(f || '[]'); return Array.isArray(p) ? p : []; } catch { return []; }
-  }
-  return [];
+function renderPOD(e){
+  const wrap = document.getElementById('pod-wrap');
+  if(e.durum!=='Teslim Edildi'){ wrap.style.display='none'; return; }
+  wrap.style.display='';
+  document.getElementById('pod-sub').textContent = (e.musteri_adi||'')+' · '+(e.arac_plaka||'');
+  document.getElementById('pod-teslim-alan').textContent = e.teslim_alan_ad || '—';
+  document.getElementById('pod-teslim-zaman').textContent = fmtTime(e.teslim_zamani) || '—';
+  if(e.teslim_not_musteri){ document.getElementById('pod-not-wrap').style.display=''; document.getElementById('pod-not').textContent = e.teslim_not_musteri; }
+  else document.getElementById('pod-not-wrap').style.display='none';
+  if(e.imza_url){ document.getElementById('pod-imza-wrap').style.display=''; document.getElementById('pod-imza').src = e.imza_url; }
+  else document.getElementById('pod-imza-wrap').style.display='none';
 }
 
-function renderFotos(e) {
-  const fotos = parseFotos(e);
-  const wrap    = document.getElementById('foto-wrap');
-  const gallery = document.getElementById('foto-gallery');
-  const badge   = document.getElementById('foto-count');
+/* ══════════════════════════════════════════════════════════════
+   HARİTA + ROTA + ETA
+══════════════════════════════════════════════════════════════ */
+function ensureMap(){
+  if(map) return map;
+  map = L.map('harita', {
+    zoomControl: true,
+    attributionControl: true,
+    tap: true,
+    scrollWheelZoom: true,
+  }).setView([41.0082, 28.9784], 10); // İstanbul default
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  // Zoom controls go into top-right on mobile to not conflict with markers
+  return map;
+}
 
-  // Fotograf yoksa bolumu gizle — veya bos mesaj goster
-  if (!fotos.length) {
-    wrap.style.display = 'none';
+function makeDivIcon(cls, inner){
+  return L.divIcon({
+    className:'',
+    html:`<div class="${cls}">${inner||''}</div>`,
+    iconSize:[30,30],
+    iconAnchor:[15,28],
+  });
+}
+function makeTruckIcon(){
+  return L.divIcon({
+    className:'',
+    html:`<div class="truck-marker">🚛</div>`,
+    iconSize:[44,44],
+    iconAnchor:[22,22],
+  });
+}
+
+function renderMapAndMetrics(e){
+  const curLat = parseFloat(e.konum_lat), curLng = parseFloat(e.konum_lng);
+  const yLat   = parseFloat(e.yukle_lat),  yLng   = parseFloat(e.yukle_lng);
+  const tLat   = parseFloat(e.teslim_lat), tLng   = parseFloat(e.teslim_lng);
+  const hasCur = isFinite(curLat)&&isFinite(curLng);
+  const hasY   = isFinite(yLat)&&isFinite(yLng);
+  const hasT   = isFinite(tLat)&&isFinite(tLng);
+  const durum  = e.durum || 'Bekliyor';
+
+  const noLoc = document.getElementById('no-location');
+  const mapDiv = document.getElementById('harita');
+
+  if(!hasCur && !hasY && !hasT){
+    noLoc.style.display = 'flex';
+    mapDiv.style.display = 'none';
+    document.getElementById('m-eta').innerHTML = '—';
+    document.getElementById('m-km').innerHTML = '—';
+    document.getElementById('m-ilerleme').innerHTML = '—';
     return;
   }
 
-  wrap.style.display = '';
-  badge.textContent  = fotos.length;
+  noLoc.style.display = 'none';
+  mapDiv.style.display = 'block';
+  ensureMap();
+  setTimeout(()=>map.invalidateSize(), 50);
 
-  gallery.innerHTML = fotos.map((f, i) => `
-    <div class="foto-item" onclick="openLightbox('${f.url.replace(/'/g,"\'")}','${(f.tip||'Fotograf').replace(/'/g,"\'")}')">
-      <img src="${f.url}" alt="${f.tip || 'Fotograf'}"
-           onerror="this.parentElement.style.background='var(--surface3)';this.style.display='none'">
-      <div class="foto-item-label">${f.tip || 'Fotograf'}</div>
-    </div>`).join('');
-}
+  // Clear old
+  if(truckMarker){ map.removeLayer(truckMarker); truckMarker=null; }
+  if(startMarker){ map.removeLayer(startMarker); startMarker=null; }
+  if(endMarker){ map.removeLayer(endMarker); endMarker=null; }
 
-function openLightbox(url, label) {
-  document.getElementById('lightbox-img').src   = url;
-  document.getElementById('lightbox-label').textContent = label;
-  document.getElementById('foto-lightbox').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
+  const bounds = [];
 
-function closeLightbox() {
-  document.getElementById('foto-lightbox').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-/* ─── SUPABASE FETCH ─── */
-async function fetchIsEmri(id) {
-  if (!SB_URL || !SB_ANON) {
-    console.error('Fleetly: SB_URL veya SB_ANON tanımlı değil — config.js yüklü mü?');
-    return null;
+  if(hasY){
+    startMarker = L.marker([yLat,yLng], { icon: makeDivIcon('pin-marker start', '<span>A</span>') })
+      .addTo(map)
+      .bindPopup('<b>'+t('lbl_yukle')+'</b><br>'+(e.yukle_yeri||''));
+    bounds.push([yLat,yLng]);
+  }
+  if(hasT){
+    endMarker = L.marker([tLat,tLng], { icon: makeDivIcon('pin-marker end', '<span>B</span>') })
+      .addTo(map)
+      .bindPopup('<b>'+t('lbl_teslim')+'</b><br>'+(e.teslim_yeri||''));
+    bounds.push([tLat,tLng]);
+  }
+  if(hasCur){
+    truckMarker = L.marker([curLat,curLng], { icon: makeTruckIcon(), zIndexOffset: 1000 })
+      .addTo(map)
+      .bindPopup('<b>'+(e.arac_plaka||t('lbl_plaka'))+'</b><br>'+fmtTime(e.konum_zaman));
+    bounds.push([curLat,curLng]);
   }
 
-  // Önce view'dan dene (RLS bypass için önerilen yol)
-  // Eğer view yoksa doğrudan tablodan dene
-  const endpoints = [
-    `${SB_URL}/rest/v1/musteri_takip_view?id=eq.${id}&select=*`,
-    `${SB_URL}/rest/v1/is_emirleri?id=eq.${id}&select=id,musteri_adi,arac_plaka,konteyner_no,kont_tip,kont_durum,referans_no,muhur_no,yukle_yeri,teslim_yeri,bos_donus,boslama_zaman,durum,atama_zamani,yola_zaman,fabrika_giris,fabrika_cikis,teslim_zamani,konum_lat,konum_lng,konum_zaman,notlar`,
-  ];
+  if(bounds.length>=2){
+    map.fitBounds(bounds, { padding:[40,40], maxZoom:14 });
+  } else if(bounds.length===1){
+    map.setView(bounds[0], 13);
+  }
 
-  for (const url of endpoints) {
-    try {
-      const res = await fetch(url, {
-        headers: {
-          'apikey': SB_ANON,
-          'Authorization': 'Bearer ' + SB_ANON,
-          'Accept': 'application/json',
-        }
-      });
-
-      console.log(`Fleetly fetch [${res.status}]:`, url);
-
-      if (res.status === 401 || res.status === 403) {
-        console.warn('Fleetly: RLS engeli — Supabase Dashboard > Authentication > Policies > is_emirleri tablosuna anon SELECT policy ekleyin');
-        _showRlsHint();
-        return null;
-      }
-
-      if (!res.ok) {
-        const errBody = await res.text();
-        console.warn('Fleetly fetch hata:', res.status, errBody);
-        continue; // sonraki endpoint'i dene
-      }
-
-      const data = await res.json();
-      if (data && data.length > 0) return data[0];
-    } catch (err) {
-      console.warn('Fleetly fetch exception:', err);
+  // Route — show route from current → delivery (if yolda/fabrikada)
+  const activeNav = ['Yolda','Fabrikada'].includes(durum) && hasCur && hasT;
+  const previewNav = durum==='Bekliyor' && hasY && hasT; // before start, show pickup→delivery
+  if(activeNav || previewNav){
+    const [lat1,lng1] = activeNav ? [curLat,curLng] : [yLat,yLng];
+    const [lat2,lng2] = [tLat,tLng];
+    const key = `${lat1.toFixed(4)},${lng1.toFixed(4)}->${lat2.toFixed(4)},${lng2.toFixed(4)}`;
+    if(key !== lastRouteKey){
+      fetchRoute(lat1,lng1,lat2,lng2).then(route=>{
+        if(!route) return;
+        lastRouteKey = key;
+        if(routeLine) map.removeLayer(routeLine);
+        routeLine = L.polyline(route.coords, {
+          color: '#e8521a', weight:5, opacity:.75,
+          dashArray: activeNav ? null : '8,8'
+        }).addTo(map);
+        // Update metrics
+        const km = route.distance/1000;
+        const min = route.duration/60;
+        setEtaMetrics(min, km, e, activeNav);
+      }).catch(()=>{ fallbackHaversineMetrics(lat1,lng1,lat2,lng2,e,activeNav); });
     }
+  } else if(durum==='Teslim Edildi'){
+    document.getElementById('m-eta').innerHTML = '<span style="color:var(--green);">✓</span>';
+    document.getElementById('m-km').innerHTML = '0 <span class="metric-unit">km</span>';
+    document.getElementById('m-ilerleme').innerHTML = '100<span class="metric-unit">%</span>';
+  } else {
+    // Fallback (no route drawn)
+    if(hasCur && hasT) fallbackHaversineMetrics(curLat,curLng,tLat,tLng,e,true);
+    else { document.getElementById('m-eta').innerHTML='—'; document.getElementById('m-km').innerHTML='—'; document.getElementById('m-ilerleme').innerHTML='—'; }
   }
-
-  return null;
 }
 
-function _showRlsHint() {
-  const hint = document.getElementById('rls-hint');
-  if (hint) hint.style.display = 'block';
+async function fetchRoute(lat1,lng1,lat2,lng2){
+  try{
+    const url = `${OSRM_URL}/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=polyline`;
+    const r = await fetch(url);
+    if(!r.ok) return null;
+    const data = await r.json();
+    const route = data.routes?.[0]; if(!route) return null;
+    return {
+      coords: decodePolyline(route.geometry),
+      distance: route.distance,  // meters
+      duration: route.duration,  // seconds
+    };
+  }catch{ return null; }
 }
 
-/* ─── AUTO REFRESH ─── */
-async function refresh() {
-  if (!isEmriId) return;
+function fallbackHaversineMetrics(lat1,lng1,lat2,lng2,e,isActive){
+  const km = haversine(lat1,lng1,lat2,lng2);
+  const avgKmh = 55; // şehirlerarası ortalama
+  const min = (km/avgKmh)*60;
+  setEtaMetrics(min, km, e, isActive);
+}
+
+function setEtaMetrics(minRemaining, kmRemaining, e, isActive){
+  const etaEl = document.getElementById('m-eta');
+  const kmEl  = document.getElementById('m-km');
+  const pctEl = document.getElementById('m-ilerleme');
+
+  if(isActive){
+    etaEl.innerHTML = fmtDuration(minRemaining);
+  } else {
+    etaEl.innerHTML = '—';
+  }
+  kmEl.innerHTML = fmtKm(kmRemaining);
+
+  // İlerleme: yola_zaman'dan teslime kadarki ortalama ilerleme
+  let pct = 0;
+  if(e.durum==='Teslim Edildi') pct = 100;
+  else if(e.yukle_lat && e.teslim_lat && e.konum_lat){
+    const total = haversine(e.yukle_lat, e.yukle_lng, e.teslim_lat, e.teslim_lng);
+    const done  = Math.max(0, total - kmRemaining);
+    pct = total>0 ? Math.min(99, Math.round((done/total)*100)) : 0;
+  }
+  pctEl.innerHTML = pct+'<span class="metric-unit">%</span>';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FOTOĞRAF GALERİSİ
+══════════════════════════════════════════════════════════════ */
+function parseFotos(e){
+  const f = e.fotograflar;
+  if(Array.isArray(f)) return f;
+  if(typeof f === 'string'){ try{ const p = JSON.parse(f||'[]'); return Array.isArray(p)?p:[]; }catch{ return []; } }
+  return [];
+}
+function renderFotos(e){
+  const fotos = parseFotos(e);
+  const wrap = document.getElementById('foto-wrap');
+  const gal  = document.getElementById('foto-gallery');
+  const cnt  = document.getElementById('foto-count');
+  if(!fotos.length){ wrap.style.display='none'; return; }
+  wrap.style.display = '';
+  cnt.textContent = fotos.length;
+  gal.innerHTML = fotos.map((f,i)=>`
+    <div class="foto-item" onclick='openLightbox(${JSON.stringify(f.url)},${JSON.stringify(f.tip||"")})'>
+      <img src="${f.url}" alt="${f.tip||''}" loading="lazy" onerror="this.style.opacity=.3">
+      ${f.tip?`<div class="foto-item-lbl">${f.tip}</div>`:''}
+    </div>
+  `).join('');
+}
+function openLightbox(url, lbl){
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox-lbl').textContent = lbl||'';
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+
+/* ══════════════════════════════════════════════════════════════
+   AKSİYONLAR: ARA / WHATSAPP / PAYLAŞ / POD
+══════════════════════════════════════════════════════════════ */
+function normalizePhone(p){
+  if(!p) return '';
+  let s = p.replace(/\s|-|\(|\)|\./g,'');
+  if(s.startsWith('+')) return s;
+  if(s.startsWith('00')) return '+'+s.slice(2);
+  if(s.startsWith('0')) return '+90'+s.slice(1);
+  if(/^\d{10}$/.test(s)) return '+90'+s; // TR 10 haneli
+  return s.startsWith('+')?s:'+'+s;
+}
+function callDriver(){
+  const p = isEmri?.sofor_tel || isEmri?.sofor_whatsapp;
+  if(!p){ showToast(t('call_no_phone'),'error'); return; }
+  window.location.href = 'tel:'+normalizePhone(p);
+}
+function whatsappDriver(){
+  const p = isEmri?.sofor_whatsapp || isEmri?.sofor_tel;
+  if(!p){ showToast(t('call_no_phone'),'error'); return; }
+  const kont = (isEmri.konteyner_no||'').split('\n')[0].trim() || ('#'+isEmri.id);
+  const msg = t('wa_prefill').replace('%s', kont);
+  const num = normalizePhone(p).replace('+','');
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+function buildShareLink(){ return window.location.href; }
+function openShareSheet(){
+  const link = buildShareLink();
+  document.getElementById('share-link-input').value = link;
+  document.getElementById('share-sheet').classList.add('open');
+}
+function closeShareSheet(){ document.getElementById('share-sheet').classList.remove('open'); }
+function copyShareLink(){
+  const link = buildShareLink();
+  navigator.clipboard.writeText(link).then(()=>{ showToast(t('toast_copy'),'success'); closeShareSheet(); })
+    .catch(()=>{ prompt(LANG==='tr'?'Linki kopyalayın:':'Copy link:', link); });
+}
+function shareVia(kind){
+  const link = buildShareLink();
+  const kont = (isEmri?.konteyner_no||'').split('\n')[0].trim() || '';
+  const title = (LANG==='tr'?'Sevkiyat Takip':'Shipment Tracking')+(kont?' — '+kont:'');
+  const txt = (LANG==='tr'?'Sevkiyatı canlı takip edin: ':'Track your shipment live: ')+link;
+  if(kind==='native' && navigator.share){ navigator.share({title, text:txt, url:link}).catch(()=>{}); return; }
+  let url = '';
+  if(kind==='wa')   url = 'https://wa.me/?text='+encodeURIComponent(txt);
+  if(kind==='sms')  url = 'sms:?&body='+encodeURIComponent(txt);
+  if(kind==='mail') url = 'mailto:?subject='+encodeURIComponent(title)+'&body='+encodeURIComponent(txt);
+  if(kind==='tg')   url = 'https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(title);
+  if(url){ window.open(url,'_blank'); closeShareSheet(); }
+}
+function printPOD(){
+  if(isEmri?.durum!=='Teslim Edildi'){ return; }
+  window.print();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GEOCODE YARDIMCISI — alım/teslim için koordinat yoksa
+═══════════════════════════════════════════════════════════════
+   Nominatim rate-limited (1 req/sec). Burada yalnızca bir kez
+   gerekli adresler için fallback geocode çalıştırırız ve sonucu
+   cloud'a yazmaya çalışırız. */
+async function maybeGeocodeMissing(){
+  if(!isEmri) return;
+  const e = isEmri;
+  const tasks = [];
+  if(e.yukle_yeri && (!e.yukle_lat || !e.yukle_lng)) tasks.push(['yukle', e.yukle_yeri]);
+  if(e.teslim_yeri && (!e.teslim_lat || !e.teslim_lng)) tasks.push(['teslim', e.teslim_yeri]);
+  if(!tasks.length) return;
+  for(const [kind,addr] of tasks){
+    try{
+      const u = `${NOMINATIM_URL}?format=json&limit=1&q=${encodeURIComponent(addr)}`;
+      const r = await fetch(u, { headers:{'Accept-Language':LANG} });
+      if(!r.ok) continue;
+      const arr = await r.json();
+      if(!arr?.length) continue;
+      const lat = parseFloat(arr[0].lat), lng = parseFloat(arr[0].lon);
+      if(!isFinite(lat)||!isFinite(lng)) continue;
+      if(kind==='yukle'){ e.yukle_lat=lat; e.yukle_lng=lng; }
+      else { e.teslim_lat=lat; e.teslim_lng=lng; }
+      // Attempt to persist (RLS may block; fail silently)
+      if(SB_URL && SB_ANON){
+        const patch = kind==='yukle' ? {yukle_lat:lat, yukle_lng:lng} : {teslim_lat:lat, teslim_lng:lng};
+        fetch(`${SB_URL}/rest/v1/is_emirleri?id=eq.${isEmriId}`, {
+          method:'PATCH',
+          headers:{'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON,'Content-Type':'application/json','Prefer':'return=minimal'},
+          body: JSON.stringify(patch)
+        }).catch(()=>{});
+      }
+      await new Promise(r=>setTimeout(r,1100)); // rate limit
+    }catch{}
+  }
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SUPABASE FETCH
+══════════════════════════════════════════════════════════════ */
+async function fetchIsEmri(id){
+  if(!SB_URL || !SB_ANON) return null;
+  try{
+    // Prefer safe public view
+    let r = await fetch(`${SB_URL}/rest/v1/takip_public?id=eq.${id}&select=*`, {
+      headers:{'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON}
+    });
+    if(!r.ok){
+      // Fallback to main table (legacy, before migration)
+      r = await fetch(`${SB_URL}/rest/v1/is_emirleri?id=eq.${id}&select=*`, {
+        headers:{'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON}
+      });
+    }
+    if(!r.ok) return null;
+    const data = await r.json();
+    const row = data?.[0] || null;
+    if(!row) return null;
+    if(typeof row.fotograflar==='string'){ try{ row.fotograflar=JSON.parse(row.fotograflar||'[]'); }catch{ row.fotograflar=[]; } }
+    return row;
+  }catch{ return null; }
+}
+
+async function refresh(){
+  if(!isEmriId) return;
   const data = await fetchIsEmri(isEmriId);
-  if (data) {
+  if(data){
     isEmri = data;
     render();
   }
 }
 
-/* ─── INIT ─── */
-async function init() {
-  const params = new URLSearchParams(window.location.search);
-  const token  = params.get('m');
+/* ══════════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════════ */
+function showError(title, msg){
+  document.getElementById('loading-state').style.display='none';
+  document.getElementById('main-content').style.display='none';
+  document.getElementById('error-state').style.display='flex';
+  document.getElementById('error-title').textContent = title;
+  document.getElementById('error-msg').textContent = msg;
+}
 
-  if (!token) {
-    showError('Takip linki geçersiz. Lütfen operatörünüzden yeni link isteyin.');
+function parseIdFromUrl(){
+  const p = new URLSearchParams(window.location.search);
+  const tok = p.get('m') || p.get('t');
+  if(!tok) return null;
+  // Stored token lookup
+  const sid = localStorage.getItem('mtr_token_'+tok);
+  if(sid) return sid;
+  // base64 decoded: "mtr_<id>_<ts>"
+  try{
+    const d = atob(tok);
+    const parts = d.split('_');
+    if(parts[0]==='mtr' && parts[1]) return parts[1];
+    if(parts[0]==='ops' && parts[1]) return parts[1];
+  }catch{}
+  // direct numeric id (easy-ops testing)
+  if(/^\d+$/.test(tok)) return tok;
+  return null;
+}
+
+async function init(){
+  applyI18n();
+
+  isEmriId = parseIdFromUrl();
+  if(!isEmriId){
+    showError(LANG==='tr'?'Geçersiz Link':'Invalid Link',
+      LANG==='tr'?'Link parametresi bulunamadı. Lütfen şoförden tekrar link isteyin.':'Link parameter missing. Please request a new link.');
     return;
   }
-
-  // Token decode — btoa('mtr_' + id + '_' + timestamp)
-  // id kısmı sayısal olduğu için split('_')[1] yeterli
-  let decoded = '';
-  try {
-    decoded = atob(token);
-  } catch {
-    showError('Link bozuk — lütfen operatörünüzden yeni link isteyin.');
-    return;
-  }
-
-  console.log('Fleetly token decoded:', decoded);
-
-  if (decoded.startsWith('mtr_')) {
-    // format: mtr_<id>_<timestamp>
-    const parts = decoded.split('_');
-    isEmriId = parts[1]; // ikinci parça = id
-  } else {
-    showError('Geçersiz link formatı.');
-    return;
-  }
-
-  if (!isEmriId) {
-    showError('İş emri ID alınamadı.');
-    return;
-  }
-
-  console.log('Fleetly isEmriId:', isEmriId);
 
   const data = await fetchIsEmri(isEmriId);
-
-  if (!data) {
-    showError(
-      'Bu iş emrine erişilemiyor.\n\n' +
-      'Supabase\'de RLS policy eksik olabilir. ' +
-      'Tarayıcı konsolunu (F12) kontrol edin.'
-    );
+  if(!data){
+    showError(LANG==='tr'?'Bulunamadı':'Not Found',
+      LANG==='tr'?'Bu takip linki geçersiz veya süresi dolmuş olabilir.':'This tracking link is invalid or expired.');
     return;
   }
 
   isEmri = data;
-  document.getElementById('loading-state').style.display = 'none';
-  document.getElementById('main-content').style.display = 'block';
+  document.getElementById('loading-state').style.display='none';
+  document.getElementById('main-content').style.display='';
   render();
 
-  refreshTimer = setInterval(refresh, 30000);
-}
+  // Try to geocode pickup/delivery if missing (one-shot)
+  maybeGeocodeMissing();
 
-function showError(msg) {
-  document.getElementById('loading-state').style.display = 'none';
-  document.getElementById('error-state').style.display = 'flex';
-  document.getElementById('error-msg').textContent = msg;
+  // Auto-refresh
+  refreshTimer = setInterval(refresh, REFRESH_MS);
+
+  // Online/offline
+  window.addEventListener('online', ()=>{ render(); refresh(); });
+  window.addEventListener('offline', ()=>{ render(); });
+
+  // Refresh on visibility
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refresh(); });
 }
 
 init();
 </script>
-
-<!-- FOTO LİGHTBOX -->
-<div class="foto-lightbox" id="foto-lightbox" onclick="closeLightbox()">
-  <button class="foto-lightbox-close" onclick="closeLightbox()">✕</button>
-  <img id="lightbox-img" src="" alt="">
-  <div class="foto-lightbox-label" id="lightbox-label"></div>
-</div>
-
 </body>
 </html>
