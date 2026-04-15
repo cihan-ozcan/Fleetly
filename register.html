@@ -109,10 +109,27 @@
       flex-direction: column;
       justify-content: center;
       padding: 60px 64px;
-      background: linear-gradient(145deg, rgba(232,82,26,.05) 0%, transparent 60%);
+      background: linear-gradient(145deg, rgba(232,82,26,.07) 0%, transparent 60%);
       border-right: 1px solid var(--border);
       max-width: 520px;
       position: relative;
+      overflow: hidden;
+    }
+
+    /* Large decorative watermark in left panel */
+    .left-panel::after {
+      content: 'FIT';
+      position: absolute;
+      bottom: -30px; right: -40px;
+      font-family: var(--font-display);
+      font-size: 200px;
+      font-weight: 900;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(232,82,26,.07);
+      pointer-events: none;
+      user-select: none;
+      line-height: 1;
+      letter-spacing: -4px;
     }
 
     /* Sol panelde hafif accent glow */
@@ -133,15 +150,37 @@
       margin-bottom: 56px;
     }
 
+    .brand-icon {
+      width: 40px; height: 40px;
+      flex-shrink: 0;
+    }
+
     .brand-name {
       font-family: var(--font-display);
       font-size: 22px; font-weight: 800;
       color: var(--text);
       letter-spacing: 2px;
       text-transform: uppercase;
+      line-height: 1;
     }
 
     .brand-name span { color: var(--accent); }
+
+    .brand-fit {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      padding: 1px 7px 0;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      text-transform: lowercase;
+      margin-left: 3px;
+      vertical-align: middle;
+      position: relative;
+      top: -2px;
+    }
 
     .left-heading {
       font-family: var(--font-display);
@@ -644,6 +683,7 @@
       .left-panel { display: none; }
       .right-panel { padding: 24px 20px; }
       .form-card { padding: 32px 24px; max-width: 100%; }
+      .mobile-brand-header { display: flex !important; }
     }
 
     @media (max-width: 480px) {
@@ -665,7 +705,17 @@
 
     <!-- Logo (index.html ile aynı SVG) -->
     <a href="index.html" class="brand">
-      <img src="logo.jpg" alt="Fleetly" style="height: 36px; width: auto; display: block;" />
+      <svg class="brand-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="17" fill="rgba(232,82,26,.10)" stroke="rgba(232,82,26,.20)" stroke-width="1"/>
+        <rect x="7" y="14" width="12" height="8" rx="1.5" fill="#e8521a"/>
+        <rect x="19" y="16" width="8" height="6" rx="1.5" fill="#e8521a"/>
+        <rect x="20" y="17" width="5.5" height="3" rx=".5" fill="rgba(8,9,26,.6)"/>
+        <circle cx="11.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
+        <circle cx="22.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
+        <path d="M30 10 A13.5 13.5 0 1 0 30 27" stroke="#ff7340" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+        <polygon points="26.5,7 30.5,10.5 26.5,14" fill="#ff7340"/>
+      </svg>
+      <span class="brand-name">FLEETLY<span class="brand-fit">.fit</span></span>
     </a>
 
     <h1 class="left-heading">
@@ -726,6 +776,23 @@
   <!-- ── SAĞ PANEL — FORM ── -->
   <div class="right-panel">
     <div class="form-card">
+
+      <!-- Mobile-only brand header (left panel hidden on small screens) -->
+      <div style="display:none; justify-content:center; margin-bottom:28px;" class="mobile-brand-header">
+        <a href="index.html" class="brand" style="margin-bottom:0; text-decoration:none;">
+          <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="18" r="17" fill="rgba(232,82,26,.10)" stroke="rgba(232,82,26,.20)" stroke-width="1"/>
+            <rect x="7" y="14" width="12" height="8" rx="1.5" fill="#e8521a"/>
+            <rect x="19" y="16" width="8" height="6" rx="1.5" fill="#e8521a"/>
+            <rect x="20" y="17" width="5.5" height="3" rx=".5" fill="rgba(8,9,26,.6)"/>
+            <circle cx="11.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
+            <circle cx="22.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
+            <path d="M30 10 A13.5 13.5 0 1 0 30 27" stroke="#ff7340" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <polygon points="26.5,7 30.5,10.5 26.5,14" fill="#ff7340"/>
+          </svg>
+          <span class="brand-name" style="font-size:20px;">FLEETLY<span class="brand-fit">.fit</span></span>
+        </a>
+      </div>
 
       <!-- ADIM GÖSTERGESİ -->
       <div class="step-indicator">
