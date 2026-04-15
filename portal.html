@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#08091a">
+<meta name="robots" content="noindex,nofollow">
+<title>Sevkiyat Portalı — Fleetly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;700;800;900&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="config.js" onerror="console.warn('config.js yok')"></script>
+
+<style>
+:root{
+  --bg:#08091a; --surface:#0e1025; --surface2:#131428; --surface3:#1a1c35;
+  --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.16);
+  --accent:#e8521a; --accent2:#ff7043;
+  --text:#f0f0f8; --text2:#9899b8; --muted:#5a5b78;
+  --green:#22c55e; --yellow:#eab308; --red:#ef4444;
+  --blue:#38bdf8; --purple:#a78bfa; --teal:#2dd4bf;
+  --fd:'Big Shoulders Display',sans-serif;
+  --fb:'Instrument Sans',sans-serif;
+  --fm:'IBM Plex Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100dvh;background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+a{color:inherit;text-decoration:none;}
+input{font-family:inherit;}
+
+/* ═══ TOPBAR ═══ */
+.topbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:max(14px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 14px max(20px,env(safe-area-inset-left));
+  display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:200;
+  backdrop-filter:blur(14px);
+}
+.brand{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.brand-mark{
+  width:38px;height:38px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:900;color:#fff;
+  box-shadow:0 4px 18px rgba(232,82,26,.3);
+}
+.brand-mark img{width:100%;height:100%;object-fit:cover;border-radius:10px;}
+.brand-info{min-width:0;}
+.brand-name{font-family:var(--fd);font-size:18px;font-weight:900;letter-spacing:.01em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.brand-sub{font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.live-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:99px;padding:4px 11px;font-family:var(--fm);font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--green);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1.6s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.lang-btn{font-family:var(--fm);font-size:10px;font-weight:700;letter-spacing:.08em;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;padding:6px 9px;color:var(--text2);}
+
+/* ═══ STATS ROW ═══ */
+.stats-row{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  background:var(--surface2);border-bottom:1px solid var(--border);
+}
+.stat-cell{
+  padding:14px 18px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  border-right:1px solid var(--border);
+}
+.stat-cell:last-child{border-right:none;}
+.stat-val{font-family:var(--fd);font-size:28px;font-weight:900;line-height:1;color:var(--text);}
+.stat-val.orange{color:var(--accent);}
+.stat-val.blue{color:var(--blue);}
+.stat-val.green{color:var(--green);}
+.stat-val.yellow{color:var(--yellow);}
+.stat-lbl{font-family:var(--fm);font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+
+/* ═══ TOOLBAR ═══ */
+.toolbar{
+  display:flex;align-items:center;gap:10px;
+  padding:12px max(16px,env(safe-area-inset-left));
+  background:var(--surface);border-bottom:1px solid var(--border);
+  flex-wrap:wrap;position:sticky;top:66px;z-index:100;
+}
+.tabs{display:flex;gap:4px;flex-shrink:0;}
+.tab-btn{
+  font-family:var(--fm);font-size:11px;font-weight:700;letter-spacing:.05em;
+  background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:8px;padding:6px 13px;color:var(--text2);
+  transition:all .15s;white-space:nowrap;
+}
+.tab-btn.active{background:rgba(232,82,26,.15);border-color:rgba(232,82,26,.4);color:var(--accent);}
+.tab-count{display:inline-block;background:currentColor;opacity:.25;border-radius:4px;font-size:9px;font-weight:800;padding:1px 5px;margin-left:4px;vertical-align:middle;}
+.search-wrap{flex:1;min-width:160px;position:relative;}
+.search-inp{
+  width:100%;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:10px;padding:8px 12px 8px 34px;
+  font-family:var(--fm);font-size:12px;color:var(--text);outline:none;
+  transition:border-color .15s;
+}
+.search-inp:focus{border-color:rgba(232,82,26,.45);}
+.search-inp::placeholder{color:var(--muted);}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;}
+.sort-btn{
+  font-family:var(--fm);font-size:11px;font-weight:700;
+  background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:8px;padding:6px 11px;color:var(--text2);white-space:nowrap;
+}
+.refresh-btn{
+  font-family:var(--fm);font-size:11px;font-weight:700;
+  background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:8px;padding:6px 10px;color:var(--text2);
+}
+
+/* ═══ GRID ═══ */
+.grid-wrap{padding:16px max(16px,env(safe-area-inset-left)) max(60px,calc(40px + env(safe-area-inset-bottom)));}
+.grid{display:grid;grid-template-columns:1fr;gap:12px;}
+@media(min-width:560px){.grid{grid-template-columns:1fr 1fr;}}
+@media(min-width:900px){.grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:1200px){.grid{grid-template-columns:repeat(4,1fr);}}
+
+/* ═══ CARD ═══ */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;
+  display:flex;flex-direction:column;
+  transition:border-color .2s,transform .15s,box-shadow .15s;
+  cursor:pointer;
+}
+.card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.35);}
+.card:active{transform:scale(.99);}
+.card-header{
+  padding:12px 14px 10px;
+  border-bottom:1px solid var(--border);
+}
+.card-status{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;
+}
+.status-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  border-radius:8px;padding:4px 10px;
+  font-family:var(--fd);font-size:13px;font-weight:800;letter-spacing:.03em;
+}
+.sb-bekliyor{background:rgba(234,179,8,.12);color:var(--yellow);border:1px solid rgba(234,179,8,.25);}
+.sb-yolda{background:rgba(56,189,248,.12);color:var(--blue);border:1px solid rgba(56,189,248,.25);}
+.sb-fabrikada{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.25);}
+.sb-teslim{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25);}
+.sb-iptal{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25);}
+
+.eta-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);
+  border-radius:7px;padding:3px 9px;
+  font-family:var(--fm);font-size:10px;font-weight:700;color:var(--blue);
+}
+.card-kont{
+  font-family:var(--fd);font-size:20px;font-weight:900;letter-spacing:.02em;
+  color:var(--text);line-height:1.1;margin-bottom:3px;
+  word-break:break-all;
+}
+.card-kont-extra{font-family:var(--fm);font-size:11px;color:var(--text2);}
+.card-tip-row{display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap;}
+.chip{display:inline-flex;align-items:center;gap:3px;font-family:var(--fm);font-size:10px;font-weight:600;background:var(--surface3);border:1px solid var(--border);border-radius:5px;padding:2px 8px;color:var(--text2);}
+.chip.ac{background:rgba(232,82,26,.1);border-color:rgba(232,82,26,.25);color:var(--accent);}
+.chip.tl{background:rgba(45,212,191,.1);border-color:rgba(45,212,191,.25);color:var(--teal);}
+
+/* Route row */
+.route-row{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  font-size:12px;font-weight:600;
+}
+.route-node{flex:1;min-width:0;color:var(--text2);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.route-node.start{color:var(--green);}
+.route-node.end{color:var(--red);}
+.route-arrow{font-size:14px;color:var(--muted);flex-shrink:0;}
+
+/* Meta row */
+.card-meta{
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  display:grid;grid-template-columns:1fr 1fr;gap:6px;
+}
+.meta-item{display:flex;flex-direction:column;gap:1px;}
+.meta-lbl{font-family:var(--fm);font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);}
+.meta-val{font-family:var(--fm);font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.meta-val.mn{letter-spacing:.04em;}
+
+/* Bottom bar */
+.card-footer{
+  padding:10px 14px;display:flex;align-items:center;justify-content:space-between;
+  margin-top:auto;
+}
+.card-footer-info{display:flex;align-items:center;gap:10px;font-family:var(--fm);font-size:10px;color:var(--muted);}
+.track-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;border-radius:8px;padding:7px 13px;
+  font-family:var(--fd);font-size:13px;font-weight:800;letter-spacing:.03em;
+  box-shadow:0 3px 12px rgba(232,82,26,.35);
+  transition:opacity .15s;flex-shrink:0;
+}
+.track-btn:hover{opacity:.9;}
+
+/* Progress bar inside card (single-row mini timeline) */
+.progress-strip{padding:8px 14px;border-bottom:1px solid var(--border);}
+.progress-bar-wrap{background:var(--surface2);border-radius:99px;height:4px;overflow:hidden;}
+.progress-bar{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s;}
+.progress-labels{display:flex;justify-content:space-between;margin-top:4px;font-family:var(--fm);font-size:9px;color:var(--muted);}
+
+/* Empty state */
+.empty{
+  grid-column:1/-1;text-align:center;padding:60px 20px;
+}
+.empty-icon{font-size:52px;margin-bottom:12px;opacity:.4;}
+.empty-title{font-family:var(--fd);font-size:22px;font-weight:900;color:var(--text2);}
+.empty-sub{font-size:13px;color:var(--muted);margin-top:6px;}
+
+/* Loading / Error */
+#loading-state,#error-state{min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:40px 24px;}
+.spinner{width:40px;height:40px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#error-state{display:none;}
+#error-state h2{font-family:var(--fd);font-size:26px;font-weight:900;}
+#error-state p{font-size:14px;color:var(--text2);max-width:340px;line-height:1.7;}
+#error-state .err-icon{font-size:56px;}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:700;color:var(--text);z-index:9999;opacity:0;transition:all .3s;pointer-events:none;max-width:calc(100vw - 32px);}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+#toast.success{border-color:rgba(34,197,94,.5);color:var(--green);}
+
+/* Footer */
+.portal-footer{text-align:center;padding:20px 16px max(20px,env(safe-area-inset-bottom));font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:.04em;border-top:1px solid var(--border);}
+
+/* Mobile stats */
+@media(max-width:479px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .stat-cell:nth-child(2){border-right:none;}
+  .stat-cell{border-bottom:1px solid var(--border);}
+  .stat-cell:nth-child(3),.stat-cell:nth-child(4){border-bottom:none;}
+  .stat-val{font-size:22px;}
+  .toolbar{flex-wrap:wrap;}
+  .card-meta{grid-template-columns:1fr;}
+}
+@media(max-width:379px){.stats-row{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+
+<body>
+
+<!-- LOADING -->
+<div id="loading-state">
+  <div class="spinner"></div>
+  <div style="color:var(--text2);font-size:14px;" id="loading-txt">Sevkiyat portalı yükleniyor…</div>
+</div>
+
+<!-- ERROR -->
+<div id="error-state">
+  <div class="err-icon">🔒</div>
+  <h2 id="error-title">Erişim Hatası</h2>
+  <p id="error-msg">Geçersiz portal linki. Lütfen lojistik firmanızdan yeni bir link isteyin.</p>
+</div>
+
+<!-- MAIN PORTAL -->
+<div id="portal-main" style="display:none;">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark" id="brand-mark">⬡</div>
+      <div class="brand-info">
+        <div class="brand-name" id="brand-name">Sevkiyat Portalı</div>
+        <div class="brand-sub" id="brand-sub">Konteyner Operasyon Takibi</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-pill" id="live-pill"><div class="live-dot"></div><span id="live-lbl">CANLI</span></div>
+      <button class="lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-cell">
+      <div class="stat-val orange" id="st-aktif">—</div>
+      <div class="stat-lbl" id="st-aktif-lbl">Aktif Sevkiyat</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val yellow" id="st-bekliyor">—</div>
+      <div class="stat-lbl" id="st-bekliyor-lbl">Bekliyor</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val green" id="st-teslim">—</div>
+      <div class="stat-lbl" id="st-teslim-lbl">Bu Ay Teslim</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val blue" id="st-toplam">—</div>
+      <div class="stat-lbl" id="st-toplam-lbl">Toplam</div>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="tabs" id="tabs">
+      <button class="tab-btn active" data-tab="tumü" onclick="setTab('tumü',this)">
+        <span id="tab-label-tumü">Tümü</span>
+        <span class="tab-count" id="tab-count-tumü">0</span>
+      </button>
+      <button class="tab-btn" data-tab="aktif" onclick="setTab('aktif',this)">
+        <span id="tab-label-aktif">Aktif</span>
+        <span class="tab-count" id="tab-count-aktif">0</span>
+      </button>
+      <button class="tab-btn" data-tab="teslim" onclick="setTab('teslim',this)">
+        <span id="tab-label-teslim">Teslim</span>
+        <span class="tab-count" id="tab-count-teslim">0</span>
+      </button>
+      <button class="tab-btn" data-tab="iptal" onclick="setTab('iptal',this)">
+        <span id="tab-label-iptal">İptal</span>
+        <span class="tab-count" id="tab-count-iptal">0</span>
+      </button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-inp" id="search-inp" type="search"
+             placeholder="Konteyner, referans, araç ara…"
+             oninput="renderGrid()" />
+    </div>
+    <button class="sort-btn" id="sort-btn" onclick="toggleSort()">⬇ Yeni</button>
+    <button class="refresh-btn" onclick="manualRefresh()" title="Yenile">↻</button>
+  </div>
+
+  <!-- GRID -->
+  <div class="grid-wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="portal-footer" id="portal-footer">
+    <span id="footer-firma">—</span> &nbsp;·&nbsp; <span id="last-update-txt">—</span>
+    &nbsp;·&nbsp; <span style="opacity:.45;">Powered by Fleetly</span>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CONFIG
+══════════════════════════════════════════════════════════════ */
+const CFG     = (typeof window.FILO_CONFIG !== 'undefined') ? window.FILO_CONFIG : null;
+const SB_URL  = CFG?.SUPABASE_URL  || '';
+const SB_ANON = CFG?.SUPABASE_ANON || '';
+const REFRESH_MS = 30000;
+
+/* ══════════════════════════════════════════════════════════════
+   I18N
+══════════════════════════════════════════════════════════════ */
+const I18N = {
+  tr: {
+    loading:'Sevkiyat portalı yükleniyor…', live:'CANLI', offline:'ÇEVRİMDIŞI',
+    brand_sub:'Konteyner Operasyon Takibi',
+    st_aktif:'Aktif Sevkiyat', st_bekliyor:'Bekliyor', st_teslim:'Bu Ay Teslim', st_toplam:'Toplam',
+    tab_tumu:'Tümü', tab_aktif:'Aktif', tab_teslim:'Teslim', tab_iptal:'İptal',
+    search:'Konteyner, referans, araç ara…',
+    sort_new:'⬇ Yeni', sort_old:'⬆ Eski',
+    card_eta:'Tahmini Varış',
+    card_ref:'Referans', card_muhur:'Mühür', card_plaka:'Araç',
+    card_yukle:'Alım', card_teslim:'Teslim Yeri',
+    track_btn:'Canlı Takip',
+    progress_labels:['Atama','Yola Çıkış','Fabrika','Teslim'],
+    durum_Bekliyor:'⏳ Bekliyor', durum_Yolda:'🚛 Yolda',
+    durum_Fabrikada:'🏭 Fabrikada', durum_Teslim:'✅ Teslim Edildi', durum_Iptal:'❌ İptal',
+    empty_title:'Sevkiyat bulunamadı', empty_sub:'Bu filtreye uygun aktif sevkiyat yok.',
+    last_update:'Son güncelleme: ', footer_firma:'',
+    copy_ok:'📋 Link kopyalandı!',
+  },
+  en: {
+    loading:'Loading shipment portal…', live:'LIVE', offline:'OFFLINE',
+    brand_sub:'Container Operation Tracking',
+    st_aktif:'Active', st_bekliyor:'Pending', st_teslim:'Delivered This Month', st_toplam:'Total',
+    tab_tumu:'All', tab_aktif:'Active', tab_teslim:'Delivered', tab_iptal:'Cancelled',
+    search:'Search container, reference, plate…',
+    sort_new:'⬇ Newest', sort_old:'⬆ Oldest',
+    card_eta:'Est. Arrival',
+    card_ref:'Reference', card_muhur:'Seal', card_plaka:'Vehicle',
+    card_yukle:'Pickup', card_teslim:'Delivery',
+    track_btn:'Live Track',
+    progress_labels:['Assigned','Departed','At Facility','Delivered'],
+    durum_Bekliyor:'⏳ Pending', durum_Yolda:'🚛 En Route',
+    durum_Fabrikada:'🏭 At Facility', durum_Teslim:'✅ Delivered', durum_Iptal:'❌ Cancelled',
+    empty_title:'No shipments found', empty_sub:'No shipments match this filter.',
+    last_update:'Last updated: ', footer_firma:'',
+    copy_ok:'📋 Link copied!',
+  }
+};
+let LANG = localStorage.getItem('fleetly_portal_lang') || (navigator.language||'tr').slice(0,2).toLowerCase();
+if (!I18N[LANG]) LANG = 'tr';
+const t = k => I18N[LANG][k] ?? I18N.tr[k] ?? k;
+
+function applyI18n(){
+  document.getElementById('loading-txt').textContent = t('loading');
+  document.getElementById('brand-sub').textContent   = t('brand_sub');
+  document.getElementById('live-lbl').textContent    = navigator.onLine ? t('live') : t('offline');
+  document.getElementById('st-aktif-lbl').textContent   = t('st_aktif');
+  document.getElementById('st-bekliyor-lbl').textContent= t('st_bekliyor');
+  document.getElementById('st-teslim-lbl').textContent  = t('st_teslim');
+  document.getElementById('st-toplam-lbl').textContent  = t('st_toplam');
+  document.getElementById('tab-label-tumü').textContent  = t('tab_tumu');
+  document.getElementById('tab-label-aktif').textContent = t('tab_aktif');
+  document.getElementById('tab-label-teslim').textContent= t('tab_teslim');
+  document.getElementById('tab-label-iptal').textContent = t('tab_iptal');
+  document.getElementById('search-inp').placeholder  = t('search');
+  document.getElementById('sort-btn').textContent    = sortDir==='desc' ? t('sort_new') : t('sort_old');
+  document.getElementById('lang-btn').textContent    = LANG==='tr' ? 'EN' : 'TR';
+  document.documentElement.lang = LANG;
+}
+function toggleLang(){
+  LANG = LANG==='tr'?'en':'tr';
+  localStorage.setItem('fleetly_portal_lang', LANG);
+  applyI18n();
+  renderGrid();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TOKEN PARSE
+   Format: btoa('mtp_' + musteriId + '_' + firmaId)
+══════════════════════════════════════════════════════════════ */
+function parseToken(tok) {
+  if (!tok) return null;
+  try {
+    const d = atob(tok);
+    // mtp_MUSTERIID_FIRMAID
+    const firstUnderscore = d.indexOf('_');
+    const secondUnderscore = d.indexOf('_', firstUnderscore + 1);
+    if (firstUnderscore === -1 || secondUnderscore === -1) return null;
+    const prefix   = d.slice(0, firstUnderscore);
+    const musteriId = d.slice(firstUnderscore + 1, secondUnderscore);
+    const firmaId   = d.slice(secondUnderscore + 1);
+    if (prefix !== 'mtp' || !musteriId || !firmaId) return null;
+    return { musteriId, firmaId };
+  } catch { return null; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════════ */
+let allShipments  = [];
+let activeTab     = 'tumü';
+let sortDir       = 'desc'; // desc = newest first
+let refreshTimer  = null;
+let tokenInfo     = null;
+let musteriAdi    = '';
+
+/* ══════════════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════════════ */
+function fmtDate(ts) {
+  if (!ts) return '—';
+  try { return new Date(ts).toLocaleDateString(LANG==='tr'?'tr-TR':'en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}); } catch { return '—'; }
+}
+function fmtTime(ts) {
+  if (!ts) return '—';
+  try { return new Date(ts).toLocaleString(LANG==='tr'?'tr-TR':'en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch { return '—'; }
+}
+function haversine(la1,ln1,la2,ln2){
+  const R=6371,r=x=>x*Math.PI/180,dLa=r(la2-la1),dLn=r(ln2-ln1);
+  const a=Math.sin(dLa/2)**2+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLn/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+function etaText(e) {
+  function fmtMin(min) {
+    if (min < 1)  return LANG==='tr'?'Şimdi':'Now';
+    if (min < 60) return min + (LANG==='tr'?' dk':' min');
+    const h=Math.floor(min/60), m=min%60;
+    return h+(LANG==='tr'?' sa ':' hr ')+(m?m+(LANG==='tr'?' dk':' min'):'');
+  }
+  // 1) DB-cached eta_iso — most accurate (OSRM-calculated by driver app)
+  if (e.eta_iso && e.konum_zaman) {
+    const posAgeMin = (Date.now() - Date.parse(e.konum_zaman)) / 60000;
+    const msLeft    = Date.parse(e.eta_iso) - Date.now();
+    if (posAgeMin < 10 && msLeft > 0) return fmtMin(Math.round(msLeft/60000));
+  }
+  // 2) DB-cached kalan_km — still better than straight-line
+  if (e.kalan_km && e.konum_zaman) {
+    const posAgeMin = (Date.now() - Date.parse(e.konum_zaman)) / 60000;
+    if (posAgeMin < 10) return fmtMin(Math.round((+e.kalan_km/55)*60));
+  }
+  // 3) Haversine straight-line fallback
+  if (!e.konum_lat || !e.teslim_lat) return null;
+  const km = haversine(+e.konum_lat,+e.konum_lng,+e.teslim_lat,+e.teslim_lng);
+  if (!isFinite(km)) return null;
+  return fmtMin(Math.round((km/55)*60));
+}
+function kontNolar(e) {
+  return (e.konteyner_no || '').split('\n').map(s=>s.trim()).filter(Boolean);
+}
+function parseFotos(e) {
+  if (Array.isArray(e.fotograflar)) return e.fotograflar;
+  try { const p = JSON.parse(e.fotograflar||'[]'); return Array.isArray(p)?p:[]; } catch { return []; }
+}
+function progressPct(e) {
+  const steps = [e.atama_zamani, e.yola_zaman, e.fabrika_cikis, e.teslim_zamani];
+  const done = steps.filter(Boolean).length;
+  return Math.round((done / steps.length) * 100);
+}
+function isActive(e) { return !['Teslim Edildi','İptal'].includes(e.durum||'Bekliyor'); }
+function isThisMonth(ts) {
+  if (!ts) return false;
+  const d = new Date(ts), now = new Date();
+  return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+}
+function trackingUrl(e) {
+  const id = e._dbId ?? e.id;
+  const tok = btoa('mtr_' + id + '_0');
+  return window.location.origin + window.location.pathname.replace('portal.html','') + 'musteri_takip.html?m=' + tok;
+}
+function showToast(msg, kind='info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show '+kind;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>{ el.className=''; }, 2800);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FETCH
+══════════════════════════════════════════════════════════════ */
+async function fetchShipments() {
+  if (!SB_URL || !SB_ANON || !tokenInfo) return null;
+  try {
+    const q = new URLSearchParams({
+      musteri_id: `eq.${tokenInfo.musteriId}`,
+      firma_id  : `eq.${tokenInfo.firmaId}`,
+      select    : '*',
+      order     : 'atama_zamani.desc',
+      limit     : '500',
+    });
+    const r = await fetch(`${SB_URL}/rest/v1/is_emirleri?${q}`, {
+      headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON }
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return rows.map(row => {
+      if (typeof row.fotograflar === 'string') {
+        try { row.fotograflar = JSON.parse(row.fotograflar||'[]'); } catch { row.fotograflar = []; }
+      }
+      row._dbId = row.id;
+      return row;
+    });
+  } catch { return null; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FILTER & SORT
+══════════════════════════════════════════════════════════════ */
+function filterShipments() {
+  const q = (document.getElementById('search-inp')?.value || '').toLowerCase().trim();
+  return allShipments
+    .filter(e => {
+      if (activeTab === 'aktif')  return isActive(e);
+      if (activeTab === 'teslim') return e.durum === 'Teslim Edildi';
+      if (activeTab === 'iptal')  return e.durum === 'İptal';
+      return true;
+    })
+    .filter(e => {
+      if (!q) return true;
+      return [e.konteyner_no,e.referans_no,e.muhur_no,e.arac_plaka,e.sofor,e.yukle_yeri,e.teslim_yeri]
+        .join(' ').toLowerCase().includes(q);
+    })
+    .sort((a,b) => {
+      const ta = new Date(a.atama_zamani||0).getTime();
+      const tb = new Date(b.atama_zamani||0).getTime();
+      return sortDir === 'desc' ? tb - ta : ta - tb;
+    });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STATS
+══════════════════════════════════════════════════════════════ */
+function updateStats() {
+  const now = new Date();
+  const aktif    = allShipments.filter(e => isActive(e) && e.durum !== 'Bekliyor').length;
+  const bekliyor = allShipments.filter(e => e.durum === 'Bekliyor').length;
+  const teslim   = allShipments.filter(e => e.durum === 'Teslim Edildi' && isThisMonth(e.teslim_zamani)).length;
+  const toplam   = allShipments.length;
+
+  document.getElementById('st-aktif').textContent   = aktif;
+  document.getElementById('st-bekliyor').textContent = bekliyor;
+  document.getElementById('st-teslim').textContent  = teslim;
+  document.getElementById('st-toplam').textContent  = toplam;
+
+  const counts = {
+    'tumü' : allShipments.length,
+    'aktif': allShipments.filter(e => isActive(e)).length,
+    'teslim': allShipments.filter(e => e.durum==='Teslim Edildi').length,
+    'iptal' : allShipments.filter(e => e.durum==='İptal').length,
+  };
+  Object.entries(counts).forEach(([tab, cnt]) => {
+    const el = document.getElementById('tab-count-'+tab);
+    if (el) el.textContent = cnt;
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DURUM BADGE
+══════════════════════════════════════════════════════════════ */
+function durumBadge(durum) {
+  const map = {
+    'Bekliyor'     : {cls:'sb-bekliyor', key:'durum_Bekliyor'},
+    'Yolda'        : {cls:'sb-yolda',    key:'durum_Yolda'},
+    'Fabrikada'    : {cls:'sb-fabrikada',key:'durum_Fabrikada'},
+    'Teslim Edildi': {cls:'sb-teslim',   key:'durum_Teslim'},
+    'İptal'        : {cls:'sb-iptal',    key:'durum_Iptal'},
+  };
+  const m = map[durum] || map['Bekliyor'];
+  return `<span class="status-badge ${m.cls}">${t(m.key)}</span>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CARD HTML
+══════════════════════════════════════════════════════════════ */
+function cardHTML(e) {
+  const knolar  = kontNolar(e);
+  const mainKont= knolar[0] || ('# ' + (e._dbId||e.id));
+  const extraKont = knolar.length > 1 ? `<div class="card-kont-extra">+${knolar.length-1} konteyner</div>` : '';
+  const fotos   = parseFotos(e);
+  const durum   = e.durum || 'Bekliyor';
+  const active  = isActive(e);
+  const eta     = (durum === 'Yolda' || durum === 'Fabrikada') ? etaText(e) : null;
+  const pct     = progressPct(e);
+  const url     = trackingUrl(e);
+
+  // ETA chip
+  const etaChip = eta ? `<span class="eta-chip">⏱ ${eta}</span>` : '';
+
+  // Type chips
+  const tipChips = [
+    e.kont_tip   ? `<span class="chip ac">📐 ${e.kont_tip}</span>` : '',
+    e.kont_durum ? `<span class="chip ${e.kont_durum==='Dolu'?'ac':'tl'}">${e.kont_durum==='Dolu'?'📦 '+(LANG==='tr'?'Dolu':'Laden'):'🔲 '+(LANG==='tr'?'Boş':'Empty')}</span>` : '',
+    e.muhur_no   ? `<span class="chip">🔒 ${e.muhur_no}</span>` : '',
+  ].join('');
+
+  // Progress bar color
+  let barColor = 'var(--accent)';
+  if (durum==='Teslim Edildi') barColor = 'var(--green)';
+  if (durum==='İptal') barColor = 'var(--red)';
+  const progressLabels = t('progress_labels');
+
+  // Meta grid
+  const metas = [];
+  if (e.referans_no) metas.push([t('card_ref'), e.referans_no]);
+  if (e.arac_plaka)  metas.push([t('card_plaka'), e.arac_plaka]);
+  const atama = e.atama_zamani ? fmtDate(e.atama_zamani) : '—';
+  metas.push([LANG==='tr'?'Atama':'Assigned', atama]);
+  if (e.teslim_zamani) metas.push([LANG==='tr'?'Teslim':'Delivered', fmtTime(e.teslim_zamani)]);
+
+  const metaHTML = metas.slice(0,4).map(([l,v])=>`
+    <div class="meta-item">
+      <div class="meta-lbl">${l}</div>
+      <div class="meta-val mn">${v}</div>
+    </div>`).join('');
+
+  // Footer info
+  const fotoInfo = fotos.length ? `📸 ${fotos.length}` : '';
+  const lastEvt  = e.teslim_zamani || e.fabrika_cikis || e.fabrika_giris || e.yola_zaman || e.atama_zamani;
+  const timeInfo = lastEvt ? fmtTime(lastEvt) : '';
+
+  return `
+  <div class="card" onclick="openTracking('${url}')" title="${mainKont}">
+
+    <div class="card-header">
+      <div class="card-status">
+        ${durumBadge(durum)}
+        ${etaChip}
+      </div>
+      <div class="card-kont">${mainKont}</div>
+      ${extraKont}
+      <div class="card-tip-row">${tipChips}</div>
+    </div>
+
+    <div class="route-row">
+      <div class="route-node start" title="${e.yukle_yeri||''}">📍 ${e.yukle_yeri || '—'}</div>
+      <div class="route-arrow">→</div>
+      <div class="route-node end"   title="${e.teslim_yeri||''}">🏁 ${e.teslim_yeri || '—'}</div>
+    </div>
+
+    <div class="progress-strip">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
+      </div>
+      <div class="progress-labels">
+        <span>${progressLabels[0]}</span>
+        <span>${progressLabels[1]}</span>
+        <span>${progressLabels[2]}</span>
+        <span>${progressLabels[3]}</span>
+      </div>
+    </div>
+
+    <div class="card-meta">${metaHTML}</div>
+
+    <div class="card-footer">
+      <div class="card-footer-info">
+        ${fotoInfo ? `<span>${fotoInfo}</span>` : ''}
+        ${timeInfo ? `<span>${timeInfo}</span>` : ''}
+      </div>
+      <a class="track-btn" href="${url}" target="_blank" onclick="event.stopPropagation()">
+        ${t('track_btn')} →
+      </a>
+    </div>
+
+  </div>`;
+}
+
+function openTracking(url) {
+  window.open(url, '_blank');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════════════════════════ */
+function renderGrid() {
+  const list = filterShipments();
+  const grid = document.getElementById('grid');
+  if (!list.length) {
+    grid.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">📦</div>
+        <div class="empty-title">${t('empty_title')}</div>
+        <div class="empty-sub">${t('empty_sub')}</div>
+      </div>`;
+    return;
+  }
+  grid.innerHTML = list.map(cardHTML).join('');
+  updateLastUpdate();
+}
+
+function updateLastUpdate() {
+  const el = document.getElementById('last-update-txt');
+  if (el) el.textContent = t('last_update') + (new Date()).toLocaleTimeString(LANG==='tr'?'tr-TR':'en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TABS / SORT
+══════════════════════════════════════════════════════════════ */
+function setTab(tab, btn) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+function toggleSort() {
+  sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+  document.getElementById('sort-btn').textContent = sortDir === 'desc' ? t('sort_new') : t('sort_old');
+  renderGrid();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   REFRESH
+══════════════════════════════════════════════════════════════ */
+async function refresh() {
+  const data = await fetchShipments();
+  if (data) {
+    allShipments = data;
+    updateStats();
+    renderGrid();
+  }
+}
+async function manualRefresh() {
+  const btn = document.getElementById('sort-btn');
+  document.getElementById('refresh-btn') && (document.querySelector('.refresh-btn').textContent = '⟳');
+  await refresh();
+  document.querySelector('.refresh-btn') && (document.querySelector('.refresh-btn').textContent = '↻');
+  showToast(LANG==='tr'?'Güncellendi ✓':'Updated ✓', 'success');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FİRMA BRANDING
+══════════════════════════════════════════════════════════════ */
+async function fetchFirmaBranding(firmaId) {
+  if (!SB_URL || !SB_ANON || !firmaId) return null;
+  try {
+    const r = await fetch(
+      `${SB_URL}/rest/v1/firmalar?id=eq.${firmaId}&select=firma,logo_url,marka_rengi`,
+      { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON } }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d?.[0] || null;
+  } catch { return null; }
+}
+
+function applyBranding(b) {
+  if (!b) return;
+  // Marka rengi
+  if (b.marka_rengi) {
+    const c = b.marka_rengi.trim();
+    document.documentElement.style.setProperty('--accent', c);
+    document.documentElement.style.setProperty('--accent2', c);
+    document.documentElement.style.setProperty('--accent-dim', c + '22');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = c;
+  }
+  // Logo / baş harf
+  const markEl = document.getElementById('brand-mark');
+  if (markEl) {
+    if (b.logo_url) {
+      markEl.innerHTML = `<img src="${b.logo_url}" alt="${b.firma||''}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">`;
+      markEl.style.background = 'var(--surface2)';
+      markEl.style.boxShadow  = 'none';
+    } else if (b.firma) {
+      markEl.textContent = b.firma.charAt(0).toUpperCase();
+    }
+  }
+  // Alt başlık
+  const subEl = document.getElementById('brand-sub');
+  if (subEl && b.firma) subEl.textContent = b.firma + (LANG === 'tr' ? ' Sevkiyat Portalı' : ' Shipment Portal');
+  // Footer — override with lojistik firma adı (daha doğru)
+  const footerFirmaEl = document.getElementById('footer-firma');
+  if (footerFirmaEl && b.firma) footerFirmaEl.textContent = b.firma;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════════ */
+function showError(title, msg) {
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('portal-main').style.display   = 'none';
+  document.getElementById('error-state').style.display   = 'flex';
+  document.getElementById('error-title').textContent     = title;
+  document.getElementById('error-msg').textContent       = msg;
+}
+
+async function init() {
+  applyI18n();
+  const p   = new URLSearchParams(window.location.search);
+  const tok = p.get('c');
+  if (!tok) { showError(LANG==='tr'?'Geçersiz Link':'Invalid Link', LANG==='tr'?'Portal parametresi eksik.':'Portal parameter missing.'); return; }
+
+  tokenInfo = parseToken(tok);
+  if (!tokenInfo) { showError(LANG==='tr'?'Geçersiz Link':'Invalid Link', LANG==='tr'?'Token çözümlenemedi. Lojistik firmanızdan yeni bir link isteyin.':'Could not decode token. Please request a new link.'); return; }
+
+  const data = await fetchShipments();
+  if (!data) { showError(LANG==='tr'?'Bağlantı Hatası':'Connection Error', LANG==='tr'?'Sevkiyat verileri yüklenemedi. Bağlantınızı kontrol edin.':'Could not load shipment data.'); return; }
+  allShipments = data;
+
+  // Müşteri adını bul
+  musteriAdi = allShipments[0]?.musteri_adi || '';
+  document.getElementById('brand-name').textContent   = musteriAdi || (LANG==='tr'?'Sevkiyat Portalı':'Shipment Portal');
+  document.title = (musteriAdi||'Sevkiyat') + (LANG==='tr'?' Portalı — Fleetly':' Portal — Fleetly');
+  document.getElementById('footer-firma').textContent = musteriAdi;
+
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('portal-main').style.display   = '';
+
+  // Lojistik firma brandingini arka planda uygula
+  if (tokenInfo?.firmaId) {
+    fetchFirmaBranding(tokenInfo.firmaId).then(b => applyBranding(b));
+  }
+
+  updateStats();
+  renderGrid();
+
+  refreshTimer = setInterval(refresh, REFRESH_MS);
+  window.addEventListener('online',  ()=>{ document.getElementById('live-lbl').textContent = t('live');    refresh(); });
+  window.addEventListener('offline', ()=>{ document.getElementById('live-lbl').textContent = t('offline'); });
+  document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) refresh(); });
+}
+
+init();
+</script>
+</body>
+</html>
