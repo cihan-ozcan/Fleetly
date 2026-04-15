@@ -653,7 +653,9 @@ let isEmri = null;
 let isEmriId = null;
 let refreshTimer = null;
 let map = null, truckMarker = null, startMarker = null, endMarker = null, routeLine = null;
-let lastRouteKey = null; // avoid re-fetching OSRM unnecessarily
+let breadcrumbLine = null;   // lived path drawn from konum_izleri
+let lastRouteKey = null;     // avoid re-fetching OSRM unnecessarily
+let breadcrumbLoaded = false; // only fetch konum_izleri once per session
 
 /* ══════════════════════════════════════════════════════════════
    HELPERS
@@ -941,6 +943,12 @@ function renderMapAndMetrics(e){
     map.setView(bounds[0], 13);
   }
 
+  // Breadcrumb — draw traveled GPS trail (first render only, low-priority)
+  if(!breadcrumbLoaded && isEmri && isEmri.id){
+    breadcrumbLoaded = true;
+    fetchKonumIzleri(isEmri.id).then(rows=>drawBreadcrumb(rows));
+  }
+
   // Route — show route from current → delivery (if yolda/fabrikada)
   const activeNav = ['Yolda','Fabrikada'].includes(durum) && hasCur && hasT;
   const previewNav = durum==='Bekliyor' && hasY && hasT; // before start, show pickup→delivery
@@ -949,19 +957,24 @@ function renderMapAndMetrics(e){
     const [lat2,lng2] = [tLat,tLng];
     const key = `${lat1.toFixed(4)},${lng1.toFixed(4)}->${lat2.toFixed(4)},${lng2.toFixed(4)}`;
     if(key !== lastRouteKey){
-      fetchRoute(lat1,lng1,lat2,lng2).then(route=>{
-        if(!route) return;
-        lastRouteKey = key;
-        if(routeLine) map.removeLayer(routeLine);
-        routeLine = L.polyline(route.coords, {
-          color: '#e8521a', weight:5, opacity:.75,
-          dashArray: activeNav ? null : '8,8'
-        }).addTo(map);
-        // Update metrics
-        const km = route.distance/1000;
-        const min = route.duration/60;
-        setEtaMetrics(min, km, e, activeNav);
-      }).catch(()=>{ fallbackHaversineMetrics(lat1,lng1,lat2,lng2,e,activeNav); });
+      // 1) Try DB cache first (instant, no network)
+      if(activeNav && tryDrawCachedRoute(e, activeNav)){
+        lastRouteKey = key; // mark so we don't retry immediately
+      } else {
+        // 2) Fetch fresh OSRM route
+        fetchRoute(lat1,lng1,lat2,lng2).then(route=>{
+          if(!route){ fallbackHaversineMetrics(lat1,lng1,lat2,lng2,e,activeNav); return; }
+          lastRouteKey = key;
+          if(routeLine) map.removeLayer(routeLine);
+          routeLine = L.polyline(route.coords, {
+            color: '#e8521a', weight:5, opacity:.75,
+            dashArray: activeNav ? null : '8,8'
+          }).addTo(map);
+          const km = route.distance/1000;
+          const min = route.duration/60;
+          setEtaMetrics(min, km, e, activeNav);
+        }).catch(()=>{ fallbackHaversineMetrics(lat1,lng1,lat2,lng2,e,activeNav); });
+      }
     }
   } else if(durum==='Teslim Edildi'){
     document.getElementById('m-eta').innerHTML = '<span style="color:var(--green);">✓</span>';
@@ -977,7 +990,7 @@ function renderMapAndMetrics(e){
 async function fetchRoute(lat1,lng1,lat2,lng2){
   try{
     const url = `${OSRM_URL}/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=polyline`;
-    const r = await fetch(url);
+    const r = await fetch(url,{signal:AbortSignal.timeout(8000)});
     if(!r.ok) return null;
     const data = await r.json();
     const route = data.routes?.[0]; if(!route) return null;
@@ -987,6 +1000,64 @@ async function fetchRoute(lat1,lng1,lat2,lng2){
       duration: route.duration,  // seconds
     };
   }catch{ return null; }
+}
+
+/* ── DB CACHE: rota_polyline + eta/km ─────────────────────── */
+function tryDrawCachedRoute(e, isActive){
+  /* Use DB-cached polyline + eta_iso/kalan_km when available and fresh.
+     "Fresh" = eta_iso is in the future OR konum_zaman < 5 min ago.
+     Returns true if successfully drawn from cache. */
+  if(!e.rota_polyline) return false;
+  const konumTs = e.konum_zaman ? Date.parse(e.konum_zaman) : 0;
+  const ageMs   = Date.now() - konumTs;
+  if(ageMs > 5*60*1000) return false; // stale if driver pos >5 min old
+
+  try{
+    const coords = decodePolyline(e.rota_polyline);
+    if(!coords || coords.length < 2) return false;
+    if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+    routeLine = L.polyline(coords,{color:'#e8521a',weight:5,opacity:.75}).addTo(map);
+    // Use cached eta_iso if it's still in the future
+    if(e.eta_iso && e.kalan_km){
+      const etaMs = Date.parse(e.eta_iso) - Date.now();
+      if(etaMs > 0){
+        const minRemaining = etaMs / 60000;
+        setEtaMetrics(minRemaining, e.kalan_km, e, isActive);
+        return true;
+      }
+    }
+    // Recalc ETA from kalan_km if eta_iso expired
+    if(e.kalan_km){
+      const avgKmh=55, min=(e.kalan_km/avgKmh)*60;
+      setEtaMetrics(min, e.kalan_km, e, isActive);
+      return true;
+    }
+  }catch{}
+  return false;
+}
+
+/* ── BREADCRUMB: konum_izleri → traveled path ──────────────── */
+async function fetchKonumIzleri(isEmriDbId){
+  if(!SB_URL||!SB_ANON||!isEmriDbId) return [];
+  try{
+    const r = await fetch(
+      `${SB_URL}/rest/v1/konum_izleri?is_emri_id=eq.${isEmriDbId}&select=lat,lng,ts&order=ts.asc&limit=500`,
+      {headers:{'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON}}
+    );
+    if(!r.ok) return [];
+    return await r.json();
+  }catch{ return []; }
+}
+
+function drawBreadcrumb(rows){
+  if(!map||!rows||rows.length<2) return;
+  if(breadcrumbLine){ map.removeLayer(breadcrumbLine); breadcrumbLine=null; }
+  const coords = rows.map(r=>[parseFloat(r.lat), parseFloat(r.lng)]).filter(c=>isFinite(c[0])&&isFinite(c[1]));
+  if(coords.length<2) return;
+  breadcrumbLine = L.polyline(coords,{
+    color:'#22c55e', weight:3, opacity:.65,
+    dashArray:'4,6'
+  }).addTo(map);
 }
 
 function fallbackHaversineMetrics(lat1,lng1,lat2,lng2,e,isActive){
@@ -1106,42 +1177,59 @@ function printPOD(){
 }
 
 /* ══════════════════════════════════════════════════════════════
-   GEOCODE YARDIMCISI — alım/teslim için koordinat yoksa
-═══════════════════════════════════════════════════════════════
-   Nominatim rate-limited (1 req/sec). Burada yalnızca bir kez
-   gerekli adresler için fallback geocode çalıştırırız ve sonucu
-   cloud'a yazmaya çalışırız. */
-async function maybeGeocodeMissing(){
-  if(!isEmri) return;
-  const e = isEmri;
-  const tasks = [];
-  if(e.yukle_yeri && (!e.yukle_lat || !e.yukle_lng)) tasks.push(['yukle', e.yukle_yeri]);
-  if(e.teslim_yeri && (!e.teslim_lat || !e.teslim_lng)) tasks.push(['teslim', e.teslim_yeri]);
-  if(!tasks.length) return;
-  for(const [kind,addr] of tasks){
-    try{
-      const u = `${NOMINATIM_URL}?format=json&limit=1&q=${encodeURIComponent(addr)}`;
-      const r = await fetch(u, { headers:{'Accept-Language':LANG} });
-      if(!r.ok) continue;
-      const arr = await r.json();
-      if(!arr?.length) continue;
-      const lat = parseFloat(arr[0].lat), lng = parseFloat(arr[0].lon);
-      if(!isFinite(lat)||!isFinite(lng)) continue;
-      if(kind==='yukle'){ e.yukle_lat=lat; e.yukle_lng=lng; }
-      else { e.teslim_lat=lat; e.teslim_lng=lng; }
-      // Attempt to persist (RLS may block; fail silently)
-      if(SB_URL && SB_ANON){
-        const patch = kind==='yukle' ? {yukle_lat:lat, yukle_lng:lng} : {teslim_lat:lat, teslim_lng:lng};
-        fetch(`${SB_URL}/rest/v1/is_emirleri?id=eq.${isEmriId}`, {
-          method:'PATCH',
-          headers:{'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON,'Content-Type':'application/json','Prefer':'return=minimal'},
-          body: JSON.stringify(patch)
-        }).catch(()=>{});
-      }
-      await new Promise(r=>setTimeout(r,1100)); // rate limit
-    }catch{}
+   GEOCODE: Koordinatlar artık app.html'de iş emri oluşturulurken
+   Google Maps linki parse edilerek DB'ye yazılıyor.
+   Bu fonksiyon geriye dönük uyumluluk için no-op bırakıldı.
+══════════════════════════════════════════════════════════════ */
+async function maybeGeocodeMissing(){ /* no-op — coords come from DB */ }
+
+/* ══════════════════════════════════════════════════════════════
+   FİRMA BRANDING
+══════════════════════════════════════════════════════════════ */
+async function fetchFirmaBranding(firmaId) {
+  if (!SB_URL || !SB_ANON || !firmaId) return null;
+  try {
+    const r = await fetch(
+      `${SB_URL}/rest/v1/firmalar?id=eq.${firmaId}&select=firma,logo_url,marka_rengi`,
+      { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON } }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d?.[0] || null;
+  } catch { return null; }
+}
+
+function applyBranding(b) {
+  if (!b) return;
+  // Brand color override
+  if (b.marka_rengi) {
+    const c = b.marka_rengi.trim();
+    document.documentElement.style.setProperty('--accent', c);
+    // Dim / lighter variants
+    document.documentElement.style.setProperty('--accent-dim', c + '22');
+    document.documentElement.style.setProperty('--accent2', c);
+    // Theme-color meta
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = c;
   }
-  render();
+  // Brand mark: logo or fallback initial
+  const markEl = document.getElementById('brand-mark');
+  if (markEl) {
+    if (b.logo_url) {
+      markEl.innerHTML = `<img src="${b.logo_url}" alt="${b.firma||''}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">`;
+      markEl.style.background = 'var(--surface2)';
+      markEl.style.boxShadow  = 'none';
+    } else if (b.firma) {
+      markEl.textContent = b.firma.charAt(0).toUpperCase();
+    }
+  }
+  // Title / sub
+  const titleEl = document.getElementById('brand-title');
+  const subEl   = document.getElementById('brand-sub');
+  if (titleEl && b.firma) titleEl.textContent = b.firma;
+  if (subEl) subEl.textContent = LANG === 'tr' ? 'Sevkiyat Takip Portalı' : 'Shipment Tracking Portal';
+  // Page title
+  if (b.firma) document.title = b.firma + (LANG==='tr' ? ' — Sevkiyat Takip' : ' — Shipment Tracking');
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1174,9 +1262,12 @@ async function refresh(){
   const data = await fetchIsEmri(isEmriId);
   if(data){
     isEmri = data;
+    // Refresh breadcrumb every 5th refresh (~100s at 20s interval)
+    if(!(refreshCounter++ % 5)) breadcrumbLoaded = false;
     render();
   }
 }
+let refreshCounter = 0;
 
 /* ══════════════════════════════════════════════════════════════
    INIT
@@ -1229,6 +1320,11 @@ async function init(){
   document.getElementById('loading-state').style.display='none';
   document.getElementById('main-content').style.display='';
   render();
+
+  // Firma branding (non-blocking — runs in background)
+  if (data.firma_id) {
+    fetchFirmaBranding(data.firma_id).then(b => applyBranding(b));
+  }
 
   // Try to geocode pickup/delivery if missing (one-shot)
   maybeGeocodeMissing();
