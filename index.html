@@ -67,9 +67,9 @@
     /* ── AMBER TOP GLOW ── */
     body::after {
       content: '';
-      position: fixed; top: -120px; left: 50%; transform: translateX(-50%);
-      width: 900px; height: 280px; z-index: 0;
-      background: radial-gradient(ellipse at center, rgba(232,82,26,.14) 0%, transparent 70%);
+      position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
+      width: 1100px; height: 340px; z-index: 0;
+      background: radial-gradient(ellipse at center, rgba(232,82,26,.18) 0%, rgba(232,82,26,.04) 45%, transparent 70%);
       pointer-events: none;
     }
 
@@ -111,8 +111,9 @@
       text-decoration: none;
     }
 
-    .brand-logo {
+    .brand-icon {
       width: 36px; height: 36px;
+      flex-shrink: 0;
     }
 
     .brand-name {
@@ -121,10 +122,25 @@
       color: var(--text);
       letter-spacing: 2px;
       text-transform: uppercase;
+      line-height: 1;
     }
 
-    .brand-name span {
-      color: var(--accent);
+    .brand-name span { color: var(--accent); }
+
+    .brand-fit {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      padding: 1px 7px 0;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      text-transform: lowercase;
+      margin-left: 3px;
+      vertical-align: middle;
+      position: relative;
+      top: -2px;
     }
 
     .nav-links {
@@ -173,6 +189,25 @@
       padding: 120px 0 100px;
       position: relative; z-index: 1;
       overflow: hidden;
+    }
+
+    /* Decorative watermark behind hero text */
+    .hero-watermark {
+      position: absolute;
+      top: 50%; left: -20px;
+      transform: translateY(-50%);
+      font-family: var(--font-display);
+      font-size: clamp(120px, 18vw, 200px);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -4px;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(232,82,26,.06);
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+      line-height: 1;
     }
 
     .hero-badge {
@@ -1224,7 +1259,17 @@
   <div class="container">
     <div class="nav-inner">
       <a href="#" class="brand">
-        <img src="logo.jpg" alt="Fleetly" style="height: 36px; width: auto; display: block;" />
+        <svg class="brand-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="18" cy="18" r="17" fill="rgba(232,82,26,.10)" stroke="rgba(232,82,26,.20)" stroke-width="1"/>
+          <rect x="7" y="14" width="12" height="8" rx="1.5" fill="#e8521a"/>
+          <rect x="19" y="16" width="8" height="6" rx="1.5" fill="#e8521a"/>
+          <rect x="20" y="17" width="5.5" height="3" rx=".5" fill="rgba(8,9,26,.6)"/>
+          <circle cx="11.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
+          <circle cx="22.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
+          <path d="M30 10 A13.5 13.5 0 1 0 30 27" stroke="#ff7340" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <polygon points="26.5,7 30.5,10.5 26.5,14" fill="#ff7340"/>
+        </svg>
+        <span class="brand-name">FLEETLY<span class="brand-fit">.fit</span></span>
       </a>
 
       <ul class="nav-links">
@@ -1239,7 +1284,8 @@
 
 <!-- ═══════════════════════ HERO ═══════════════════════ -->
 <section class="hero">
-  <div class="container" style="display: grid; grid-template-columns: 1fr 480px; gap: 60px; align-items: center;">
+  <div class="hero-watermark">FLEETLY</div>
+  <div class="container" style="display: grid; grid-template-columns: 1fr 480px; gap: 60px; align-items: center; position: relative; z-index: 1;">
     <div>
       <div class="hero-badge fade-up">
         <span class="hero-badge-dot"></span>
@@ -1774,7 +1820,17 @@
   <div class="container">
     <div class="footer-inner">
       <a href="#" class="brand" style="text-decoration: none;">
-        <img src="logo.jpg" alt="Fleetly" style="height: 28px; width: auto; display: block;" />
+        <svg width="28" height="28" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="18" cy="18" r="17" fill="rgba(232,82,26,.10)" stroke="rgba(232,82,26,.20)" stroke-width="1"/>
+          <rect x="7" y="14" width="12" height="8" rx="1.5" fill="#e8521a"/>
+          <rect x="19" y="16" width="8" height="6" rx="1.5" fill="#e8521a"/>
+          <rect x="20" y="17" width="5.5" height="3" rx=".5" fill="rgba(8,9,26,.6)"/>
+          <circle cx="11.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
+          <circle cx="22.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
+          <path d="M30 10 A13.5 13.5 0 1 0 30 27" stroke="#ff7340" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <polygon points="26.5,7 30.5,10.5 26.5,14" fill="#ff7340"/>
+        </svg>
+        <span class="brand-name" style="font-size:17px; letter-spacing:1.5px;">FLEETLY<span class="brand-fit" style="font-size:10px; padding:1px 5px 0; border-radius:4px;">.fit</span></span>
       </a>
 
       <ul class="footer-links">
