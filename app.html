@@ -6966,15 +6966,18 @@ function saveFuelDataLocal() {
 async function loadFuelData() {
   loadFuelDataLocal(); // önce lokali yükle (hızlı görünüm)
   if (isLocalMode()) { fuelLoaded = true; return; }
+  // Auth token hazır değilse bulut isteği atma — yoksa RLS boş döner ve
+  // localStorage yedeğini ezip yeni eklenen kayıtları "silinmiş gibi" gösterir.
+  if (!_authToken) { fuelLoaded = true; return; }
   try {
     const res = await fetch(sbUrl('yakit_girisleri?select=*&order=tarih.asc,km.asc'), { headers: sbHeaders() });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const rows = await res.json();
     // Satırları { vehicleId: [...] } yapısına dönüştür
-    fuelData = {};
+    const next = {};
     rows.forEach(r => {
-      if (!fuelData[r.arac_id]) fuelData[r.arac_id] = [];
-      fuelData[r.arac_id].push({
+      if (!next[r.arac_id]) next[r.arac_id] = [];
+      next[r.arac_id].push({
         id        : r.id,
         tarih     : r.tarih,
         km        : r.km,
@@ -6990,6 +6993,16 @@ async function loadFuelData() {
         anomaliFlag: r.anomali_flag || ''
       });
     });
+    // Güvenlik kapısı: cloud boş döndüyse ve local'de veri varsa
+    // localStorage'ı EZME. (Genelde RLS/politika/token sorunudur.)
+    const localAdet = Object.values(fuelData || {}).reduce((a,arr)=>a+(arr?.length||0),0);
+    const cloudAdet = rows.length;
+    if (cloudAdet === 0 && localAdet > 0) {
+      console.warn('Cloud fuelData boş, local (' + localAdet + ' kayıt) korunuyor.');
+      fuelLoaded = true;
+      return;
+    }
+    fuelData = next;
     saveFuelDataLocal();
     fuelLoaded = true;
   } catch (err) {
@@ -8909,14 +8922,17 @@ function saveMaintDataLocal() {
 async function loadMaintData() {
   loadMaintDataLocal();
   if (isLocalMode()) { maintLoaded = true; return; }
+  // Auth token hazır değilse bulut isteği atma — RLS boş döner ve
+  // localStorage'ı ezip yeni eklenen kayıtları kaybeder.
+  if (!_authToken) { maintLoaded = true; return; }
   try {
     const res = await fetch(sbUrl('bakim_kayitlari?select=*&order=tarih.desc'), { headers: sbHeaders() });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const rows = await res.json();
-    maintData = {};
+    const next = {};
     rows.forEach(r => {
-      if (!maintData[r.arac_id]) maintData[r.arac_id] = [];
-      maintData[r.arac_id].push({
+      if (!next[r.arac_id]) next[r.arac_id] = [];
+      next[r.arac_id].push({
         id            : r.id,
         tarih         : r.tarih,
         tur           : r.tur,
@@ -8928,6 +8944,14 @@ async function loadMaintData() {
         servis        : r.servis || ''
       });
     });
+    // Güvenlik kapısı: cloud boş ama local'de veri varsa EZME
+    const localAdet = Object.values(maintData || {}).reduce((a,arr)=>a+(arr?.length||0),0);
+    if (rows.length === 0 && localAdet > 0) {
+      console.warn('Cloud maintData boş, local (' + localAdet + ' kayıt) korunuyor.');
+      maintLoaded = true;
+      return;
+    }
+    maintData = next;
     saveMaintDataLocal();
     maintLoaded = true;
   } catch (err) {
