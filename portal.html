@@ -522,26 +522,35 @@ function showToast(msg, kind='info') {
 ══════════════════════════════════════════════════════════════ */
 async function fetchShipments() {
   if (!SB_URL || !SB_ANON || !tokenInfo) return null;
+  const headers = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
+  const q = new URLSearchParams({
+    musteri_id: `eq.${tokenInfo.musteriId}`,
+    firma_id  : `eq.${tokenInfo.firmaId}`,
+    select    : '*',
+    order     : 'atama_zamani.desc',
+    limit     : '500',
+  });
+  const processRows = rows => rows.map(row => {
+    if (typeof row.fotograflar === 'string') {
+      try { row.fotograflar = JSON.parse(row.fotograflar||'[]'); } catch { row.fotograflar = []; }
+    }
+    row._dbId = row.id;
+    return row;
+  });
+  // 1) takip_public view (anon SELECT izni var)
   try {
-    const q = new URLSearchParams({
-      musteri_id: `eq.${tokenInfo.musteriId}`,
-      firma_id  : `eq.${tokenInfo.firmaId}`,
-      select    : '*',
-      order     : 'atama_zamani.desc',
-      limit     : '500',
-    });
-    const r = await fetch(`${SB_URL}/rest/v1/is_emirleri?${q}`, {
-      headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON }
-    });
+    const r = await fetch(`${SB_URL}/rest/v1/takip_public?${q}`, { headers });
+    if (r.ok) {
+      const rows = await r.json();
+      if (Array.isArray(rows) && rows.length > 0) return processRows(rows);
+    }
+  } catch {}
+  // 2) is_emirleri tablosu (RLS politikası anon'a izin veriyorsa)
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/is_emirleri?${q}`, { headers });
     if (!r.ok) return null;
     const rows = await r.json();
-    return rows.map(row => {
-      if (typeof row.fotograflar === 'string') {
-        try { row.fotograflar = JSON.parse(row.fotograflar||'[]'); } catch { row.fotograflar = []; }
-      }
-      row._dbId = row.id;
-      return row;
-    });
+    return processRows(Array.isArray(rows) ? rows : []);
   } catch { return null; }
 }
 
