@@ -4679,6 +4679,9 @@ function exportCSV() { crmExportCSV(); }
       <div class="vs-tabs">
         <button class="vs-tab active" id="vs-tab-araclar" onclick="switchVsTab('araclar')">🚛 Araç Seçimi</button>
         <button class="vs-tab" id="vs-tab-ozet" onclick="switchVsTab('ozet')">📊 Genel Özet</button>
+        <button class="vs-tab" id="vs-tab-trend" onclick="switchVsTab('trend')">📈 Trend</button>
+        <button class="vs-tab" id="vs-tab-sofor" onclick="switchVsTab('sofor')">👤 Şoför Analizi</button>
+        <button class="vs-tab" id="vs-tab-anomali" onclick="switchVsTab('anomali')">⚠️ Anomaliler</button>
         <button class="vs-tab" id="vs-tab-ayarlar" onclick="switchVsTab('ayarlar')">⚙️ Yönetim</button>
       </div>
 
@@ -4723,11 +4726,102 @@ function exportCSV() { crmExportCSV(); }
               <div class="vs-summary-val" style="color:var(--red)" id="vs-s-ort-tuketim">—</div>
               <div class="vs-summary-lbl">Ort. L/100km</div>
             </div>
+            <!-- Yeni: Maliyet Analizi -->
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:#22d3ee" id="vs-s-tl-km">—</div>
+              <div class="vs-summary-lbl">TL / km</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:#f97316" id="vs-s-ay-delta">—</div>
+              <div class="vs-summary-lbl">Önceki Aya Göre</div>
+            </div>
+            <div class="vs-summary-stat">
+              <div class="vs-summary-val" style="color:#a78bfa" id="vs-s-en-pahali">—</div>
+              <div class="vs-summary-lbl">En Pahalı Dolum</div>
+            </div>
           </div>
           <!-- En Çok Tüketen Top 5 -->
           <div style="margin-top:14px">
             <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏆 En Çok Yakıt Kullanan Araçlar</div>
             <div class="vs-top-vehicles" id="vs-top-vehicles"></div>
+          </div>
+          <!-- En Çok Kullanılan İstasyon -->
+          <div style="margin-top:14px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">⛽ En Çok Dolum Yapılan İstasyonlar</div>
+            <div class="vs-top-vehicles" id="vs-top-istasyonlar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEKME: Trend & Grafik -->
+      <div class="vs-tab-panel" id="vspanel-trend">
+        <div class="vs-summary-panel">
+          <div class="vs-summary-title" style="color:#22d3ee">📈 Yakıt Trend & Grafik Analizi</div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">📊 Aylık Toplam Litre & Maliyet (Son 12 Ay)</div>
+            <div style="position:relative;height:220px"><canvas id="chart-aylik-trend"></canvas></div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">💸 Birim Fiyat Trendi (₺/L)</div>
+            <div style="position:relative;height:180px"><canvas id="chart-fiyat-trend"></canvas></div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">🚛 Araç Bazlı Yakıt Tüketimi (Top 10)</div>
+            <div style="position:relative;height:260px"><canvas id="chart-arac-bar"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEKME: Şoför Analizi -->
+      <div class="vs-tab-panel" id="vspanel-sofor">
+        <div class="vs-summary-panel">
+          <div class="vs-summary-title" style="color:#a78bfa">👤 Şoför Bazlı Tüketim Analizi</div>
+          <div class="vs-month-tabs" id="vs-sofor-month-tabs"></div>
+          <div style="overflow:auto;margin-top:10px">
+            <table class="fuel-table" id="vs-sofor-table" style="min-width:720px">
+              <thead>
+                <tr>
+                  <th>Şoför</th>
+                  <th>Dolum</th>
+                  <th>Toplam Litre</th>
+                  <th>Toplam Maliyet</th>
+                  <th>Ort. ₺/L</th>
+                  <th>Ort. L/100km</th>
+                  <th>Skor</th>
+                </tr>
+              </thead>
+              <tbody id="vs-sofor-body"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:14px">Veri yok.</td></tr></tbody>
+            </table>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:12px">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">🏆 Şoför Verimlilik Sıralaması (Düşük L/100km = İyi)</div>
+            <div style="position:relative;height:240px"><canvas id="chart-sofor-bar"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEKME: Anomaliler -->
+      <div class="vs-tab-panel" id="vspanel-anomali">
+        <div class="vs-summary-panel">
+          <div class="vs-summary-title" style="color:var(--red)">⚠️ Şüpheli / Anormal Kayıtlar</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.45">
+            Sistem otomatik olarak aşağıdaki durumları işaretler: aynı gün çift dolum, km sayacı geri gitmesi, depo kapasitesi üzerinde litre, anormal birim fiyat, beklenmedik yüksek/düşük tüketim.
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+            <div class="vs-summary-stat"><div class="vs-summary-val" style="color:var(--red)" id="anom-total">—</div><div class="vs-summary-lbl">Toplam Uyarı</div></div>
+            <div class="vs-summary-stat"><div class="vs-summary-val" style="color:var(--yellow)" id="anom-doublefill">—</div><div class="vs-summary-lbl">Çift Dolum</div></div>
+            <div class="vs-summary-stat"><div class="vs-summary-val" style="color:var(--yellow)" id="anom-kmback">—</div><div class="vs-summary-lbl">Km Geri Gitti</div></div>
+            <div class="vs-summary-stat"><div class="vs-summary-val" style="color:var(--yellow)" id="anom-highcons">—</div><div class="vs-summary-lbl">Yüksek Tüketim</div></div>
+          </div>
+          <div style="overflow:auto">
+            <table class="fuel-table" id="vs-anom-table" style="min-width:820px">
+              <thead>
+                <tr>
+                  <th>Tarih</th><th>Plaka</th><th>Şoför</th><th>Litre</th><th>Km</th><th>₺/L</th><th>Sorun</th>
+                </tr>
+              </thead>
+              <tbody id="vs-anom-body"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:14px">Veri bekleniyor…</td></tr></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -4747,9 +4841,18 @@ function exportCSV() { crmExportCSV(); }
           <button class="fuel-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none;background:linear-gradient(135deg,#38bdf8,#0ea5e9)" onclick="closeVehicleSelect();downloadFuelPDF()">⬇ PDF Rapor</button>
         </div>
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
-          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">📊 Excel Rapor</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Tüm araçların yakıt geçmişini Excel tablosu olarak indirin.</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">📊 Excel Rapor (Detaylı + Pivot)</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Tüm araçların yakıt geçmişini detaylı Excel tablosu olarak indirin. Şoför, istasyon ve aylık pivot sayfaları içerir.</div>
           <button class="fuel-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none;background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="closeVehicleSelect();downloadFuelExcel()">⬇ Excel İndir</button>
+        </div>
+        <!-- YENİ: Aylık Yönetici Raporu -->
+        <div style="background:var(--surface2);border:1px solid rgba(167,139,250,.35);border-radius:12px;padding:14px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">🏢 Aylık Yönetici Raporu (PDF)</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Firma sahibi için hazırlanmış aylık yakıt gideri özeti — toplam gider, araç & şoför sıralaması, anomali uyarıları.</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="month" id="yonetici-rapor-ay" class="fuel-inp" style="max-width:180px" />
+            <button class="fuel-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none;background:linear-gradient(135deg,#a78bfa,#7c3aed)" onclick="closeVehicleSelect();downloadYoneticiRaporu()">⬇ Aylık Rapor İndir</button>
+          </div>
         </div>
         <!-- Tehlike Bölgesi -->
         <div class="vs-danger-zone">
@@ -4925,8 +5028,45 @@ function exportCSV() { crmExportCSV(); }
             <input class="fuel-inp" type="number" id="f-fuel-fiyat" placeholder="ör. 72.50" step="0.01" min="0" />
           </div>
           <div class="fuel-form-group">
-            <label>İstasyon / Not</label>
-            <input class="fuel-inp" type="text" id="f-fuel-not" placeholder="ör. ABC Opet" />
+            <label>Yakıt Türü</label>
+            <select class="fuel-inp" id="f-fuel-turu">
+              <option value="Motorin">Motorin</option>
+              <option value="Benzin">Benzin</option>
+              <option value="LPG">LPG</option>
+              <option value="AdBlue">AdBlue</option>
+              <option value="Elektrik">Elektrik</option>
+              <option value="Diğer">Diğer</option>
+            </select>
+          </div>
+          <div class="fuel-form-group">
+            <label>Şoför</label>
+            <input class="fuel-inp" type="text" id="f-fuel-sofor" placeholder="ör. Ahmet Yılmaz" list="fuel-sofor-list" />
+            <datalist id="fuel-sofor-list"></datalist>
+          </div>
+          <div class="fuel-form-group">
+            <label>İstasyon</label>
+            <input class="fuel-inp" type="text" id="f-fuel-istasyon" placeholder="ör. Shell Bostancı" list="fuel-istasyon-list" />
+            <datalist id="fuel-istasyon-list"></datalist>
+          </div>
+          <div class="fuel-form-group">
+            <label>Ödeme Tipi</label>
+            <select class="fuel-inp" id="f-fuel-odeme">
+              <option value="">Seçiniz</option>
+              <option value="Nakit">Nakit</option>
+              <option value="Kredi Kartı">Kredi Kartı</option>
+              <option value="Yakıt Kartı">Yakıt Kartı</option>
+              <option value="Cari">Cari</option>
+              <option value="Havale">Havale</option>
+              <option value="Diğer">Diğer</option>
+            </select>
+          </div>
+          <div class="fuel-form-group">
+            <label>Fiş / Fatura No</label>
+            <input class="fuel-inp" type="text" id="f-fuel-fis" placeholder="ör. F-2026041" />
+          </div>
+          <div class="fuel-form-group">
+            <label>Not / Açıklama</label>
+            <input class="fuel-inp" type="text" id="f-fuel-not" placeholder="ör. Dönüş yolunda dolum" />
           </div>
           <div class="fuel-form-group" style="justify-content:flex-end">
             <button class="fuel-add-btn" onclick="addFuelEntry()">+ Ekle</button>
@@ -4953,7 +5093,13 @@ function exportCSV() { crmExportCSV(); }
                 <th>Tutar</th>
                 <th>Tüketim</th>
                 <th>Km Farkı</th>
+                <th>Şoför</th>
+                <th>İstasyon</th>
+                <th>Yakıt</th>
+                <th>Ödeme</th>
+                <th>Fiş No</th>
                 <th>Not</th>
+                <th>Durum</th>
                 <th class="col-islem">İşlem</th>
               </tr>
             </thead>
@@ -6475,12 +6621,19 @@ async function loadFuelData() {
     rows.forEach(r => {
       if (!fuelData[r.arac_id]) fuelData[r.arac_id] = [];
       fuelData[r.arac_id].push({
-        id    : r.id,
-        tarih : r.tarih,
-        km    : r.km,
-        litre : r.litre,
-        fiyat : r.fiyat || 0,
-        not   : r.aciklama || ''
+        id        : r.id,
+        tarih     : r.tarih,
+        km        : r.km,
+        litre     : r.litre,
+        fiyat     : r.fiyat || 0,
+        not       : r.aciklama || '',
+        sofor     : r.sofor || '',
+        yakitTuru : r.yakit_turu || '',
+        istasyon  : r.istasyon || '',
+        odemeTipi : r.odeme_tipi || '',
+        fisNo     : r.fis_no || '',
+        litreFiyat: r.litre_fiyat || (r.litre > 0 ? +(((r.fiyat||0)/r.litre).toFixed(2)) : 0),
+        anomaliFlag: r.anomali_flag || ''
       });
     });
     saveFuelDataLocal();
@@ -6501,15 +6654,22 @@ async function saveFuelEntry(vehicleId, entry) {
 
   try {
     const row = {
-      id      : entry.id,
-      user_id : user.id,
-      firma_id: currentFirmaId,       // ← firma bazlı paylaşım
-      arac_id : vehicleId,
-      tarih   : entry.tarih,
-      km      : entry.km,
-      litre   : entry.litre,
-      fiyat   : entry.fiyat || 0,
-      aciklama: entry.not   || null
+      id         : entry.id,
+      user_id    : user.id,
+      firma_id   : currentFirmaId,       // ← firma bazlı paylaşım
+      arac_id    : vehicleId,
+      tarih      : entry.tarih,
+      km         : entry.km,
+      litre      : entry.litre,
+      fiyat      : entry.fiyat || 0,
+      aciklama   : entry.not   || null,
+      sofor      : entry.sofor || null,
+      yakit_turu : entry.yakitTuru || null,
+      istasyon   : entry.istasyon || null,
+      odeme_tipi : entry.odemeTipi || null,
+      fis_no     : entry.fisNo || null,
+      litre_fiyat: entry.litre > 0 ? +(((entry.fiyat||0)/entry.litre).toFixed(2)) : 0,
+      anomali_flag: entry.anomaliFlag || null
     };
     const res = await fetch(sbUrl('yakit_girisleri'), {
       method : 'POST',
@@ -6610,14 +6770,37 @@ async function openFuelModal(vehicleId) {
   document.getElementById('f-fuel-litre').value = '';
   document.getElementById('f-fuel-fiyat').value = '';
   document.getElementById('f-fuel-not').value   = '';
+  if (document.getElementById('f-fuel-sofor'))    document.getElementById('f-fuel-sofor').value    = v?.sofor || '';
+  if (document.getElementById('f-fuel-istasyon')) document.getElementById('f-fuel-istasyon').value = '';
+  if (document.getElementById('f-fuel-odeme'))    document.getElementById('f-fuel-odeme').value    = '';
+  if (document.getElementById('f-fuel-fis'))      document.getElementById('f-fuel-fis').value      = '';
   document.getElementById('fuel-preview').textContent = '';
+
+  // Şoför & istasyon otomatik tamamlama önerileri
+  populateFuelAutocomplete();
 
   document.getElementById('fuel-modal-backdrop').classList.remove('hidden');
   renderFuelModal(); // önce mevcut veriyle göster
 
   // Supabase'den taze veri çek
   await loadFuelData();
+  populateFuelAutocomplete();
   renderFuelModal();
+}
+
+// Şoför & istasyon datalist'lerini mevcut verilerle doldur
+function populateFuelAutocomplete() {
+  const soforSet = new Set();
+  const istSet = new Set();
+  vehicles.forEach(v => { if (v.sofor) soforSet.add(v.sofor); });
+  Object.values(fuelData || {}).forEach(arr => arr.forEach(e => {
+    if (e.sofor)    soforSet.add(e.sofor);
+    if (e.istasyon) istSet.add(e.istasyon);
+  }));
+  const sdl = document.getElementById('fuel-sofor-list');
+  const idl = document.getElementById('fuel-istasyon-list');
+  if (sdl) sdl.innerHTML = Array.from(soforSet).map(s => `<option value="${s.replace(/"/g,'&quot;')}"></option>`).join('');
+  if (idl) idl.innerHTML = Array.from(istSet).map(s => `<option value="${s.replace(/"/g,'&quot;')}"></option>`).join('');
 }
 
 function closeFuelModal() {
@@ -6631,11 +6814,16 @@ function closeFuelModalBackdrop(e) {
 
 // Yakıt girişi ekle
 function addFuelEntry() {
-  const km     = parseFloat(document.getElementById('f-fuel-km').value);
-  const litre  = parseFloat(document.getElementById('f-fuel-litre').value);
-  const fiyat  = parseFloat(document.getElementById('f-fuel-fiyat').value) || 0;
-  const tarih  = document.getElementById('f-fuel-tarih').value;
-  const not    = document.getElementById('f-fuel-not').value.trim();
+  const km       = parseFloat(document.getElementById('f-fuel-km').value);
+  const litre    = parseFloat(document.getElementById('f-fuel-litre').value);
+  const fiyat    = parseFloat(document.getElementById('f-fuel-fiyat').value) || 0;
+  const tarih    = document.getElementById('f-fuel-tarih').value;
+  const not      = document.getElementById('f-fuel-not').value.trim();
+  const sofor    = (document.getElementById('f-fuel-sofor')?.value || '').trim();
+  const yakitTuru= document.getElementById('f-fuel-turu')?.value || 'Motorin';
+  const istasyon = (document.getElementById('f-fuel-istasyon')?.value || '').trim();
+  const odemeTipi= document.getElementById('f-fuel-odeme')?.value || '';
+  const fisNo    = (document.getElementById('f-fuel-fis')?.value || '').trim();
 
   if (!tarih)         { showToast('Tarih giriniz.', 'error'); return; }
   if (!km || km <= 0) { showToast('Geçerli km sayacı giriniz.', 'error'); return; }
@@ -6652,13 +6840,18 @@ function addFuelEntry() {
     }
   }
 
+  // Aynı gün/araç çift dolum uyarısı
+  const sameDay = entries.filter(e => e.tarih === tarih);
+  if (sameDay.length >= 1) {
+    if (!confirm(`⚠️ Bu araç için ${tarih} tarihinde zaten ${sameDay.length} dolum kaydı var. Yeni dolum eklensin mi?`)) return;
+  }
+
   const entry = {
     id: uid(),
-    tarih,
-    km,
-    litre,
-    fiyat,
-    not
+    tarih, km, litre, fiyat, not,
+    sofor, yakitTuru, istasyon, odemeTipi, fisNo,
+    litreFiyat: litre > 0 ? +(fiyat/litre).toFixed(2) : 0,
+    anomaliFlag: detectEntryAnomaly({km, litre, fiyat, tarih}, entries)
   };
   fuelData[activeFuelVehicleId].push(entry);
   fuelData[activeFuelVehicleId].sort((a, b) => new Date(a.tarih) - new Date(b.tarih) || a.km - b.km);
@@ -6667,17 +6860,48 @@ function addFuelEntry() {
   updateFuelStat();
   updateStats(); // Filo Özeti panelini de güncelle
   const _fuelV = vehicles.find(x => x.id === activeFuelVehicleId);
-  addActivity('yakıt_ekle', _fuelV?.plaka || '—', litre.toLocaleString('tr-TR',{maximumFractionDigits:1}) + ' L · ' + tarih);
+  addActivity('yakıt_ekle', _fuelV?.plaka || '—', litre.toLocaleString('tr-TR',{maximumFractionDigits:1}) + ' L · ' + tarih + (sofor ? ' · '+sofor : ''));
   renderFuelModal();
 
-  // Formu temizle
+  // Formu temizle (tarih dışında)
   document.getElementById('f-fuel-km').value    = '';
   document.getElementById('f-fuel-litre').value = '';
   document.getElementById('f-fuel-fiyat').value = '';
   document.getElementById('f-fuel-not').value   = '';
+  if (document.getElementById('f-fuel-sofor'))    document.getElementById('f-fuel-sofor').value    = '';
+  if (document.getElementById('f-fuel-istasyon')) document.getElementById('f-fuel-istasyon').value = '';
+  if (document.getElementById('f-fuel-odeme'))    document.getElementById('f-fuel-odeme').value    = '';
+  if (document.getElementById('f-fuel-fis'))      document.getElementById('f-fuel-fis').value      = '';
   document.getElementById('fuel-preview').textContent = '';
 
-  showToast('Yakıt kaydı eklendi ✓', 'success');
+  if (entry.anomaliFlag) {
+    showToast('Kayıt eklendi — ⚠ Anomali tespit edildi: ' + entry.anomaliFlag, 'error');
+  } else {
+    showToast('Yakıt kaydı eklendi ✓', 'success');
+  }
+}
+
+// Tekil kayıt için anomali tespiti
+function detectEntryAnomaly(newE, entries) {
+  // 1) Litre > 500 — muhtemelen yanlış giriş
+  if (newE.litre > 500) return 'Yüksek litre (>500L)';
+  // 2) Birim fiyat anormal (<5 veya >150)
+  if (newE.fiyat > 0 && (newE.fiyat < 5 || newE.fiyat > 150)) return 'Anormal birim fiyat';
+  if (!entries || entries.length === 0) return '';
+  // 3) Km düşüşü
+  const lastKm = Math.max(...entries.map(e => e.km));
+  if (newE.km < lastKm) return 'Km sayacı geri gitti';
+  // 4) Aynı gün çift dolum
+  const sameDay = entries.filter(e => e.tarih === newE.tarih);
+  if (sameDay.length >= 1) return 'Aynı gün çift dolum';
+  // 5) Yüksek tüketim (>60 L/100km)
+  const prev = entries.slice().sort((a,b)=>a.km-b.km).pop();
+  if (prev && newE.km > prev.km) {
+    const cons = (newE.litre / (newE.km - prev.km)) * 100;
+    if (cons > 60) return 'Yüksek tüketim (>60L/100km)';
+    if (cons < 5 && newE.km - prev.km > 50) return 'Şüpheli düşük tüketim';
+  }
+  return '';
 }
 
 // Yakıt kaydı sil
@@ -6707,6 +6931,11 @@ function editFuelEntry(vehicleId, entryId) {
   document.getElementById('f-fuel-litre').value = entry.litre || '';
   document.getElementById('f-fuel-fiyat').value = entry.fiyat || '';
   document.getElementById('f-fuel-not').value   = entry.not   || '';
+  if (document.getElementById('f-fuel-sofor'))    document.getElementById('f-fuel-sofor').value    = entry.sofor     || '';
+  if (document.getElementById('f-fuel-turu'))     document.getElementById('f-fuel-turu').value     = entry.yakitTuru || 'Motorin';
+  if (document.getElementById('f-fuel-istasyon')) document.getElementById('f-fuel-istasyon').value = entry.istasyon  || '';
+  if (document.getElementById('f-fuel-odeme'))    document.getElementById('f-fuel-odeme').value    = entry.odemeTipi || '';
+  if (document.getElementById('f-fuel-fis'))      document.getElementById('f-fuel-fis').value      = entry.fisNo     || '';
   updateFuelPreview();
 
   // Eski kaydı sil (kaydet butonuyla yeniden eklenecek)
@@ -6809,7 +7038,7 @@ function renderFuelModal() {
 
   const tbody = document.getElementById('fuel-history-body');
   if (entries.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="fuel-empty"><div class="icon">⛽</div><p>Henüz yakıt kaydı yok. Yukarıdan ekleyin.</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15"><div class="fuel-empty"><div class="icon">⛽</div><p>Henüz yakıt kaydı yok. Yukarıdan ekleyin.</p></div></td></tr>`;
     return;
   }
 
@@ -6822,6 +7051,11 @@ function renderFuelModal() {
     const tutar   = e.litre * e.fiyat;
     const kmFark  = origIdx > 0 ? e.km - entries[origIdx-1].km : null;
     const consTxt = cons !== null ? cons.toFixed(1) + ' L/100km' : '—';
+    // Anomali yeniden hesapla (güncel verilerle)
+    const flag = detectEntryAnomaly(e, entries.filter(x => x.id !== e.id && new Date(x.tarih) <= new Date(e.tarih)));
+    const flagBadge = flag
+      ? `<span title="${flag}" style="display:inline-block;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.35);color:var(--red);font-size:10.5px;font-weight:700">⚠ ${flag}</span>`
+      : `<span style="display:inline-block;padding:2px 7px;border-radius:999px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green);font-size:10.5px;font-weight:700">✓ OK</span>`;
     // vehicleId'yi veri attribute olarak HTML'e gömdük — activeFuelVehicleId'ye bağımlılığı kaldırıyoruz
     const vid = activeFuelVehicleId;
     return `
@@ -6833,7 +7067,13 @@ function renderFuelModal() {
         <td class="mono" style="color:var(--green)">${tutar > 0 ? tutar.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' ₺' : '—'}</td>
         <td>${cons !== null ? `<span class="fuel-consumption-badge ${consCls}">${consTxt}</span>` : '<span style="color:var(--muted);font-size:12px">—</span>'}</td>
         <td class="mono" style="color:var(--text2)">${kmFark !== null ? '+' + kmFark.toLocaleString('tr-TR') + ' km' : '<span style="color:var(--muted)">Referans</span>'}</td>
+        <td style="color:var(--text2);font-size:12px">${e.sofor || '<span style="color:var(--muted)">—</span>'}</td>
+        <td style="color:var(--text2);font-size:12px">${e.istasyon || '<span style="color:var(--muted)">—</span>'}</td>
+        <td style="color:var(--text2);font-size:12px">${e.yakitTuru || '<span style="color:var(--muted)">—</span>'}</td>
+        <td style="color:var(--text2);font-size:12px">${e.odemeTipi || '<span style="color:var(--muted)">—</span>'}</td>
+        <td class="mono" style="color:var(--text2);font-size:12px">${e.fisNo || '<span style="color:var(--muted)">—</span>'}</td>
         <td style="color:var(--muted);font-size:12px">${e.not || '—'}</td>
+        <td>${flagBadge}</td>
         <td class="col-islem">
           <div style="display:flex;gap:5px;align-items:center">
             <button class="fuel-del-btn" style="color:var(--blue);font-size:14px;width:26px;height:26px;border-radius:6px;border:1px solid rgba(56,189,248,.25);background:rgba(56,189,248,.06);display:flex;align-items:center;justify-content:center" onclick="editFuelEntry('${vid}','${e.id}')" title="Düzenle">✎</button>
@@ -6894,11 +7134,14 @@ function openFuelSummary() {
 
 // Sekme geçişi
 function switchVsTab(name) {
-  ['araclar','ozet','ayarlar'].forEach(t => {
+  ['araclar','ozet','trend','sofor','anomali','ayarlar'].forEach(t => {
     document.getElementById('vs-tab-' + t)?.classList.toggle('active', t === name);
     document.getElementById('vspanel-' + t)?.classList.toggle('active', t === name);
   });
-  if (name === 'ozet') renderVsSummary();
+  if (name === 'ozet')    renderVsSummary();
+  if (name === 'trend')   renderVsTrendCharts();
+  if (name === 'sofor')   renderVsSoforAnalizi();
+  if (name === 'anomali') renderVsAnomaliler();
   if (name === 'ayarlar') renderVsManagement();
 }
 
@@ -6983,6 +7226,362 @@ function renderVsSummary() {
             <div class="vs-top-val">${info.litre.toLocaleString('tr-TR',{maximumFractionDigits:0})} L</div>
           </div>`;
         }).join('');
+  }
+
+  // ---- Maliyet Analizi: TL/km, önceki aya göre, en pahalı dolum ----
+  // Toplam km: her araç için (max-min) aralığı toplamı (seçili dönemde)
+  let donemKm = 0;
+  vehicles.forEach(v => {
+    const entries = (fuelData[v.id] || [])
+      .filter(e => !vsSummaryMonth || (e.tarih && e.tarih.startsWith(vsSummaryMonth)))
+      .slice().sort((a,b) => a.km-b.km);
+    if (entries.length >= 2) donemKm += Math.max(0, entries[entries.length-1].km - entries[0].km);
+  });
+  const tlKm = donemKm > 0 && totalTutar > 0 ? totalTutar / donemKm : null;
+  set('vs-s-tl-km', tlKm !== null ? tlKm.toLocaleString('tr-TR',{minimumFractionDigits:2, maximumFractionDigits:2}) + ' ₺' : '—');
+
+  // Önceki aya göre (sadece vsSummaryMonth set edildiğinde anlamlı)
+  const ayDeltaEl = document.getElementById('vs-s-ay-delta');
+  if (ayDeltaEl) {
+    if (vsSummaryMonth) {
+      // prevMonth = vsSummaryMonth - 1
+      const [yy, mm] = vsSummaryMonth.split('-').map(Number);
+      const prev = new Date(yy, mm-2, 1);
+      const prevKey = prev.getFullYear() + '-' + String(prev.getMonth()+1).padStart(2,'0');
+      let prevTL = 0;
+      Object.values(fuelData).forEach(arr => arr.forEach(e => {
+        if (e.tarih && e.tarih.startsWith(prevKey)) prevTL += (e.litre||0)*(e.fiyat||0);
+      }));
+      if (prevTL > 0) {
+        const diffPct = ((totalTutar - prevTL) / prevTL) * 100;
+        const arrow = diffPct >= 0 ? '↑' : '↓';
+        const clr = diffPct > 5 ? 'var(--red)' : diffPct < -5 ? 'var(--green)' : 'var(--yellow)';
+        ayDeltaEl.textContent = arrow + ' %' + Math.abs(diffPct).toFixed(1);
+        ayDeltaEl.style.color = clr;
+      } else {
+        ayDeltaEl.textContent = '— (önceki ay yok)';
+        ayDeltaEl.style.color = 'var(--muted)';
+      }
+    } else {
+      // Tümü seçiliyken bu ay vs önceki ay
+      const now = new Date();
+      const thisK = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+      const prevD = new Date(now.getFullYear(), now.getMonth()-1, 1);
+      const prevK = prevD.getFullYear()+'-'+String(prevD.getMonth()+1).padStart(2,'0');
+      let thisTL=0, prevTL=0;
+      Object.values(fuelData).forEach(arr => arr.forEach(e => {
+        if (!e.tarih) return;
+        if (e.tarih.startsWith(thisK)) thisTL += (e.litre||0)*(e.fiyat||0);
+        if (e.tarih.startsWith(prevK)) prevTL += (e.litre||0)*(e.fiyat||0);
+      }));
+      if (prevTL > 0) {
+        const diffPct = ((thisTL - prevTL) / prevTL) * 100;
+        const arrow = diffPct >= 0 ? '↑' : '↓';
+        ayDeltaEl.textContent = arrow + ' %' + Math.abs(diffPct).toFixed(1);
+        ayDeltaEl.style.color = diffPct > 5 ? 'var(--red)' : diffPct < -5 ? 'var(--green)' : 'var(--yellow)';
+        ayDeltaEl.title = 'Bu ay (' + thisK + ') önceki aya göre';
+      } else {
+        ayDeltaEl.textContent = '—';
+        ayDeltaEl.style.color = 'var(--muted)';
+      }
+    }
+  }
+
+  // En pahalı dolum
+  let enPahali = null;
+  vehicles.forEach(v => {
+    (fuelData[v.id] || []).forEach(e => {
+      if (!vsSummaryMonth || (e.tarih && e.tarih.startsWith(vsSummaryMonth))) {
+        const t = (e.litre||0)*(e.fiyat||0);
+        if (!enPahali || t > enPahali.tutar) enPahali = {tutar: t, plaka: v.plaka, tarih: e.tarih};
+      }
+    });
+  });
+  const enPahaliEl = document.getElementById('vs-s-en-pahali');
+  if (enPahaliEl) {
+    enPahaliEl.textContent = enPahali && enPahali.tutar > 0 ? enPahali.tutar.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' ₺' : '—';
+    enPahaliEl.title = enPahali ? (enPahali.plaka + ' · ' + enPahali.tarih) : '';
+  }
+
+  // En çok dolum yapılan istasyonlar
+  const istEl = document.getElementById('vs-top-istasyonlar');
+  if (istEl) {
+    const istMap = {};
+    Object.values(fuelData).forEach(arr => arr.forEach(e => {
+      if (!vsSummaryMonth || (e.tarih && e.tarih.startsWith(vsSummaryMonth))) {
+        const k = (e.istasyon || '').trim();
+        if (!k) return;
+        if (!istMap[k]) istMap[k] = {cnt:0, litre:0, tutar:0};
+        istMap[k].cnt++;
+        istMap[k].litre += (e.litre||0);
+        istMap[k].tutar += (e.litre||0)*(e.fiyat||0);
+      }
+    }));
+    const sortedI = Object.entries(istMap).sort((a,b) => b[1].litre - a[1].litre).slice(0,5);
+    const maxIL = sortedI.length > 0 ? sortedI[0][1].litre : 1;
+    istEl.innerHTML = sortedI.length === 0
+      ? `<div style="color:var(--muted);font-size:12px">Henüz istasyon bilgisi girilmedi.</div>`
+      : sortedI.map(([k, info]) => {
+          const pct = Math.max(4, Math.round((info.litre/maxIL)*100));
+          return `<div class="vs-top-row">
+            <div class="vs-top-plaka">${k}</div>
+            <div class="vs-top-bar-wrap"><div class="vs-top-bar" style="width:${pct}%;background:linear-gradient(90deg,#22d3ee,#06b6d4)"></div></div>
+            <div class="vs-top-val">${info.cnt} dolum · ${info.litre.toLocaleString('tr-TR',{maximumFractionDigits:0})} L</div>
+          </div>`;
+        }).join('');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TREND & GRAFİK SEKMESI
+// ─────────────────────────────────────────────────────────────────
+let _chartAylik = null, _chartFiyat = null, _chartArac = null, _chartSofor = null;
+
+function renderVsTrendCharts() {
+  if (typeof Chart === 'undefined') return;
+  const now = new Date();
+  const months = [];
+  for (let i=11; i>=0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    months.push({key: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), d});
+  }
+  const litreByMonth = {}, tutarByMonth = {}, priceByMonth = {};
+  months.forEach(m => { litreByMonth[m.key]=0; tutarByMonth[m.key]=0; priceByMonth[m.key]=[]; });
+
+  Object.values(fuelData).forEach(arr => arr.forEach(e => {
+    if (!e.tarih) return;
+    const k = e.tarih.slice(0,7);
+    if (k in litreByMonth) {
+      litreByMonth[k] += (e.litre||0);
+      tutarByMonth[k] += (e.litre||0)*(e.fiyat||0);
+      if (e.fiyat > 0) priceByMonth[k].push(e.fiyat);
+    }
+  }));
+
+  const labels = months.map(m => m.d.toLocaleDateString('tr-TR',{month:'short',year:'2-digit'}));
+
+  // Grafik 1: Aylık trend (bar+line)
+  if (_chartAylik) _chartAylik.destroy();
+  const el1 = document.getElementById('chart-aylik-trend');
+  if (el1) {
+    _chartAylik = new Chart(el1, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { type:'bar',  label: 'Litre (L)', data: months.map(m => +litreByMonth[m.key].toFixed(1)), backgroundColor:'rgba(249,115,22,0.6)', borderColor:'#f97316', borderWidth:1.5, yAxisID:'y' },
+          { type:'line', label: 'Maliyet (₺)', data: months.map(m => +tutarByMonth[m.key].toFixed(0)), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.15)', tension:0.35, fill:false, yAxisID:'y1', pointRadius:3 }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{ color:'#a8b8cc', font:{size:11} } } },
+        scales: {
+          x:  { ticks:{ color:'#a8b8cc' }, grid:{ color:'rgba(255,255,255,0.05)' } },
+          y:  { position:'left', ticks:{ color:'#f97316' }, grid:{ color:'rgba(255,255,255,0.05)' }, title:{ display:true, text:'Litre', color:'#f97316' } },
+          y1: { position:'right', ticks:{ color:'#22c55e' }, grid:{ drawOnChartArea:false }, title:{ display:true, text:'TL', color:'#22c55e' } }
+        }
+      }
+    });
+  }
+
+  // Grafik 2: Birim fiyat trend (line)
+  if (_chartFiyat) _chartFiyat.destroy();
+  const el2 = document.getElementById('chart-fiyat-trend');
+  if (el2) {
+    const avgP = months.map(m => {
+      const arr = priceByMonth[m.key];
+      return arr.length ? +(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2) : null;
+    });
+    _chartFiyat = new Chart(el2, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{ label:'Ort. Birim Fiyat (₺/L)', data: avgP, borderColor:'#a78bfa', backgroundColor:'rgba(167,139,250,0.15)', fill:true, tension:0.4, spanGaps:true, pointRadius:3 }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{ color:'#a8b8cc' } } },
+        scales: {
+          x: { ticks:{ color:'#a8b8cc' }, grid:{ color:'rgba(255,255,255,0.05)' } },
+          y: { ticks:{ color:'#a78bfa' }, grid:{ color:'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+  }
+
+  // Grafik 3: Araç bazlı bar
+  if (_chartArac) _chartArac.destroy();
+  const el3 = document.getElementById('chart-arac-bar');
+  if (el3) {
+    const arr = vehicles.map(v => {
+      const litre = (fuelData[v.id] || []).reduce((s,e) => s+(e.litre||0), 0);
+      return { plaka: v.plaka, litre };
+    }).filter(r => r.litre > 0).sort((a,b) => b.litre - a.litre).slice(0, 10);
+    _chartArac = new Chart(el3, {
+      type: 'bar',
+      data: {
+        labels: arr.map(r => r.plaka),
+        datasets: [{ label:'Toplam Litre', data: arr.map(r => +r.litre.toFixed(1)), backgroundColor:'rgba(56,189,248,0.65)', borderColor:'#38bdf8', borderWidth:1.5 }]
+      },
+      options: {
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales: {
+          x: { ticks:{ color:'#a8b8cc' }, grid:{ color:'rgba(255,255,255,0.05)' } },
+          y: { ticks:{ color:'#a8b8cc' }, grid:{ color:'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ŞOFÖR ANALİZİ SEKMESİ
+// ─────────────────────────────────────────────────────────────────
+function renderVsSoforAnalizi() {
+  // Şoför bazlı toplam
+  const map = {}; // sofor → { dolum, litre, tutar, prices:[], cons:[] }
+  vehicles.forEach(v => {
+    const entries = (fuelData[v.id] || []).slice().sort((a,b) => a.km-b.km);
+    // Araç bazlı ortalama tüketim (bu araç için)
+    const vehAvg = entries.length >= 2 && (entries[entries.length-1].km - entries[0].km) > 0
+      ? (entries.slice(1).reduce((s,e)=>s+(e.litre||0),0) / (entries[entries.length-1].km - entries[0].km)) * 100
+      : null;
+    entries.forEach(e => {
+      const key = (e.sofor || '').trim() || (v.sofor || '').trim() || '— Bilinmeyen —';
+      if (!map[key]) map[key] = { dolum:0, litre:0, tutar:0, prices:[], vehCons:new Set() };
+      map[key].dolum++;
+      map[key].litre += (e.litre||0);
+      map[key].tutar += (e.litre||0)*(e.fiyat||0);
+      if (e.fiyat > 0) map[key].prices.push(e.fiyat);
+      if (vehAvg !== null) map[key].vehCons.add(vehAvg);
+    });
+  });
+
+  const rows = Object.entries(map).map(([sofor, v]) => {
+    const ortP = v.prices.length ? v.prices.reduce((a,b)=>a+b,0)/v.prices.length : null;
+    const consArr = Array.from(v.vehCons);
+    const ortCons = consArr.length ? consArr.reduce((a,b)=>a+b,0)/consArr.length : null;
+    return { sofor, ...v, ortP, ortCons };
+  }).sort((a,b) => b.litre - a.litre);
+
+  // Skor hesabı: düşük L/100km ve düşük ₺/L iyi. 0-100 skala.
+  const maxCons = Math.max(...rows.map(r => r.ortCons || 0), 1);
+  const maxPrice = Math.max(...rows.map(r => r.ortP || 0), 1);
+  rows.forEach(r => {
+    if (r.ortCons === null) { r.skor = null; return; }
+    const consSkor = Math.max(0, 100 - ((r.ortCons / maxCons) * 100));
+    const priceSkor = r.ortP ? Math.max(0, 100 - ((r.ortP / maxPrice) * 60)) : 80;
+    r.skor = Math.round(consSkor * 0.7 + priceSkor * 0.3);
+  });
+
+  const tbody = document.getElementById('vs-sofor-body');
+  if (tbody) {
+    if (rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:14px">Henüz şoför bazlı kayıt yok.</td></tr>`;
+    } else {
+      tbody.innerHTML = rows.map(r => {
+        const skorClr = r.skor === null ? 'var(--muted)' : r.skor >= 75 ? 'var(--green)' : r.skor >= 50 ? 'var(--yellow)' : 'var(--red)';
+        const skorBadge = r.skor === null ? '—' : `<span style="padding:3px 9px;border-radius:999px;background:${skorClr===('var(--green)')?'rgba(34,197,94,.15)':skorClr===('var(--yellow)')?'rgba(245,158,11,.15)':'rgba(239,68,68,.15)'};color:${skorClr};font-weight:700">${r.skor}/100</span>`;
+        return `<tr>
+          <td style="font-weight:600">${r.sofor}</td>
+          <td class="mono">${r.dolum}</td>
+          <td class="mono" style="color:var(--accent)">${r.litre.toLocaleString('tr-TR',{maximumFractionDigits:0})} L</td>
+          <td class="mono" style="color:var(--green)">${r.tutar > 0 ? r.tutar.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' ₺' : '—'}</td>
+          <td class="mono">${r.ortP ? r.ortP.toFixed(2) + ' ₺' : '—'}</td>
+          <td class="mono" style="color:${r.ortCons ? (r.ortCons<25?'var(--green)':r.ortCons<35?'var(--yellow)':'var(--red)') : 'var(--muted)'}">${r.ortCons ? r.ortCons.toFixed(1) + ' L' : '—'}</td>
+          <td>${skorBadge}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  // Grafik
+  if (_chartSofor) _chartSofor.destroy();
+  const el = document.getElementById('chart-sofor-bar');
+  if (el && rows.filter(r => r.ortCons).length > 0) {
+    const top = rows.filter(r => r.ortCons).sort((a,b) => a.ortCons - b.ortCons).slice(0, 10);
+    _chartSofor = new Chart(el, {
+      type:'bar',
+      data: {
+        labels: top.map(r => r.sofor),
+        datasets: [{ label:'Ort. L/100km', data: top.map(r => +r.ortCons.toFixed(1)),
+          backgroundColor: top.map(r => r.ortCons<25?'rgba(34,197,94,.7)':r.ortCons<35?'rgba(245,158,11,.7)':'rgba(239,68,68,.7)'),
+          borderWidth:1.2 }]
+      },
+      options: {
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales: {
+          x: { ticks:{ color:'#a8b8cc' }, grid:{ color:'rgba(255,255,255,0.05)' } },
+          y: { ticks:{ color:'#a8b8cc' }, grid:{ color:'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ANOMALİ TESPİT SEKMESİ
+// ─────────────────────────────────────────────────────────────────
+function renderVsAnomaliler() {
+  const anoms = []; // {tarih, plaka, sofor, litre, km, fiyat, problem}
+  let doubleFill = 0, kmBack = 0, highCons = 0;
+
+  vehicles.forEach(v => {
+    const entries = (fuelData[v.id] || []).slice().sort((a,b) => new Date(a.tarih) - new Date(b.tarih) || a.km - b.km);
+    entries.forEach((e, i) => {
+      const problems = [];
+      // 1) Km geri gitmiş
+      if (i > 0 && e.km < entries[i-1].km) { problems.push('Km sayacı geri gitti'); kmBack++; }
+      // 2) Aynı gün çift dolum
+      if (i > 0 && e.tarih === entries[i-1].tarih) { problems.push('Aynı gün çift dolum'); doubleFill++; }
+      // 3) Yüksek tüketim
+      if (i > 0 && entries[i-1].km < e.km) {
+        const cons = (e.litre / (e.km - entries[i-1].km)) * 100;
+        if (cons > 60) { problems.push('Yüksek tüketim ('+cons.toFixed(1)+' L/100km)'); highCons++; }
+      }
+      // 4) Anormal birim fiyat
+      if (e.fiyat > 0 && (e.fiyat < 5 || e.fiyat > 150)) problems.push('Anormal birim fiyat ('+e.fiyat+' ₺)');
+      // 5) Yüksek litre
+      if (e.litre > 500) problems.push('Yüksek litre ('+e.litre+' L)');
+      // 6) Mevcut flag
+      if (e.anomaliFlag && !problems.some(p => p.startsWith(e.anomaliFlag))) problems.push(e.anomaliFlag);
+
+      if (problems.length > 0) {
+        anoms.push({
+          tarih: e.tarih, plaka: v.plaka, sofor: e.sofor || v.sofor || '—',
+          litre: e.litre, km: e.km, fiyat: e.fiyat,
+          problem: problems.join(' · ')
+        });
+      }
+    });
+  });
+
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('anom-total', anoms.length);
+  set('anom-doublefill', doubleFill);
+  set('anom-kmback', kmBack);
+  set('anom-highcons', highCons);
+
+  const tbody = document.getElementById('vs-anom-body');
+  if (tbody) {
+    if (anoms.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--green);padding:18px;font-weight:600">✓ Tüm kayıtlar normal görünüyor. Herhangi bir anomali bulunamadı.</td></tr>`;
+    } else {
+      tbody.innerHTML = anoms
+        .sort((a,b) => new Date(b.tarih) - new Date(a.tarih))
+        .map(a => `<tr>
+          <td class="mono">${fmtDate(a.tarih)}</td>
+          <td style="font-weight:600">${a.plaka}</td>
+          <td>${a.sofor}</td>
+          <td class="mono" style="color:var(--accent)">${(a.litre||0).toLocaleString('tr-TR',{maximumFractionDigits:1})} L</td>
+          <td class="mono">${(a.km||0).toLocaleString('tr-TR')} km</td>
+          <td class="mono">${a.fiyat > 0 ? a.fiyat.toFixed(2) + ' ₺' : '—'}</td>
+          <td><span style="color:var(--red);font-weight:600;font-size:11.5px">⚠ ${a.problem}</span></td>
+        </tr>`).join('');
+    }
   }
 }
 
@@ -10927,7 +11526,7 @@ async function downloadMasrafExcel() {
   } catch(err){ console.error(err); showToast('Excel hatası: '+err.message, 'error'); }
 }
 
-/* ── Yakıt Excel ── */
+/* ── Yakıt Excel (detaylı, 5 sayfa) ── */
 async function downloadFuelExcel() {
   var allE=[];
   Object.entries(fuelData).forEach(function(kv){ kv[1].forEach(function(e){ allE.push(Object.assign({},e,{_vid:kv[0]})); }); });
@@ -10936,29 +11535,405 @@ async function downloadFuelExcel() {
   try {
     var XL = await _loadXLSX();
     var WB = XL.utils.book_new();
-    var pm={};vehicles.forEach(function(v){pm[v.id]=v.plaka||v.id;});
+    var pm={}, sofMap={};
+    vehicles.forEach(function(v){pm[v.id]=v.plaka||v.id; sofMap[v.id]=v.sofor||'';});
     var fmtD = function(d){ return d ? d.split('-').reverse().join('.') : '—'; };
-    var rows=[['Araç Plakası','Tarih','Km','Litre','Birim Fiyat (₺)','Toplam (₺)','Not']];
+
+    // --- Sayfa 1: Detaylı kayıtlar ---
+    var rows=[['Araç Plakası','Tarih','Şoför','Km','Litre','Birim Fiyat (₺)','Toplam (₺)','Yakıt Türü','İstasyon','Ödeme','Fiş No','Not','Anomali']];
     allE.sort(function(a,b){return (b.tarih||'').localeCompare(a.tarih||'');}).forEach(function(e){
       var t=(e.fiyat&&e.litre)?+(e.fiyat*e.litre).toFixed(2):'';
-      rows.push([pm[e._vid]||e._vid,fmtD(e.tarih),e.km||'',e.litre||'',e.fiyat||'',t,e.not||'']);
+      var sof = e.sofor || sofMap[e._vid] || '';
+      rows.push([
+        pm[e._vid]||e._vid, fmtD(e.tarih), sof, e.km||'', e.litre||'', e.fiyat||'', t,
+        e.yakitTuru||'', e.istasyon||'', e.odemeTipi||'', e.fisNo||'', e.not||'', e.anomaliFlag||''
+      ]);
     });
     var ws = XL.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:14},{wch:12},{wch:10},{wch:10},{wch:16},{wch:12},{wch:22}];
-    XL.utils.book_append_sheet(WB, ws, 'Yakıt Kayıtları');
-    var ar=[['Araç Plakası','Dolum Sayısı','Toplam Litre','Toplam Maliyet (₺)']];
+    ws['!cols'] = [{wch:14},{wch:12},{wch:18},{wch:10},{wch:10},{wch:14},{wch:14},{wch:12},{wch:18},{wch:14},{wch:14},{wch:22},{wch:20}];
+    ws['!autofilter'] = { ref: XL.utils.encode_range({s:{r:0,c:0}, e:{r:0, c:12}}) };
+    XL.utils.book_append_sheet(WB, ws, 'Detay Kayıtlar');
+
+    // --- Sayfa 2: Araç Özeti ---
+    var ar=[['Araç Plakası','Dolum Sayısı','Toplam Litre','Toplam Maliyet (₺)','Ort. ₺/L','İlk Km','Son Km','Toplam Km','Ort. L/100km']];
     Object.entries(fuelData).forEach(function(kv){
       var en=kv[1]; if(!en.length)return;
+      var sorted = en.slice().sort(function(a,b){ return a.km - b.km; });
       var lt=en.reduce(function(a,e){return a+(e.litre||0);},0);
       var tt=en.reduce(function(a,e){return a+(e.fiyat?e.fiyat*e.litre:0);},0);
-      ar.push([pm[kv[0]]||kv[0],en.length,+lt.toFixed(2),+tt.toFixed(2)]);
+      var prices=en.filter(function(e){return e.fiyat>0;}).map(function(e){return e.fiyat;});
+      var ortP = prices.length ? prices.reduce(function(a,b){return a+b;},0)/prices.length : 0;
+      var ilk=sorted[0].km, son=sorted[sorted.length-1].km;
+      var kmR=son-ilk;
+      var usedL = sorted.slice(1).reduce(function(a,e){return a+(e.litre||0);},0);
+      var avgC = (kmR > 0 && sorted.length >= 2) ? (usedL/kmR)*100 : null;
+      ar.push([pm[kv[0]]||kv[0], en.length, +lt.toFixed(2), +tt.toFixed(2), +ortP.toFixed(2), ilk, son, kmR, avgC !== null ? +avgC.toFixed(2) : '']);
     });
     var ws2 = XL.utils.aoa_to_sheet(ar);
-    ws2['!cols'] = [{wch:14},{wch:14},{wch:14},{wch:18}];
+    ws2['!cols'] = [{wch:14},{wch:14},{wch:14},{wch:18},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14}];
     XL.utils.book_append_sheet(WB, ws2, 'Araç Özeti');
+
+    // --- Sayfa 3: Şoför Özeti ---
+    var sofBy = {};
+    allE.forEach(function(e){
+      var key = (e.sofor || sofMap[e._vid] || '— Bilinmeyen —').trim() || '— Bilinmeyen —';
+      if(!sofBy[key]) sofBy[key] = {n:0, l:0, t:0, p:[]};
+      sofBy[key].n++;
+      sofBy[key].l += (e.litre||0);
+      sofBy[key].t += (e.litre||0)*(e.fiyat||0);
+      if (e.fiyat > 0) sofBy[key].p.push(e.fiyat);
+    });
+    var sofR = [['Şoför','Dolum','Toplam Litre','Toplam Maliyet (₺)','Ort. ₺/L']];
+    Object.entries(sofBy).sort(function(a,b){return b[1].t - a[1].t;}).forEach(function(kv){
+      var v = kv[1];
+      var op = v.p.length ? v.p.reduce(function(a,b){return a+b;},0)/v.p.length : 0;
+      sofR.push([kv[0], v.n, +v.l.toFixed(2), +v.t.toFixed(2), +op.toFixed(2)]);
+    });
+    var ws3 = XL.utils.aoa_to_sheet(sofR);
+    ws3['!cols'] = [{wch:22},{wch:10},{wch:14},{wch:18},{wch:12}];
+    XL.utils.book_append_sheet(WB, ws3, 'Şoför Özeti');
+
+    // --- Sayfa 4: İstasyon Özeti ---
+    var istBy = {};
+    allE.forEach(function(e){
+      var key = (e.istasyon || '').trim() || '— Belirtilmemiş —';
+      if(!istBy[key]) istBy[key] = {n:0, l:0, t:0, p:[]};
+      istBy[key].n++;
+      istBy[key].l += (e.litre||0);
+      istBy[key].t += (e.litre||0)*(e.fiyat||0);
+      if (e.fiyat > 0) istBy[key].p.push(e.fiyat);
+    });
+    var istR = [['İstasyon','Dolum','Toplam Litre','Toplam Maliyet (₺)','Ort. ₺/L']];
+    Object.entries(istBy).sort(function(a,b){return b[1].l - a[1].l;}).forEach(function(kv){
+      var v = kv[1];
+      var op = v.p.length ? v.p.reduce(function(a,b){return a+b;},0)/v.p.length : 0;
+      istR.push([kv[0], v.n, +v.l.toFixed(2), +v.t.toFixed(2), +op.toFixed(2)]);
+    });
+    var ws4 = XL.utils.aoa_to_sheet(istR);
+    ws4['!cols'] = [{wch:22},{wch:10},{wch:14},{wch:18},{wch:12}];
+    XL.utils.book_append_sheet(WB, ws4, 'İstasyon Özeti');
+
+    // --- Sayfa 5: Aylık Pivot ---
+    var ayBy = {};
+    allE.forEach(function(e){
+      if (!e.tarih) return;
+      var k = e.tarih.slice(0,7);
+      if (!ayBy[k]) ayBy[k] = {n:0, l:0, t:0};
+      ayBy[k].n++;
+      ayBy[k].l += (e.litre||0);
+      ayBy[k].t += (e.litre||0)*(e.fiyat||0);
+    });
+    var ayR = [['Ay','Dolum','Toplam Litre','Toplam Maliyet (₺)','Ort. ₺/L']];
+    Object.entries(ayBy).sort(function(a,b){return a[0].localeCompare(b[0]);}).forEach(function(kv){
+      var v = kv[1];
+      var op = v.l > 0 ? v.t/v.l : 0;
+      ayR.push([kv[0], v.n, +v.l.toFixed(2), +v.t.toFixed(2), +op.toFixed(2)]);
+    });
+    var ws5 = XL.utils.aoa_to_sheet(ayR);
+    ws5['!cols'] = [{wch:12},{wch:10},{wch:14},{wch:18},{wch:12}];
+    XL.utils.book_append_sheet(WB, ws5, 'Aylık Pivot');
+
+    // --- Sayfa 6: Anomaliler ---
+    var anomR = [['Araç','Tarih','Şoför','Litre','Km','₺/L','Sorun']];
+    vehicles.forEach(function(v){
+      var en = (fuelData[v.id]||[]).slice().sort(function(a,b){return new Date(a.tarih)-new Date(b.tarih) || a.km-b.km;});
+      en.forEach(function(e, i){
+        var problems = [];
+        if (i > 0 && e.km < en[i-1].km) problems.push('Km geri gitti');
+        if (i > 0 && e.tarih === en[i-1].tarih) problems.push('Aynı gün çift dolum');
+        if (i > 0 && en[i-1].km < e.km) {
+          var cons = (e.litre / (e.km - en[i-1].km)) * 100;
+          if (cons > 60) problems.push('Yüksek tüketim ' + cons.toFixed(1));
+        }
+        if (e.fiyat > 0 && (e.fiyat < 5 || e.fiyat > 150)) problems.push('Anormal fiyat');
+        if (e.litre > 500) problems.push('Yüksek litre');
+        if (problems.length) {
+          anomR.push([v.plaka, fmtD(e.tarih), e.sofor || v.sofor || '—', e.litre, e.km, e.fiyat||'', problems.join(' · ')]);
+        }
+      });
+    });
+    if (anomR.length === 1) anomR.push(['— Anomali bulunamadı —','','','','','','']);
+    var ws6 = XL.utils.aoa_to_sheet(anomR);
+    ws6['!cols'] = [{wch:14},{wch:12},{wch:18},{wch:10},{wch:12},{wch:10},{wch:32}];
+    XL.utils.book_append_sheet(WB, ws6, 'Anomaliler');
+
     XL.writeFile(WB, 'yakit_raporu_'+new Date().toISOString().slice(0,10)+'.xlsx');
-    showToast('Excel indirildi ✓', 'success');
+    showToast('Excel indirildi ✓ (6 sayfa)', 'success');
   } catch(err){ console.error(err); showToast('Excel hatası: '+err.message, 'error'); }
+}
+
+/* ── Aylık Yönetici Raporu (PDF) ── */
+async function downloadYoneticiRaporu() {
+  var ay = document.getElementById('yonetici-rapor-ay')?.value;
+  if (!ay) {
+    var d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    ay = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }
+  var allE = [];
+  Object.entries(fuelData).forEach(function(kv){
+    kv[1].forEach(function(e){
+      if (e.tarih && e.tarih.startsWith(ay)) allE.push(Object.assign({}, e, {_vid: kv[0]}));
+    });
+  });
+  if (!allE.length) { showToast('Seçili ayda (' + ay + ') yakıt kaydı yok.', 'error'); return; }
+  showToast('Yönetici raporu hazırlanıyor…', 'info');
+
+  var pm = {}, sofMap = {};
+  vehicles.forEach(function(v){ pm[v.id] = v.plaka || v.id; sofMap[v.id] = v.sofor || ''; });
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const PW = 210, PH = 297, ML = 14, MR = 14, CW = PW - ML - MR;
+  const C = {
+    bg:[8,12,16], surface:[17,24,32], surface2:[24,32,44], border:[37,47,62],
+    accent:[249,115,22], text:[226,234,243], text2:[168,184,204], muted:[82,96,112],
+    green:[34,197,94], yellow:[245,158,11], red:[239,68,68], blue:[56,189,248],
+    purple:[167,139,250], white:[255,255,255],
+  };
+  function _tr(s) {
+    if (!s) return '';
+    return String(s).replace(/ş/g,'s').replace(/Ş/g,'S').replace(/ğ/g,'g').replace(/Ğ/g,'G')
+      .replace(/ü/g,'u').replace(/Ü/g,'U').replace(/ö/g,'o').replace(/Ö/g,'O')
+      .replace(/ç/g,'c').replace(/Ç/g,'C').replace(/ı/g,'i').replace(/İ/g,'I');
+  }
+  function sf(c){doc.setFillColor(...c);} function st(c){doc.setTextColor(...c);}
+  function rc(x,y,w,h,s='F'){doc.rect(x,y,w,h,s);} function rr(x,y,w,h,r,s='F'){doc.roundedRect(x,y,w,h,r,r,s);}
+  let pg = 1;
+  function footer() {
+    st(C.muted); doc.setFontSize(8);
+    doc.text(_tr('Aylik Yonetici Raporu | ') + ay, ML, PH-8);
+    doc.text(_tr('Sayfa ') + pg, PW-MR, PH-8, {align:'right'});
+    doc.text(new Date().toLocaleDateString('tr-TR'), PW/2, PH-8, {align:'center'});
+  }
+  function newPage() { footer(); doc.addPage(); pg++; sf(C.bg); rc(0,0,PW,PH); }
+
+  // --- Kapak ---
+  sf(C.bg); rc(0,0,PW,PH);
+  sf(C.surface); rc(0,0,PW,55);
+  sf(C.purple); rc(0,0,4,55);
+  st(C.white); doc.setFontSize(22); doc.setFont('helvetica','bold');
+  doc.text(_tr('AYLIK YAKIT YONETICI RAPORU'), ML, 22);
+  doc.setFontSize(14); doc.setFont('helvetica','normal'); st(C.text2);
+  const [yy, mm] = ay.split('-');
+  const ayAd = new Date(yy, mm-1, 1).toLocaleDateString('tr-TR', {month:'long', year:'numeric'});
+  doc.text(_tr(ayAd), ML, 32);
+  sf(C.surface2); rr(PW-ML-62, 14, 62, 28, 3);
+  st(C.purple); doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.text(_tr('FIRMA SAHIBI ICIN'), PW-MR-31, 24, {align:'center'});
+  doc.setFontSize(7); st(C.muted); doc.setFont('helvetica','normal');
+  doc.text(_tr('Gizli / Ic Kullanim'), PW-MR-31, 32, {align:'center'});
+
+  let y = 68;
+
+  // --- Üst seviye KPI kartları ---
+  const totalL = allE.reduce(function(s,e){return s+(e.litre||0);},0);
+  const totalTL = allE.reduce(function(s,e){return s+(e.litre||0)*(e.fiyat||0);},0);
+  const prices = allE.filter(function(e){return e.fiyat>0;}).map(function(e){return e.fiyat;});
+  const ortP = prices.length ? prices.reduce(function(a,b){return a+b;},0)/prices.length : 0;
+  const dolumCnt = allE.length;
+
+  // Önceki ay
+  const prevD = new Date(parseInt(yy), parseInt(mm)-2, 1);
+  const prevK = prevD.getFullYear() + '-' + String(prevD.getMonth()+1).padStart(2,'0');
+  let prevTL = 0, prevL = 0;
+  Object.values(fuelData).forEach(function(arr){
+    arr.forEach(function(e){
+      if (e.tarih && e.tarih.startsWith(prevK)) {
+        prevTL += (e.litre||0)*(e.fiyat||0);
+        prevL += (e.litre||0);
+      }
+    });
+  });
+  const tlDelta = prevTL > 0 ? ((totalTL - prevTL) / prevTL * 100) : null;
+  const lDelta  = prevL > 0 ? ((totalL - prevL) / prevL * 100) : null;
+
+  const cards = [
+    {l:'Toplam Gider', v: totalTL.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' TL', c:C.green},
+    {l:'Toplam Litre', v: totalL.toLocaleString('tr-TR',{maximumFractionDigits:1}) + ' L', c:C.accent},
+    {l:'Dolum Sayisi', v: dolumCnt + ' dolum', c:C.blue},
+    {l:'Ort. Birim Fiyat', v: ortP > 0 ? ortP.toFixed(2) + ' TL/L' : '--', c:C.purple},
+  ];
+  const cW = (CW - 9) / 4;
+  cards.forEach(function(card, i) {
+    const cx = ML + i * (cW + 3);
+    sf(C.surface); rr(cx, y, cW, 26, 3);
+    sf(card.c); rr(cx, y, 3, 26, 1);
+    st(card.c); doc.setFontSize(12); doc.setFont('helvetica','bold');
+    doc.text(card.v, cx+cW/2, y+13, {align:'center'});
+    st(C.muted); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(_tr(card.l).toUpperCase(), cx+cW/2, y+20, {align:'center'});
+  });
+  y += 34;
+
+  // --- Önceki aya göre karşılaştırma ---
+  sf(C.surface); rr(ML, y, CW, 22, 3);
+  st(C.purple); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(_tr('Onceki Aya Gore Karsilastirma (' + prevK + ')'), ML+5, y+7);
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); st(C.text2);
+  let cmpTxt = '';
+  if (tlDelta !== null) {
+    const arr = tlDelta >= 0 ? '^' : 'v';
+    const clr = Math.abs(tlDelta) < 5 ? C.yellow : (tlDelta > 0 ? C.red : C.green);
+    st(clr); doc.setFont('helvetica','bold');
+    doc.text(_tr('Maliyet: ' + arr + ' %' + Math.abs(tlDelta).toFixed(1)) + '  (' + prevTL.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' TL -> ' + totalTL.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' TL)', ML+5, y+14);
+  } else {
+    st(C.muted); doc.text(_tr('Onceki ay verisi yok.'), ML+5, y+14);
+  }
+  if (lDelta !== null) {
+    const arr2 = lDelta >= 0 ? '^' : 'v';
+    const clr2 = Math.abs(lDelta) < 5 ? C.yellow : (lDelta > 0 ? C.red : C.green);
+    st(clr2); doc.setFont('helvetica','bold');
+    doc.text(_tr('Litre: ' + arr2 + ' %' + Math.abs(lDelta).toFixed(1)), ML+CW/2+5, y+14);
+  }
+  y += 28;
+
+  // --- En çok yakıt yakan 5 araç ---
+  const byVeh = {};
+  allE.forEach(function(e){
+    const k = pm[e._vid] || e._vid;
+    if (!byVeh[k]) byVeh[k] = {l:0, t:0, n:0};
+    byVeh[k].l += (e.litre||0);
+    byVeh[k].t += (e.litre||0)*(e.fiyat||0);
+    byVeh[k].n++;
+  });
+  const topVeh = Object.entries(byVeh).sort(function(a,b){return b[1].t - a[1].t;}).slice(0,5);
+  st(C.accent); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(_tr('En Cok Yakit Gideri Olan 5 Arac'), ML, y); y += 6;
+  sf(C.surface2); rc(ML, y, CW, 7);
+  st(C.muted); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+  doc.text(_tr('PLAKA'), ML+3, y+4.8);
+  doc.text(_tr('DOLUM'), ML+55, y+4.8);
+  doc.text(_tr('LITRE'), ML+80, y+4.8);
+  doc.text(_tr('MALIYET (TL)'), ML+115, y+4.8);
+  doc.text(_tr('PAY %'), ML+165, y+4.8);
+  y += 8;
+  topVeh.forEach(function(kv, i){
+    sf(i%2===0?C.surface:C.bg); rc(ML, y, CW, 7);
+    const pct = totalTL > 0 ? (kv[1].t / totalTL * 100).toFixed(1) : '0.0';
+    st(C.text); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(_tr(kv[0]), ML+3, y+4.8);
+    doc.setFont('helvetica','normal'); st(C.text2);
+    doc.text(String(kv[1].n), ML+55, y+4.8);
+    doc.text(kv[1].l.toLocaleString('tr-TR',{maximumFractionDigits:1}), ML+80, y+4.8);
+    st(C.green); doc.setFont('helvetica','bold');
+    doc.text(kv[1].t.toLocaleString('tr-TR',{maximumFractionDigits:0}), ML+115, y+4.8);
+    st(C.purple);
+    doc.text('%' + pct, ML+165, y+4.8);
+    y += 7;
+  });
+  y += 6;
+  if (y > PH - 100) { newPage(); y = 15; }
+
+  // --- En çok yakıt yakan 5 şoför ---
+  const bySof = {};
+  allE.forEach(function(e){
+    const k = (e.sofor || sofMap[e._vid] || '— Bilinmeyen —').trim() || '— Bilinmeyen —';
+    if (!bySof[k]) bySof[k] = {l:0, t:0, n:0};
+    bySof[k].l += (e.litre||0);
+    bySof[k].t += (e.litre||0)*(e.fiyat||0);
+    bySof[k].n++;
+  });
+  const topSof = Object.entries(bySof).sort(function(a,b){return b[1].t - a[1].t;}).slice(0,5);
+  st(C.purple); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(_tr('En Cok Yakit Gideri Olan 5 Sofor'), ML, y); y += 6;
+  sf(C.surface2); rc(ML, y, CW, 7);
+  st(C.muted); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+  doc.text(_tr('SOFOR'), ML+3, y+4.8);
+  doc.text(_tr('DOLUM'), ML+70, y+4.8);
+  doc.text(_tr('LITRE'), ML+95, y+4.8);
+  doc.text(_tr('MALIYET (TL)'), ML+125, y+4.8);
+  doc.text(_tr('PAY %'), ML+170, y+4.8);
+  y += 8;
+  topSof.forEach(function(kv, i){
+    sf(i%2===0?C.surface:C.bg); rc(ML, y, CW, 7);
+    const pct = totalTL > 0 ? (kv[1].t / totalTL * 100).toFixed(1) : '0.0';
+    st(C.text); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(_tr(kv[0]), ML+3, y+4.8);
+    doc.setFont('helvetica','normal'); st(C.text2);
+    doc.text(String(kv[1].n), ML+70, y+4.8);
+    doc.text(kv[1].l.toLocaleString('tr-TR',{maximumFractionDigits:1}), ML+95, y+4.8);
+    st(C.green); doc.setFont('helvetica','bold');
+    doc.text(kv[1].t.toLocaleString('tr-TR',{maximumFractionDigits:0}), ML+125, y+4.8);
+    st(C.purple);
+    doc.text('%' + pct, ML+170, y+4.8);
+    y += 7;
+  });
+  y += 6;
+
+  // --- Anomali Özeti ---
+  if (y > PH - 60) { newPage(); y = 15; }
+  st(C.red); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(_tr('Bu Ayda Tespit Edilen Anomaliler'), ML, y); y += 6;
+  const monthAnoms = [];
+  vehicles.forEach(function(v){
+    const en = (fuelData[v.id]||[]).slice().sort(function(a,b){return new Date(a.tarih)-new Date(b.tarih) || a.km-b.km;});
+    en.forEach(function(e, i){
+      if (!e.tarih || !e.tarih.startsWith(ay)) return;
+      const problems = [];
+      if (i > 0 && e.km < en[i-1].km) problems.push('Km geri gitti');
+      if (i > 0 && e.tarih === en[i-1].tarih) problems.push('Ayni gun cift dolum');
+      if (i > 0 && en[i-1].km < e.km) {
+        const cons = (e.litre / (e.km - en[i-1].km)) * 100;
+        if (cons > 60) problems.push('Yuksek tuketim ' + cons.toFixed(1));
+      }
+      if (e.fiyat > 0 && (e.fiyat < 5 || e.fiyat > 150)) problems.push('Anormal fiyat');
+      if (e.litre > 500) problems.push('Yuksek litre');
+      if (problems.length) monthAnoms.push({plaka: v.plaka, tarih: e.tarih, sofor: e.sofor || v.sofor || '—', problem: problems.join(' · ')});
+    });
+  });
+  if (monthAnoms.length === 0) {
+    sf(C.surface); rr(ML, y, CW, 16, 3);
+    st(C.green); doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text(_tr('✓ Bu ayda anomali tespit edilmedi. Tum dolum kayitlari normal goruyor.'), ML+5, y+10);
+    y += 20;
+  } else {
+    sf(C.surface2); rc(ML, y, CW, 7);
+    st(C.muted); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text(_tr('TARIH'), ML+3, y+4.8);
+    doc.text(_tr('PLAKA'), ML+28, y+4.8);
+    doc.text(_tr('SOFOR'), ML+60, y+4.8);
+    doc.text(_tr('SORUN'), ML+105, y+4.8);
+    y += 8;
+    monthAnoms.slice(0, 20).forEach(function(a, i){
+      if (y > PH - 18) { newPage(); y = 15; }
+      sf(i%2===0?C.surface:C.bg); rc(ML, y, CW, 6.5);
+      st(C.text2); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(_tr(a.tarih.split('-').reverse().join('.')), ML+3, y+4.5);
+      doc.setFont('helvetica','bold');
+      doc.text(_tr(a.plaka), ML+28, y+4.5);
+      doc.setFont('helvetica','normal'); st(C.muted);
+      doc.text(_tr(a.sofor).slice(0,18), ML+60, y+4.5);
+      st(C.red);
+      doc.text(_tr(a.problem).slice(0,60), ML+105, y+4.5);
+      y += 6.5;
+    });
+    if (monthAnoms.length > 20) {
+      st(C.muted); doc.setFontSize(8); doc.setFont('helvetica','italic');
+      doc.text(_tr('(... ve ' + (monthAnoms.length - 20) + ' anomali daha)'), ML, y+5);
+      y += 10;
+    }
+  }
+
+  // --- Yönetici Yorumları ---
+  if (y > PH - 50) { newPage(); y = 15; }
+  y += 4;
+  st(C.accent); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(_tr('Ozet ve Oneriler'), ML, y); y += 6;
+  sf(C.surface); rr(ML, y, CW, 34, 3);
+  st(C.text2); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  let suggestion = '';
+  if (tlDelta !== null && tlDelta > 10) suggestion += '• Toplam gider onceki aya gore %' + tlDelta.toFixed(1) + ' artti. Fiyat artisi veya fazladan dolum kontrol edilmeli.  \n';
+  if (tlDelta !== null && tlDelta < -10) suggestion += '• Toplam gider onceki aya gore %' + Math.abs(tlDelta).toFixed(1) + ' dustu. Iyi yonde ilerleme.  \n';
+  if (monthAnoms.length > 0) suggestion += '• ' + monthAnoms.length + ' anomali tespit edildi; ilgili soforlerle gorusulmeli.  \n';
+  if (topVeh.length > 0) suggestion += '• En yuksek gider ' + topVeh[0][0] + ' aracinda (' + topVeh[0][1].t.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' TL).  \n';
+  if (!suggestion) suggestion = '• Bu ay icin otomatik oneri bulunmadi. Manuel inceleme tavsiye edilir.';
+  const lines = doc.splitTextToSize(_tr(suggestion), CW - 10);
+  doc.text(lines, ML+5, y+7);
+
+  footer();
+  doc.save('yonetici_raporu_' + ay + '.pdf');
+  showToast('Yönetici raporu indirildi ✓', 'success');
 }
 
 /* ── Bakım/Arıza Excel ── */
