@@ -825,8 +825,11 @@ async function applyUpdate(u){Object.assign(isEmri,u);saveLocal();render();await
 /* ─── MÜŞTERİ LİNKİ ─── */
 function msteriLinkKopyala(){
   if(!isEmriId)return;
-  const tok=btoa('mtr_'+isEmriId+'_'+Date.now()),url=window.location.origin+'/musteri_takip.html?m='+tok;
-  try{localStorage.setItem('mtr_token_'+tok,String(isEmriId));}catch{}
+  // Daima DB id kullan (negatif local id'ler geçersizdir)
+  const dbId = (isEmri&&isEmri._dbId&&isEmri._dbId>0)?isEmri._dbId:(isEmri&&isEmri.id&&isEmri.id>0)?isEmri.id:null;
+  if(!dbId){showToast('İş emri henüz kaydedilmedi, link oluşturulamadı.','error');return;}
+  const tok=btoa('mtr_'+dbId+'_'+Date.now()),url=window.location.origin+'/musteri_takip.html?m='+tok;
+  try{localStorage.setItem('mtr_token_'+tok,String(dbId));}catch{}
   if(navigator.share)navigator.share({title:'Sevkiyat Takip',url}).catch(()=>fbCopy(url));
   else fbCopy(url);
 }
