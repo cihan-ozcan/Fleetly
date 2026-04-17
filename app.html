@@ -3567,6 +3567,11 @@
       <div id="ops-drawer-durum-row" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;"></div>
       <div id="ops-drawer-detaylar"></div>
     </div>
+    <!-- Yakıt & Maliyet -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Yakıt & Maliyet</div>
+      <div id="ops-drawer-yakit-card"></div>
+    </div>
     <!-- Zaman çizelgesi -->
     <div class="drawer-section">
       <div class="drawer-section-title">Zaman Çizelgesi</div>
@@ -3744,6 +3749,25 @@
         <div class="srm-group">
           <label>Boşaltma Zamanı</label>
           <input id="ops-m-boslama-zaman" class="srm-inp" type="datetime-local" />
+        </div>
+
+        <!-- ── KM SAYACI (yakıt-iş eşleştirme için) ── -->
+        <div class="srm-group">
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span>🧭 Başlangıç Km</span>
+            <span style="font-size:10px;color:var(--muted);font-weight:400;">Araç sayacı</span>
+          </label>
+          <input id="ops-m-bas-km" class="srm-inp" type="number" min="0" step="1" placeholder="154230" oninput="_opsKmAutoHint()" />
+        </div>
+        <div class="srm-group">
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span>🏁 Bitiş Km</span>
+            <span style="font-size:10px;color:var(--muted);font-weight:400;">Teslim sonrası sayaç</span>
+          </label>
+          <input id="ops-m-bit-km" class="srm-inp" type="number" min="0" step="1" placeholder="154312" oninput="_opsKmAutoHint()" />
+        </div>
+        <div class="srm-group full" id="ops-km-hint" style="display:none;font-size:11px;color:var(--blue);background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:8px;padding:8px 12px;">
+          <!-- canlı km / yakıt tahmini buraya yazılır -->
         </div>
 
         <!-- ── NOTLAR ── -->
@@ -4541,7 +4565,9 @@ function exportCSV() { crmExportCSV(); }
             <div class="srm-group"><label>Sürücü</label><input class="srm-inp" type="text" id="f-sefer-sofor" placeholder="Ad Soyad"/></div>
             <div class="srm-group"><label>Kalkış Noktası *</label><input class="srm-inp" type="text" id="f-sefer-kalkis" placeholder="Ambarlı"/></div>
             <div class="srm-group"><label>Varış Noktası *</label><input class="srm-inp" type="text" id="f-sefer-varis" placeholder="Çatalca"/></div>
-            <div class="srm-group"><label>Mesafe (km)</label><input class="srm-inp" type="number" id="f-sefer-km" placeholder="82" min="0"/></div>
+            <div class="srm-group"><label>Mesafe (km)</label><input class="srm-inp" type="number" id="f-sefer-km" placeholder="82" min="0" oninput="_seferKmAutoCalc()"/></div>
+            <div class="srm-group"><label>Başlangıç Km <span style="font-size:10px;color:var(--muted);font-weight:400;">(sayaç)</span></label><input class="srm-inp" type="number" id="f-sefer-bas-km" placeholder="154230" min="0" oninput="_seferKmAutoCalc()"/></div>
+            <div class="srm-group"><label>Bitiş Km <span style="font-size:10px;color:var(--muted);font-weight:400;">(sayaç)</span></label><input class="srm-inp" type="number" id="f-sefer-bit-km" placeholder="154312" min="0" oninput="_seferKmAutoCalc()"/></div>
             <div class="srm-group"><label>Yük / Müşteri</label><input class="srm-inp" type="text" id="f-sefer-yuk" placeholder="Mega Metal A.Ş."/></div>
             <div class="srm-group"><label>Sefer Ücreti (TL)</label><input class="srm-inp" type="number" id="f-sefer-ucret" placeholder="0" min="0" step="0.01"/></div>
             <div class="srm-group full"><label>Notlar</label><input class="srm-inp" type="text" id="f-sefer-not" placeholder="Serbest not…"/></div>
@@ -4682,6 +4708,7 @@ function exportCSV() { crmExportCSV(); }
         <button class="vs-tab" id="vs-tab-trend" onclick="switchVsTab('trend')">📈 Trend</button>
         <button class="vs-tab" id="vs-tab-sofor" onclick="switchVsTab('sofor')">👤 Şoför Analizi</button>
         <button class="vs-tab" id="vs-tab-anomali" onclick="switchVsTab('anomali')">⚠️ Anomaliler</button>
+        <button class="vs-tab" id="vs-tab-sefer" onclick="switchVsTab('sefer')">🗺 Sefer Analizi</button>
         <button class="vs-tab" id="vs-tab-ayarlar" onclick="switchVsTab('ayarlar')">⚙️ Yönetim</button>
       </div>
 
@@ -4821,6 +4848,38 @@ function exportCSV() { crmExportCSV(); }
                 </tr>
               </thead>
               <tbody id="vs-anom-body"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:14px">Veri bekleniyor…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEKME: Sefer Analizi -->
+      <div class="vs-tab-panel" id="vspanel-sefer">
+        <div class="vs-summary-panel">
+          <div class="vs-summary-title" style="color:#22d3ee">🗺 Sefer Başına Yakıt & Kâr Analizi</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+            Seferlerin <strong>Başlangıç Km</strong> / <strong>Bitiş Km</strong> alanlarına göre o aralıkta yapılan yakıt dolumları eşleştirilir. Böylece her sefer için gerçek yakıt maliyeti ve net kâr hesaplanır.
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+            <div class="vs-summary-stat"><div class="vs-summary-val" style="color:var(--blue)" id="sef-toplam">—</div><div class="vs-summary-lbl">Toplam Sefer</div></div>
+            <div class="vs-summary-stat"><div class="vs-summary-val" style="color:var(--accent)" id="sef-km">—</div><div class="vs-summary-lbl">Toplam Km</div></div>
+            <div class="vs-summary-stat"><div class="vs-summary-val" style="color:#22d3ee" id="sef-yakit">—</div><div class="vs-summary-lbl">Yakıt Maliyeti</div></div>
+            <div class="vs-summary-stat"><div class="vs-summary-val" style="color:var(--green)" id="sef-kar">—</div><div class="vs-summary-lbl">Net Kâr</div></div>
+          </div>
+          <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="fuel-add-btn" style="font-size:11px;padding:6px 12px;box-shadow:none;background:linear-gradient(135deg,#f59e0b,#f97316)" onclick="downloadIsKarlilikPDF()">⬇ İş Kârlılık PDF</button>
+            <button class="fuel-add-btn" style="font-size:11px;padding:6px 12px;box-shadow:none;background:linear-gradient(135deg,#22c55e,#10b981)" onclick="downloadIsKarlilikExcel()">⬇ Excel Detay</button>
+          </div>
+          <div style="overflow:auto">
+            <table class="fuel-table" id="vs-sefer-table" style="min-width:1000px">
+              <thead>
+                <tr>
+                  <th>Tarih</th><th>Araç</th><th>Şoför</th><th>Rota</th>
+                  <th>Km</th><th>Litre</th><th>Yakıt ₺</th><th>₺/km</th>
+                  <th>Gelir</th><th>Net Kâr</th><th>Marj</th>
+                </tr>
+              </thead>
+              <tbody id="vs-sefer-body"><tr><td colspan="11" style="text-align:center;color:var(--muted);padding:14px">Veri bekleniyor…</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -6904,6 +6963,53 @@ function detectEntryAnomaly(newE, entries) {
   return '';
 }
 
+/* ══════════════════════════════════════════════════════════════
+   KM ARALIĞI → YAKIT HESAPLAMA
+   Bir aracın belirli bir km aralığında yaptığı yakıt dolumlarını
+   toplar. Sefer / iş emri başına yakıt maliyetini bulmak için
+   kullanılır.
+   Dönüş: { litre, tl, km, count, entries }
+══════════════════════════════════════════════════════════════ */
+function calcFuelForKmRange(vehicleId, startKm, endKm) {
+  const empty = { litre: 0, tl: 0, km: 0, count: 0, entries: [] };
+  if (!vehicleId) return empty;
+  const s = parseFloat(startKm), e = parseFloat(endKm);
+  if (!isFinite(s) || !isFinite(e) || e <= s) return empty;
+  const arr = (fuelData && fuelData[vehicleId]) || [];
+  // startKm < y.km <= endKm (sefer sırasında yapılan dolum)
+  const hits = arr.filter(x => {
+    const k = parseFloat(x.km);
+    return isFinite(k) && k > s && k <= e;
+  });
+  const litre = hits.reduce((a, x) => a + (parseFloat(x.litre)||0), 0);
+  const tl    = hits.reduce((a, x) => a + (parseFloat(x.fiyat)||0), 0);
+  return {
+    litre: +litre.toFixed(2),
+    tl   : +tl.toFixed(2),
+    km   : +(e - s).toFixed(2),
+    count: hits.length,
+    entries: hits,
+  };
+}
+
+/* Aynı aracın iki ardışık dolumu arasındaki tüketimi hesaplar.
+   Seferin baslangic_km/bitis_km yoksa bu fallback'i kullanabiliriz:
+   TL/km * sefer.km yaklaşık maliyet. */
+function calcAvgTLPerKm(vehicleId) {
+  const arr = (fuelData && fuelData[vehicleId]) || [];
+  if (arr.length < 2) return 0;
+  const sorted = arr.slice().sort((a,b) => (a.km||0) - (b.km||0));
+  let totalKm = 0, totalTl = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const d = (sorted[i].km||0) - (sorted[i-1].km||0);
+    if (d > 0 && d < 5000) { // anomali filtresi
+      totalKm += d;
+      totalTl += (sorted[i].fiyat||0);
+    }
+  }
+  return totalKm > 0 ? +(totalTl / totalKm).toFixed(2) : 0;
+}
+
 // Yakıt kaydı sil
 function deleteFuelEntry(vehicleId, entryId) {
   if (!fuelData[vehicleId]) return;
@@ -7134,7 +7240,7 @@ function openFuelSummary() {
 
 // Sekme geçişi
 function switchVsTab(name) {
-  ['araclar','ozet','trend','sofor','anomali','ayarlar'].forEach(t => {
+  ['araclar','ozet','trend','sofor','anomali','sefer','ayarlar'].forEach(t => {
     document.getElementById('vs-tab-' + t)?.classList.toggle('active', t === name);
     document.getElementById('vspanel-' + t)?.classList.toggle('active', t === name);
   });
@@ -7142,6 +7248,7 @@ function switchVsTab(name) {
   if (name === 'trend')   renderVsTrendCharts();
   if (name === 'sofor')   renderVsSoforAnalizi();
   if (name === 'anomali') renderVsAnomaliler();
+  if (name === 'sefer')   renderVsSeferAnalizi();
   if (name === 'ayarlar') renderVsManagement();
 }
 
@@ -7588,6 +7695,93 @@ function renderVsAnomaliler() {
 function setVsSummaryMonth(m) {
   vsSummaryMonth = m;
   renderVsSummary();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SEFER ANALİZİ — Her sefer için yakıt ve kâr hesapla
+   ══════════════════════════════════════════════════════════ */
+function _computeSeferYakitRows() {
+  // Hem seferData hem isEmirleri'yi birleştir. Öncelik seferData'da,
+  // iş emri ile bağlı seferler aynı satıra düşer.
+  const rows = [];
+  if (typeof seferData !== 'undefined' && Array.isArray(seferData)) {
+    seferData.forEach(s => {
+      const veh = vehicles.find(v => v.id === s.aracId || v.plaka === s.plaka);
+      const hasKmRange = (s.baslangic_km != null && s.bitis_km != null && s.bitis_km > s.baslangic_km);
+      const km = hasKmRange ? (s.bitis_km - s.baslangic_km) : (s.km || 0);
+      let litre = 0, tl = 0, count = 0, note = '';
+      if (veh && hasKmRange) {
+        const r = calcFuelForKmRange(veh.id, s.baslangic_km, s.bitis_km);
+        litre = r.litre; tl = r.tl; count = r.count;
+      } else if (s.yakit_tutar != null) {
+        litre = +(s.yakit_litre || 0); tl = +s.yakit_tutar; note = 'cache';
+      } else if (veh && km > 0) {
+        const tlkm = calcAvgTLPerKm(veh.id);
+        if (tlkm > 0) { tl = +(tlkm * km).toFixed(0); note = 'tahmin'; }
+      }
+      const ucret = +(s.ucret || 0);
+      const kar   = ucret > 0 ? ucret - tl : null;
+      const marj  = ucret > 0 ? (kar / ucret) * 100 : null;
+      rows.push({
+        kaynak: 'sefer',
+        id: s.id,
+        tarih: s.tarih,
+        plaka: s.plaka || veh?.plaka || '',
+        sofor: s.sofor || '',
+        rota : (s.kalkis || '') + ' → ' + (s.varis || ''),
+        km, litre, tl, ucret, kar, marj, count, note,
+      });
+    });
+  }
+  return rows;
+}
+
+function renderVsSeferAnalizi() {
+  const rows = _computeSeferYakitRows();
+
+  // Özet kartları
+  const totSefer = rows.length;
+  const totKm    = rows.reduce((a, r) => a + (r.km || 0), 0);
+  const totTl    = rows.reduce((a, r) => a + (r.tl || 0), 0);
+  const totCiro  = rows.reduce((a, r) => a + (r.ucret || 0), 0);
+  const totKar   = totCiro > 0 ? totCiro - totTl : 0;
+
+  const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setTxt('sef-toplam', totSefer ? totSefer.toLocaleString('tr-TR') : '—');
+  setTxt('sef-km',     totKm    ? totKm.toFixed(0).toLocaleString('tr-TR') + ' km' : '—');
+  setTxt('sef-yakit',  totTl    ? '₺' + totTl.toLocaleString('tr-TR') : '—');
+  setTxt('sef-kar',    totCiro  ? '₺' + totKar.toLocaleString('tr-TR') : '—');
+  const karEl = document.getElementById('sef-kar');
+  if (karEl) karEl.style.color = (totKar >= 0) ? 'var(--green)' : 'var(--red)';
+
+  // Tablo
+  const body = document.getElementById('vs-sefer-body');
+  if (!body) return;
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:14px">Henüz sefer kaydı yok.</td></tr>';
+    return;
+  }
+  const sorted = rows.slice().sort((a,b) => (b.tarih||'').localeCompare(a.tarih||''));
+  body.innerHTML = sorted.map(r => {
+    const karTxt  = (r.kar == null) ? '—' : '₺' + r.kar.toLocaleString('tr-TR');
+    const marjTxt = (r.marj == null) ? '—' : ('%' + r.marj.toFixed(1));
+    const karClr  = (r.kar == null) ? 'var(--muted)' : (r.kar >= 0 ? 'var(--green)' : 'var(--red)');
+    const tlkm    = (r.km > 0 && r.tl > 0) ? '₺' + (r.tl / r.km).toFixed(2) : '—';
+    const noteTag = r.note ? `<span style="font-size:9.5px;color:var(--muted);margin-left:4px;">(${r.note})</span>` : '';
+    return `<tr>
+      <td style="font-family:var(--font-mono);font-size:11.5px;">${r.tarih || '—'}</td>
+      <td style="font-weight:700;">${r.plaka || '—'}</td>
+      <td>${r.sofor || '—'}</td>
+      <td style="font-size:11.5px;">${r.rota || '—'}</td>
+      <td style="font-family:var(--font-mono);">${r.km ? r.km.toFixed(0) : '—'}</td>
+      <td style="font-family:var(--font-mono);">${r.litre ? r.litre.toLocaleString('tr-TR') : '—'}</td>
+      <td style="font-family:var(--font-mono);color:var(--accent);">${r.tl ? '₺' + r.tl.toLocaleString('tr-TR') + noteTag : '—'}</td>
+      <td style="font-family:var(--font-mono);">${tlkm}</td>
+      <td style="font-family:var(--font-mono);color:var(--blue);">${r.ucret ? '₺' + r.ucret.toLocaleString('tr-TR') : '—'}</td>
+      <td style="font-family:var(--font-mono);color:${karClr};font-weight:700;">${karTxt}</td>
+      <td style="font-family:var(--font-mono);color:${karClr};">${marjTxt}</td>
+    </tr>`;
+  }).join('');
 }
 
 // Yönetim sekmesini render et
@@ -10716,6 +10910,10 @@ async function loadSeferData() {
       kalkis  : r.kalkis  || '',
       varis   : r.varis   || '',
       km      : r.km      || 0,
+      baslangic_km: (r.baslangic_km !== null && r.baslangic_km !== undefined) ? r.baslangic_km : null,
+      bitis_km    : (r.bitis_km     !== null && r.bitis_km     !== undefined) ? r.bitis_km     : null,
+      yakit_litre : (r.yakit_litre  !== null && r.yakit_litre  !== undefined) ? r.yakit_litre  : null,
+      yakit_tutar : (r.yakit_tutar  !== null && r.yakit_tutar  !== undefined) ? r.yakit_tutar  : null,
       yuk     : r.yuk     || '',
       ucret   : r.ucret   || 0,
       not     : r.notlar  || '',
@@ -10748,6 +10946,10 @@ async function saveSeferEntryCloud(entry) {
       kalkis  : entry.kalkis,
       varis   : entry.varis,
       km      : entry.km      || null,
+      baslangic_km: (entry.baslangic_km !== null && entry.baslangic_km !== undefined) ? entry.baslangic_km : null,
+      bitis_km    : (entry.bitis_km     !== null && entry.bitis_km     !== undefined) ? entry.bitis_km     : null,
+      yakit_litre : (entry.yakit_litre  !== null && entry.yakit_litre  !== undefined) ? entry.yakit_litre  : null,
+      yakit_tutar : (entry.yakit_tutar  !== null && entry.yakit_tutar  !== undefined) ? entry.yakit_tutar  : null,
       yuk     : entry.yuk     || null,
       ucret   : entry.ucret   || null,
       notlar  : entry.not     || null,
@@ -10803,7 +11005,9 @@ function saveSeferEntry() {
   const sofor   = document.getElementById('f-sefer-sofor').value.trim();
   const kalkis  = document.getElementById('f-sefer-kalkis').value.trim();
   const varis   = document.getElementById('f-sefer-varis').value.trim();
-  const km      = parseFloat(document.getElementById('f-sefer-km').value)||0;
+  let   km      = parseFloat(document.getElementById('f-sefer-km').value)||0;
+  const basKm   = parseFloat(document.getElementById('f-sefer-bas-km')?.value)||null;
+  const bitKm   = parseFloat(document.getElementById('f-sefer-bit-km')?.value)||null;
   const yuk     = document.getElementById('f-sefer-yuk').value.trim();
   const ucret   = parseFloat(document.getElementById('f-sefer-ucret').value)||0;
   const not     = document.getElementById('f-sefer-not').value.trim();
@@ -10811,8 +11015,21 @@ function saveSeferEntry() {
 
   if(!tarih||!kalkis||!varis){ showToast('Tarih, Kalkış ve Varış zorunludur.','error'); return; }
 
+  // Başlangıç/Bitiş km doluysa sefer mesafesini otomatik hesapla
+  if (basKm !== null && bitKm !== null) {
+    if (bitKm <= basKm) { showToast('Bitiş km, başlangıç km\'den büyük olmalı.','error'); return; }
+    if (!km) km = +(bitKm - basKm).toFixed(2);
+  }
+
+  // Km aralığından yakıt maliyetini hesapla (cache için)
+  let yakitLitre = null, yakitTutar = null;
+  if (aracId && basKm !== null && bitKm !== null) {
+    const r = calcFuelForKmRange(aracId, basKm, bitKm);
+    if (r.count > 0) { yakitLitre = r.litre; yakitTutar = r.tl; }
+  }
+
   const veh = vehicles.find(v=>v.id===aracId);
-  const entry = { id: eid||uid(), tarih, aracId, plaka: veh?.plaka||'', sofor: sofor||(veh?.sofor||''), kalkis, varis, km, yuk, ucret, not };
+  const entry = { id: eid||uid(), tarih, aracId, plaka: veh?.plaka||'', sofor: sofor||(veh?.sofor||''), kalkis, varis, km, baslangic_km: basKm, bitis_km: bitKm, yakit_litre: yakitLitre, yakit_tutar: yakitTutar, yuk, ucret, not };
 
   if(eid) { const i=seferData.findIndex(s=>s.id===eid); if(i!==-1) seferData[i]=entry; }
   else seferData.push(entry);
@@ -10827,11 +11044,26 @@ function saveSeferEntry() {
 
   document.getElementById('f-sefer-id').value='';
   // formu sıfırla
-  ['f-sefer-arac','f-sefer-sofor','f-sefer-kalkis','f-sefer-varis','f-sefer-km','f-sefer-yuk','f-sefer-ucret','f-sefer-not'].forEach(id=>{
+  ['f-sefer-arac','f-sefer-sofor','f-sefer-kalkis','f-sefer-varis','f-sefer-km','f-sefer-bas-km','f-sefer-bit-km','f-sefer-yuk','f-sefer-ucret','f-sefer-not'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   showToast('Sefer kaydedildi ✓','success');
   switchSeferTab('liste');
+}
+
+/* Başlangıç / Bitiş km girildiğinde mesafeyi otomatik hesapla */
+function _seferKmAutoCalc() {
+  const basEl = document.getElementById('f-sefer-bas-km');
+  const bitEl = document.getElementById('f-sefer-bit-km');
+  const kmEl  = document.getElementById('f-sefer-km');
+  if (!basEl || !bitEl || !kmEl) return;
+  const b = parseFloat(basEl.value), e = parseFloat(bitEl.value);
+  if (isFinite(b) && isFinite(e) && e > b) {
+    // Kullanıcı km'yi manuel girmediyse (veya boşsa) doldur
+    if (!kmEl.value || Math.abs(parseFloat(kmEl.value) - (e - b)) < 0.01) {
+      kmEl.value = (e - b).toFixed(0);
+    }
+  }
 }
 
 function deleteSeferEntry(id) {
@@ -11660,6 +11892,258 @@ async function downloadFuelExcel() {
     XL.writeFile(WB, 'yakit_raporu_'+new Date().toISOString().slice(0,10)+'.xlsx');
     showToast('Excel indirildi ✓ (6 sayfa)', 'success');
   } catch(err){ console.error(err); showToast('Excel hatası: '+err.message, 'error'); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   İŞ KÂRLILIK PDF — Sefer bazlı gelir - yakıt = net kâr
+══════════════════════════════════════════════════════════════ */
+async function downloadIsKarlilikPDF() {
+  try {
+    if (typeof jspdf === 'undefined') { showToast('PDF kütüphanesi yüklenemedi', 'error'); return; }
+    const { jsPDF } = jspdf;
+    const rows = _computeSeferYakitRows();
+    if (!rows.length) { showToast('Kayıtlı sefer yok', 'error'); return; }
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const W = doc.internal.pageSize.getWidth();
+
+    // Başlık bandı
+    doc.setFillColor(232, 82, 26);
+    doc.rect(0, 0, W, 60, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(18);
+    doc.text('IS KARLILIK RAPORU', 30, 28);
+    doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.text('Sefer bazli gelir - yakit maliyeti = net kar', 30, 46);
+    doc.setFontSize(9);
+    const today = new Date().toLocaleDateString('tr-TR');
+    doc.text(today, W - 30, 28, { align: 'right' });
+    doc.text((currentFirmaAdi || 'Fleetly') + '', W - 30, 46, { align: 'right' });
+
+    // KPI satırı
+    const totSefer = rows.length;
+    const totKm    = rows.reduce((a,r)=>a+(r.km||0), 0);
+    const totLt    = rows.reduce((a,r)=>a+(r.litre||0), 0);
+    const totTl    = rows.reduce((a,r)=>a+(r.tl||0), 0);
+    const totCiro  = rows.reduce((a,r)=>a+(r.ucret||0), 0);
+    const totKar   = totCiro > 0 ? totCiro - totTl : 0;
+    const marj     = totCiro > 0 ? (totKar / totCiro) * 100 : 0;
+
+    let y = 85;
+    doc.setTextColor(15,23,42);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('OZET GOSTERGELER', 30, y);
+    y += 10;
+    const kpis = [
+      { lbl: 'Toplam Sefer', val: totSefer.toString(), color: [59,130,246] },
+      { lbl: 'Toplam Km',    val: totKm.toFixed(0) + ' km', color: [232,82,26] },
+      { lbl: 'Yakit (L)',    val: totLt.toFixed(0) + ' L', color: [34,211,238] },
+      { lbl: 'Yakit Maliyeti', val: 'TL ' + totTl.toLocaleString('tr-TR'), color: [245,158,11] },
+      { lbl: 'Toplam Gelir', val: 'TL ' + totCiro.toLocaleString('tr-TR'), color: [59,130,246] },
+      { lbl: 'Net Kar',      val: 'TL ' + totKar.toLocaleString('tr-TR'), color: totKar >= 0 ? [34,197,94] : [239,68,68] },
+      { lbl: 'Marj',         val: '%' + marj.toFixed(1), color: totKar >= 0 ? [34,197,94] : [239,68,68] },
+    ];
+    const kpiW = (W - 60) / kpis.length;
+    kpis.forEach((k, i) => {
+      const x = 30 + i * kpiW;
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(x, y, kpiW - 8, 48, 5, 5, 'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.setTextColor(100,116,139);
+      doc.text(k.lbl.toUpperCase(), x + 8, y + 14);
+      doc.setFont('helvetica','bold'); doc.setFontSize(13);
+      doc.setTextColor(k.color[0], k.color[1], k.color[2]);
+      doc.text(k.val, x + 8, y + 34);
+    });
+    y += 60;
+
+    // Detay tablo
+    doc.setTextColor(15,23,42);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('SEFER DETAYLARI', 30, y);
+    y += 8;
+
+    const headers = ['Tarih','Arac','Sofor','Rota','Km','Litre','Yakit TL','TL/km','Gelir','Net Kar','Marj'];
+    const cw      = [55, 60, 70, 175, 40, 45, 65, 45, 65, 70, 45];
+    const startX  = 30;
+    doc.setFillColor(232, 82, 26);
+    doc.rect(startX, y, cw.reduce((a,b)=>a+b,0), 20, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9);
+    let cx = startX + 5;
+    headers.forEach((h, i) => { doc.text(h, cx, y + 13); cx += cw[i]; });
+    y += 20;
+
+    const sorted = rows.slice().sort((a,b) => (b.tarih||'').localeCompare(a.tarih||''));
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,41,59);
+    sorted.forEach((r, idx) => {
+      if (y > 540) {
+        doc.addPage();
+        y = 40;
+        doc.setFillColor(232, 82, 26);
+        doc.rect(startX, y, cw.reduce((a,b)=>a+b,0), 20, 'F');
+        doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+        let cxh = startX + 5;
+        headers.forEach((h, i) => { doc.text(h, cxh, y + 13); cxh += cw[i]; });
+        y += 20;
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,41,59);
+      }
+      if (idx % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(startX, y, cw.reduce((a,b)=>a+b,0), 18, 'F');
+      }
+      const cells = [
+        r.tarih || '-',
+        r.plaka || '-',
+        (r.sofor || '-').slice(0, 15),
+        (r.rota  || '-').slice(0, 40),
+        r.km ? r.km.toFixed(0) : '-',
+        r.litre ? r.litre.toFixed(1) : '-',
+        r.tl ? r.tl.toLocaleString('tr-TR') : '-',
+        (r.km > 0 && r.tl > 0) ? (r.tl / r.km).toFixed(2) : '-',
+        r.ucret ? r.ucret.toLocaleString('tr-TR') : '-',
+        (r.kar == null) ? '-' : r.kar.toLocaleString('tr-TR'),
+        (r.marj == null) ? '-' : '%' + r.marj.toFixed(1),
+      ];
+      let cellX = startX + 5;
+      cells.forEach((c, i) => {
+        const val = String(c);
+        // Net Kar + Marj renkli
+        if (i === 9 || i === 10) {
+          if (r.kar != null) {
+            if (r.kar >= 0) doc.setTextColor(34,197,94);
+            else doc.setTextColor(239,68,68);
+          } else doc.setTextColor(100,116,139);
+        } else doc.setTextColor(30,41,59);
+        doc.text(val, cellX, y + 12);
+        cellX += cw[i];
+      });
+      y += 18;
+    });
+
+    doc.save('is-karlilik-raporu-' + new Date().toISOString().slice(0,10) + '.pdf');
+    showToast('Kârlılık PDF indirildi ✓', 'success');
+  } catch(err) { console.error(err); showToast('PDF hatası: ' + err.message, 'error'); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   İŞ KÂRLILIK EXCEL — Detaylı sefer + iş emri analizi
+══════════════════════════════════════════════════════════════ */
+async function downloadIsKarlilikExcel() {
+  try {
+    if (typeof XLSX === 'undefined') {
+      // dinamik yükle
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    const rows = _computeSeferYakitRows();
+    if (!rows.length) { showToast('Kayıtlı sefer yok', 'error'); return; }
+
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Sefer bazlı kârlılık
+    const sef = rows.map(r => ({
+      'Tarih'      : r.tarih || '',
+      'Araç'       : r.plaka || '',
+      'Şoför'      : r.sofor || '',
+      'Kalkış→Varış': r.rota || '',
+      'Km'         : r.km || 0,
+      'Litre'      : r.litre || 0,
+      'Yakıt ₺'    : r.tl || 0,
+      '₺/km'       : (r.km > 0 && r.tl > 0) ? +(r.tl / r.km).toFixed(2) : 0,
+      'L/100km'    : (r.km > 0 && r.litre > 0) ? +((r.litre * 100) / r.km).toFixed(2) : 0,
+      'Gelir ₺'    : r.ucret || 0,
+      'Net Kâr ₺'  : r.kar != null ? r.kar : '',
+      'Marj %'     : r.marj != null ? +r.marj.toFixed(2) : '',
+      'Kaynak'     : r.note || 'Km aralığı eşleşmesi',
+    }));
+    const ws1 = XLSX.utils.json_to_sheet(sef);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Sefer Kârlılık');
+
+    // Sheet 2: Araç bazlı özet
+    const byVeh = {};
+    rows.forEach(r => {
+      const k = r.plaka || '—';
+      if (!byVeh[k]) byVeh[k] = { plaka: k, sefer: 0, km: 0, litre: 0, tl: 0, ciro: 0 };
+      byVeh[k].sefer += 1;
+      byVeh[k].km    += r.km || 0;
+      byVeh[k].litre += r.litre || 0;
+      byVeh[k].tl    += r.tl || 0;
+      byVeh[k].ciro  += r.ucret || 0;
+    });
+    const veh = Object.values(byVeh).map(v => ({
+      'Araç'       : v.plaka,
+      'Sefer'      : v.sefer,
+      'Toplam Km'  : +v.km.toFixed(0),
+      'Toplam Litre': +v.litre.toFixed(1),
+      'Yakıt ₺'    : +v.tl.toFixed(0),
+      'Gelir ₺'    : +v.ciro.toFixed(0),
+      'Net Kâr ₺'  : +(v.ciro - v.tl).toFixed(0),
+      'Marj %'     : v.ciro > 0 ? +(((v.ciro - v.tl) / v.ciro) * 100).toFixed(2) : 0,
+      '₺/km'       : v.km > 0 ? +(v.tl / v.km).toFixed(2) : 0,
+    }));
+    const ws2 = XLSX.utils.json_to_sheet(veh);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Araç Bazlı');
+
+    // Sheet 3: Şoför bazlı özet
+    const bySof = {};
+    rows.forEach(r => {
+      const k = r.sofor || '— Bilinmeyen —';
+      if (!bySof[k]) bySof[k] = { sofor: k, sefer: 0, km: 0, litre: 0, tl: 0, ciro: 0 };
+      bySof[k].sefer += 1;
+      bySof[k].km    += r.km || 0;
+      bySof[k].litre += r.litre || 0;
+      bySof[k].tl    += r.tl || 0;
+      bySof[k].ciro  += r.ucret || 0;
+    });
+    const sof = Object.values(bySof).map(v => ({
+      'Şoför'      : v.sofor,
+      'Sefer'      : v.sefer,
+      'Toplam Km'  : +v.km.toFixed(0),
+      'Yakıt ₺'    : +v.tl.toFixed(0),
+      'Gelir ₺'    : +v.ciro.toFixed(0),
+      'Net Kâr ₺'  : +(v.ciro - v.tl).toFixed(0),
+      'L/100km'    : v.km > 0 ? +((v.litre * 100) / v.km).toFixed(2) : 0,
+    }));
+    const ws3 = XLSX.utils.json_to_sheet(sof);
+    XLSX.utils.book_append_sheet(wb, ws3, 'Şoför Bazlı');
+
+    // Sheet 4: İş Emri kârlılık (baslangic_km/bitis_km dolu olanlar)
+    const isRows = (isEmirleri || [])
+      .filter(e => e.baslangic_km != null && e.bitis_km != null && e.bitis_km > e.baslangic_km)
+      .map(e => {
+        const veh = vehicles.find(v => v.plaka === e.arac_plaka);
+        const r = veh ? calcFuelForKmRange(veh.id, e.baslangic_km, e.bitis_km) : { litre: 0, tl: 0, count: 0 };
+        const bagli = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
+        const ucret = +(bagli?.ucret || 0);
+        const km    = e.bitis_km - e.baslangic_km;
+        const kar   = ucret > 0 ? ucret - r.tl : null;
+        return {
+          'İş Emri'    : e.konteyner_no || ('#' + (e._dbId ?? e.id)),
+          'Müşteri'    : e.musteri_adi || '',
+          'Araç'       : e.arac_plaka || '',
+          'Şoför'      : e.sofor || '',
+          'Rota'       : (e.yukle_yeri || '') + ' → ' + (e.teslim_yeri || ''),
+          'Başlangıç Km': e.baslangic_km,
+          'Bitiş Km'   : e.bitis_km,
+          'Katedilen Km': km,
+          'Litre'      : r.litre,
+          'Yakıt ₺'    : r.tl,
+          'Gelir ₺'    : ucret,
+          'Net Kâr ₺'  : kar,
+          'Marj %'     : (ucret > 0 && kar != null) ? +((kar / ucret) * 100).toFixed(2) : '',
+          'Durum'      : e.durum || '',
+        };
+      });
+    const ws4 = XLSX.utils.json_to_sheet(isRows);
+    XLSX.utils.book_append_sheet(wb, ws4, 'İş Emri Kârlılık');
+
+    XLSX.writeFile(wb, 'is-karlilik-' + new Date().toISOString().slice(0,10) + '.xlsx');
+    showToast('Excel indirildi ✓ (4 sayfa)', 'success');
+  } catch(err) { console.error(err); showToast('Excel hatası: ' + err.message, 'error'); }
 }
 
 /* ── Aylık Yönetici Raporu (PDF) ── */
@@ -12876,6 +13360,12 @@ function opsRowToObj(r) {
     eta_iso       : r.eta_iso       || null,
     kalan_km      : r.kalan_km      != null ? parseFloat(r.kalan_km)   : null,
     rota_polyline : r.rota_polyline || null,
+    /* ── Km sayacı & yakıt cache ── */
+    baslangic_km  : r.baslangic_km  != null ? parseFloat(r.baslangic_km) : null,
+    bitis_km      : r.bitis_km      != null ? parseFloat(r.bitis_km)     : null,
+    yakit_litre   : r.yakit_litre   != null ? parseFloat(r.yakit_litre)  : null,
+    yakit_tutar   : r.yakit_tutar   != null ? parseFloat(r.yakit_tutar)  : null,
+    diger_masraf  : r.diger_masraf  != null ? parseFloat(r.diger_masraf) : null,
   };
 }
 
@@ -12918,6 +13408,10 @@ async function opsObjToRow(obj, isEdit) {
       return '[]';
     })(),
     notlar        : obj.notlar        || null,
+    baslangic_km  : (obj.baslangic_km != null ? obj.baslangic_km : null),
+    bitis_km      : (obj.bitis_km     != null ? obj.bitis_km     : null),
+    yakit_litre   : (obj.yakit_litre  != null ? obj.yakit_litre  : null),
+    yakit_tutar   : (obj.yakit_tutar  != null ? obj.yakit_tutar  : null),
   };
   // GENERATED ALWAYS AS IDENTITY — yeni kayıtta id GÖNDERİLMEZ
   // Düzenleme modunda (isEdit=true) id URL parametresine gider, body'e değil
@@ -13386,6 +13880,8 @@ function openOpsIsEmriModal(duzenlemeObj) {
     notlar         : d.notlar,
     'yukle-konum'  : d.yukle_konum_url  || '',
     'teslim-konum' : d.teslim_konum_url || '',
+    'bas-km'       : (d.baslangic_km != null ? d.baslangic_km : ''),
+    'bit-km'       : (d.bitis_km     != null ? d.bitis_km     : ''),
   };
   Object.entries(map).forEach(([k, v]) => {
     const el = document.getElementById('ops-m-' + k);
@@ -13399,6 +13895,7 @@ function openOpsIsEmriModal(duzenlemeObj) {
   });
 
   document.getElementById('ops-modal-bg').classList.remove('hidden');
+  setTimeout(() => { try { _opsKmAutoHint(); } catch(e) {} }, 50);
 }
 
 function openOpsIsEmriDuzenle(id) {
@@ -13408,6 +13905,45 @@ function openOpsIsEmriDuzenle(id) {
 }
 function closeOpsIsEmriModal() {
   document.getElementById('ops-modal-bg').classList.add('hidden');
+}
+
+/* İş emri formunda başlangıç/bitiş km girildiğinde canlı tahmini göster */
+function _opsKmAutoHint() {
+  const hintEl = document.getElementById('ops-km-hint');
+  if (!hintEl) return;
+  const bas = parseFloat(document.getElementById('ops-m-bas-km')?.value);
+  const bit = parseFloat(document.getElementById('ops-m-bit-km')?.value);
+  const aracPlaka = document.getElementById('ops-m-arac')?.value;
+  if (!isFinite(bas) || !isFinite(bit) || bit <= bas) {
+    hintEl.style.display = 'none'; return;
+  }
+  const dKm = bit - bas;
+  const veh = vehicles.find(v => v.plaka === aracPlaka);
+  if (!veh) {
+    hintEl.style.display = 'block';
+    hintEl.innerHTML = `📏 Mesafe: <strong>${dKm.toFixed(0)} km</strong> · Yakıt tahmini için araç seçin.`;
+    return;
+  }
+  const r = calcFuelForKmRange(veh.id, bas, bit);
+  const tlkm = calcAvgTLPerKm(veh.id);
+  hintEl.style.display = 'block';
+  if (r.count > 0) {
+    hintEl.innerHTML =
+      `📏 Mesafe: <strong>${dKm.toFixed(0)} km</strong> &nbsp;·&nbsp; ` +
+      `⛽ ${r.litre.toLocaleString('tr-TR')} L &nbsp;·&nbsp; ` +
+      `💰 <strong>${r.tl.toLocaleString('tr-TR')} ₺</strong> &nbsp;·&nbsp; ` +
+      `${r.count} dolum (km aralığındaki)`;
+  } else if (tlkm > 0) {
+    const est = +(tlkm * dKm).toFixed(0);
+    hintEl.innerHTML =
+      `📏 Mesafe: <strong>${dKm.toFixed(0)} km</strong> &nbsp;·&nbsp; ` +
+      `📈 TL/km ort. <strong>${tlkm.toLocaleString('tr-TR')}</strong> &nbsp;·&nbsp; ` +
+      `tahmini yakıt <strong>~${est.toLocaleString('tr-TR')} ₺</strong> ` +
+      `<span style="color:var(--muted);">(bu aralıkta dolum yok)</span>`;
+  } else {
+    hintEl.innerHTML =
+      `📏 Mesafe: <strong>${dKm.toFixed(0)} km</strong> · Yakıt verisi yetersiz.`;
+  }
 }
 /* ══════════════════════════════════════════════════════════════
    KONUM URL PARSER — Google Maps / Apple Maps / Yandex / Here
@@ -13564,6 +14100,20 @@ function saveOpsIsEmri() {
     e.bos_donus    = document.getElementById('ops-m-bos-donus').value.trim();
     e.boslama_zaman= document.getElementById('ops-m-boslama-zaman').value;
     e.notlar       = document.getElementById('ops-m-notlar').value.trim();
+    // Km sayacı + yakıt cache
+    const _bk = parseFloat(document.getElementById('ops-m-bas-km')?.value);
+    const _bi = parseFloat(document.getElementById('ops-m-bit-km')?.value);
+    e.baslangic_km = isFinite(_bk) ? _bk : null;
+    e.bitis_km     = isFinite(_bi) ? _bi : null;
+    // Yakıt maliyet cache (araç plakadan id'yi bul)
+    if (e.baslangic_km != null && e.bitis_km != null && e.bitis_km > e.baslangic_km) {
+      const _vh = vehicles.find(v => v.plaka === e.arac_plaka);
+      if (_vh) {
+        const r = calcFuelForKmRange(_vh.id, e.baslangic_km, e.bitis_km);
+        e.yakit_litre = r.count ? r.litre : null;
+        e.yakit_tutar = r.count ? r.tl    : null;
+      }
+    } else { e.yakit_litre = null; e.yakit_tutar = null; }
     // Konum linkleri
     const yukleKonumUrl  = document.getElementById('ops-m-yukle-konum')?.value.trim()  || '';
     const teslimKonumUrl = document.getElementById('ops-m-teslim-konum')?.value.trim() || '';
@@ -13606,6 +14156,10 @@ function saveOpsIsEmri() {
     yukle_lng      : (() => { const p=parseKonumUrl(document.getElementById('ops-m-yukle-konum')?.value||''); return p?.lng||null; })(),
     teslim_lat     : (() => { const p=parseKonumUrl(document.getElementById('ops-m-teslim-konum')?.value||''); return p?.lat||null; })(),
     teslim_lng     : (() => { const p=parseKonumUrl(document.getElementById('ops-m-teslim-konum')?.value||''); return p?.lng||null; })(),
+    baslangic_km   : (() => { const v=parseFloat(document.getElementById('ops-m-bas-km')?.value); return isFinite(v)?v:null; })(),
+    bitis_km       : (() => { const v=parseFloat(document.getElementById('ops-m-bit-km')?.value); return isFinite(v)?v:null; })(),
+    yakit_litre    : null,
+    yakit_tutar    : null,
     durum          : 'Bekliyor',
     atama_zamani   : new Date().toISOString(),
     yola_zaman     : null,
@@ -13614,6 +14168,14 @@ function saveOpsIsEmri() {
     teslim_zamani  : null,
     fotograflar    : '[]',
   };
+  // Yakıt maliyet cache'i — km aralığı girildiyse hemen hesapla
+  if (obj.baslangic_km != null && obj.bitis_km != null && obj.bitis_km > obj.baslangic_km) {
+    const _vh = vehicles.find(v => v.plaka === obj.arac_plaka);
+    if (_vh) {
+      const r = calcFuelForKmRange(_vh.id, obj.baslangic_km, obj.bitis_km);
+      if (r.count > 0) { obj.yakit_litre = r.litre; obj.yakit_tutar = r.tl; }
+    }
+  }
   isEmirleri.push(obj);
   opsSaveLocal();
   opsSaveCloud(obj).then(() => {
@@ -13690,6 +14252,10 @@ function openOpsDrawer(id) {
     </div>
   </div>` : (e.durum === 'Teslim Edildi' ? '' : `<div style="margin-top:8px;opacity:.5;font-size:11px;color:var(--muted);padding:4px 0;">🗺 Sefer kaydı "Teslim Edildi" durumunda otomatik oluşturulur</div>`));
 
+  // ⛽ Yakıt / Maliyet kartı — iş emrine düşen yakıt ve kâr hesabı
+  const yakitCardEl = document.getElementById('ops-drawer-yakit-card');
+  if (yakitCardEl) yakitCardEl.innerHTML = _opsYakitCardHtml(e);
+
   // Zaman çizelgesi
   const milestones = [
     { label: 'İş Emri Atandı',    zaman: e.atama_zamani,  },
@@ -13749,6 +14315,78 @@ function closeOpsDrawer() {
   document.getElementById('ops-drawer-bg').classList.add('hidden');
   document.getElementById('ops-drawer').classList.add('hidden');
   opsDrawerActiveId = null;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   İŞ EMRİ — YAKIT / KÂR KARTI
+   - baslangic_km & bitis_km doluysa aralıktaki dolumları toplar
+   - bagli sefer kaydı varsa onun ucret'ini gelir olarak kullanır
+══════════════════════════════════════════════════════════════ */
+function _opsYakitCardHtml(e) {
+  const veh = vehicles.find(v => v.plaka === e.arac_plaka);
+  const bagliSefer = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
+  const ucret = +(bagliSefer?.ucret || 0);
+
+  const hasKm = (e.baslangic_km != null && e.bitis_km != null && e.bitis_km > e.baslangic_km);
+  const katedilenKm = hasKm ? (e.bitis_km - e.baslangic_km) : (bagliSefer?.km || 0);
+
+  let litre = 0, tl = 0, count = 0, note = '';
+  if (veh && hasKm) {
+    const r = calcFuelForKmRange(veh.id, e.baslangic_km, e.bitis_km);
+    litre = r.litre; tl = r.tl; count = r.count;
+  } else if (e.yakit_tutar != null) {
+    litre = +(e.yakit_litre || 0);
+    tl    = +e.yakit_tutar;
+    count = 0;
+    note  = 'Önceden kaydedilmiş cache';
+  } else if (veh && katedilenKm > 0) {
+    // Fallback: ortalama TL/km × mesafe
+    const tlkm = calcAvgTLPerKm(veh.id);
+    if (tlkm > 0) {
+      tl = +(tlkm * katedilenKm).toFixed(0);
+      note = 'Tahmini (TL/km × mesafe)';
+    }
+  }
+
+  if (!hasKm && tl === 0) {
+    return `<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:10px;padding:14px;color:var(--muted);font-size:12px;line-height:1.6;">
+      <strong>⛽ Yakıt & Maliyet</strong><br>
+      Bu iş emrinde yakıt & kâr analizi için <strong>Başlangıç Km</strong> ve <strong>Bitiş Km</strong> girilmelidir.
+      <div style="margin-top:8px;">
+        <button onclick="openOpsIsEmriDuzenle(${e._dbId ?? e.id})" style="background:rgba(232,82,26,.12);border:1px solid rgba(232,82,26,.35);color:var(--accent);border-radius:6px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;">Km Bilgisi Ekle</button>
+      </div>
+    </div>`;
+  }
+
+  const tlPerKm = katedilenKm > 0 ? (tl / katedilenKm).toFixed(2) : '—';
+  const lPer100 = (katedilenKm > 0 && litre > 0) ? ((litre * 100) / katedilenKm).toFixed(1) : '—';
+  const netKar  = ucret > 0 ? (ucret - tl) : null;
+  const karPct  = (ucret > 0) ? ((netKar / ucret) * 100).toFixed(1) : null;
+  const karRenk = (netKar == null) ? 'var(--muted)' : (netKar >= 0 ? 'var(--green)' : 'var(--red)');
+
+  const kpi = (label, val, sub='', color='var(--text)') =>
+    `<div style="flex:1;min-width:110px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:9px 11px;">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;">${label}</div>
+      <div style="font-family:var(--font-mono);font-size:15px;font-weight:800;color:${color};margin-top:3px;">${val}</div>
+      ${sub ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;">${sub}</div>` : ''}
+    </div>`;
+
+  return `<div style="background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(16,185,129,.06));border:1px solid var(--border2);border-radius:10px;padding:12px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      ${kpi('Mesafe', katedilenKm > 0 ? katedilenKm.toFixed(0) + ' km' : '—')}
+      ${kpi('Yakıt', litre > 0 ? litre.toLocaleString('tr-TR') + ' L' : '—')}
+      ${kpi('Yakıt TL', tl > 0 ? '₺' + tl.toLocaleString('tr-TR') : '—', '', 'var(--accent)')}
+      ${kpi('TL/km', tlPerKm !== '—' ? '₺' + tlPerKm : '—')}
+      ${kpi('L/100km', lPer100)}
+      ${kpi('Gelir', ucret > 0 ? '₺' + ucret.toLocaleString('tr-TR') : '—', '', 'var(--blue)')}
+      ${kpi('Net Kâr', (netKar != null) ? '₺' + netKar.toLocaleString('tr-TR') : '—',
+            (karPct != null) ? ('%' + karPct + ' marj') : '', karRenk)}
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);">
+      <span>${count > 0 ? `🔎 Bu aralıkta ${count} dolum eşleşti` : (note || 'Sefer bazlı hesap')}</span>
+      ${hasKm ? `<span style="font-family:var(--font-mono);">Km: ${e.baslangic_km} → ${e.bitis_km}</span>` : ''}
+    </div>
+  </div>`;
 }
 
 /* ── DURUM GÜNCELLE ─────────────────────────────────────── */
@@ -14042,6 +14680,19 @@ function opsAutoCreateSefer(e) {
   // ── 5) ARAÇ ───────────────────────────────────────────────
   const veh = vehicles.find(v => v.plaka === e.arac_plaka);
 
+  // ── 6) KM ARALIĞI: iş emrinden devral → daha doğru yakıt eşleşmesi ──
+  const basKm = (e.baslangic_km != null) ? +e.baslangic_km : null;
+  const bitKm = (e.bitis_km     != null) ? +e.bitis_km     : null;
+  if (basKm != null && bitKm != null && bitKm > basKm && !km) {
+    km = +(bitKm - basKm).toFixed(0);
+  }
+  // Yakıt cache'ini hemen hesapla
+  let yakitLitre = null, yakitTutar = null;
+  if (veh && basKm != null && bitKm != null && bitKm > basKm) {
+    const r = calcFuelForKmRange(veh.id, basKm, bitKm);
+    if (r.count > 0) { yakitLitre = r.litre; yakitTutar = r.tl; }
+  }
+
   const seferEntry = {
     id     : uid(),
     _opsId : e._dbId ?? e.id,
@@ -14052,6 +14703,10 @@ function opsAutoCreateSefer(e) {
     kalkis : e.yukle_yeri  || '—',
     varis  : e.teslim_yeri || '—',
     km,
+    baslangic_km: basKm,
+    bitis_km    : bitKm,
+    yakit_litre : yakitLitre,
+    yakit_tutar : yakitTutar,
     yuk    : yukStr,
     ucret,
     not    : notParcalar.join(' · '),
