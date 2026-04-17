@@ -1237,24 +1237,42 @@ function applyBranding(b) {
 ══════════════════════════════════════════════════════════════ */
 async function fetchIsEmri(id){
   if(!SB_URL || !SB_ANON) return null;
+  const headers = {'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON};
+  async function tryFetch(url){
+    try{
+      const r = await fetch(url, {headers});
+      if(!r.ok) return null;
+      const data = await r.json();
+      if(!Array.isArray(data) || !data.length) return null;
+      const row = data[0];
+      if(typeof row.fotograflar==='string'){ try{ row.fotograflar=JSON.parse(row.fotograflar||'[]'); }catch{ row.fotograflar=[]; } }
+      return row;
+    }catch{ return null; }
+  }
+  // 1) Önce takip_public view (RLS bypass, sadece tracking alanları)
+  const base = `${SB_URL}/rest/v1`;
+  let row = await tryFetch(`${base}/takip_public?id=eq.${id}&select=*`);
+  if(row) return row;
+  // 2) is_emirleri tablosu (RLS politikası anon SELECT'e izin veriyorsa)
+  row = await tryFetch(`${base}/is_emirleri?id=eq.${id}&select=*`);
+  if(row) return row;
+  // 3) Supabase RPC ile (takip_public view yoksa ve RLS bloke ediyorsa)
   try{
-    // Prefer safe public view
-    let r = await fetch(`${SB_URL}/rest/v1/takip_public?id=eq.${id}&select=*`, {
-      headers:{'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON}
+    const r = await fetch(`${base}/rpc/get_takip_by_id`, {
+      method:'POST',
+      headers:{...headers,'Content-Type':'application/json'},
+      body:JSON.stringify({p_id: parseInt(id, 10)})
     });
-    if(!r.ok){
-      // Fallback to main table (legacy, before migration)
-      r = await fetch(`${SB_URL}/rest/v1/is_emirleri?id=eq.${id}&select=*`, {
-        headers:{'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON}
-      });
+    if(r.ok){
+      const d = await r.json();
+      const row2 = Array.isArray(d)?d[0]:d;
+      if(row2 && row2.id){
+        if(typeof row2.fotograflar==='string'){ try{ row2.fotograflar=JSON.parse(row2.fotograflar||'[]'); }catch{ row2.fotograflar=[]; } }
+        return row2;
+      }
     }
-    if(!r.ok) return null;
-    const data = await r.json();
-    const row = data?.[0] || null;
-    if(!row) return null;
-    if(typeof row.fotograflar==='string'){ try{ row.fotograflar=JSON.parse(row.fotograflar||'[]'); }catch{ row.fotograflar=[]; } }
-    return row;
-  }catch{ return null; }
+  }catch{}
+  return null;
 }
 
 async function refresh(){
