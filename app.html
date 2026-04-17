@@ -3602,14 +3602,18 @@
       </button>
       <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">WhatsApp: iş detayları anında şoföre iletilir</div>
     </div>
-    <!-- Müşteri Portalı linki -->
+    <!-- Müşteri Portalı + Tekil Takip linkleri -->
     <div class="drawer-section">
-      <div class="drawer-section-title">Müşteri Portalı</div>
+      <div class="drawer-section-title">Müşteri Takip</div>
+      <button onclick="opsTekliTakipLink()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#22c55e,#16a34a);border:none;color:#fff;border-radius:9px;padding:11px;font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;letter-spacing:.01em;">
+        📍 Bu Sevkiyat İçin Takip Linki
+      </button>
+      <div style="font-size:10.5px;color:var(--muted);text-align:center;margin-bottom:10px;">Tek sefer için canlı konum takip linki</div>
       <button onclick="opsPortalLink()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--accent),#6366f1);border:none;color:#fff;border-radius:9px;padding:11px;font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;letter-spacing:.01em;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-        Müşteriye Portal Linki Kopyala
+        Müşteri Portal Linki (Tüm Sevkiyatlar)
       </button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Müşteri tüm sevkiyatlarını takip edebilir</div>
+      <div style="font-size:10.5px;color:var(--muted);text-align:center;">Müşteri tüm sevkiyatlarını takip edebilir</div>
     </div>
   </div>
 </div>
@@ -11782,12 +11786,14 @@ function closeCrmDrawer() {
 let _crmDrawerActiveMusteriId = null;
 
 function _crmPortalUrl(musteriId) {
-  const tok  = btoa('mtp_' + musteriId + '_' + (currentFirmaId || ''));
+  if (!currentFirmaId) return null;
+  const tok  = btoa('mtp_' + musteriId + '_' + currentFirmaId);
   const base = window.location.href.replace(/[^/]*$/, '');
   return base + 'portal.html?c=' + tok;
 }
 function crmPortalLink() {
   if (!_crmDrawerActiveMusteriId) return;
+  if (!currentFirmaId) { showToast('Firma bilgisi yüklenemedi. Sayfayı yenileyin.', 'error'); return; }
   const url = _crmPortalUrl(_crmDrawerActiveMusteriId);
   navigator.clipboard.writeText(url)
     .then(() => showToast('📋 Müşteri portal linki kopyalandı!', 'success'))
@@ -11795,6 +11801,7 @@ function crmPortalLink() {
 }
 function crmPortalLinkOpen() {
   if (!_crmDrawerActiveMusteriId) return;
+  if (!currentFirmaId) { showToast('Firma bilgisi yüklenemedi. Sayfayı yenileyin.', 'error'); return; }
   window.open(_crmPortalUrl(_crmDrawerActiveMusteriId), '_blank');
 }
 
@@ -11860,6 +11867,7 @@ function opsRowToObj(r) {
   return {
     id            : r.id,
     _dbId         : r.id,
+    firma_id      : r.firma_id      || null,
     musteri_id    : r.musteri_id    || null,
     musteri_adi   : r.musteri_adi   || '',
     arac_plaka    : r.arac_plaka    || '',
@@ -11872,6 +11880,10 @@ function opsRowToObj(r) {
     muhur_no      : r.muhur_no      || '',
     yukle_yeri    : r.yukle_yeri    || '',
     teslim_yeri   : r.teslim_yeri   || '',
+    yukle_lat     : r.yukle_lat     || null,
+    yukle_lng     : r.yukle_lng     || null,
+    teslim_lat    : r.teslim_lat    || null,
+    teslim_lng    : r.teslim_lng    || null,
     bos_donus     : r.bos_donus     || '',
     boslama_zaman : r.boslama_zaman || null,
     durum         : r.durum         || 'Bekliyor',
@@ -11882,6 +11894,13 @@ function opsRowToObj(r) {
     teslim_zamani : r.teslim_zamani || null,
     fotograflar   : (() => { try { return JSON.parse(r.fotograflar || '[]'); } catch(e) { return []; } })(),
     notlar        : r.notlar        || '',
+    /* ── Konum & ETA (şoför tarafından doldurulur) ── */
+    konum_lat     : r.konum_lat     != null ? parseFloat(r.konum_lat)  : null,
+    konum_lng     : r.konum_lng     != null ? parseFloat(r.konum_lng)  : null,
+    konum_zaman   : r.konum_zaman   || null,
+    eta_iso       : r.eta_iso       || null,
+    kalan_km      : r.kalan_km      != null ? parseFloat(r.kalan_km)   : null,
+    rota_polyline : r.rota_polyline || null,
   };
 }
 
@@ -12074,14 +12093,14 @@ function closeOperasyonPage() {
 }
 
 /* ── SEKME ───────────────────────────────────────────────── */
-function switchOpsTab(name, btn) {
+async function switchOpsTab(name, btn) {
   document.querySelectorAll('#operasyon-page .srm-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('#operasyon-page .srm-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('ops-panel-' + name).classList.add('active');
   btn.classList.add('active');
   if (name === 'canli')  opsRenderKanban();
   if (name === 'arsiv')  opsRenderArsiv();
-  if (name === 'harita') opsRenderFleetMap();
+  if (name === 'harita') await opsRenderFleetMap();
 }
 
 /* ── STAT ÇUBUĞU ─────────────────────────────────────────── */
@@ -12215,7 +12234,7 @@ let _fleetMap = null;
 let _fleetMarkers = [];
 let _fleetRefreshTimer = null;
 
-function opsRenderFleetMap() {
+async function opsRenderFleetMap() {
   // Init Leaflet map once
   if (!_fleetMap) {
     _fleetMap = L.map('ops-fleet-map', { zoomControl: true, attributionControl: false })
@@ -12226,6 +12245,9 @@ function opsRenderFleetMap() {
     L.control.attribution({ prefix: '© OpenStreetMap' }).addTo(_fleetMap);
   }
   setTimeout(() => _fleetMap.invalidateSize(), 80);
+
+  // Harita açıldığında güncel konum verisini cloud'dan çek
+  await opsLoadCloud();
 
   // Remove old markers
   _fleetMarkers.forEach(m => _fleetMap.removeLayer(m));
@@ -12815,10 +12837,15 @@ function opsDrawerNotEkle() {
 /* ── ŞOFÖRE LİNK ─────────────────────────────────────────── */
 function opsKopyalaLink() {
   if (!opsDrawerActiveId) return;
-  const token = btoa('ops_' + opsDrawerActiveId + '_' + Date.now());
+  const e = opsById(opsDrawerActiveId);
+  const useId = (e && e._dbId && e._dbId > 0) ? e._dbId : opsDrawerActiveId;
+  if (!useId || useId < 0) {
+    showToast('İş emri henüz Supabase\'e kaydedilmedi. Bekleyip tekrar deneyin.', 'error'); return;
+  }
+  const token = btoa('ops_' + useId + '_' + Date.now());
   const url   = window.location.origin + '/sofor.html?t=' + token;
-  localStorage.setItem('ops_token_' + token, String(opsDrawerActiveId));
-  navigator.clipboard.writeText(url).then(() => showToast('Link panoya kopyalandı ✓')).catch(() => {
+  localStorage.setItem('ops_token_' + token, String(useId));
+  navigator.clipboard.writeText(url).then(() => showToast('🔗 Şoför linki kopyalandı ✓')).catch(() => {
     prompt('Linki kopyalayın:', url);
   });
 }
@@ -12828,12 +12855,30 @@ function opsPortalLink() {
   if (!opsDrawerActiveId) return;
   const e = opsById(opsDrawerActiveId);
   if (!e || !e.musteri_id) { showToast('Bu iş emrinde müşteri atanmamış', 'error'); return; }
-  const tok = btoa('mtp_' + e.musteri_id + '_' + (currentFirmaId || ''));
+  if (!currentFirmaId) { showToast('Firma bilgisi yüklenemedi. Sayfayı yenileyin.', 'error'); return; }
+  const tok = btoa('mtp_' + e.musteri_id + '_' + currentFirmaId);
   const base = window.location.href.replace(/[^/]*$/, '');
   const url  = base + 'portal.html?c=' + tok;
   navigator.clipboard.writeText(url)
     .then(() => showToast('📋 Müşteri portal linki kopyalandı!', 'success'))
     .catch(() => { prompt('Müşteri portal linki:', url); });
+}
+
+/* Tek sevkiyat için canlı takip linki (musteri_takip.html) */
+function opsTekliTakipLink() {
+  if (!opsDrawerActiveId) return;
+  const e = opsById(opsDrawerActiveId);
+  if (!e) return;
+  const dbId = e._dbId || e.id;
+  if (!dbId || dbId < 0) {
+    showToast('İş emri henüz kaydedilmedi. Lütfen bekleyin.', 'error'); return;
+  }
+  const tok = btoa('mtr_' + dbId + '_' + Date.now());
+  const base = window.location.href.replace(/[^/]*$/, '');
+  const url  = base + 'musteri_takip.html?m=' + tok;
+  navigator.clipboard.writeText(url)
+    .then(() => showToast('📍 Tekil takip linki kopyalandı!', 'success'))
+    .catch(() => { prompt('Müşteri takip linki:', url); });
 }
 
 /* ── ARAÇ ARAMA (Autocomplete) ───────────────────────────── */
