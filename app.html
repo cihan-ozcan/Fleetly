@@ -4437,6 +4437,7 @@ function exportCSV() { crmExportCSV(); }
       <div class="vs-tabs">
         <button class="vs-tab active" id="ds-tab-suruculer" onclick="switchDsTab('suruculer')">👤 Sürücüler</button>
         <button class="vs-tab" id="ds-tab-ozet" onclick="switchDsTab('ozet')">📊 Genel Özet</button>
+        <button class="vs-tab" id="ds-tab-davet" onclick="switchDsTab('davet')">📲 Davet</button>
         <button class="vs-tab" id="ds-tab-ayarlar" onclick="switchDsTab('ayarlar')">⚙️ Yönetim</button>
       </div>
 
@@ -4492,7 +4493,64 @@ function exportCSV() { crmExportCSV(); }
         </div>
       </div>
 
-      <!-- SEKME 3: Yönetim (Sürücü Ekle / Düzenle) -->
+      <!-- SEKME 3: Şoför Daveti (mobil/web şoför portalı davet kodu) -->
+      <div class="vs-tab-panel" id="dspanel-davet">
+        <div class="driver-form" style="margin-bottom:16px;border-color:rgba(99,102,241,.25);background:rgba(99,102,241,.05)">
+          <div class="driver-form-title" style="color:#818cf8">📲 Şoför Davet Et</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5;">
+            Şoförünüze özel bir davet kodu oluşturun. Kod 48 saat geçerlidir. Şoför mobil uygulamaya
+            kodu + telefon numarasını girerek erişim kazanır.
+          </div>
+          <div class="driver-form-grid">
+            <div class="driver-form-group">
+              <label>Ad Soyad *</label>
+              <input class="driver-inp" type="text" id="f-davet-ad" placeholder="Ad Soyad" />
+            </div>
+            <div class="driver-form-group">
+              <label>Telefon * <span style="color:var(--muted);font-weight:400">(05XX)</span></label>
+              <input class="driver-inp" type="tel" id="f-davet-tel" placeholder="05xx xxx xx xx" />
+            </div>
+            <div class="driver-form-group">
+              <label>Araç (opsiyonel)</label>
+              <select class="driver-inp" id="f-davet-arac">
+                <option value="">— Sabit araç yok (sefer bazlı) —</option>
+              </select>
+            </div>
+            <div class="driver-form-group">
+              <label>Not (opsiyonel)</label>
+              <input class="driver-inp" type="text" id="f-davet-not" placeholder="ör. Gece vardiyası" />
+            </div>
+            <div class="driver-form-group" style="align-self:end">
+              <button class="driver-add-btn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)" onclick="soforDavetOlustur()">📲 Davet Oluştur</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Oluşturulan Davet Kodu Sonucu -->
+        <div id="davet-sonuc-kart" style="display:none;margin-bottom:16px;padding:16px;border:1px solid rgba(34,197,94,.35);border-radius:12px;background:rgba(34,197,94,.08)">
+          <div style="font-size:12px;font-weight:700;color:#22c55e;margin-bottom:10px;letter-spacing:.05em">✓ DAVET KODU OLUŞTURULDU</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+            <div id="davet-sonuc-kod" style="font-family:monospace;font-size:24px;font-weight:800;letter-spacing:3px;color:var(--text);background:var(--card);padding:8px 14px;border-radius:8px;border:1px solid var(--border2);flex:1;min-width:180px;text-align:center"></div>
+            <button onclick="soforDavetKoduKopyala()" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);color:#818cf8;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer">📋 Kopyala</button>
+            <button onclick="soforDavetWhatsApp()" style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer">💬 WhatsApp</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.6">
+            <div id="davet-sonuc-bilgi"></div>
+            <div style="margin-top:6px">Bu kod tek kullanımlıktır ve <b style="color:var(--yellow)">48 saat</b> içinde kullanılmalıdır.</div>
+          </div>
+        </div>
+
+        <!-- Aktif/Geçmiş Davet Listesi -->
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+          <span>📋 Davet Geçmişi</span>
+          <button onclick="soforDavetlerYukle()" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:10.5px;font-weight:600;cursor:pointer">🔄 Yenile</button>
+        </div>
+        <div id="davet-liste" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;padding-right:4px">
+          <div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Yükleniyor…</div>
+        </div>
+      </div>
+
+      <!-- SEKME 4: Yönetim (Sürücü Ekle / Düzenle) -->
       <div class="vs-tab-panel" id="dspanel-ayarlar">
         <div class="driver-form" id="driver-form-section" style="margin-bottom:16px">
           <div class="driver-form-title">👤 Sürücü Ekle / Güncelle</div>
@@ -10190,12 +10248,16 @@ function editDriverEntry(id) {
 
 // ── Sekme geçişi ──
 function switchDsTab(name) {
-  ['suruculer','ozet','ayarlar'].forEach(t => {
+  ['suruculer','ozet','davet','ayarlar'].forEach(t => {
     document.getElementById('ds-tab-' + t)?.classList.toggle('active', t === name);
     document.getElementById('dspanel-' + t)?.classList.toggle('active', t === name);
   });
   if (name === 'ozet')     renderDsSummary();
   if (name === 'ayarlar')  _fillDriverPlacaSelect();
+  if (name === 'davet') {
+    _fillDavetAracSelect();
+    soforDavetlerYukle();
+  }
 }
 
 // ── Sürücü Listesi Render (Sekme 1) ──
@@ -10258,6 +10320,264 @@ function renderDsDriverList() {
       </div>
     </div>`;
   }).join('');
+}
+
+/* ================================================================
+   ŞOFÖR DAVET AKIŞI — operasyoncu/yönetici tarafı
+   ================================================================ */
+
+// Son oluşturulan davetin bilgileri (kopyala + whatsapp için)
+let _sonDavet = null;
+
+// Araç listesini davet formundaki select'e doldur
+function _fillDavetAracSelect() {
+  const sel = document.getElementById('f-davet-arac');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Sabit araç yok (sefer bazlı) —</option>' +
+    vehicles.map(v => `<option value="${v.id}">${v.plaka}${v.sofor ? ' · ' + v.sofor : ''}</option>`).join('');
+}
+
+// Davet kodu oluştur — RPC çağırır
+async function soforDavetOlustur() {
+  const ad    = (document.getElementById('f-davet-ad').value   || '').trim();
+  const tel   = (document.getElementById('f-davet-tel').value  || '').trim();
+  const arac  = document.getElementById('f-davet-arac').value || '';
+  const not   = (document.getElementById('f-davet-not').value  || '').trim();
+
+  if (!ad)  { showToast('Ad Soyad zorunludur.', 'error'); return; }
+  if (!tel) { showToast('Telefon numarası zorunludur.', 'error'); return; }
+
+  // Basit telefon temizle (sadece rakam)
+  const telDigits = tel.replace(/\D/g, '');
+  if (telDigits.length < 10) {
+    showToast('Geçerli bir telefon numarası girin (en az 10 hane).', 'error');
+    return;
+  }
+
+  if (isLocalMode() || !_authToken) {
+    showToast('Davet oluşturmak için buluta bağlı olmanız gerekir.', 'error');
+    return;
+  }
+
+  try {
+    const sb = getSB();
+    const { data, error } = await sb.rpc('sofor_davet_olustur', {
+      p_ad      : ad,
+      p_telefon : tel,
+      p_arac_id : arac || null,
+      p_not     : not  || null
+    });
+    if (error) throw error;
+
+    // RPC surucu_davetleri satırını tam döndürür
+    const rec = Array.isArray(data) ? data[0] : data;
+    if (!rec || !rec.davet_kodu) throw new Error('Davet kodu üretilemedi.');
+
+    _sonDavet = {
+      kod      : rec.davet_kodu,
+      ad       : rec.ad || ad,
+      telefon  : rec.telefon || tel,
+      expires  : rec.expires_at || null,
+      arac_id  : rec.arac_id || arac || null
+    };
+
+    // Sonuç kartını göster
+    document.getElementById('davet-sonuc-kart').style.display  = '';
+    document.getElementById('davet-sonuc-kod').textContent     = rec.davet_kodu;
+    const expTxt = rec.expires_at ? new Date(rec.expires_at).toLocaleString('tr-TR') : '—';
+    document.getElementById('davet-sonuc-bilgi').innerHTML =
+      `<b>${rec.ad || ad}</b> · ${rec.telefon || tel}<br>Geçerlilik bitişi: <b>${expTxt}</b>`;
+
+    // Formu temizle
+    document.getElementById('f-davet-ad').value   = '';
+    document.getElementById('f-davet-tel').value  = '';
+    document.getElementById('f-davet-not').value  = '';
+    document.getElementById('f-davet-arac').value = '';
+
+    showToast('Davet kodu oluşturuldu ✓', 'success');
+    // Listeyi tazele
+    soforDavetlerYukle();
+  } catch (err) {
+    console.error('Davet oluşturma hatası:', err);
+    const mesaj = (err?.message || '').toLowerCase();
+    if (mesaj.includes('yetki') || mesaj.includes('permission')) {
+      showToast('Bu işlem için yetkiniz yok.', 'error');
+    } else if (mesaj.includes('telefon')) {
+      showToast('Geçersiz telefon numarası.', 'error');
+    } else {
+      showToast('Davet oluşturulamadı: ' + (err?.message || 'bilinmeyen hata'), 'error');
+    }
+  }
+}
+
+// Son oluşturulan davet kodunu panoya kopyala
+async function soforDavetKoduKopyala() {
+  if (!_sonDavet) return;
+  try {
+    await navigator.clipboard.writeText(_sonDavet.kod);
+    showToast('Kod panoya kopyalandı ✓', 'success');
+  } catch (e) {
+    // Fallback: geçici input
+    const ta = document.createElement('textarea');
+    ta.value = _sonDavet.kod;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Kod kopyalandı ✓', 'success');
+  }
+}
+
+// WhatsApp üzerinden davet mesajı gönder
+function soforDavetWhatsApp() {
+  if (!_sonDavet) return;
+  const kod = _sonDavet.kod;
+  const ad  = _sonDavet.ad;
+  const tel = _sonDavet.telefon;
+
+  // Davet linki — şoför portalı app.html#/sofor olarak açacak
+  const portalUrl = location.origin + location.pathname + '#/sofor?kod=' + encodeURIComponent(kod);
+
+  const mesaj = [
+    `Merhaba ${ad},`,
+    ``,
+    `Fleetly Şoför Portalı'na davet edildiniz 🚛`,
+    ``,
+    `📱 Davet Kodunuz: *${kod}*`,
+    `📞 Kayıtlı Telefon: ${tel}`,
+    ``,
+    `Aşağıdaki bağlantıya tıklayın ve kodu girin:`,
+    portalUrl,
+    ``,
+    `Bu kod 48 saat içinde kullanılmalıdır.`,
+    ``,
+    `_Fleetly - Filo Yönetim Sistemi_`
+  ].join('\n');
+
+  // Türkiye normalize
+  let waNum = tel.replace(/\D/g, '');
+  if (waNum.startsWith('0'))        waNum = '90' + waNum.slice(1);
+  else if (!waNum.startsWith('90')) waNum = '90' + waNum;
+
+  const waUrl = `https://wa.me/${waNum}?text=${encodeURIComponent(mesaj)}`;
+  window.open(waUrl, '_blank');
+  showToast('WhatsApp açılıyor…');
+}
+
+// Davet listesini Supabase'ten yükle
+async function soforDavetlerYukle() {
+  const list = document.getElementById('davet-liste');
+  if (!list) return;
+
+  if (isLocalMode() || !_authToken) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Buluta bağlı değil.</div>';
+    return;
+  }
+
+  list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Yükleniyor…</div>';
+
+  try {
+    const sb = getSB();
+    const { data, error } = await sb
+      .from('surucu_davetleri')
+      .select('id, ad, telefon, davet_kodu, arac_id, expires_at, kullanildi_at, kullanan_user_id, iptal_mi, notlar, created_at')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Henüz davet yok.</div>';
+      return;
+    }
+
+    const now = Date.now();
+    list.innerHTML = data.map(d => {
+      const expMs = d.expires_at ? new Date(d.expires_at).getTime() : 0;
+      let durumTxt, durumColor;
+      if (d.iptal_mi) { durumTxt = '🚫 İptal Edildi'; durumColor = 'var(--muted)'; }
+      else if (d.kullanildi_at) { durumTxt = '✅ Kullanıldı'; durumColor = '#22c55e'; }
+      else if (expMs && expMs < now) { durumTxt = '⏰ Süresi Doldu'; durumColor = 'var(--muted)'; }
+      else { durumTxt = '🕐 Bekliyor'; durumColor = '#f59e0b'; }
+
+      const aktif = !d.iptal_mi && !d.kullanildi_at && expMs > now;
+      const plaka = d.arac_id ? (vehicles.find(v => v.id === d.arac_id)?.plaka || d.arac_id) : null;
+      const createdTxt = d.created_at ? new Date(d.created_at).toLocaleString('tr-TR') : '';
+      const expTxt     = d.expires_at ? new Date(d.expires_at).toLocaleString('tr-TR') : '—';
+
+      // Telefon maskele: son 4 hane görünür
+      const tel = d.telefon || '';
+      const telMask = tel.length >= 4 ? '****' + tel.slice(-4) : tel;
+
+      return `
+        <div style="border:1px solid var(--border2);border-radius:10px;padding:10px 12px;background:var(--card);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">
+              <span style="font-weight:700;color:var(--text)">${d.ad}</span>
+              <span style="font-size:11px;color:var(--muted)">· ${telMask}</span>
+              ${plaka ? `<span style="font-size:11px;background:rgba(56,189,248,.12);color:#38bdf8;padding:2px 6px;border-radius:4px;font-weight:600">${plaka}</span>` : ''}
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;margin-top:4px;flex-wrap:wrap">
+              <span style="font-family:monospace;font-size:13px;font-weight:700;letter-spacing:1.5px;color:#818cf8">${d.davet_kodu}</span>
+              <span style="font-size:10.5px;color:${durumColor};font-weight:700">${durumTxt}</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">
+              Oluşturuldu: ${createdTxt}${aktif ? ' · Bitiş: ' + expTxt : ''}
+              ${d.notlar ? ' · <i>' + d.notlar + '</i>' : ''}
+            </div>
+          </div>
+          ${aktif ? `
+            <div style="display:flex;gap:6px">
+              <button onclick="soforDavetTekrarPaylas(${d.id})" title="Tekrar paylaş" style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">💬</button>
+              <button onclick="soforDavetIptal(${d.id})" title="Daveti iptal et" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">🚫</button>
+            </div>
+          ` : ''}
+        </div>`;
+    }).join('');
+  } catch (err) {
+    console.error('Davet listesi yüklenemedi:', err);
+    list.innerHTML = '<div style="text-align:center;color:var(--red);padding:18px;font-size:12px">Liste yüklenemedi: ' + (err?.message || 'hata') + '</div>';
+  }
+}
+
+// Tekrar WhatsApp paylaş (listeden)
+async function soforDavetTekrarPaylas(davetId) {
+  try {
+    const sb = getSB();
+    const { data, error } = await sb
+      .from('surucu_davetleri')
+      .select('ad, telefon, davet_kodu, expires_at, arac_id')
+      .eq('id', davetId)
+      .single();
+    if (error) throw error;
+    _sonDavet = {
+      kod     : data.davet_kodu,
+      ad      : data.ad,
+      telefon : data.telefon,
+      expires : data.expires_at,
+      arac_id : data.arac_id
+    };
+    soforDavetWhatsApp();
+  } catch (err) {
+    showToast('Davet bilgisi alınamadı.', 'error');
+  }
+}
+
+// Daveti iptal et (soft delete)
+async function soforDavetIptal(davetId) {
+  if (!confirm('Bu daveti iptal etmek istediğinize emin misiniz?')) return;
+  try {
+    const sb = getSB();
+    const { error } = await sb
+      .from('surucu_davetleri')
+      .update({ iptal_mi: true })
+      .eq('id', davetId);
+    if (error) throw error;
+    showToast('Davet iptal edildi.', 'success');
+    soforDavetlerYukle();
+  } catch (err) {
+    console.error('Davet iptal hatası:', err);
+    showToast('İptal edilemedi: ' + (err?.message || 'hata'), 'error');
+  }
 }
 
 // ── Genel Özet Render (Sekme 2) ──
@@ -16251,6 +16571,867 @@ async function saveBranding() {
     </div>
   </div>
 </div>
+
+<!-- =========================================================
+     ŞOFÖR PORTALI — PWA / MOBİL MODU (#/sofor)
+     ========================================================= -->
+<style>
+  /* Şoför portalı — ayrı, tam ekran, mobil-öncelikli */
+  #sofor-app {
+    display:none;
+    position:fixed; inset:0;
+    background:#0f172a;
+    color:#e2e8f0;
+    z-index:9000;
+    overflow:auto;
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+  }
+  #sofor-app.active { display:block; }
+  body.sofor-mode > header,
+  body.sofor-mode > main,
+  body.sofor-mode > #login-overlay,
+  body.sofor-mode > #subscription-overlay,
+  body.sofor-mode > #trial-banner { display:none !important; }
+
+  .sofor-container { max-width:640px; margin:0 auto; padding:16px; padding-bottom:88px; }
+  .sofor-header {
+    position:sticky; top:0; z-index:10;
+    background:rgba(15,23,42,.92); backdrop-filter:blur(8px);
+    padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.08);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .sofor-header .logo { font-size:18px; font-weight:800; color:#fff; letter-spacing:-.01em; }
+  .sofor-header .logo span { color:#818cf8; }
+  .sofor-header .user { display:flex; align-items:center; gap:8px; font-size:13px; color:#cbd5e1; }
+  .sofor-header .logout { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); color:#ef4444; border-radius:8px; padding:6px 10px; font-size:11.5px; font-weight:600; cursor:pointer; }
+
+  /* Login kart */
+  .sofor-login { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .sofor-login-card {
+    width:100%; max-width:380px;
+    background:linear-gradient(180deg,#1e293b,#0f172a);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:20px; padding:28px;
+    box-shadow:0 24px 60px rgba(0,0,0,.4);
+  }
+  .sofor-login-card .logo {
+    font-size:32px; font-weight:900; color:#fff; letter-spacing:-.02em; text-align:center; margin-bottom:6px;
+  }
+  .sofor-login-card .logo .badge { display:inline-block; background:linear-gradient(135deg,#6366f1,#8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .sofor-login-card .subtitle { text-align:center; color:#94a3b8; font-size:13px; margin-bottom:24px; }
+  .sofor-step { display:none; }
+  .sofor-step.active { display:block; }
+  .sofor-inp {
+    width:100%; background:rgba(15,23,42,.6); border:1px solid rgba(255,255,255,.1);
+    color:#fff; border-radius:10px; padding:12px 14px; font-size:15px; font-family:inherit;
+    box-sizing:border-box; margin-bottom:12px; outline:none; transition:border .2s;
+  }
+  .sofor-inp:focus { border-color:#818cf8; box-shadow:0 0 0 3px rgba(129,140,248,.15); }
+  .sofor-inp.kod { font-family:monospace; font-size:22px; font-weight:700; letter-spacing:4px; text-align:center; text-transform:uppercase; }
+  .sofor-btn {
+    width:100%; background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; color:#fff;
+    border-radius:10px; padding:13px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit;
+    transition:transform .12s, filter .12s;
+  }
+  .sofor-btn:active { transform:scale(.98); }
+  .sofor-btn:disabled { filter:grayscale(.6) opacity(.6); cursor:not-allowed; }
+  .sofor-btn.secondary { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); }
+  .sofor-hint { font-size:11.5px; color:#94a3b8; text-align:center; margin-top:12px; line-height:1.5; }
+  .sofor-error { font-size:12px; color:#fca5a5; margin-top:8px; padding:8px 10px; background:rgba(239,68,68,.1); border-radius:8px; display:none; }
+  .sofor-error.show { display:block; }
+  .sofor-success { font-size:12px; color:#86efac; margin-top:8px; padding:8px 10px; background:rgba(34,197,94,.1); border-radius:8px; display:none; }
+  .sofor-success.show { display:block; }
+
+  /* Dashboard */
+  .sofor-greet { padding:18px 4px 10px; }
+  .sofor-greet .hi { font-size:14px; color:#94a3b8; }
+  .sofor-greet .name { font-size:22px; font-weight:800; color:#fff; margin-top:2px; }
+  .sofor-greet .plaka { display:inline-block; margin-top:6px; background:rgba(99,102,241,.15); color:#a5b4fc; border:1px solid rgba(99,102,241,.3); border-radius:8px; padding:3px 10px; font-size:12px; font-weight:700; }
+
+  .sofor-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:12px 0 18px; }
+  .sofor-stat { background:rgba(30,41,59,.6); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:12px; }
+  .sofor-stat .label { font-size:10.5px; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; }
+  .sofor-stat .val { font-size:22px; font-weight:800; color:#fff; margin-top:2px; }
+
+  .sofor-section-title { font-size:12px; font-weight:700; color:#cbd5e1; text-transform:uppercase; letter-spacing:.08em; margin:18px 0 10px; display:flex; align-items:center; justify-content:space-between; }
+  .sofor-job-list { display:flex; flex-direction:column; gap:10px; }
+  .sofor-job-card {
+    background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.06); border-radius:14px;
+    padding:14px; cursor:pointer; transition:transform .12s, border-color .2s;
+  }
+  .sofor-job-card:active { transform:scale(.98); }
+  .sofor-job-card .top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:8px; }
+  .sofor-job-card .ref { font-size:11px; color:#94a3b8; font-family:monospace; }
+  .sofor-job-card .status { font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+  .sofor-job-card .status.yeni { background:rgba(56,189,248,.15); color:#38bdf8; }
+  .sofor-job-card .status.yolda { background:rgba(245,158,11,.15); color:#f59e0b; }
+  .sofor-job-card .status.teslim { background:rgba(34,197,94,.15); color:#22c55e; }
+  .sofor-job-card .status.iptal { background:rgba(239,68,68,.15); color:#ef4444; }
+  .sofor-job-card .route { display:flex; align-items:center; gap:8px; font-size:14px; color:#fff; font-weight:600; line-height:1.3; }
+  .sofor-job-card .route .arrow { color:#64748b; }
+  .sofor-job-card .meta { margin-top:8px; font-size:12px; color:#94a3b8; display:flex; flex-wrap:wrap; gap:10px; }
+  .sofor-empty { text-align:center; padding:40px 20px; color:#64748b; font-size:13px; }
+
+  /* Alt bar */
+  .sofor-tabbar {
+    position:fixed; bottom:0; left:0; right:0; z-index:100;
+    background:rgba(15,23,42,.96); backdrop-filter:blur(10px);
+    border-top:1px solid rgba(255,255,255,.08);
+    display:flex; justify-content:space-around; padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+  }
+  .sofor-tab {
+    background:transparent; border:none; color:#64748b; font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:6px 14px; cursor:pointer; font-size:10.5px; font-weight:600;
+    transition:color .2s;
+  }
+  .sofor-tab .ico { font-size:20px; }
+  .sofor-tab.active { color:#818cf8; }
+
+  /* Drawer (iş emri detayı) */
+  .sofor-drawer {
+    position:fixed; inset:0; z-index:9500;
+    background:#0f172a; overflow:auto;
+    transform:translateY(100%); transition:transform .25s ease;
+  }
+  .sofor-drawer.open { transform:translateY(0); }
+  .sofor-drawer .head {
+    position:sticky; top:0; z-index:5; background:rgba(15,23,42,.95); backdrop-filter:blur(8px);
+    padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.08);
+    display:flex; align-items:center; gap:10px;
+  }
+  .sofor-drawer .head .back { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); color:#fff; border-radius:8px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; }
+  .sofor-drawer .head h2 { font-size:15px; font-weight:700; color:#fff; margin:0; flex:1; }
+  .sofor-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; }
+  .sofor-info { background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:10px 12px; }
+  .sofor-info .lbl { font-size:10.5px; color:#94a3b8; text-transform:uppercase; }
+  .sofor-info .val { font-size:14px; color:#fff; font-weight:600; margin-top:2px; word-break:break-word; }
+  .sofor-info.full { grid-column:1 / -1; }
+
+  .sofor-action-btns { display:flex; flex-direction:column; gap:10px; margin:16px 0 8px; }
+  .sofor-big-btn {
+    padding:16px; border:none; border-radius:14px; color:#fff; font-family:inherit; font-size:15px; font-weight:700;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
+    transition:transform .12s, filter .12s;
+  }
+  .sofor-big-btn:active { transform:scale(.98); }
+  .sofor-big-btn.primary { background:linear-gradient(135deg,#6366f1,#8b5cf6); }
+  .sofor-big-btn.yolda   { background:linear-gradient(135deg,#f59e0b,#f97316); }
+  .sofor-big-btn.teslim  { background:linear-gradient(135deg,#22c55e,#16a34a); }
+  .sofor-big-btn.sec     { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); }
+
+  /* Yakıt fiş yükle modalı */
+  .sofor-fuel-modal {
+    position:fixed; inset:0; z-index:9700; background:rgba(0,0,0,.75); backdrop-filter:blur(4px);
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .sofor-fuel-modal.open { display:flex; }
+  .sofor-fuel-sheet {
+    width:100%; max-width:640px; background:#0f172a; border-top-left-radius:20px; border-top-right-radius:20px;
+    padding:18px 16px calc(18px + env(safe-area-inset-bottom)); max-height:90vh; overflow:auto;
+  }
+  .sofor-fuel-sheet h3 { margin:0 0 14px; font-size:17px; color:#fff; font-weight:700; }
+  .sofor-field { margin-bottom:12px; }
+  .sofor-field label { display:block; font-size:11.5px; color:#94a3b8; margin-bottom:6px; font-weight:600; }
+  .sofor-photo-preview {
+    width:100%; aspect-ratio:4/3; background:rgba(30,41,59,.5); border:2px dashed rgba(255,255,255,.12);
+    border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;
+    font-size:13px; color:#64748b; cursor:pointer; margin-bottom:10px;
+  }
+  .sofor-photo-preview img { width:100%; height:100%; object-fit:cover; }
+  .sofor-input-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+</style>
+
+<div id="sofor-app">
+  <div class="sofor-container">
+
+    <!-- LOGIN -->
+    <div id="sofor-screen-login" class="sofor-screen">
+      <div class="sofor-login">
+        <div class="sofor-login-card">
+          <div class="logo">Fleetly<span class="badge"> · Şoför</span></div>
+          <div class="subtitle">Filo yönetim portalına giriş</div>
+
+          <!-- Adım 1: Davet kodu -->
+          <div class="sofor-step active" id="sofor-step-kod">
+            <div class="sofor-field">
+              <label>Davet Kodu</label>
+              <input class="sofor-inp kod" id="sofor-kod" maxlength="8" placeholder="XXXXXXXX" autocomplete="off" />
+            </div>
+            <button class="sofor-btn" onclick="soforDavetKontrol()">Devam Et →</button>
+            <div class="sofor-error" id="sofor-err-kod"></div>
+            <div class="sofor-hint">Operasyon ekibinden aldığınız 8 haneli davet kodunu girin.</div>
+          </div>
+
+          <!-- Adım 2: Telefon OTP gönder -->
+          <div class="sofor-step" id="sofor-step-tel">
+            <div style="text-align:center;font-size:13px;color:#cbd5e1;margin-bottom:14px">
+              <b style="color:#fff" id="sofor-davet-ad">—</b><br>
+              <span style="font-size:12px;color:#94a3b8" id="sofor-davet-firma">—</span><br>
+              <span style="font-size:12px;color:#818cf8" id="sofor-davet-tel">—</span>
+            </div>
+            <div class="sofor-field">
+              <label>Telefon Numarası (davetteki numara ile aynı olmalı)</label>
+              <input class="sofor-inp" id="sofor-tel" type="tel" placeholder="+90 5XX XXX XX XX" inputmode="tel" />
+            </div>
+            <button class="sofor-btn" onclick="soforOtpGonder()">SMS Kodu Gönder</button>
+            <button class="sofor-btn secondary" style="margin-top:8px" onclick="soforStepGoster('kod')">← Geri</button>
+            <div class="sofor-error" id="sofor-err-tel"></div>
+          </div>
+
+          <!-- Adım 3: OTP kodu -->
+          <div class="sofor-step" id="sofor-step-otp">
+            <div style="text-align:center;font-size:13px;color:#cbd5e1;margin-bottom:14px">
+              📱 <span id="sofor-otp-hedef">—</span> numarasına gönderilen 6 haneli kodu girin
+            </div>
+            <div class="sofor-field">
+              <input class="sofor-inp kod" id="sofor-otp" maxlength="6" placeholder="______" inputmode="numeric" autocomplete="one-time-code" />
+            </div>
+            <button class="sofor-btn" onclick="soforOtpDogrula()">Doğrula & Giriş</button>
+            <button class="sofor-btn secondary" style="margin-top:8px" onclick="soforStepGoster('tel')">← Tekrar gönder</button>
+            <div class="sofor-error" id="sofor-err-otp"></div>
+            <div class="sofor-success" id="sofor-suc-otp"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="sofor-screen-home" class="sofor-screen" style="display:none">
+      <div class="sofor-header">
+        <div class="logo">Fleetly<span> · Şoför</span></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="user" id="sofor-user-ad">—</span>
+          <button class="logout" onclick="soforCikis()">Çıkış</button>
+        </div>
+      </div>
+
+      <div class="sofor-greet">
+        <div class="hi">Merhaba,</div>
+        <div class="name" id="sofor-greet-name">—</div>
+        <div id="sofor-greet-plaka"></div>
+      </div>
+
+      <div class="sofor-stats">
+        <div class="sofor-stat">
+          <div class="label">Bugünkü İş</div>
+          <div class="val" id="sofor-stat-bugun">0</div>
+        </div>
+        <div class="sofor-stat">
+          <div class="label">Aktif Sefer</div>
+          <div class="val" id="sofor-stat-aktif">0</div>
+        </div>
+      </div>
+
+      <div class="sofor-section-title">
+        <span>📋 Bugünkü İş Emirleri</span>
+        <button onclick="soforIsEmirleriYukle()" style="background:transparent;border:none;color:#64748b;font-size:16px;cursor:pointer">🔄</button>
+      </div>
+      <div class="sofor-job-list" id="sofor-job-list">
+        <div class="sofor-empty">Yükleniyor…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alt bar -->
+  <div class="sofor-tabbar" id="sofor-tabbar" style="display:none">
+    <button class="sofor-tab active" onclick="soforGoto('home')"><span class="ico">🏠</span>Anasayfa</button>
+    <button class="sofor-tab" onclick="soforYakitFisAc()"><span class="ico">⛽</span>Yakıt Fişi</button>
+    <button class="sofor-tab" onclick="soforKonumAc()"><span class="ico">📍</span>Konum</button>
+    <button class="sofor-tab" onclick="soforProfilAc()"><span class="ico">👤</span>Profil</button>
+  </div>
+
+  <!-- İş Emri Detay Drawer -->
+  <div class="sofor-drawer" id="sofor-job-drawer">
+    <div class="head">
+      <button class="back" onclick="soforJobKapat()">←</button>
+      <h2 id="sofor-job-title">İş Emri</h2>
+    </div>
+    <div class="sofor-container" id="sofor-job-body"></div>
+  </div>
+
+  <!-- Yakıt Fişi Yükle Modalı -->
+  <div class="sofor-fuel-modal" id="sofor-fuel-modal" onclick="if(event.target===this)soforYakitKapat()">
+    <div class="sofor-fuel-sheet">
+      <h3>⛽ Yakıt Fişi Yükle</h3>
+      <div class="sofor-field">
+        <label>Fiş Fotoğrafı *</label>
+        <label for="sofor-fuel-photo" class="sofor-photo-preview" id="sofor-fuel-preview">
+          📷 Fotoğraf çek / seç
+        </label>
+        <input type="file" id="sofor-fuel-photo" accept="image/*" capture="environment" style="display:none" onchange="soforFisFotoSec(event)" />
+      </div>
+      <div class="sofor-input-row">
+        <div class="sofor-field">
+          <label>Tarih *</label>
+          <input class="sofor-inp" type="date" id="sofor-fuel-tarih" />
+        </div>
+        <div class="sofor-field">
+          <label>Km *</label>
+          <input class="sofor-inp" type="number" id="sofor-fuel-km" placeholder="123450" inputmode="numeric" />
+        </div>
+      </div>
+      <div class="sofor-input-row">
+        <div class="sofor-field">
+          <label>Litre *</label>
+          <input class="sofor-inp" type="number" id="sofor-fuel-litre" placeholder="120" step="0.01" inputmode="decimal" />
+        </div>
+        <div class="sofor-field">
+          <label>₺/Litre *</label>
+          <input class="sofor-inp" type="number" id="sofor-fuel-birim" placeholder="42.50" step="0.01" inputmode="decimal" />
+        </div>
+      </div>
+      <div class="sofor-field">
+        <label>Toplam (otomatik)</label>
+        <input class="sofor-inp" id="sofor-fuel-toplam" readonly style="opacity:.75" />
+      </div>
+      <div class="sofor-field">
+        <label>İstasyon (opsiyonel)</label>
+        <input class="sofor-inp" id="sofor-fuel-istasyon" placeholder="Shell Esenyurt" />
+      </div>
+      <button class="sofor-big-btn primary" onclick="soforFisYukle()">💾 Fişi Yükle</button>
+      <button class="sofor-big-btn sec" style="margin-top:8px" onclick="soforYakitKapat()">İptal</button>
+      <div class="sofor-error" id="sofor-fuel-err" style="margin-top:10px"></div>
+      <div class="sofor-success" id="sofor-fuel-suc" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================================================================
+   ŞOFÖR PORTAL — Client State & Routing
+   ================================================================ */
+
+// Global state
+const soforState = {
+  davet         : null,   // {davet_id, firma_id, firma_adi, ad, telefon_son4, arac_id, expires_at}
+  session       : null,   // Supabase auth session
+  profil        : null,   // {id, ad, tel, firma_id, arac_id, plaka}
+  isEmirleri    : [],
+  aktifIsEmri   : null,
+  konumInterval : null,
+  fisFotoBlob   : null
+};
+
+// URL: #/sofor → sofor modu
+function soforCheckRoute() {
+  const isSofor = location.hash.startsWith('#/sofor');
+  document.body.classList.toggle('sofor-mode', isSofor);
+  const app = document.getElementById('sofor-app');
+  if (!app) return;
+  app.classList.toggle('active', isSofor);
+  if (isSofor) {
+    soforInit();
+  }
+}
+window.addEventListener('hashchange', soforCheckRoute);
+window.addEventListener('DOMContentLoaded', soforCheckRoute);
+
+async function soforInit() {
+  try {
+    const sb = getSB();
+    if (!sb) { soforStepGoster('kod'); return; }
+
+    // Mevcut Supabase session var mı?
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      soforState.session = session;
+      // Şoför mü? firma_kullanicilar'da rol=sofor olmalı
+      const isSofor = await soforKullaniciMi();
+      if (isSofor) {
+        await soforDashboardAc();
+        return;
+      }
+    }
+
+    // URL'de ?kod=XXX varsa otomatik doldur
+    const qs = new URLSearchParams(location.hash.split('?')[1] || '');
+    const kodParam = qs.get('kod');
+    if (kodParam) {
+      const el = document.getElementById('sofor-kod');
+      if (el) el.value = kodParam.toUpperCase();
+    }
+    soforScreenGoster('login');
+    soforStepGoster('kod');
+  } catch (e) {
+    console.error('Sofor init hatası:', e);
+    soforScreenGoster('login');
+    soforStepGoster('kod');
+  }
+}
+
+function soforScreenGoster(name) {
+  const screens = ['login','home'];
+  screens.forEach(s => {
+    const el = document.getElementById('sofor-screen-' + s);
+    if (el) el.style.display = (s === name ? '' : 'none');
+  });
+  const tabbar = document.getElementById('sofor-tabbar');
+  if (tabbar) tabbar.style.display = (name === 'home' ? '' : 'none');
+}
+
+function soforStepGoster(name) {
+  ['kod','tel','otp'].forEach(s => {
+    document.getElementById('sofor-step-' + s)?.classList.toggle('active', s === name);
+  });
+  // Hata/başarı kutularını temizle
+  document.querySelectorAll('#sofor-app .sofor-error, #sofor-app .sofor-success').forEach(e => e.classList.remove('show'));
+}
+
+function soforHata(elId, msg) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+/* ---- ADIM 1: Davet kodu kontrol ---- */
+async function soforDavetKontrol() {
+  const kod = (document.getElementById('sofor-kod').value || '').trim().toUpperCase();
+  if (kod.length < 6) { soforHata('sofor-err-kod', 'Geçerli bir davet kodu girin.'); return; }
+
+  try {
+    const sb = getSB();
+    const { data, error } = await sb.rpc('sofor_davet_dogrula', { p_kod: kod });
+    if (error) throw error;
+    const rec = Array.isArray(data) ? data[0] : data;
+    if (!rec) throw new Error('Kod bulunamadı veya süresi dolmuş.');
+
+    soforState.davet = { ...rec, davet_kodu: kod };
+    document.getElementById('sofor-davet-ad').textContent    = rec.ad || '—';
+    document.getElementById('sofor-davet-firma').textContent = rec.firma_adi || '';
+    document.getElementById('sofor-davet-tel').textContent   = rec.telefon_son4 || '';
+    soforStepGoster('tel');
+  } catch (err) {
+    console.error(err);
+    soforHata('sofor-err-kod', 'Kod geçersiz veya süresi dolmuş.');
+  }
+}
+
+/* ---- ADIM 2: Telefon OTP gönder ---- */
+async function soforOtpGonder() {
+  const telRaw = (document.getElementById('sofor-tel').value || '').trim();
+  let tel = telRaw.replace(/[^\d+]/g, '');
+  if (!tel.startsWith('+')) {
+    tel = tel.replace(/\D/g, '');
+    if (tel.length === 10) tel = '+90' + tel;
+    else if (tel.length === 11 && tel.startsWith('0')) tel = '+9' + tel;
+    else if (tel.length === 12 && tel.startsWith('90')) tel = '+' + tel;
+    else { soforHata('sofor-err-tel', 'Geçerli bir telefon numarası girin.'); return; }
+  }
+
+  try {
+    const sb = getSB();
+    const { error } = await sb.auth.signInWithOtp({
+      phone: tel,
+      options: { shouldCreateUser: true }
+    });
+    if (error) throw error;
+    soforState.telefon = tel;
+    document.getElementById('sofor-otp-hedef').textContent = tel;
+    soforStepGoster('otp');
+  } catch (err) {
+    console.error(err);
+    const msg = (err?.message || '').toLowerCase();
+    if (msg.includes('sms') || msg.includes('provider')) {
+      soforHata('sofor-err-tel', 'SMS servisi yapılandırılmamış. Yöneticinize bildirin.');
+    } else {
+      soforHata('sofor-err-tel', 'Kod gönderilemedi: ' + (err?.message || 'hata'));
+    }
+  }
+}
+
+/* ---- ADIM 3: OTP kodu doğrula + davet kabul ---- */
+async function soforOtpDogrula() {
+  const otp = (document.getElementById('sofor-otp').value || '').trim();
+  if (otp.length < 4) { soforHata('sofor-err-otp', 'Geçerli bir kod girin.'); return; }
+  const tel = soforState.telefon;
+  if (!tel) { soforHata('sofor-err-otp', 'Telefon bilgisi kayıp. Baştan başlayın.'); return; }
+
+  try {
+    const sb = getSB();
+    const { data, error } = await sb.auth.verifyOtp({ phone: tel, token: otp, type: 'sms' });
+    if (error) throw error;
+    soforState.session = data.session;
+
+    // Davet kabul RPC
+    const kod = soforState.davet?.davet_kodu;
+    if (kod) {
+      const { error: kabulErr } = await sb.rpc('sofor_davet_kabul', { p_kod: kod });
+      if (kabulErr) {
+        console.warn('Davet kabul hatası:', kabulErr);
+        // telefon uyuşmazlığı en tipik hata
+        soforHata('sofor-err-otp', kabulErr.message || 'Davet kabul edilemedi.');
+        return;
+      }
+    }
+
+    const el = document.getElementById('sofor-suc-otp');
+    el.textContent = '✓ Giriş başarılı, yönlendiriliyorsunuz…';
+    el.classList.add('show');
+    setTimeout(() => soforDashboardAc(), 600);
+  } catch (err) {
+    console.error(err);
+    soforHata('sofor-err-otp', 'Kod hatalı veya süresi dolmuş.');
+  }
+}
+
+/* ---- Şoför kullanıcı mı kontrolü ---- */
+async function soforKullaniciMi() {
+  try {
+    const sb = getSB();
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return false;
+    const { data, error } = await sb
+      .from('firma_kullanicilar')
+      .select('firma_id, rol')
+      .eq('user_id', user.id)
+      .eq('rol', 'sofor')
+      .limit(1);
+    if (error) return false;
+    return !!(data && data.length);
+  } catch (e) { return false; }
+}
+
+/* ---- Dashboard aç ---- */
+async function soforDashboardAc() {
+  soforScreenGoster('home');
+  await soforProfilYukle();
+  await soforIsEmirleriYukle();
+}
+
+async function soforProfilYukle() {
+  try {
+    const sb = getSB();
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+
+    const { data: profil, error } = await sb
+      .from('v_sofor_profil')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && profil) {
+      soforState.profil = profil;
+      const ad = profil.ad || user.phone || 'Şoför';
+      document.getElementById('sofor-greet-name').textContent = ad;
+      document.getElementById('sofor-user-ad').textContent    = ad;
+      const plakaTxt = profil.arac_plaka || profil.plaka;
+      if (plakaTxt) {
+        document.getElementById('sofor-greet-plaka').innerHTML = `<span class="plaka">🚛 ${plakaTxt}</span>`;
+      }
+    } else {
+      document.getElementById('sofor-greet-name').textContent = user.phone || 'Şoför';
+    }
+  } catch (e) {
+    console.error('Profil yüklenemedi:', e);
+  }
+}
+
+async function soforIsEmirleriYukle() {
+  const list = document.getElementById('sofor-job-list');
+  if (!list) return;
+  list.innerHTML = '<div class="sofor-empty">Yükleniyor…</div>';
+
+  try {
+    const sb = getSB();
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { soforScreenGoster('login'); return; }
+
+    const bugun = new Date();
+    const d0 = new Date(bugun.getFullYear(), bugun.getMonth(), bugun.getDate()).toISOString();
+
+    const { data, error } = await sb
+      .from('is_emirleri')
+      .select('id, referans_no, konteyner_no, yukle_yeri, teslim_yeri, durum, kont_tip, musteri_adi, planlanan_tarih, created_at')
+      .eq('sofor_user_id', user.id)
+      .in('durum', ['Yeni','Yolda','Yüklendi','Beklemede','Teslim Edildi'])
+      .order('planlanan_tarih', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+
+    soforState.isEmirleri = data || [];
+
+    // Stat
+    const bugunkiler = soforState.isEmirleri.filter(e => {
+      const t = e.planlanan_tarih || e.created_at;
+      if (!t) return false;
+      return t.slice(0,10) === d0.slice(0,10);
+    });
+    const aktifler = soforState.isEmirleri.filter(e => ['Yolda','Yüklendi','Beklemede'].includes(e.durum));
+    document.getElementById('sofor-stat-bugun').textContent = bugunkiler.length;
+    document.getElementById('sofor-stat-aktif').textContent = aktifler.length;
+
+    if (!soforState.isEmirleri.length) {
+      list.innerHTML = '<div class="sofor-empty">🎉 Atanan iş emriniz yok. İyi dinlenmeler!</div>';
+      return;
+    }
+
+    list.innerHTML = soforState.isEmirleri.map(e => {
+      const stCls = (e.durum || '').toLowerCase().includes('yolda')   ? 'yolda'
+                  : (e.durum || '').toLowerCase().includes('teslim')  ? 'teslim'
+                  : (e.durum || '').toLowerCase().includes('iptal')   ? 'iptal' : 'yeni';
+      return `
+      <div class="sofor-job-card" onclick="soforJobAc('${e.id}')">
+        <div class="top">
+          <span class="ref">${e.referans_no || e.konteyner_no || e.id}</span>
+          <span class="status ${stCls}">${e.durum || 'Yeni'}</span>
+        </div>
+        <div class="route">
+          <span>📍 ${e.yukle_yeri || '—'}</span>
+          <span class="arrow">→</span>
+          <span>🏁 ${e.teslim_yeri || '—'}</span>
+        </div>
+        <div class="meta">
+          ${e.musteri_adi ? '🏢 ' + e.musteri_adi : ''}
+          ${e.kont_tip   ? '· 📦 ' + e.kont_tip : ''}
+          ${e.planlanan_tarih ? '· 🗓 ' + new Date(e.planlanan_tarih).toLocaleDateString('tr-TR') : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    console.error('İş emirleri yüklenemedi:', err);
+    list.innerHTML = '<div class="sofor-empty" style="color:#fca5a5">Liste yüklenemedi: ' + (err?.message || 'hata') + '</div>';
+  }
+}
+
+/* ---- İş Emri Detay Drawer ---- */
+function soforJobAc(id) {
+  const e = soforState.isEmirleri.find(x => String(x.id) === String(id));
+  if (!e) return;
+  soforState.aktifIsEmri = e;
+  document.getElementById('sofor-job-title').textContent = e.referans_no || e.konteyner_no || 'İş Emri';
+
+  const body = document.getElementById('sofor-job-body');
+  const actions = soforJobActionsHTML(e);
+  body.innerHTML = `
+    <div class="sofor-info-grid">
+      <div class="sofor-info full"><div class="lbl">Durum</div><div class="val">${e.durum || '—'}</div></div>
+      <div class="sofor-info"><div class="lbl">Yükleme</div><div class="val">${e.yukle_yeri || '—'}</div></div>
+      <div class="sofor-info"><div class="lbl">Teslim</div><div class="val">${e.teslim_yeri || '—'}</div></div>
+      ${e.musteri_adi ? `<div class="sofor-info full"><div class="lbl">Müşteri</div><div class="val">${e.musteri_adi}</div></div>` : ''}
+      ${e.konteyner_no ? `<div class="sofor-info"><div class="lbl">Konteyner</div><div class="val">${e.konteyner_no}</div></div>` : ''}
+      ${e.kont_tip ? `<div class="sofor-info"><div class="lbl">Tip</div><div class="val">${e.kont_tip}</div></div>` : ''}
+      ${e.planlanan_tarih ? `<div class="sofor-info full"><div class="lbl">Planlanan</div><div class="val">${new Date(e.planlanan_tarih).toLocaleString('tr-TR')}</div></div>` : ''}
+    </div>
+    <div class="sofor-action-btns">${actions}</div>`;
+  document.getElementById('sofor-job-drawer').classList.add('open');
+}
+
+function soforJobKapat() {
+  document.getElementById('sofor-job-drawer').classList.remove('open');
+  soforState.aktifIsEmri = null;
+  soforKonumStop();
+}
+
+function soforJobActionsHTML(e) {
+  const d = (e.durum || '').toLowerCase();
+  const btns = [];
+  if (d.includes('yeni') || d === '' ) {
+    btns.push(`<button class="sofor-big-btn yolda" onclick="soforDurumGuncelle('Yolda')">🚛 Yola Çıktım</button>`);
+  } else if (d.includes('yolda')) {
+    btns.push(`<button class="sofor-big-btn primary" onclick="soforDurumGuncelle('Yüklendi')">📦 Yüklendi</button>`);
+    btns.push(`<button class="sofor-big-btn teslim" onclick="soforDurumGuncelle('Teslim Edildi')">✅ Teslim Ettim</button>`);
+  } else if (d.includes('yüklendi') || d.includes('yuklendi')) {
+    btns.push(`<button class="sofor-big-btn teslim" onclick="soforDurumGuncelle('Teslim Edildi')">✅ Teslim Ettim</button>`);
+  }
+  btns.push(`<button class="sofor-big-btn sec" onclick="soforYakitFisAc()">⛽ Yakıt Fişi Yükle</button>`);
+  btns.push(`<button class="sofor-big-btn sec" onclick="soforJobKapat()">Kapat</button>`);
+  return btns.join('');
+}
+
+async function soforDurumGuncelle(yeniDurum) {
+  const e = soforState.aktifIsEmri;
+  if (!e) return;
+  try {
+    const sb = getSB();
+    const { error } = await sb
+      .from('is_emirleri')
+      .update({ durum: yeniDurum })
+      .eq('id', e.id);
+    if (error) throw error;
+    e.durum = yeniDurum;
+    soforJobAc(e.id); // yeniden render
+    soforIsEmirleriYukle();
+
+    // "Yolda" ise konum takibini başlat; diğer durumlarda durdur
+    if (yeniDurum === 'Yolda') soforKonumStart();
+    else soforKonumStop();
+  } catch (err) {
+    console.error(err);
+    alert('Durum güncellenemedi: ' + (err?.message || 'hata'));
+  }
+}
+
+/* ---- Konum takibi (Yolda iken 60 sn'de bir) ---- */
+function soforKonumStart() {
+  if (soforState.konumInterval) return;
+  if (!('geolocation' in navigator)) return;
+  const gonder = async () => {
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const sb = getSB();
+        const e = soforState.aktifIsEmri;
+        await sb.from('konum_izleri').insert({
+          is_emri_id: e?.id || null,
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          hiz: pos.coords.speed || null,
+          dogruluk: pos.coords.accuracy || null
+        });
+      } catch (e) { /* sessiz */ }
+    }, () => {}, { enableHighAccuracy:true, timeout:15000, maximumAge:30000 });
+  };
+  gonder();
+  soforState.konumInterval = setInterval(gonder, 60000);
+}
+function soforKonumStop() {
+  if (soforState.konumInterval) {
+    clearInterval(soforState.konumInterval);
+    soforState.konumInterval = null;
+  }
+}
+
+/* ---- Yakıt Fiş Yükle ---- */
+function soforYakitFisAc() {
+  // Tarihi bugün
+  document.getElementById('sofor-fuel-tarih').value = new Date().toISOString().slice(0,10);
+  document.getElementById('sofor-fuel-modal').classList.add('open');
+}
+function soforYakitKapat() {
+  document.getElementById('sofor-fuel-modal').classList.remove('open');
+  soforState.fisFotoBlob = null;
+  ['sofor-fuel-km','sofor-fuel-litre','sofor-fuel-birim','sofor-fuel-toplam','sofor-fuel-istasyon'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value='';
+  });
+  const prev = document.getElementById('sofor-fuel-preview');
+  if (prev) prev.innerHTML = '📷 Fotoğraf çek / seç';
+}
+function soforFisFotoSec(ev) {
+  const file = ev.target.files?.[0];
+  if (!file) return;
+  soforState.fisFotoBlob = file;
+  const url = URL.createObjectURL(file);
+  document.getElementById('sofor-fuel-preview').innerHTML = `<img src="${url}" alt="fiş">`;
+}
+
+// Toplam otomatik hesapla
+document.addEventListener('input', (e) => {
+  if (!e.target || !e.target.id) return;
+  if (['sofor-fuel-litre','sofor-fuel-birim'].includes(e.target.id)) {
+    const l = parseFloat(document.getElementById('sofor-fuel-litre').value) || 0;
+    const b = parseFloat(document.getElementById('sofor-fuel-birim').value) || 0;
+    const t = (l * b).toFixed(2);
+    document.getElementById('sofor-fuel-toplam').value = t;
+  }
+});
+
+async function soforFisYukle() {
+  const tarih   = document.getElementById('sofor-fuel-tarih').value;
+  const km      = parseFloat(document.getElementById('sofor-fuel-km').value);
+  const litre   = parseFloat(document.getElementById('sofor-fuel-litre').value);
+  const birim   = parseFloat(document.getElementById('sofor-fuel-birim').value);
+  const istas   = document.getElementById('sofor-fuel-istasyon').value.trim();
+  const toplam  = parseFloat(document.getElementById('sofor-fuel-toplam').value);
+
+  const errEl = document.getElementById('sofor-fuel-err');
+  const sucEl = document.getElementById('sofor-fuel-suc');
+  errEl.classList.remove('show'); sucEl.classList.remove('show');
+
+  if (!tarih || !km || !litre || !birim) {
+    errEl.textContent = 'Tarih, km, litre ve birim fiyat zorunludur.'; errEl.classList.add('show'); return;
+  }
+  if (!soforState.fisFotoBlob) {
+    errEl.textContent = 'Fiş fotoğrafı zorunludur.'; errEl.classList.add('show'); return;
+  }
+  const aracId = soforState.profil?.arac_id;
+  if (!aracId) {
+    errEl.textContent = 'Aracınız atanmamış. Operasyoncuya başvurun.'; errEl.classList.add('show'); return;
+  }
+
+  try {
+    const sb = getSB();
+    const { data: { user } } = await sb.auth.getUser();
+
+    // 1) Fotoyu Supabase Storage'a yükle (bucket: yakit-fisleri)
+    const dosya = soforState.fisFotoBlob;
+    const ext   = (dosya.name.split('.').pop() || 'jpg').toLowerCase();
+    const yol   = `${user.id}/${tarih}_${Date.now()}.${ext}`;
+    let fisUrl  = null;
+    try {
+      const up = await sb.storage.from('yakit-fisleri').upload(yol, dosya, { contentType: dosya.type, upsert: false });
+      if (up.error) throw up.error;
+      const pub = sb.storage.from('yakit-fisleri').getPublicUrl(yol);
+      fisUrl = pub?.data?.publicUrl || null;
+    } catch (upErr) {
+      console.warn('Fiş yükleme hatası:', upErr);
+      // yine de kaydı oluştur; fotoğraf sonra eklenebilir
+    }
+
+    // 2) yakit_girisleri insert
+    const { error } = await sb.from('yakit_girisleri').insert({
+      user_id  : user.id,
+      arac_id  : aracId,
+      tarih    : tarih,
+      km       : km,
+      litre    : litre,
+      birim    : birim,
+      toplam   : toplam,
+      istasyon : istas || null,
+      fis_url  : fisUrl,
+      sofor    : soforState.profil?.ad || null
+    });
+    if (error) throw error;
+
+    sucEl.textContent = '✓ Fiş başarıyla yüklendi';
+    sucEl.classList.add('show');
+    setTimeout(() => soforYakitKapat(), 1200);
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = 'Kaydedilemedi: ' + (err?.message || 'hata'); errEl.classList.add('show');
+  }
+}
+
+/* ---- Diğer aksiyonlar ---- */
+function soforGoto(tab) {
+  if (tab === 'home') soforScreenGoster('home');
+}
+function soforKonumAc() {
+  alert('Konum paylaşımı, İş Emri "Yolda" durumuna alındığında otomatik başlar.');
+}
+function soforProfilAc() {
+  const p = soforState.profil;
+  const msg = p
+    ? `Ad: ${p.ad || '—'}\nTelefon: ${p.tel || '—'}\nAraç: ${p.plaka || '—'}`
+    : 'Profil yüklenemedi.';
+  alert(msg);
+}
+
+async function soforCikis() {
+  if (!confirm('Çıkış yapmak istediğinize emin misiniz?')) return;
+  try { await getSB().auth.signOut(); } catch (e) {}
+  soforState.profil = null;
+  soforState.session = null;
+  soforKonumStop();
+  soforScreenGoster('login');
+  soforStepGoster('kod');
+  // Hash'i temizle
+  location.hash = '#/sofor';
+}
+
+/* ---- PWA / Service Worker (basit) ---- */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.getRegistrations().then(() => {
+    // Opsiyonel: sw.js dosyası varsa kaydet. Yoksa sessizce geç.
+    fetch('/sw.js', { method: 'HEAD' }).then(r => {
+      if (r.ok) navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }).catch(() => {});
+  });
+}
+</script>
 
 </body>
 </html>
