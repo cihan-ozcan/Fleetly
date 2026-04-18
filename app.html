@@ -17700,28 +17700,80 @@ async function soforProfilYukle(force) {
       .limit(1)
       .maybeSingle();
 
-    if (!error && profil) {
-      soforState.profil = profil;
-      soforState._profilTs = Date.now();
-      const ad = profil.ad || user.phone || 'Şoför';
-      const gn = document.getElementById('sofor-greet-name'); if (gn) gn.textContent = ad;
-      const pl = document.getElementById('sofor-greet-plaka');
-      if (pl) {
-        const plakaTxt = profil.arac_plaka || profil.plaka;
-        pl.innerHTML = plakaTxt
-          ? `<span class="plaka">🚛 ${plakaTxt}</span>${profil.arac_tip?'<span style="font-size:11px;color:#94a3b8;margin-left:8px">'+profil.arac_tip+'</span>':''}`
-          : '<span style="font-size:12px;color:#94a3b8">🚛 Sabit araç atanmamış — sefer bazlı</span>';
-      }
-      const fe = document.getElementById('sofor-greet-firma');
-      if (fe) fe.textContent = profil.firma_adi || '';
-    } else {
-      const gn = document.getElementById('sofor-greet-name');
-      if (gn) gn.textContent = user.phone || 'Şoför';
+    // Profil tabanı: v_sofor_profil'den gelen ya da boş obje
+    const profilObj = (!error && profil) ? { ...profil } : {};
+
+    // --- surucu_belgeler'dan eksik belge tarihlerini tamamla ---
+    // v_sofor_profil'de belge tarihleri boşsa, operatörün girdiği
+    // surucu_belgeler tablosundan telefon eşleştirmesiyle çek
+    const belgelerEksik = !profilObj.ehliyet_bitis && !profilObj.src_bitis && !profilObj.psiko_bitis;
+    if (belgelerEksik && user.phone) {
+      try {
+        const telVaryantlari = _soforTelVariantlari(user.phone);
+        // Her varyant için dene; ilk başarılı sonucu kullan
+        for (const tel of telVaryantlari) {
+          const { data: belge } = await sb
+            .from('surucu_belgeler')
+            .select('ad, tel, ehliyet, src, psiko, takograf')
+            .eq('tel', tel)
+            .limit(1)
+            .maybeSingle();
+          if (belge) {
+            // surucu_belgeler sütun adları farklı: ehliyet→ehliyet_bitis, src→src_bitis vb.
+            if (belge.ehliyet  && !profilObj.ehliyet_bitis)  profilObj.ehliyet_bitis = belge.ehliyet;
+            if (belge.src      && !profilObj.src_bitis)      profilObj.src_bitis     = belge.src;
+            if (belge.psiko    && !profilObj.psiko_bitis)    profilObj.psiko_bitis   = belge.psiko;
+            if (belge.takograf && !profilObj.saglik_bitis)   profilObj.saglik_bitis  = belge.takograf;
+            if (belge.ad       && !profilObj.ad)             profilObj.ad            = belge.ad;
+            // Bulunan belge tarihlerini sofor_profil_guncelle ile kalıcı hale getir (arka planda)
+            try {
+              await sb.rpc('sofor_profil_guncelle', {
+                p_ehliyet_bitis : belge.ehliyet  || null,
+                p_src_bitis     : belge.src      || null,
+                p_psiko_bitis   : belge.psiko    || null,
+                p_saglik_bitis  : belge.takograf || null,
+              });
+            } catch(syncErr) { /* RPC erişim hatası olabilir, sessizce geç */ }
+            break;
+          }
+        }
+      } catch(belgeErr) { console.warn('surucu_belgeler erişim hatası (RLS?):', belgeErr); }
     }
+    // -------------------------------------------------------
+
+    soforState.profil = profilObj;
+    soforState._profilTs = Date.now();
+
+    const ad = profilObj.ad || user.phone || 'Şoför';
+    const gn = document.getElementById('sofor-greet-name'); if (gn) gn.textContent = ad;
+    const pl = document.getElementById('sofor-greet-plaka');
+    if (pl) {
+      const plakaTxt = profilObj.arac_plaka || profilObj.plaka;
+      pl.innerHTML = plakaTxt
+        ? `<span class="plaka">🚛 ${plakaTxt}</span>${profilObj.arac_tip?'<span style="font-size:11px;color:#94a3b8;margin-left:8px">'+profilObj.arac_tip+'</span>':''}`
+        : '<span style="font-size:12px;color:#94a3b8">🚛 Sabit araç atanmamış — sefer bazlı</span>';
+    }
+    const fe = document.getElementById('sofor-greet-firma');
+    if (fe) fe.textContent = profilObj.firma_adi || '';
+
     return soforState.profil;
   } catch (e) {
     console.error('Profil yüklenemedi:', e);
   }
+}
+
+// Şoförün telefon numarasından olası format varyantlarını üretir
+function _soforTelVariantlari(rawPhone) {
+  const digits = (rawPhone || '').replace(/\D/g, '');
+  if (digits.length < 10) return [];
+  const core = digits.slice(-10); // son 10 rakam (ülke kodu olmadan)
+  return [
+    '0' + core,                                                                          // "05321234567"
+    '+90' + core,                                                                        // "+905321234567"
+    '90' + core,                                                                         // "905321234567"
+    '0' + core.slice(0,3) + ' ' + core.slice(3,6) + ' ' + core.slice(6,8) + ' ' + core.slice(8), // "0532 123 45 67"
+    core.slice(0,3) + ' ' + core.slice(3,6) + ' ' + core.slice(6,8) + ' ' + core.slice(8),       // "532 123 45 67"
+  ];
 }
 
 async function soforIsEmirleriYukle() {
@@ -17740,77 +17792,26 @@ async function soforIsEmirleriYukle() {
     const FIELDS = 'id, referans_no, konteyner_no, yukle_yeri, teslim_yeri, durum, kont_tip, musteri_adi, atama_zamani, created_at';
     const DURUMLAR = ['Bekliyor','Yolda','Fabrikada','Teslim Edildi'];
 
-    // 1) sofor_user_id ile eşleşen iş emirleri
-    const { data: q1, error: e1 } = await sb
+    // user.phone: Supabase'in sakladığı E.164 formatı (+905321234567)
+    // Bunu olası tüm formatlara çevirerek OR filtresi oluştur
+    const telVaryantlari = _soforTelVariantlari(user.phone || '');
+    const telOrParcalari = telVaryantlari.map(t => `sofor_tel.eq.${t}`).join(',');
+    const orFiltre = `sofor_user_id.eq.${user.id}${telOrParcalari ? ',' + telOrParcalari : ''}`;
+
+    const { data, error } = await sb
       .from('is_emirleri')
       .select(FIELDS)
-      .eq('sofor_user_id', user.id)
+      .or(orFiltre)
       .in('durum', DURUMLAR)
       .order('atama_zamani', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false })
       .limit(50);
-    if (e1) throw e1;
+    if (error) throw error;
 
-    // 2) Şoförün davet kaydından operatör tarafından girilen tel/ad'ı bul
-    let q2 = [];
-    try {
-      const { data: davet } = await sb
-        .from('surucu_davetleri')
-        .select('ad, telefon')
-        .eq('kullanan_user_id', user.id)
-        .not('kullanildi_at', 'is', null)
-        .order('kullanildi_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (davet) {
-        // sofor_user_id henüz atanmamış iş emirlerini tel veya ad ile bul
-        const q1ids = new Set((q1||[]).map(e => e.id));
-        let ekstraData = [];
-
-        if (davet.telefon) {
-          const { data: byTel } = await sb
-            .from('is_emirleri')
-            .select(FIELDS)
-            .eq('sofor_tel', davet.telefon)
-            .is('sofor_user_id', null)
-            .in('durum', DURUMLAR)
-            .limit(50);
-          ekstraData = [...ekstraData, ...(byTel||[])];
-        }
-        if (davet.ad) {
-          const { data: byAd } = await sb
-            .from('is_emirleri')
-            .select(FIELDS)
-            .eq('sofor', davet.ad)
-            .is('sofor_user_id', null)
-            .in('durum', DURUMLAR)
-            .limit(50);
-          ekstraData = [...ekstraData, ...(byAd||[])];
-        }
-
-        // Tekrarları temizle ve q1'de olmayanları al
-        const seen = new Set(q1ids);
-        q2 = ekstraData.filter(e => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
-
-        // Bulunan eski iş emirlerine sofor_user_id'yi yaz (arka planda)
-        q2.forEach(e => {
-          sb.from('is_emirleri')
-            .update({ sofor_user_id: user.id })
-            .eq('id', e.id)
-            .then(() => {})
-            .catch(() => {});
-        });
-      }
-    } catch(lookupErr) { console.warn('Davet bazlı arama hatası:', lookupErr); }
-
-    const data = [...(q1||[]), ...q2]
-      .sort((a,b) => {
-        const ta = a.atama_zamani || a.created_at || '';
-        const tb = b.atama_zamani || b.created_at || '';
-        return ta < tb ? -1 : ta > tb ? 1 : 0;
-      });
-    const error = null;
+    // sofor_user_id boş olanları arka planda güncelle (bir daha arama gerekmesin)
+    (data || []).filter(e => !e.sofor_user_id).forEach(e => {
+      sb.from('is_emirleri').update({ sofor_user_id: user.id }).eq('id', e.id).catch(()=>{});
+    });
 
     soforState.isEmirleri = data || [];
 
