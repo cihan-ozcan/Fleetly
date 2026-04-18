@@ -16009,10 +16009,16 @@ function openOpsDrawer(id) {
   // Bağlantılı sefer kaydını bul
   const bagliSefer = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
 
+  // Şoför bağlantı durumu
+  const soforBagliMi = !!e.sofor_user_id;
+  const soforBagliHtml = soforBagliMi
+    ? `<span style="font-size:10px;background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);border-radius:4px;padding:1px 7px;margin-left:6px;">✓ Uygulamaya bağlı</span>`
+    : `<span style="font-size:10px;background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25);border-radius:4px;padding:1px 7px;margin-left:6px;">⚠ Bağlı değil</span>`;
+
   document.getElementById('ops-drawer-detaylar').innerHTML = [
     ['Müşteri',           e.musteri_adi || '—'],
     ['Araç',              e.arac_plaka  || '—'],
-    ['Sürücü',            e.sofor       || '—'],
+    ['Sürücü',            (e.sofor || '—') + soforBagliHtml],
     ['Sürücü Tel',        e.sofor_tel   || '—'],
     ['Konteyner No(lar)', (e.konteyner_no || '—').replace(/\n/g, ' · ')],
     ['Konteyner Tipi',    e.kont_tip    || '—'],
@@ -16036,7 +16042,17 @@ function openOpsDrawer(id) {
       ${bagliSefer.ucret > 0 ? `<span style="font-family:var(--font-mono);font-size:11.5px;color:var(--green);font-weight:700;">₺${(bagliSefer.ucret||0).toLocaleString('tr-TR')}</span>` : ''}
       ${bagliSefer.tarih    ? `<span style="font-size:11px;color:var(--muted);">${bagliSefer.tarih}</span>` : ''}
     </div>
-  </div>` : (e.durum === 'Teslim Edildi' ? '' : `<div style="margin-top:8px;opacity:.5;font-size:11px;color:var(--muted);padding:4px 0;">🗺 Sefer kaydı "Teslim Edildi" durumunda otomatik oluşturulur</div>`));
+  </div>` : (e.durum === 'Teslim Edildi' ? '' : `<div style="margin-top:8px;opacity:.5;font-size:11px;color:var(--muted);padding:4px 0;">🗺 Sefer kaydı "Teslim Edildi" durumunda otomatik oluşturulur</div>`))
+  + (!soforBagliMi && e.sofor ? `
+    <div style="margin-top:10px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 12px;">
+      <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:6px;">⚠ Şoför uygulamaya bağlı değil</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Şoför bu iş emrini kendi panelinde göremez. Daveti kabul ettikten sonra manuel olarak bağlayabilirsiniz.</div>
+      <button id="ops-sofor-ata-btn-${eId}" onclick="opsManuelSoforAta(${eId})"
+        style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">
+        🔗 Şoföre Bağla
+      </button>
+      <div id="ops-sofor-ata-secim-${eId}"></div>
+    </div>` : '');
 
   // ⛽ Yakıt / Maliyet kartı — iş emrine düşen yakıt ve kâr hesabı
   const yakitCardEl = document.getElementById('ops-drawer-yakit-card');
@@ -16343,39 +16359,109 @@ async function opsAracSec(plaka, sofor, tel) {
 
 /* ── ŞOFÖR USER_ID EŞLEŞTIR (geriye dönük düzeltme) ─────── */
 async function opsSoforUserIdEslestiir() {
-  // Daveti kabul etmiş şoförleri çek
   const sb = getSB();
+  // Kabul edilmiş tüm davetleri arac_id dahil çek
   const { data: davetler, error: dErr } = await sb
     .from('surucu_davetleri')
-    .select('kullanan_user_id, ad, telefon')
-    .not('kullanildi_at', 'is', null);
+    .select('kullanan_user_id, ad, telefon, arac_id')
+    .not('kullanildi_at', 'is', null)
+    .eq('iptal_mi', false);
   if (dErr || !davetler?.length) { console.warn('Davet listesi alınamadı', dErr); return 0; }
 
-  // sofor_user_id boş olan iş emirlerini bul
-  const bosIsEmirleri = (isEmirleri || []).filter(e => !e.sofor_user_id && (e.sofor || e.sofor_tel));
+  // arac_id → normalize plaka haritası (vehicles dizisinden)
+  const aracPlakaMap = {};
+  davetler.forEach(d => {
+    if (d.arac_id) {
+      const v = (vehicles || []).find(v => v.id === d.arac_id);
+      if (v?.plaka) aracPlakaMap[d.arac_id] = v.plaka.toUpperCase().replace(/\s/g, '');
+    }
+  });
+
+  // sofor_user_id boş, buluta kaydedilmiş iş emirleri
+  const bosIsEmirleri = (isEmirleri || []).filter(e => !e.sofor_user_id && e._dbId);
   if (!bosIsEmirleri.length) return 0;
 
   let guncellenen = 0;
   for (const e of bosIsEmirleri) {
-    const arananTel = (e.sofor_tel || '').replace(/[\s\-\(\)]/g, '');
-    const arananAd  = (e.sofor    || '').toLowerCase().trim();
+    const arananPlaka = (e.arac_plaka || '').toUpperCase().replace(/\s/g, '');
+    const arananTel   = (e.sofor_tel  || '').replace(/[\s\-\(\)]/g, '');
+    const arananAd    = (e.sofor      || '').toLowerCase().trim();
+
     const eslesme =
+      // 1) Plaka (en güvenilir: davet arac_id → vehicles → plaka → iş emri arac_plaka)
+      davetler.find(d => d.arac_id && arananPlaka && aracPlakaMap[d.arac_id] === arananPlaka) ||
+      // 2) Telefon (normalize: boşluk/tire/parantez yok)
       davetler.find(d => arananTel && (d.telefon||'').replace(/[\s\-\(\)]/g,'') === arananTel) ||
-      davetler.find(d => arananAd  && (d.ad||'').toLowerCase().trim() === arananAd);
+      // 3) Ad (son çare)
+      davetler.find(d => arananAd && (d.ad||'').toLowerCase().trim() === arananAd);
+
     if (eslesme?.kullanan_user_id) {
       e.sofor_user_id = eslesme.kullanan_user_id;
-      if (e._dbId) {
-        await fetch(sbUrl('is_emirleri?id=eq.' + e._dbId), {
-          method : 'PATCH',
-          headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
-          body   : JSON.stringify({ sofor_user_id: eslesme.kullanan_user_id }),
-        }).catch(err => console.warn('patch hata', e._dbId, err));
-      }
-      guncellenen++;
+      const res = await fetch(sbUrl('is_emirleri?id=eq.' + e._dbId), {
+        method : 'PATCH',
+        headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+        body   : JSON.stringify({ sofor_user_id: eslesme.kullanan_user_id }),
+      });
+      if (res.ok) guncellenen++;
+      else console.warn('sofor_user_id patch hata:', e._dbId, res.status);
     }
   }
   opsSaveLocal();
   return guncellenen;
+}
+
+/* ── MANUEL ŞOFÖRE BAĞLA (drawer'dan elle atama) ─────────── */
+async function opsManuelSoforAta(dbId) {
+  const sb = getSB();
+  const btnEl = document.getElementById('ops-sofor-ata-btn-' + dbId);
+  if (btnEl) { btnEl.textContent = '⌛ Yükleniyor…'; btnEl.disabled = true; }
+
+  const { data: davetler, error } = await sb
+    .from('surucu_davetleri')
+    .select('kullanan_user_id, ad, telefon, arac_id')
+    .not('kullanildi_at', 'is', null)
+    .eq('iptal_mi', false)
+    .order('kullanildi_at', { ascending: false });
+
+  if (btnEl) { btnEl.textContent = '🔗 Şoföre Bağla'; btnEl.disabled = false; }
+
+  if (error || !davetler?.length) {
+    showToast('Kabul edilmiş davet bulunamadı. Şoförün önce daveti onaylaması gerekiyor.', 'error');
+    return;
+  }
+
+  const konteyner = document.getElementById('ops-sofor-ata-secim-' + dbId);
+  if (!konteyner) return;
+  konteyner.innerHTML = `
+    <div style="margin-top:8px;background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">Hangi şoförle eşleştirilsin?</div>
+      ${davetler.map(d => {
+        const plaka = d.arac_id ? ((vehicles||[]).find(v=>v.id===d.arac_id)?.plaka||'') : '';
+        return `<button onclick="opsSoforAtaOnayla(${dbId},'${d.kullanan_user_id}',this)"
+          style="display:block;width:100%;text-align:left;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:8px 11px;margin-bottom:5px;cursor:pointer;font-family:var(--font-body);font-size:12.5px;color:var(--text);">
+          👤 <strong>${d.ad}</strong>${d.telefon?'&nbsp;·&nbsp;📞 '+d.telefon:''}${plaka?'&nbsp;·&nbsp;🚛 '+plaka:''}
+        </button>`;
+      }).join('')}
+      <button onclick="document.getElementById('ops-sofor-ata-secim-${dbId}').innerHTML=''" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;margin-top:2px;">İptal</button>
+    </div>`;
+}
+
+async function opsSoforAtaOnayla(dbId, kullananUserId, clickedBtn) {
+  if (clickedBtn) { clickedBtn.textContent = '⌛ Kaydediliyor…'; clickedBtn.disabled = true; }
+  const res = await fetch(sbUrl('is_emirleri?id=eq.' + dbId), {
+    method : 'PATCH',
+    headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+    body   : JSON.stringify({ sofor_user_id: kullananUserId }),
+  });
+  if (res.ok) {
+    const e = isEmirleri.find(x => x._dbId == dbId || x._dbId === Number(dbId));
+    if (e) { e.sofor_user_id = kullananUserId; opsSaveLocal(); }
+    showToast('✅ Şoförle bağlandı! Şoför artık bu iş emrini görebilir.', 'success');
+    if (opsDrawerActiveId != null) setTimeout(() => openOpsDrawer(opsDrawerActiveId), 200);
+  } else {
+    showToast('Bağlantı kurulamadı: ' + res.status, 'error');
+    if (clickedBtn) { clickedBtn.textContent = '(tekrar dene)'; clickedBtn.disabled = false; }
+  }
 }
 
 /* ── WHATSAPP PAYLAŞIMI ──────────────────────────────────── */
@@ -17714,26 +17800,35 @@ async function soforProfilYukle(force) {
         for (const tel of telVaryantlari) {
           const { data: belge } = await sb
             .from('surucu_belgeler')
-            .select('ad, tel, ehliyet, src, psiko, takograf')
+            // Hem yeni (_bitis) hem eski sütunları çek
+            .select('ad, tel, ehliyet, src, psiko, takograf, ehliyet_bitis, src_bitis, psiko_bitis, saglik_bitis, ehliyet_no, ehliyet_sinifi')
             .eq('tel', tel)
             .limit(1)
             .maybeSingle();
           if (belge) {
-            // surucu_belgeler sütun adları farklı: ehliyet→ehliyet_bitis, src→src_bitis vb.
-            if (belge.ehliyet  && !profilObj.ehliyet_bitis)  profilObj.ehliyet_bitis = belge.ehliyet;
-            if (belge.src      && !profilObj.src_bitis)      profilObj.src_bitis     = belge.src;
-            if (belge.psiko    && !profilObj.psiko_bitis)    profilObj.psiko_bitis   = belge.psiko;
-            if (belge.takograf && !profilObj.saglik_bitis)   profilObj.saglik_bitis  = belge.takograf;
-            if (belge.ad       && !profilObj.ad)             profilObj.ad            = belge.ad;
-            // Bulunan belge tarihlerini sofor_profil_guncelle ile kalıcı hale getir (arka planda)
+            // Yeni sütunu tercih et, yoksa eski sütuna bak
+            const eh  = belge.ehliyet_bitis || belge.ehliyet  || null;
+            const src = belge.src_bitis     || belge.src      || null;
+            const ps  = belge.psiko_bitis   || belge.psiko    || null;
+            const sg  = belge.saglik_bitis  || belge.takograf || null;
+            if (eh  && !profilObj.ehliyet_bitis)  profilObj.ehliyet_bitis  = eh;
+            if (src && !profilObj.src_bitis)      profilObj.src_bitis      = src;
+            if (ps  && !profilObj.psiko_bitis)    profilObj.psiko_bitis    = ps;
+            if (sg  && !profilObj.saglik_bitis)   profilObj.saglik_bitis   = sg;
+            if (belge.ehliyet_no     && !profilObj.ehliyet_no)     profilObj.ehliyet_no     = belge.ehliyet_no;
+            if (belge.ehliyet_sinifi && !profilObj.ehliyet_sinifi) profilObj.ehliyet_sinifi = belge.ehliyet_sinifi;
+            if (belge.ad && !profilObj.ad) profilObj.ad = belge.ad;
+            // Bulunan tarihleri sofor_profil_guncelle ile kalıcı hale getir (arka planda)
             try {
               await sb.rpc('sofor_profil_guncelle', {
-                p_ehliyet_bitis : belge.ehliyet  || null,
-                p_src_bitis     : belge.src      || null,
-                p_psiko_bitis   : belge.psiko    || null,
-                p_saglik_bitis  : belge.takograf || null,
+                p_ehliyet_bitis  : eh  || null,
+                p_src_bitis      : src || null,
+                p_psiko_bitis    : ps  || null,
+                p_saglik_bitis   : sg  || null,
+                p_ehliyet_no     : belge.ehliyet_no     || null,
+                p_ehliyet_sinifi : belge.ehliyet_sinifi || null,
               });
-            } catch(syncErr) { /* RPC erişim hatası olabilir, sessizce geç */ }
+            } catch(syncErr) { /* RPC erişim yoksa sessizce geç */ }
             break;
           }
         }
