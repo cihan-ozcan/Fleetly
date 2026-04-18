@@ -16740,6 +16740,188 @@ async function saveBranding() {
   }
   .sofor-photo-preview img { width:100%; height:100%; object-fit:cover; }
   .sofor-input-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+  /* ─── v2 — Marka + yeni ekranlar ─── */
+  .sofor-brand { display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:10px; }
+  .sofor-brand-mark { width:72px; height:72px; border-radius:20px;
+    background:linear-gradient(135deg, rgba(99,102,241,.15), rgba(168,85,247,.15));
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 12px 30px rgba(99,102,241,.25); border:1px solid rgba(129,140,248,.25); }
+  .sofor-brand-text { text-align:center; }
+  .sofor-brand-name { font-size:28px; font-weight:900; letter-spacing:-.02em; color:#fff;
+    background:linear-gradient(135deg,#818cf8,#c084fc);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .sofor-brand-tag { font-size:11.5px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.12em; margin-top:2px; }
+
+  .sofor-hdr-brand { display:flex; align-items:center; gap:10px; }
+  .sofor-hdr-name { font-size:15px; font-weight:800; color:#fff; line-height:1; letter-spacing:-.01em; }
+  .sofor-hdr-tag  { font-size:10.5px; color:#94a3b8; margin-top:3px; text-transform:uppercase; letter-spacing:.08em; }
+  .sofor-hdr-right { display:flex; align-items:center; gap:6px; }
+  .sofor-hdr-ico {
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); color:#cbd5e1;
+    width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:16px; cursor:pointer; transition:background .15s;
+  }
+  .sofor-hdr-ico:hover { background:rgba(255,255,255,.08); }
+  .sofor-hdr-ico .dot { width:9px; height:9px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); transition:background .2s; }
+  .sofor-hdr-ico.offline .dot { background:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.18); }
+
+  /* Greeting kartı */
+  .sofor-greet {
+    background:linear-gradient(135deg, rgba(99,102,241,.18), rgba(168,85,247,.12));
+    border:1px solid rgba(129,140,248,.18); border-radius:18px;
+    padding:16px 18px; margin:4px 0 14px;
+  }
+  .sofor-greet .hi   { font-size:13px; color:#cbd5e1; }
+  .sofor-greet .name { font-size:22px; font-weight:800; color:#fff; margin-top:2px; letter-spacing:-.01em; }
+  .sofor-greet .plaka {
+    display:inline-flex; align-items:center; gap:6px; margin-top:10px;
+    background:rgba(15,23,42,.55); border:1px solid rgba(129,140,248,.25);
+    border-radius:8px; padding:5px 10px; font-family:monospace; font-size:13px; color:#fff; font-weight:700; letter-spacing:.06em;
+  }
+  .sofor-greet .meta { margin-top:6px; font-size:12px; color:#94a3b8; }
+
+  /* 3 kolon quick action */
+  .sofor-quick { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }
+  .sofor-quick button {
+    background:rgba(30,41,59,.55); border:1px solid rgba(255,255,255,.07); color:#cbd5e1;
+    border-radius:14px; padding:14px 8px; font-family:inherit; font-size:11px; font-weight:700;
+    display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;
+    transition:transform .12s, border-color .2s, background .2s;
+  }
+  .sofor-quick button:active { transform:scale(.96); }
+  .sofor-quick button .ico { font-size:22px; }
+
+  /* Uyarı çubuğu */
+  .sofor-warn-list { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .sofor-warn {
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px;
+    background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.28);
+    font-size:12.5px; color:#fbbf24;
+  }
+  .sofor-warn.red { background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.28); color:#fca5a5; }
+  .sofor-warn .ico { font-size:18px; }
+
+  /* Profil ekranı */
+  .sofor-profile-hdr {
+    display:flex; align-items:center; gap:14px; padding:18px 4px 8px;
+  }
+  .sofor-avatar {
+    width:72px; height:72px; border-radius:50%;
+    background:linear-gradient(135deg,#6366f1,#8b5cf6);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:26px; font-weight:800; overflow:hidden;
+    box-shadow:0 10px 24px rgba(99,102,241,.3); cursor:pointer;
+    border:3px solid rgba(255,255,255,.08); position:relative;
+  }
+  .sofor-avatar img { width:100%; height:100%; object-fit:cover; }
+  .sofor-avatar .cam { position:absolute; bottom:-2px; right:-2px; width:26px; height:26px;
+    border-radius:50%; background:#1e293b; color:#cbd5e1; font-size:13px;
+    display:flex; align-items:center; justify-content:center; border:2px solid #0f172a; }
+  .sofor-profile-hdr .name { font-size:20px; font-weight:800; color:#fff; }
+  .sofor-profile-hdr .sub  { font-size:12px; color:#94a3b8; margin-top:4px; }
+
+  .sofor-card {
+    background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.06);
+    border-radius:14px; padding:14px; margin-bottom:12px;
+  }
+  .sofor-card-title {
+    font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em;
+    margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .sofor-card-title .edit {
+    background:transparent; border:none; color:#818cf8; font-family:inherit;
+    font-size:11px; font-weight:700; cursor:pointer; padding:0; letter-spacing:0; text-transform:none;
+  }
+
+  .sofor-kv { display:flex; justify-content:space-between; gap:10px; padding:9px 0;
+    border-bottom:1px dashed rgba(255,255,255,.06); font-size:13px; }
+  .sofor-kv:last-child { border-bottom:none; }
+  .sofor-kv .k { color:#94a3b8; flex-shrink:0; }
+  .sofor-kv .v { color:#fff; text-align:right; word-break:break-word; font-weight:600; }
+  .sofor-kv .v.muted { color:#64748b; font-weight:400; font-style:italic; }
+
+  .sofor-doc {
+    display:flex; align-items:center; gap:12px; padding:11px 12px;
+    background:rgba(15,23,42,.4); border:1px solid rgba(255,255,255,.05);
+    border-radius:10px; margin-bottom:8px; font-size:12.5px;
+  }
+  .sofor-doc .ico { font-size:22px; width:28px; text-align:center; }
+  .sofor-doc .info { flex:1; min-width:0; }
+  .sofor-doc .info .t { color:#fff; font-weight:600; }
+  .sofor-doc .info .d { color:#94a3b8; font-size:11px; margin-top:2px; }
+  .sofor-doc .badge { font-size:10.5px; padding:3px 8px; border-radius:999px; font-weight:700; }
+  .sofor-doc .badge.ok  { background:rgba(34,197,94,.15); color:#22c55e; }
+  .sofor-doc .badge.warn{ background:rgba(245,158,11,.15); color:#f59e0b; }
+  .sofor-doc .badge.red { background:rgba(239,68,68,.15); color:#ef4444; }
+  .sofor-doc .badge.na  { background:rgba(100,116,139,.15); color:#94a3b8; }
+
+  /* Konum ekranı */
+  .sofor-konum-hero {
+    background:linear-gradient(135deg, rgba(56,189,248,.14), rgba(14,165,233,.08));
+    border:1px solid rgba(56,189,248,.18); border-radius:16px; padding:16px; margin-bottom:14px;
+  }
+  .sofor-konum-hero .row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .sofor-konum-hero .lbl { font-size:10.5px; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; }
+  .sofor-konum-hero .val { font-size:16px; color:#fff; font-weight:700; font-family:monospace; }
+  .sofor-konum-hero .sub { font-size:12px; color:#7dd3fc; margin-top:6px; }
+
+  .sofor-switch { display:inline-flex; align-items:center; gap:10px; user-select:none; cursor:pointer; }
+  .sofor-switch input { position:absolute; opacity:0; pointer-events:none; }
+  .sofor-switch .track { width:44px; height:26px; border-radius:999px; background:rgba(255,255,255,.1); position:relative; transition:background .2s; }
+  .sofor-switch .thumb { position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:left .2s; }
+  .sofor-switch input:checked + .track { background:linear-gradient(135deg,#6366f1,#8b5cf6); }
+  .sofor-switch input:checked + .track .thumb { left:21px; }
+  .sofor-switch .txt { font-size:13px; color:#fff; font-weight:600; }
+
+  .sofor-map-embed {
+    width:100%; aspect-ratio:16/10; border:none; border-radius:14px;
+    background:rgba(30,41,59,.5); margin-bottom:12px;
+  }
+
+  /* Yakıt geçmişi */
+  .sofor-fuel-row {
+    display:grid; grid-template-columns:1fr auto auto; gap:10px; padding:12px 14px;
+    background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.06);
+    border-radius:12px; margin-bottom:8px; align-items:center;
+  }
+  .sofor-fuel-row .date { font-size:11px; color:#94a3b8; }
+  .sofor-fuel-row .station { font-size:13.5px; color:#fff; font-weight:600; margin-top:2px; }
+  .sofor-fuel-row .litre { font-size:12px; color:#cbd5e1; }
+  .sofor-fuel-row .tut { font-size:14px; color:#22c55e; font-weight:700; font-family:monospace; }
+  .sofor-fuel-row .foto { width:34px; height:34px; border-radius:8px; overflow:hidden; background:rgba(15,23,42,.6); border:1px solid rgba(255,255,255,.08); flex-shrink:0; }
+  .sofor-fuel-row .foto img { width:100%; height:100%; object-fit:cover; }
+
+  /* Ayarlar */
+  .sofor-setting-row {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:13px 14px; background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.06);
+    border-radius:12px; margin-bottom:8px;
+  }
+  .sofor-setting-row .lft { display:flex; align-items:center; gap:12px; flex:1; min-width:0; }
+  .sofor-setting-row .ico { width:34px; height:34px; border-radius:9px; background:rgba(129,140,248,.15); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .sofor-setting-row .txt { flex:1; min-width:0; }
+  .sofor-setting-row .t { font-size:14px; color:#fff; font-weight:600; }
+  .sofor-setting-row .d { font-size:11.5px; color:#94a3b8; margin-top:2px; }
+  .sofor-setting-row .act { flex-shrink:0; color:#64748b; font-size:14px; }
+
+  /* Form/edit mini-modal */
+  .sofor-editor-field { margin-bottom:12px; }
+  .sofor-editor-field label { display:block; font-size:11.5px; color:#94a3b8; margin-bottom:6px; font-weight:600; }
+  .sofor-editor-actions { display:flex; gap:10px; margin-top:16px; }
+  .sofor-editor-actions > * { flex:1; }
+
+  /* Tostu */
+  .sofor-toast {
+    position:fixed; top:80px; left:50%; transform:translateX(-50%) translateY(-100%);
+    background:linear-gradient(135deg,#1e293b,#0f172a); border:1px solid rgba(129,140,248,.35);
+    color:#fff; padding:12px 18px; border-radius:12px; font-size:13px; font-weight:600;
+    box-shadow:0 16px 36px rgba(0,0,0,.5); z-index:9999; transition:transform .25s, opacity .25s; opacity:0;
+    max-width:90%;
+  }
+  .sofor-toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+  .sofor-toast.ok   { border-color:rgba(34,197,94,.5); }
+  .sofor-toast.err  { border-color:rgba(239,68,68,.5); }
 </style>
 
 <div id="sofor-app">
@@ -16749,8 +16931,28 @@ async function saveBranding() {
     <div id="sofor-screen-login" class="sofor-screen">
       <div class="sofor-login">
         <div class="sofor-login-card">
-          <div class="logo">Fleetly<span class="badge"> · Şoför</span></div>
-          <div class="subtitle">Filo yönetim portalına giriş</div>
+          <div class="sofor-brand">
+            <div class="sofor-brand-mark">
+              <svg width="52" height="52" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <defs>
+                  <linearGradient id="sf-logo-grad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#818cf8"/>
+                    <stop offset="1" stop-color="#a855f7"/>
+                  </linearGradient>
+                </defs>
+                <polygon points="60,8 108,34 108,86 60,112 12,86 12,34" fill="none" stroke="url(#sf-logo-grad)" stroke-width="4" opacity=".85"/>
+                <line x1="22" y1="96" x2="60" y2="26" stroke="white" stroke-width="7" stroke-linecap="round"/>
+                <line x1="40" y1="106" x2="78" y2="22" stroke="white" stroke-width="5" stroke-linecap="round" opacity=".6"/>
+                <circle cx="96" cy="30" r="9" fill="#a855f7"/>
+                <circle cx="22" cy="96" r="12" fill="#818cf8" opacity=".9"/>
+              </svg>
+            </div>
+            <div class="sofor-brand-text">
+              <div class="sofor-brand-name">Fleetly</div>
+              <div class="sofor-brand-tag">Şoför Portalı</div>
+            </div>
+          </div>
+          <div class="subtitle">Giriş yapmak için davet kodunuzu kullanın</div>
 
           <!-- Adım 1: Davet kodu -->
           <div class="sofor-step active" id="sofor-step-kod">
@@ -16796,20 +16998,45 @@ async function saveBranding() {
       </div>
     </div>
 
-    <!-- DASHBOARD -->
-    <div id="sofor-screen-home" class="sofor-screen" style="display:none">
-      <div class="sofor-header">
-        <div class="logo">Fleetly<span> · Şoför</span></div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span class="user" id="sofor-user-ad">—</span>
-          <button class="logout" onclick="soforCikis()">Çıkış</button>
+    <!-- ORTAK HEADER -->
+    <div id="sofor-top-header" class="sofor-header" style="display:none">
+      <div class="sofor-hdr-brand">
+        <svg width="26" height="26" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <polygon points="60,8 108,34 108,86 60,112 12,86 12,34" fill="none" stroke="#818cf8" stroke-width="5" opacity=".85"/>
+          <line x1="22" y1="96" x2="60" y2="26" stroke="white" stroke-width="8" stroke-linecap="round"/>
+          <circle cx="96" cy="30" r="10" fill="#a855f7"/>
+        </svg>
+        <div>
+          <div class="sofor-hdr-name">Fleetly</div>
+          <div class="sofor-hdr-tag" id="sofor-hdr-screen">Anasayfa</div>
         </div>
       </div>
+      <div class="sofor-hdr-right">
+        <button class="sofor-hdr-ico" id="sofor-online-dot" title="Bağlantı durumu" aria-label="Bağlantı durumu">
+          <span class="dot"></span>
+        </button>
+        <button class="sofor-hdr-ico" onclick="soforGoto('ayarlar')" title="Ayarlar">⚙️</button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="sofor-screen-home" class="sofor-screen" style="display:none">
 
       <div class="sofor-greet">
-        <div class="hi">Merhaba,</div>
+        <div class="hi">Merhaba 👋</div>
         <div class="name" id="sofor-greet-name">—</div>
         <div id="sofor-greet-plaka"></div>
+        <div class="meta" id="sofor-greet-firma"></div>
+      </div>
+
+      <!-- Belgeler uyarı şeridi -->
+      <div class="sofor-warn-list" id="sofor-warn-list" style="display:none"></div>
+
+      <!-- Quick actions -->
+      <div class="sofor-quick">
+        <button onclick="soforGoto('konum')"><span class="ico">📍</span>Konum</button>
+        <button onclick="soforYakitFisAc()"><span class="ico">⛽</span>Fiş Yükle</button>
+        <button onclick="soforGoto('profil')"><span class="ico">👤</span>Profil</button>
       </div>
 
       <div class="sofor-stats">
@@ -16824,21 +17051,222 @@ async function saveBranding() {
       </div>
 
       <div class="sofor-section-title">
-        <span>📋 Bugünkü İş Emirleri</span>
+        <span>📋 İş Emirleri</span>
         <button onclick="soforIsEmirleriYukle()" style="background:transparent;border:none;color:#64748b;font-size:16px;cursor:pointer">🔄</button>
       </div>
       <div class="sofor-job-list" id="sofor-job-list">
         <div class="sofor-empty">Yükleniyor…</div>
       </div>
     </div>
+
+    <!-- KONUM -->
+    <div id="sofor-screen-konum" class="sofor-screen" style="display:none">
+      <h2 style="font-size:20px;font-weight:800;color:#fff;margin:12px 0 14px">📍 Konum Takibi</h2>
+
+      <div class="sofor-konum-hero">
+        <div class="row">
+          <div>
+            <div class="lbl">Mevcut Konum</div>
+            <div class="val" id="sofor-konum-latlng">—</div>
+          </div>
+          <label class="sofor-switch">
+            <input type="checkbox" id="sofor-konum-toggle" onchange="soforKonumToggleDegisti(this.checked)"/>
+            <span class="track"><span class="thumb"></span></span>
+            <span class="txt">Canlı</span>
+          </label>
+        </div>
+        <div class="row">
+          <div>
+            <div class="lbl">Doğruluk</div>
+            <div class="val" id="sofor-konum-dogruluk">—</div>
+          </div>
+          <div style="text-align:right">
+            <div class="lbl">Hız</div>
+            <div class="val" id="sofor-konum-hiz">—</div>
+          </div>
+        </div>
+        <div class="sub" id="sofor-konum-sub">Konum paylaşımı kapalı. Aktif bir işte "Yolda" durumuna geçtiğinizde otomatik başlar.</div>
+      </div>
+
+      <iframe class="sofor-map-embed" id="sofor-konum-harita" src="about:blank" title="Konum Haritası" referrerpolicy="no-referrer"></iframe>
+
+      <button class="sofor-big-btn primary" onclick="soforKonumSimdiGonder()">📤 Şu An Konumumu Gönder</button>
+      <button class="sofor-big-btn sec" style="margin-top:8px" onclick="soforKonumAcHarita()">🗺 Google Haritalar'da Aç</button>
+
+      <div class="sofor-section-title" style="margin-top:20px"><span>🕒 Son Konumlar</span></div>
+      <div id="sofor-konum-list"><div class="sofor-empty">Henüz konum gönderilmedi.</div></div>
+    </div>
+
+    <!-- PROFİL -->
+    <div id="sofor-screen-profil" class="sofor-screen" style="display:none">
+      <div class="sofor-profile-hdr">
+        <label class="sofor-avatar" id="sofor-avatar-lbl" for="sofor-avatar-file" title="Fotoğraf değiştir">
+          <span id="sofor-avatar-fallback">👤</span>
+          <img id="sofor-avatar-img" style="display:none" alt="profil"/>
+          <span class="cam">📷</span>
+        </label>
+        <input type="file" id="sofor-avatar-file" accept="image/*" style="display:none" onchange="soforAvatarSec(event)"/>
+        <div>
+          <div class="name" id="sofor-pr-ad">—</div>
+          <div class="sub" id="sofor-pr-rol">Şoför</div>
+          <div class="sub" id="sofor-pr-firma"></div>
+        </div>
+      </div>
+
+      <!-- Lifetime stats -->
+      <div class="sofor-stats" style="grid-template-columns:repeat(3,1fr); margin-top:6px">
+        <div class="sofor-stat"><div class="label">Toplam Sefer</div><div class="val" id="sofor-st-sefer">—</div></div>
+        <div class="sofor-stat"><div class="label">Bu Ay</div><div class="val" id="sofor-st-buay">—</div></div>
+        <div class="sofor-stat"><div class="label">Aktif</div><div class="val" id="sofor-st-aktif">—</div></div>
+      </div>
+
+      <!-- Kişisel bilgiler -->
+      <div class="sofor-card">
+        <div class="sofor-card-title">
+          <span>Kişisel Bilgiler</span>
+          <button class="edit" onclick="soforProfilDuzenle('kisisel')">Düzenle</button>
+        </div>
+        <div class="sofor-kv"><span class="k">Ad Soyad</span><span class="v" id="pr-kv-ad">—</span></div>
+        <div class="sofor-kv"><span class="k">Telefon</span><span class="v" id="pr-kv-tel">—</span></div>
+        <div class="sofor-kv"><span class="k">E-posta</span><span class="v muted" id="pr-kv-email">—</span></div>
+        <div class="sofor-kv"><span class="k">Doğum Tarihi</span><span class="v muted" id="pr-kv-dogum">—</span></div>
+        <div class="sofor-kv"><span class="k">Adres</span><span class="v muted" id="pr-kv-adres">—</span></div>
+      </div>
+
+      <!-- Acil durum kontağı -->
+      <div class="sofor-card">
+        <div class="sofor-card-title">
+          <span>Acil Durum Kontağı</span>
+          <button class="edit" onclick="soforProfilDuzenle('acil')">Düzenle</button>
+        </div>
+        <div class="sofor-kv"><span class="k">Ad</span><span class="v" id="pr-kv-acil-ad">—</span></div>
+        <div class="sofor-kv"><span class="k">Telefon</span><span class="v" id="pr-kv-acil-tel">—</span></div>
+      </div>
+
+      <!-- Araç -->
+      <div class="sofor-card">
+        <div class="sofor-card-title"><span>Atanan Araç</span></div>
+        <div class="sofor-kv"><span class="k">Plaka</span><span class="v" id="pr-kv-plaka">—</span></div>
+        <div class="sofor-kv"><span class="k">Tip</span><span class="v" id="pr-kv-arac-tip">—</span></div>
+        <div class="sofor-kv"><span class="k">Marka / Model</span><span class="v" id="pr-kv-arac-mm">—</span></div>
+        <div class="sofor-kv"><span class="k">Yıl</span><span class="v" id="pr-kv-arac-yil">—</span></div>
+      </div>
+
+      <!-- Belgeler -->
+      <div class="sofor-card">
+        <div class="sofor-card-title">
+          <span>Belgeler & Sertifikalar</span>
+          <button class="edit" onclick="soforProfilDuzenle('belge')">Düzenle</button>
+        </div>
+        <div id="sofor-doc-list"></div>
+      </div>
+
+      <button class="sofor-big-btn sec" onclick="soforGoto('yakit')">⛽ Yakıt Fiş Geçmişim</button>
+      <button class="sofor-big-btn sec" style="margin-top:8px" onclick="soforGoto('ayarlar')">⚙️ Ayarlar</button>
+    </div>
+
+    <!-- YAKIT GEÇMİŞİ -->
+    <div id="sofor-screen-yakit" class="sofor-screen" style="display:none">
+      <h2 style="font-size:20px;font-weight:800;color:#fff;margin:12px 0 14px">⛽ Yakıt Fişleri</h2>
+
+      <div class="sofor-stats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="sofor-stat"><div class="label">Toplam Fiş</div><div class="val" id="yk-st-fis">—</div></div>
+        <div class="sofor-stat"><div class="label">Toplam Litre</div><div class="val" id="yk-st-litre">—</div></div>
+        <div class="sofor-stat"><div class="label">Toplam ₺</div><div class="val" id="yk-st-tut">—</div></div>
+      </div>
+
+      <button class="sofor-big-btn primary" style="margin-top:12px" onclick="soforYakitFisAc()">➕ Yeni Yakıt Fişi</button>
+
+      <div class="sofor-section-title" style="margin-top:18px"><span>Geçmiş</span></div>
+      <div id="sofor-yakit-list"><div class="sofor-empty">Yükleniyor…</div></div>
+    </div>
+
+    <!-- AYARLAR -->
+    <div id="sofor-screen-ayarlar" class="sofor-screen" style="display:none">
+      <h2 style="font-size:20px;font-weight:800;color:#fff;margin:12px 0 14px">⚙️ Ayarlar</h2>
+
+      <div class="sofor-setting-row" onclick="soforBildirimDegistir()">
+        <div class="lft">
+          <div class="ico">🔔</div>
+          <div class="txt"><div class="t">Bildirimler</div><div class="d" id="ay-bildirim-d">Push bildirimlerini yönet</div></div>
+        </div>
+        <span class="act" id="ay-bildirim-state">—</span>
+      </div>
+
+      <div class="sofor-setting-row" onclick="soforTemaDegistir()">
+        <div class="lft">
+          <div class="ico">🎨</div>
+          <div class="txt"><div class="t">Tema</div><div class="d" id="ay-tema-d">Koyu tema</div></div>
+        </div>
+        <span class="act">›</span>
+      </div>
+
+      <div class="sofor-setting-row" onclick="soforDilDegistir()">
+        <div class="lft">
+          <div class="ico">🌐</div>
+          <div class="txt"><div class="t">Dil</div><div class="d" id="ay-dil-d">Türkçe</div></div>
+        </div>
+        <span class="act">›</span>
+      </div>
+
+      <div class="sofor-setting-row" onclick="soforKonumIzniYardim()">
+        <div class="lft">
+          <div class="ico">📍</div>
+          <div class="txt"><div class="t">Konum İzinleri</div><div class="d" id="ay-konum-d">Durum kontrol et</div></div>
+        </div>
+        <span class="act">›</span>
+      </div>
+
+      <div class="sofor-setting-row" onclick="pwaInstall()">
+        <div class="lft">
+          <div class="ico">📲</div>
+          <div class="txt"><div class="t">Ana Ekrana Ekle</div><div class="d">Uygulama gibi kullanın</div></div>
+        </div>
+        <span class="act">›</span>
+      </div>
+
+      <div class="sofor-setting-row" onclick="soforYardim()">
+        <div class="lft">
+          <div class="ico">💬</div>
+          <div class="txt"><div class="t">Yardım & Destek</div><div class="d">WhatsApp ile iletişime geç</div></div>
+        </div>
+        <span class="act">›</span>
+      </div>
+
+      <div class="sofor-setting-row" onclick="soforHakkinda()">
+        <div class="lft">
+          <div class="ico">ℹ️</div>
+          <div class="txt"><div class="t">Hakkında</div><div class="d">Fleetly Şoför Portalı v2.0</div></div>
+        </div>
+        <span class="act">›</span>
+      </div>
+
+      <button class="sofor-big-btn sec" style="margin-top:16px;color:#fca5a5;border-color:rgba(239,68,68,.3)" onclick="soforCikis()">🚪 Çıkış Yap</button>
+    </div>
   </div>
+
+  <!-- PROFİL DÜZENLE MODAL -->
+  <div class="sofor-fuel-modal" id="sofor-edit-modal" onclick="if(event.target===this)soforEditKapat()">
+    <div class="sofor-fuel-sheet">
+      <h3 id="sofor-edit-title">Düzenle</h3>
+      <div id="sofor-edit-body"></div>
+      <div class="sofor-editor-actions">
+        <button class="sofor-big-btn sec" onclick="soforEditKapat()">İptal</button>
+        <button class="sofor-big-btn primary" onclick="soforEditKaydet()">💾 Kaydet</button>
+      </div>
+      <div class="sofor-error" id="sofor-edit-err" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="sofor-toast" id="sofor-toast"></div>
 
   <!-- Alt bar -->
   <div class="sofor-tabbar" id="sofor-tabbar" style="display:none">
-    <button class="sofor-tab active" onclick="soforGoto('home')"><span class="ico">🏠</span>Anasayfa</button>
-    <button class="sofor-tab" onclick="soforYakitFisAc()"><span class="ico">⛽</span>Yakıt Fişi</button>
-    <button class="sofor-tab" onclick="soforKonumAc()"><span class="ico">📍</span>Konum</button>
-    <button class="sofor-tab" onclick="soforProfilAc()"><span class="ico">👤</span>Profil</button>
+    <button class="sofor-tab active" data-screen="home"    onclick="soforGoto('home')"><span class="ico">🏠</span>Anasayfa</button>
+    <button class="sofor-tab"        data-screen="konum"   onclick="soforGoto('konum')"><span class="ico">📍</span>Konum</button>
+    <button class="sofor-tab"        data-screen="yakit"   onclick="soforGoto('yakit')"><span class="ico">⛽</span>Yakıt</button>
+    <button class="sofor-tab"        data-screen="profil"  onclick="soforGoto('profil')"><span class="ico">👤</span>Profil</button>
   </div>
 
   <!-- İş Emri Detay Drawer -->
@@ -16962,13 +17390,26 @@ async function soforInit() {
 }
 
 function soforScreenGoster(name) {
-  const screens = ['login','home'];
+  const screens = ['login','home','konum','profil','yakit','ayarlar'];
   screens.forEach(s => {
     const el = document.getElementById('sofor-screen-' + s);
     if (el) el.style.display = (s === name ? '' : 'none');
   });
   const tabbar = document.getElementById('sofor-tabbar');
-  if (tabbar) tabbar.style.display = (name === 'home' ? '' : 'none');
+  const header = document.getElementById('sofor-top-header');
+  const showChrome = (name !== 'login');
+  if (tabbar) tabbar.style.display = showChrome ? '' : 'none';
+  if (header) header.style.display = showChrome ? '' : 'none';
+
+  // Aktif tab vurgusu
+  document.querySelectorAll('#sofor-tabbar .sofor-tab').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('data-screen') === name);
+  });
+  // Header başlığı
+  const titles = { home:'Anasayfa', konum:'Konum', profil:'Profil', yakit:'Yakıt', ayarlar:'Ayarlar' };
+  const tag = document.getElementById('sofor-hdr-screen');
+  if (tag && titles[name]) tag.textContent = titles[name];
+  soforState.aktifEkran = name;
 }
 
 function soforStepGoster(name) {
@@ -17101,11 +17542,16 @@ async function soforDashboardAc() {
   await soforIsEmirleriYukle();
 }
 
-async function soforProfilYukle() {
+async function soforProfilYukle(force) {
   try {
     const sb = getSB();
     const { data: { user } } = await sb.auth.getUser();
     if (!user) return;
+
+    // cache (force değilse 15 sn)
+    if (!force && soforState.profil && (Date.now() - (soforState._profilTs||0)) < 15000) {
+      return soforState.profil;
+    }
 
     const { data: profil, error } = await sb
       .from('v_sofor_profil')
@@ -17115,16 +17561,23 @@ async function soforProfilYukle() {
 
     if (!error && profil) {
       soforState.profil = profil;
+      soforState._profilTs = Date.now();
       const ad = profil.ad || user.phone || 'Şoför';
-      document.getElementById('sofor-greet-name').textContent = ad;
-      document.getElementById('sofor-user-ad').textContent    = ad;
-      const plakaTxt = profil.arac_plaka || profil.plaka;
-      if (plakaTxt) {
-        document.getElementById('sofor-greet-plaka').innerHTML = `<span class="plaka">🚛 ${plakaTxt}</span>`;
+      const gn = document.getElementById('sofor-greet-name'); if (gn) gn.textContent = ad;
+      const pl = document.getElementById('sofor-greet-plaka');
+      if (pl) {
+        const plakaTxt = profil.arac_plaka || profil.plaka;
+        pl.innerHTML = plakaTxt
+          ? `<span class="plaka">🚛 ${plakaTxt}</span>${profil.arac_tip?'<span style="font-size:11px;color:#94a3b8;margin-left:8px">'+profil.arac_tip+'</span>':''}`
+          : '<span style="font-size:12px;color:#94a3b8">🚛 Sabit araç atanmamış — sefer bazlı</span>';
       }
+      const fe = document.getElementById('sofor-greet-firma');
+      if (fe) fe.textContent = profil.firma_adi || '';
     } else {
-      document.getElementById('sofor-greet-name').textContent = user.phone || 'Şoför';
+      const gn = document.getElementById('sofor-greet-name');
+      if (gn) gn.textContent = user.phone || 'Şoför';
     }
+    return soforState.profil;
   } catch (e) {
     console.error('Profil yüklenemedi:', e);
   }
@@ -17209,18 +17662,70 @@ function soforJobAc(id) {
 
   const body = document.getElementById('sofor-job-body');
   const actions = soforJobActionsHTML(e);
+
+  // Navigasyon butonları — yükleme & teslim yerlerine Google Maps linki
+  const navBtns = [];
+  if (e.yukle_yeri) {
+    navBtns.push(`<button class="sofor-big-btn sec" onclick="soforNavigate('${(e.yukle_yeri||'').replace(/'/g,"\\'")}')">🗺 Yükleme Noktasına Git</button>`);
+  }
+  if (e.teslim_yeri) {
+    navBtns.push(`<button class="sofor-big-btn sec" onclick="soforNavigate('${(e.teslim_yeri||'').replace(/'/g,"\\'")}')">🏁 Teslim Noktasına Git</button>`);
+  }
+
   body.innerHTML = `
     <div class="sofor-info-grid">
-      <div class="sofor-info full"><div class="lbl">Durum</div><div class="val">${e.durum || '—'}</div></div>
-      <div class="sofor-info"><div class="lbl">Yükleme</div><div class="val">${e.yukle_yeri || '—'}</div></div>
-      <div class="sofor-info"><div class="lbl">Teslim</div><div class="val">${e.teslim_yeri || '—'}</div></div>
-      ${e.musteri_adi ? `<div class="sofor-info full"><div class="lbl">Müşteri</div><div class="val">${e.musteri_adi}</div></div>` : ''}
+      <div class="sofor-info full"><div class="lbl">Durum</div><div class="val">
+        <span class="sofor-doc"><span class="badge ok" style="background:rgba(129,140,248,.15);color:#818cf8">${e.durum || 'Bekliyor'}</span></span>
+      </div></div>
+      <div class="sofor-info"><div class="lbl">📍 Yükleme</div><div class="val">${e.yukle_yeri || '—'}</div></div>
+      <div class="sofor-info"><div class="lbl">🏁 Teslim</div><div class="val">${e.teslim_yeri || '—'}</div></div>
+      ${e.musteri_adi ? `<div class="sofor-info full"><div class="lbl">🏢 Müşteri</div><div class="val">${e.musteri_adi}</div></div>` : ''}
       ${e.konteyner_no ? `<div class="sofor-info"><div class="lbl">Konteyner</div><div class="val">${e.konteyner_no}</div></div>` : ''}
       ${e.kont_tip ? `<div class="sofor-info"><div class="lbl">Tip</div><div class="val">${e.kont_tip}</div></div>` : ''}
-      ${e.atama_zamani ? `<div class="sofor-info full"><div class="lbl">Atama Zamanı</div><div class="val">${new Date(e.atama_zamani).toLocaleString('tr-TR')}</div></div>` : ''}
+      ${e.atama_zamani ? `<div class="sofor-info full"><div class="lbl">🗓 Atama Zamanı</div><div class="val">${new Date(e.atama_zamani).toLocaleString('tr-TR')}</div></div>` : ''}
     </div>
+    ${navBtns.length ? `<div class="sofor-section-title" style="margin-top:10px"><span>🧭 Navigasyon</span></div><div class="sofor-action-btns">${navBtns.join('')}</div>` : ''}
+    <div class="sofor-section-title" style="margin-top:10px"><span>⚡ İşlemler</span></div>
     <div class="sofor-action-btns">${actions}</div>`;
   document.getElementById('sofor-job-drawer').classList.add('open');
+}
+
+function soforNavigate(adres) {
+  if (!adres) return;
+  const u = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(adres)}`;
+  window.open(u, '_blank');
+}
+
+/* ---- Müşteriye telefonla ulaş / problem bildir ---- */
+async function soforMusteriAra() {
+  const e = soforState.aktifIsEmri; if (!e) return;
+  try {
+    const sb = getSB();
+    const { data } = await sb.from('is_emirleri')
+      .select('musteri_tel, yetkili_tel, iletisim_tel')
+      .eq('id', e.id).maybeSingle();
+    const tel = data?.yetkili_tel || data?.iletisim_tel || data?.musteri_tel;
+    if (!tel) { soforToast('Müşteri telefonu kayıtlı değil', 'err'); return; }
+    window.location.href = 'tel:' + tel;
+  } catch { soforToast('Bulunamadı', 'err'); }
+}
+
+async function soforProblemBildir() {
+  const e = soforState.aktifIsEmri; if (!e) return;
+  const mesaj = prompt('Problemi yazın (operasyon ekibine iletilecek):');
+  if (!mesaj || !mesaj.trim()) return;
+  try {
+    const sb = getSB();
+    // is_emirleri.aciklama'ya ekle (append)
+    const { data: cur } = await sb.from('is_emirleri').select('aciklama').eq('id', e.id).maybeSingle();
+    const eskisi = cur?.aciklama || '';
+    const yeni = (eskisi ? eskisi + '\n\n' : '') + `[ŞOFÖR · ${new Date().toLocaleString('tr-TR')}] ${mesaj.trim()}`;
+    const { error } = await sb.from('is_emirleri').update({ aciklama: yeni }).eq('id', e.id);
+    if (error) throw error;
+    soforToast('Bildirim gönderildi ✓', 'ok');
+  } catch (err) {
+    soforToast('Gönderilemedi: ' + (err?.message||'hata'), 'err');
+  }
 }
 
 function soforJobKapat() {
@@ -17242,6 +17747,8 @@ function soforJobActionsHTML(e) {
     btns.push(`<button class="sofor-big-btn teslim" onclick="soforDurumGuncelle('Teslim Edildi')">✅ Teslim Ettim</button>`);
   }
   btns.push(`<button class="sofor-big-btn sec" onclick="soforYakitFisAc()">⛽ Yakıt Fişi Yükle</button>`);
+  btns.push(`<button class="sofor-big-btn sec" onclick="soforMusteriAra()">📞 Müşteriyi Ara</button>`);
+  btns.push(`<button class="sofor-big-btn sec" onclick="soforProblemBildir()" style="color:#fbbf24;border-color:rgba(245,158,11,.3)">⚠️ Problem Bildir</button>`);
   btns.push(`<button class="sofor-big-btn sec" onclick="soforJobKapat()">Kapat</button>`);
   return btns.join('');
 }
@@ -17269,34 +17776,45 @@ async function soforDurumGuncelle(yeniDurum) {
   }
 }
 
-/* ---- Konum takibi (Yolda iken 60 sn'de bir) ---- */
-function soforKonumStart() {
+/* ---- Konum takibi (Yolda iken veya manuel "Canlı" toggle ile 60 sn'de bir) ---- */
+function soforKonumStart(manual) {
   if (soforState.konumInterval) return;
   if (!('geolocation' in navigator)) return;
   const gonder = async () => {
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
+        // Konum ekranı açıksa UI'ı da güncelle
+        if (soforState.aktifEkran === 'konum') _soforKonumHeroGuncelle(pos);
         const sb = getSB();
         const e = soforState.aktifIsEmri;
-        if (!e?.id) return;  // is_emri_id NOT NULL — aktif iş emri yoksa gönderme
-        await sb.from('konum_izleri').insert({
-          is_emri_id: e.id,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,         // şema: lng (lon değil)
-          hiz: pos.coords.speed || null,
-          dogruluk: pos.coords.accuracy || null
+        const batarya = await _soforBatarya();
+        await sb.rpc('sofor_konum_gonder', {
+          p_lat      : pos.coords.latitude,
+          p_lng      : pos.coords.longitude,
+          p_dogruluk : pos.coords.accuracy || null,
+          p_hiz      : pos.coords.speed || null,
+          p_batarya  : batarya,
+          p_is_emri  : e?.id || null,
+          p_tip      : manual ? 'live' : 'auto'
         });
-      } catch (e) { /* sessiz */ }
+      } catch (err) { /* sessiz */ }
     }, () => {}, { enableHighAccuracy:true, timeout:15000, maximumAge:30000 });
   };
   gonder();
   soforState.konumInterval = setInterval(gonder, 60000);
+  soforState.konumMode = manual ? 'manual' : 'job';
+  // Konum ekranındaysa toggle'ı işaretle
+  const tg = document.getElementById('sofor-konum-toggle');
+  if (tg) tg.checked = true;
 }
 function soforKonumStop() {
   if (soforState.konumInterval) {
     clearInterval(soforState.konumInterval);
     soforState.konumInterval = null;
   }
+  soforState.konumMode = null;
+  const tg = document.getElementById('sofor-konum-toggle');
+  if (tg) tg.checked = false;
 }
 
 /* ---- Yakıt Fiş Yükle ---- */
@@ -17401,19 +17919,490 @@ async function soforFisYukle() {
   }
 }
 
-/* ---- Diğer aksiyonlar ---- */
-function soforGoto(tab) {
-  if (tab === 'home') soforScreenGoster('home');
+/* ================================================================
+   ŞOFÖR PORTAL v2 — Router + Profil + Konum + Yakıt + Ayarlar
+   ================================================================ */
+
+function soforGoto(screen) {
+  soforScreenGoster(screen);
+  // Lazy load per-screen
+  switch (screen) {
+    case 'home'    : soforIsEmirleriYukle(); soforProfilYukle(); break;
+    case 'konum'   : soforKonumEkranAc();  break;
+    case 'profil'  : soforProfilEkranAc(); break;
+    case 'yakit'   : soforYakitEkranAc();  break;
+    case 'ayarlar' : soforAyarlarEkranAc(); break;
+  }
+  // Scroll top
+  document.getElementById('sofor-app')?.scrollTo({ top:0, behavior:'auto' });
 }
-function soforKonumAc() {
-  alert('Konum paylaşımı, İş Emri "Yolda" durumuna alındığında otomatik başlar.');
+
+/* ---- Toast helper ---- */
+function soforToast(msg, type='') {
+  const t = document.getElementById('sofor-toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'sofor-toast show ' + type;
+  clearTimeout(soforToast._t);
+  soforToast._t = setTimeout(() => t.classList.remove('show'), 2600);
 }
-function soforProfilAc() {
+
+/* ---- Online/offline indikatörü ---- */
+function _soforOnlineUpdate() {
+  const dot = document.getElementById('sofor-online-dot');
+  if (!dot) return;
+  dot.classList.toggle('offline', !navigator.onLine);
+  dot.title = navigator.onLine ? 'Çevrimiçi' : 'Çevrimdışı';
+}
+window.addEventListener('online',  _soforOnlineUpdate);
+window.addEventListener('offline', _soforOnlineUpdate);
+
+/* ================================================================
+   PROFİL — Bilgileri yükle + renderla + düzenle
+   ================================================================ */
+async function soforProfilEkranAc() {
+  await Promise.all([ soforProfilYukle(true), soforIstatistikYukle() ]);
+  _soforProfilRender();
+}
+
+async function soforIstatistikYukle() {
+  try {
+    const sb = getSB();
+    const { data, error } = await sb.from('v_sofor_istatistik').select('*').maybeSingle();
+    if (error) throw error;
+    soforState.istatistik = data || null;
+    // Home'daki genel statler (lifetime)
+    if (data) {
+      const buay = document.getElementById('sofor-st-buay'); if (buay) buay.textContent = data.bu_ay_sefer ?? 0;
+      const sef  = document.getElementById('sofor-st-sefer'); if (sef)  sef.textContent  = data.toplam_sefer ?? 0;
+      const ak   = document.getElementById('sofor-st-aktif'); if (ak)   ak.textContent   = data.aktif_sefer ?? 0;
+    }
+  } catch (e) { console.warn('İstatistik yüklenemedi:', e); }
+}
+
+function _fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('tr-TR'); } catch { return d; }
+}
+function _belgeBadge(bitis) {
+  if (!bitis) return { cls:'na', txt:'Eklenmedi' };
+  const b = new Date(bitis); const now = new Date();
+  const gun = Math.round((b - now) / (1000*60*60*24));
+  if (gun < 0)      return { cls:'red',  txt:'Süresi dolmuş' };
+  if (gun <= 30)    return { cls:'warn', txt:gun+' gün kaldı' };
+  return { cls:'ok', txt:'Geçerli · '+_fmtDate(bitis) };
+}
+
+function _soforProfilRender() {
+  const p = soforState.profil || {};
+  // Avatar
+  const imgEl = document.getElementById('sofor-avatar-img');
+  const fbEl  = document.getElementById('sofor-avatar-fallback');
+  if (p.avatar_url) {
+    imgEl.src = p.avatar_url; imgEl.style.display = ''; if (fbEl) fbEl.style.display='none';
+  } else {
+    if (imgEl) imgEl.style.display = 'none';
+    if (fbEl)  { fbEl.style.display=''; fbEl.textContent = (p.ad||'?').trim().charAt(0).toUpperCase() || '?'; }
+  }
+  const set = (id,v) => { const el = document.getElementById(id); if (el) el.textContent = v || '—'; };
+  const setMuted = (id,v) => {
+    const el = document.getElementById(id); if (!el) return;
+    el.textContent = v || 'Eklenmemiş';
+    el.classList.toggle('muted', !v);
+  };
+  set('sofor-pr-ad',  p.ad);
+  set('sofor-pr-firma', p.firma_adi);
+  set('pr-kv-ad',   p.ad);
+  set('pr-kv-tel',  p.tel);
+  setMuted('pr-kv-email',  p.email);
+  setMuted('pr-kv-dogum',  p.dogum_tarihi ? _fmtDate(p.dogum_tarihi) : '');
+  setMuted('pr-kv-adres',  p.adres);
+  setMuted('pr-kv-acil-ad',  p.acil_kontak_ad);
+  setMuted('pr-kv-acil-tel', p.acil_kontak_tel);
+  set('pr-kv-plaka',    p.arac_plaka);
+  set('pr-kv-arac-tip', p.arac_tip);
+  set('pr-kv-arac-mm',  [p.arac_marka, p.arac_model].filter(Boolean).join(' '));
+  set('pr-kv-arac-yil', p.arac_yil);
+
+  // Belgeler
+  const docs = [
+    { ico:'🪪', ad:'Ehliyet',        sinifi:p.ehliyet_sinifi, bitis:p.ehliyet_bitis, no:p.ehliyet_no },
+    { ico:'📘', ad:'SRC Belgesi',    bitis:p.src_bitis },
+    { ico:'🧠', ad:'Psikoteknik',    bitis:p.psiko_bitis },
+    { ico:'❤️', ad:'Sağlık Raporu', bitis:p.saglik_bitis }
+  ];
+  const dl = document.getElementById('sofor-doc-list');
+  if (dl) dl.innerHTML = docs.map(d => {
+    const b = _belgeBadge(d.bitis);
+    const det = [];
+    if (d.sinifi) det.push('Sınıf: ' + d.sinifi);
+    if (d.no)     det.push('No: ' + d.no);
+    if (d.bitis)  det.push('Bitiş: ' + _fmtDate(d.bitis));
+    return `<div class="sofor-doc">
+      <div class="ico">${d.ico}</div>
+      <div class="info"><div class="t">${d.ad}</div><div class="d">${det.join(' · ') || 'Bilgi yok'}</div></div>
+      <div class="badge ${b.cls}">${b.txt}</div>
+    </div>`;
+  }).join('');
+
+  // Home greeting — firma adı
+  const fe = document.getElementById('sofor-greet-firma');
+  if (fe) fe.textContent = p.firma_adi || '';
+
+  // Warn şeridi — home
+  const warns = [];
+  if (p.ehliyet_uyari) warns.push({t:'Ehliyetiniz 30 gün içinde dolacak', red:false});
+  if (p.src_uyari)     warns.push({t:'SRC belgeniz 30 gün içinde dolacak', red:false});
+  if (p.psiko_uyari)   warns.push({t:'Psikoteknik raporunuz 30 gün içinde dolacak', red:false});
+  if (p.saglik_uyari)  warns.push({t:'Sağlık raporunuz 30 gün içinde dolacak', red:false});
+  if (p.ehliyet_bitis && new Date(p.ehliyet_bitis) < new Date()) warns.push({t:'Ehliyetinizin süresi dolmuş!', red:true});
+  const wl = document.getElementById('sofor-warn-list');
+  if (wl) {
+    if (warns.length) {
+      wl.style.display = '';
+      wl.innerHTML = warns.map(w => `<div class="sofor-warn ${w.red?'red':''}"><span class="ico">${w.red?'🚨':'⚠️'}</span>${w.t}</div>`).join('');
+    } else {
+      wl.style.display = 'none'; wl.innerHTML = '';
+    }
+  }
+}
+
+/* ---- Profil DÜZENLE MODAL ---- */
+let _soforEditCtx = null;
+
+function soforProfilDuzenle(bolum) {
+  const p = soforState.profil || {};
+  const title = document.getElementById('sofor-edit-title');
+  const body  = document.getElementById('sofor-edit-body');
+  const err   = document.getElementById('sofor-edit-err'); err.classList.remove('show');
+
+  let html = '';
+  _soforEditCtx = { bolum };
+
+  const inp = (id, label, value, type='text', attrs='') =>
+    `<div class="sofor-editor-field"><label>${label}</label>
+      <input class="sofor-inp" type="${type}" id="${id}" value="${value??''}" ${attrs}/></div>`;
+
+  if (bolum === 'kisisel') {
+    title.textContent = 'Kişisel Bilgileri Düzenle';
+    html += inp('ed-ad',    'Ad Soyad',   p.ad);
+    html += inp('ed-tel',   'Telefon',    p.tel, 'tel', 'placeholder="+90 5XX XXX XX XX"');
+    html += inp('ed-email', 'E-posta',    p.email, 'email');
+    html += inp('ed-dogum', 'Doğum Tarihi', p.dogum_tarihi ? p.dogum_tarihi.slice(0,10) : '', 'date');
+    html += `<div class="sofor-editor-field"><label>Adres</label>
+      <textarea class="sofor-inp" id="ed-adres" rows="2">${p.adres||''}</textarea></div>`;
+  } else if (bolum === 'acil') {
+    title.textContent = 'Acil Durum Kontağı';
+    html += inp('ed-acil-ad',  'Ad',       p.acil_kontak_ad);
+    html += inp('ed-acil-tel', 'Telefon',  p.acil_kontak_tel, 'tel');
+  } else if (bolum === 'belge') {
+    title.textContent = 'Belgeler & Sertifikalar';
+    html += inp('ed-eh-no',     'Ehliyet No',              p.ehliyet_no);
+    html += inp('ed-eh-sinifi', 'Ehliyet Sınıfı',          p.ehliyet_sinifi, 'text', 'placeholder="B, C, D, E ..."');
+    html += inp('ed-eh-bitis',  'Ehliyet Bitiş',           p.ehliyet_bitis ? p.ehliyet_bitis.slice(0,10) : '', 'date');
+    html += inp('ed-src-bitis', 'SRC Belgesi Bitiş',       p.src_bitis ? p.src_bitis.slice(0,10) : '', 'date');
+    html += inp('ed-psk-bitis', 'Psikoteknik Bitiş',       p.psiko_bitis ? p.psiko_bitis.slice(0,10) : '', 'date');
+    html += inp('ed-sag-bitis', 'Sağlık Raporu Bitiş',     p.saglik_bitis ? p.saglik_bitis.slice(0,10) : '', 'date');
+  }
+  body.innerHTML = html;
+  document.getElementById('sofor-edit-modal').classList.add('open');
+}
+
+function soforEditKapat() {
+  document.getElementById('sofor-edit-modal').classList.remove('open');
+  _soforEditCtx = null;
+}
+
+async function soforEditKaydet() {
+  const ctx = _soforEditCtx; if (!ctx) return;
+  const err = document.getElementById('sofor-edit-err'); err.classList.remove('show');
+
+  const v = id => (document.getElementById(id)?.value || '').trim();
+  let patch = {};
+  try {
+    if (ctx.bolum === 'kisisel') {
+      patch = {
+        p_ad:           v('ed-ad')    || null,
+        p_tel:          v('ed-tel')   || null,
+        p_email:        v('ed-email') || null,
+        p_dogum_tarihi: v('ed-dogum') || null,
+        p_adres:        v('ed-adres') || null
+      };
+    } else if (ctx.bolum === 'acil') {
+      patch = {
+        p_acil_kontak_ad:  v('ed-acil-ad')  || null,
+        p_acil_kontak_tel: v('ed-acil-tel') || null
+      };
+    } else if (ctx.bolum === 'belge') {
+      patch = {
+        p_ehliyet_no:     v('ed-eh-no')     || null,
+        p_ehliyet_sinifi: v('ed-eh-sinifi') || null,
+        p_ehliyet_bitis:  v('ed-eh-bitis')  || null,
+        p_src_bitis:      v('ed-src-bitis') || null,
+        p_psiko_bitis:    v('ed-psk-bitis') || null,
+        p_saglik_bitis:   v('ed-sag-bitis') || null
+      };
+    }
+    const sb = getSB();
+    const { error } = await sb.rpc('sofor_profil_guncelle', patch);
+    if (error) throw error;
+    soforEditKapat();
+    soforToast('Güncellendi ✓', 'ok');
+    await soforProfilYukle(true);
+    _soforProfilRender();
+  } catch (e) {
+    console.error(e);
+    err.textContent = 'Kaydedilemedi: ' + (e?.message || 'hata');
+    err.classList.add('show');
+  }
+}
+
+/* ---- Avatar upload ---- */
+async function soforAvatarSec(ev) {
+  const file = ev.target.files?.[0]; if (!file) return;
+  if (file.size > 4 * 1024 * 1024) { soforToast('Dosya çok büyük (max 4 MB)', 'err'); return; }
+  try {
+    const sb = getSB();
+    const { data: { user } } = await sb.auth.getUser();
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${user.id}/avatar_${Date.now()}.${ext}`;
+
+    soforToast('Yükleniyor…');
+    const up = await sb.storage.from('sofor-avatars').upload(path, file, { contentType:file.type, upsert:true });
+    if (up.error) throw up.error;
+    const pub = sb.storage.from('sofor-avatars').getPublicUrl(path);
+    const url = pub?.data?.publicUrl || null;
+    if (!url) throw new Error('URL alınamadı');
+
+    const { error: rpcErr } = await sb.rpc('sofor_profil_guncelle', { p_avatar_url: url });
+    if (rpcErr) throw rpcErr;
+
+    soforToast('Fotoğraf güncellendi ✓', 'ok');
+    await soforProfilYukle(true);
+    _soforProfilRender();
+  } catch (e) {
+    console.error(e); soforToast('Yüklenemedi: ' + (e?.message || 'hata'), 'err');
+  } finally {
+    ev.target.value = '';
+  }
+}
+
+/* ================================================================
+   KONUM EKRANI
+   ================================================================ */
+async function soforKonumEkranAc() {
+  soforKonumSonlariYukle();
+  // Mevcut konumu hemen bir kez al
+  if ('geolocation' in navigator) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      _soforKonumHeroGuncelle(pos);
+    }, () => {
+      const sub = document.getElementById('sofor-konum-sub');
+      if (sub) sub.textContent = 'Konum izni verilmedi. Lütfen tarayıcı/telefon ayarlarını kontrol edin.';
+    }, { enableHighAccuracy:true, timeout:10000, maximumAge:15000 });
+  }
+  // Toggle'ı mevcut duruma göre senkronla
+  const tg = document.getElementById('sofor-konum-toggle');
+  if (tg) tg.checked = !!soforState.konumInterval;
+}
+
+function _soforKonumHeroGuncelle(pos) {
+  if (!pos || !pos.coords) return;
+  const lat = pos.coords.latitude, lng = pos.coords.longitude;
+  const acc = pos.coords.accuracy, spd = pos.coords.speed;
+  soforState.sonKonum = { lat, lng, acc, spd, ts: Date.now() };
+
+  const el1 = document.getElementById('sofor-konum-latlng');
+  const el2 = document.getElementById('sofor-konum-dogruluk');
+  const el3 = document.getElementById('sofor-konum-hiz');
+  if (el1) el1.textContent = lat.toFixed(5) + ' · ' + lng.toFixed(5);
+  if (el2) el2.textContent = (acc != null ? Math.round(acc) + ' m' : '—');
+  if (el3) el3.textContent = (spd != null ? Math.round((spd||0) * 3.6) + ' km/h' : '—');
+
+  // OSM embed
+  const harita = document.getElementById('sofor-konum-harita');
+  if (harita) {
+    const d = 0.008;
+    const bbox = `${lng-d}%2C${lat-d}%2C${lng+d}%2C${lat+d}`;
+    harita.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+  }
+  const sub = document.getElementById('sofor-konum-sub');
+  if (sub) sub.textContent = soforState.konumInterval
+    ? '✓ Canlı konum paylaşımı açık · 60 sn\'de bir güncellenir'
+    : 'Konum alındı. "Canlı" açarak sürekli paylaşım başlatabilirsiniz.';
+}
+
+function soforKonumToggleDegisti(on) {
+  if (on) soforKonumStart(true);  // ekran modunda (is_emri_id olmadan)
+  else soforKonumStop();
+  const sub = document.getElementById('sofor-konum-sub');
+  if (sub) sub.textContent = on
+    ? '✓ Canlı konum paylaşımı açık · 60 sn\'de bir güncellenir'
+    : 'Canlı paylaşım kapalı.';
+}
+
+async function soforKonumSimdiGonder() {
+  if (!('geolocation' in navigator)) { soforToast('Konum desteklenmiyor', 'err'); return; }
+  soforToast('Konum alınıyor…');
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    _soforKonumHeroGuncelle(pos);
+    try {
+      const sb = getSB();
+      const batarya = await _soforBatarya();
+      const e = soforState.aktifIsEmri;
+      const { error } = await sb.rpc('sofor_konum_gonder', {
+        p_lat: pos.coords.latitude,
+        p_lng: pos.coords.longitude,
+        p_dogruluk: pos.coords.accuracy || null,
+        p_hiz: pos.coords.speed || null,
+        p_batarya: batarya,
+        p_is_emri: e?.id || null,
+        p_tip: 'manual'
+      });
+      if (error) throw error;
+      soforToast('Konum gönderildi ✓', 'ok');
+      soforKonumSonlariYukle();
+    } catch (err) { soforToast('Gönderilemedi: ' + (err?.message||'hata'), 'err'); }
+  }, err => soforToast('Konum alınamadı: ' + (err.message||'izin verilmedi'), 'err'),
+    { enableHighAccuracy:true, timeout:12000, maximumAge:5000 });
+}
+
+async function _soforBatarya() {
+  try {
+    if (navigator.getBattery) {
+      const b = await navigator.getBattery();
+      return Math.round((b.level || 0) * 100);
+    }
+  } catch {}
+  return null;
+}
+
+function soforKonumAcHarita() {
+  const k = soforState.sonKonum;
+  if (!k) { soforToast('Önce konum al', 'err'); return; }
+  window.open(`https://www.google.com/maps?q=${k.lat},${k.lng}`, '_blank');
+}
+
+async function soforKonumSonlariYukle() {
+  const list = document.getElementById('sofor-konum-list');
+  if (!list) return;
+  try {
+    const sb = getSB();
+    const { data, error } = await sb.from('v_sofor_son_konum').select('*').limit(10);
+    if (error) throw error;
+    if (!data || !data.length) {
+      list.innerHTML = '<div class="sofor-empty">Henüz konum gönderilmedi.</div>';
+      return;
+    }
+    list.innerHTML = data.map(k => {
+      const t = k.ts ? new Date(k.ts).toLocaleString('tr-TR') : '—';
+      const spd = k.hiz != null ? Math.round((k.hiz||0)*3.6) + ' km/h' : '—';
+      return `<div class="sofor-fuel-row" onclick="window.open('https://www.google.com/maps?q=${k.lat},${k.lng}','_blank')">
+        <div><div class="date">${t}${k.tip==='manual'?' · Manuel':''}</div>
+          <div class="station">${k.lat.toFixed(5)}, ${k.lng.toFixed(5)}</div></div>
+        <div class="litre">${spd}</div>
+        <div class="tut" style="color:#818cf8">›</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="sofor-empty" style="color:#fca5a5">Yüklenemedi</div>';
+  }
+}
+
+/* ================================================================
+   YAKIT GEÇMİŞİ EKRANI
+   ================================================================ */
+async function soforYakitEkranAc() {
+  try {
+    const sb = getSB();
+    const { data, error } = await sb.from('v_sofor_yakit').select('*').limit(200);
+    if (error) throw error;
+    const list = data || [];
+    let totLitre = 0, totTut = 0;
+    list.forEach(r => { totLitre += (+r.litre||0); totTut += (+r.fiyat||0); });
+    document.getElementById('yk-st-fis').textContent   = list.length;
+    document.getElementById('yk-st-litre').textContent = totLitre.toFixed(0);
+    document.getElementById('yk-st-tut').textContent   = '₺' + totTut.toLocaleString('tr-TR', { maximumFractionDigits: 0 });
+
+    const holder = document.getElementById('sofor-yakit-list');
+    if (!list.length) { holder.innerHTML = '<div class="sofor-empty">Henüz fiş yok. İlk fişinizi yükleyin!</div>'; return; }
+    holder.innerHTML = list.map(r => `
+      <div class="sofor-fuel-row" ${r.fis_url?`onclick="window.open('${r.fis_url}','_blank')"`:''}>
+        <div>
+          <div class="date">${_fmtDate(r.tarih)} ${r.arac_plaka?'· '+r.arac_plaka:''}</div>
+          <div class="station">${r.istasyon || 'İstasyon belirtilmedi'}</div>
+          <div class="litre">${(+r.litre||0).toFixed(1)} L${r.litre_fiyat?' · ₺'+r.litre_fiyat+'/L':''}</div>
+        </div>
+        <div class="tut">₺${(+r.fiyat||0).toLocaleString('tr-TR', {maximumFractionDigits:0})}</div>
+        ${r.fis_url ? `<div class="foto"><img src="${r.fis_url}" alt="fiş"/></div>` : '<div></div>'}
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error(e);
+    document.getElementById('sofor-yakit-list').innerHTML = '<div class="sofor-empty" style="color:#fca5a5">Yüklenemedi</div>';
+  }
+}
+
+/* ================================================================
+   AYARLAR EKRANI
+   ================================================================ */
+function soforAyarlarEkranAc() {
+  // Bildirim
+  const bd = document.getElementById('ay-bildirim-state');
+  const bdDesc = document.getElementById('ay-bildirim-d');
+  if ('Notification' in window) {
+    const p = Notification.permission;
+    if (bd) bd.textContent = p === 'granted' ? 'Açık' : (p === 'denied' ? 'Engelli' : 'Kapalı');
+    if (bdDesc) bdDesc.textContent = p === 'denied' ? 'Tarayıcı ayarlarından açın' : 'Push bildirimlerini yönet';
+  } else {
+    if (bd) bd.textContent = 'Desteklenmiyor';
+  }
+  // Tema
+  const t = localStorage.getItem('sofor-tema') || 'dark';
+  const td = document.getElementById('ay-tema-d');
+  if (td) td.textContent = t === 'light' ? 'Açık tema' : 'Koyu tema';
+  // Konum
+  if (navigator.permissions?.query) {
+    navigator.permissions.query({name:'geolocation'}).then(r => {
+      const d = document.getElementById('ay-konum-d');
+      if (d) d.textContent = r.state === 'granted' ? '✓ İzin verildi' : (r.state==='denied'?'Engelli':'İzin sorulacak');
+    }).catch(()=>{});
+  }
+}
+
+async function soforBildirimDegistir() {
+  if (!('Notification' in window)) { soforToast('Tarayıcı desteklemiyor', 'err'); return; }
+  if (Notification.permission === 'default') {
+    const p = await Notification.requestPermission();
+    soforToast(p === 'granted' ? 'Bildirimler açıldı ✓' : 'İzin verilmedi', p === 'granted' ? 'ok' : 'err');
+  } else if (Notification.permission === 'denied') {
+    alert('Bildirimler engellenmiş. Tarayıcı ayarlarından tekrar açın.');
+  } else {
+    alert('Bildirimler zaten açık. Kapatmak için tarayıcı ayarlarına girin.');
+  }
+  soforAyarlarEkranAc();
+}
+function soforTemaDegistir() {
+  const cur = localStorage.getItem('sofor-tema') || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('sofor-tema', next);
+  soforToast(next === 'dark' ? 'Koyu tema' : 'Açık tema', 'ok');
+  soforAyarlarEkranAc();
+}
+function soforDilDegistir() {
+  soforToast('Dil seçeneği yakında', '');
+}
+function soforKonumIzniYardim() {
+  alert('Konum izni adımları:\n\n1. Tarayıcınızın adres çubuğundaki 🔒 simgesine tıklayın\n2. "Konum" → "İzin ver" seçin\n3. Mobilde: Ayarlar → Uygulamalar → Tarayıcı → İzinler → Konum');
+}
+function soforYardim() {
   const p = soforState.profil;
-  const msg = p
-    ? `Ad: ${p.ad || '—'}\nTelefon: ${p.tel || '—'}\nAraç: ${p.plaka || '—'}`
-    : 'Profil yüklenemedi.';
-  alert(msg);
+  const tel = '902125555555';
+  const msg = 'Merhaba, Fleetly Şoför Portalı hakkında yardım istiyorum.';
+  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+function soforHakkinda() {
+  alert('Fleetly Şoför Portalı\nSürüm 2.0\n\nFilo yönetim sistemi — şoförler için mobil uygulama.\n\n© Fleetly');
 }
 
 async function soforCikis() {
