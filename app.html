@@ -17145,10 +17145,10 @@ async function soforIsEmirleriYukle() {
 
     const { data, error } = await sb
       .from('is_emirleri')
-      .select('id, referans_no, konteyner_no, yukle_yeri, teslim_yeri, durum, kont_tip, musteri_adi, planlanan_tarih, created_at')
+      .select('id, referans_no, konteyner_no, yukle_yeri, teslim_yeri, durum, kont_tip, musteri_adi, atama_zamani, created_at')
       .eq('sofor_user_id', user.id)
-      .in('durum', ['Yeni','Yolda','Yüklendi','Beklemede','Teslim Edildi'])
-      .order('planlanan_tarih', { ascending: true, nullsFirst: false })
+      .in('durum', ['Bekliyor','Yolda','Fabrikada','Teslim Edildi'])
+      .order('atama_zamani', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false })
       .limit(50);
     if (error) throw error;
@@ -17157,11 +17157,11 @@ async function soforIsEmirleriYukle() {
 
     // Stat
     const bugunkiler = soforState.isEmirleri.filter(e => {
-      const t = e.planlanan_tarih || e.created_at;
+      const t = e.atama_zamani || e.created_at;
       if (!t) return false;
       return t.slice(0,10) === d0.slice(0,10);
     });
-    const aktifler = soforState.isEmirleri.filter(e => ['Yolda','Yüklendi','Beklemede'].includes(e.durum));
+    const aktifler = soforState.isEmirleri.filter(e => ['Yolda','Fabrikada'].includes(e.durum));
     document.getElementById('sofor-stat-bugun').textContent = bugunkiler.length;
     document.getElementById('sofor-stat-aktif').textContent = aktifler.length;
 
@@ -17171,14 +17171,16 @@ async function soforIsEmirleriYukle() {
     }
 
     list.innerHTML = soforState.isEmirleri.map(e => {
-      const stCls = (e.durum || '').toLowerCase().includes('yolda')   ? 'yolda'
-                  : (e.durum || '').toLowerCase().includes('teslim')  ? 'teslim'
-                  : (e.durum || '').toLowerCase().includes('iptal')   ? 'iptal' : 'yeni';
+      const d = (e.durum || '').toLowerCase();
+      const stCls = d.includes('yolda')   ? 'yolda'
+                  : d.includes('fabrika') ? 'yolda'
+                  : d.includes('teslim')  ? 'teslim'
+                  : d.includes('iptal')   ? 'iptal' : 'yeni';
       return `
       <div class="sofor-job-card" onclick="soforJobAc('${e.id}')">
         <div class="top">
           <span class="ref">${e.referans_no || e.konteyner_no || e.id}</span>
-          <span class="status ${stCls}">${e.durum || 'Yeni'}</span>
+          <span class="status ${stCls}">${e.durum || 'Bekliyor'}</span>
         </div>
         <div class="route">
           <span>📍 ${e.yukle_yeri || '—'}</span>
@@ -17188,7 +17190,7 @@ async function soforIsEmirleriYukle() {
         <div class="meta">
           ${e.musteri_adi ? '🏢 ' + e.musteri_adi : ''}
           ${e.kont_tip   ? '· 📦 ' + e.kont_tip : ''}
-          ${e.planlanan_tarih ? '· 🗓 ' + new Date(e.planlanan_tarih).toLocaleDateString('tr-TR') : ''}
+          ${e.atama_zamani ? '· 🗓 ' + new Date(e.atama_zamani).toLocaleDateString('tr-TR') : ''}
         </div>
       </div>`;
     }).join('');
@@ -17215,7 +17217,7 @@ function soforJobAc(id) {
       ${e.musteri_adi ? `<div class="sofor-info full"><div class="lbl">Müşteri</div><div class="val">${e.musteri_adi}</div></div>` : ''}
       ${e.konteyner_no ? `<div class="sofor-info"><div class="lbl">Konteyner</div><div class="val">${e.konteyner_no}</div></div>` : ''}
       ${e.kont_tip ? `<div class="sofor-info"><div class="lbl">Tip</div><div class="val">${e.kont_tip}</div></div>` : ''}
-      ${e.planlanan_tarih ? `<div class="sofor-info full"><div class="lbl">Planlanan</div><div class="val">${new Date(e.planlanan_tarih).toLocaleString('tr-TR')}</div></div>` : ''}
+      ${e.atama_zamani ? `<div class="sofor-info full"><div class="lbl">Atama Zamanı</div><div class="val">${new Date(e.atama_zamani).toLocaleString('tr-TR')}</div></div>` : ''}
     </div>
     <div class="sofor-action-btns">${actions}</div>`;
   document.getElementById('sofor-job-drawer').classList.add('open');
@@ -17228,14 +17230,15 @@ function soforJobKapat() {
 }
 
 function soforJobActionsHTML(e) {
-  const d = (e.durum || '').toLowerCase();
+  const d = (e.durum || 'Bekliyor').toLowerCase();
   const btns = [];
-  if (d.includes('yeni') || d === '' ) {
+  // is_emirleri.durum CHECK: ('Bekliyor','Yolda','Fabrikada','Teslim Edildi','İptal')
+  if (d.includes('bekliyor') || d === '') {
     btns.push(`<button class="sofor-big-btn yolda" onclick="soforDurumGuncelle('Yolda')">🚛 Yola Çıktım</button>`);
   } else if (d.includes('yolda')) {
-    btns.push(`<button class="sofor-big-btn primary" onclick="soforDurumGuncelle('Yüklendi')">📦 Yüklendi</button>`);
+    btns.push(`<button class="sofor-big-btn primary" onclick="soforDurumGuncelle('Fabrikada')">🏭 Fabrikadayım</button>`);
     btns.push(`<button class="sofor-big-btn teslim" onclick="soforDurumGuncelle('Teslim Edildi')">✅ Teslim Ettim</button>`);
-  } else if (d.includes('yüklendi') || d.includes('yuklendi')) {
+  } else if (d.includes('fabrika')) {
     btns.push(`<button class="sofor-big-btn teslim" onclick="soforDurumGuncelle('Teslim Edildi')">✅ Teslim Ettim</button>`);
   }
   btns.push(`<button class="sofor-big-btn sec" onclick="soforYakitFisAc()">⛽ Yakıt Fişi Yükle</button>`);
@@ -17275,10 +17278,11 @@ function soforKonumStart() {
       try {
         const sb = getSB();
         const e = soforState.aktifIsEmri;
+        if (!e?.id) return;  // is_emri_id NOT NULL — aktif iş emri yoksa gönderme
         await sb.from('konum_izleri').insert({
-          is_emri_id: e?.id || null,
+          is_emri_id: e.id,
           lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
+          lng: pos.coords.longitude,         // şema: lng (lon değil)
           hiz: pos.coords.speed || null,
           dogruluk: pos.coords.accuracy || null
         });
@@ -17371,18 +17375,20 @@ async function soforFisYukle() {
       // yine de kaydı oluştur; fotoğraf sonra eklenebilir
     }
 
-    // 2) yakit_girisleri insert
+    // 2) yakit_girisleri insert — id text NOT NULL (client-side generated)
+    const genId = 'YK-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
     const { error } = await sb.from('yakit_girisleri').insert({
-      user_id  : user.id,
-      arac_id  : aracId,
-      tarih    : tarih,
-      km       : km,
-      litre    : litre,
-      birim    : birim,
-      toplam   : toplam,
-      istasyon : istas || null,
-      fis_url  : fisUrl,
-      sofor    : soforState.profil?.ad || null
+      id          : genId,
+      user_id     : user.id,
+      arac_id     : aracId,
+      tarih       : tarih,
+      km          : km,
+      litre       : litre,
+      litre_fiyat : birim,           // ₺/litre
+      fiyat       : toplam,          // toplam tutar
+      istasyon    : istas || null,
+      fis_url     : fisUrl,
+      sofor       : soforState.profil?.ad || null
     });
     if (error) throw error;
 
