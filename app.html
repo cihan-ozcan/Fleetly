@@ -16365,7 +16365,7 @@ async function opsSoforUserIdEslestiir() {
     .from('surucu_davetleri')
     .select('kullanan_user_id, ad, telefon, arac_id')
     .not('kullanildi_at', 'is', null)
-    .eq('iptal_mi', false);
+    .neq('iptal_mi', true);
   if (dErr || !davetler?.length) { console.warn('Davet listesi alınamadı', dErr); return 0; }
 
   // arac_id → normalize plaka haritası (vehicles dizisinden)
@@ -16420,7 +16420,7 @@ async function opsManuelSoforAta(dbId) {
     .from('surucu_davetleri')
     .select('kullanan_user_id, ad, telefon, arac_id')
     .not('kullanildi_at', 'is', null)
-    .eq('iptal_mi', false)
+    .neq('iptal_mi', true)
     .order('kullanildi_at', { ascending: false });
 
   if (btnEl) { btnEl.textContent = '🔗 Şoföre Bağla'; btnEl.disabled = false; }
@@ -17905,7 +17905,7 @@ async function soforIsEmirleriYukle() {
 
     // sofor_user_id boş olanları arka planda güncelle (bir daha arama gerekmesin)
     (data || []).filter(e => !e.sofor_user_id).forEach(e => {
-      sb.from('is_emirleri').update({ sofor_user_id: user.id }).eq('id', e.id).catch(()=>{});
+      (async () => { try { await sb.from('is_emirleri').update({ sofor_user_id: user.id }).eq('id', e.id); } catch(_){} })();
     });
 
     soforState.isEmirleri = data || [];
