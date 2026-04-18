@@ -6690,6 +6690,26 @@ async function addActivity(type, plaka, detail) {
   await renderActivityLog();
 }
 
+// Geriye dönük uyumluluk: bazı modüller logActivity(detailHTML) çağırıyor.
+// Sessizce addActivity'e yönlendiriyoruz; hata atmamalı ki ana akışı bozmasın.
+function logActivity(detailHtml) {
+  try {
+    // HTML tag'lerini temizle, type tahmin et
+    const plainText = String(detailHtml || '').replace(/<[^>]+>/g, '').trim();
+    let type = 'info';
+    if (/iş emri|konteyner|operasyon/i.test(plainText)) type = 'ops';
+    else if (/yakıt|dolum/i.test(plainText)) type = 'yakit';
+    else if (/şoför|sürücü/i.test(plainText)) type = 'sofor';
+    // Plaka regex: 2 rakam + 1-3 harf + 2-4 rakam
+    const plakaMatch = plainText.match(/\b\d{2}\s?[A-ZÇĞİÖŞÜ]{1,3}\s?\d{2,4}\b/i);
+    const plaka = plakaMatch ? plakaMatch[0].toUpperCase() : '';
+    // addActivity async'dir; await etmeyiz — çağıran sync olabilir
+    return addActivity(type, plaka, detailHtml);
+  } catch (e) {
+    console.warn('logActivity bridge hata (yoksayıldı):', e);
+  }
+}
+
 async function clearActivityLog() {
   if (!confirm('Aktivite geçmişi silinsin mi?')) return;
   try {
