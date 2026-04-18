@@ -15131,8 +15131,24 @@ async function opsLoadCloud() {
     const res = await fetch(url, { headers: sbHeaders() });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const rows = await res.json();
-    isEmirleri = rows.map(opsRowToObj);
+    // Cloud'dan gelen kayıtları parse et
+    const cloudObjs = rows.map(opsRowToObj);
+    // Local'de buluta kaydedilememiş (_syncPending veya _dbId yok) kayıtları koru
+    // Böylece POST hatası (RLS, network, vs.) sonrası kullanıcının yeni eklediği iş
+    // emirleri refresh sonrası kaybolmaz — ekranda durum göstergesiyle kalır.
+    const pendingLocal = (isEmirleri || []).filter(e =>
+      e && (e._syncPending === true || e._dbId == null)
+    );
+    // Cloud'dan dönen id'ler setinde olan pending'leri ele (dbId eşleşirse cloud galip)
+    const cloudIds = new Set(cloudObjs.map(o => o._dbId).filter(Boolean));
+    const keep = pendingLocal.filter(e => !(e._dbId != null && cloudIds.has(e._dbId)));
+    isEmirleri = [...keep, ...cloudObjs];
     opsSaveLocal();
+    // Bekleyenleri tekrar buluta göndermeyi dene
+    if (keep.length) {
+      console.log('is_emirleri: ' + keep.length + ' pending kayıt yeniden buluta gönderiliyor...');
+      keep.forEach(e => { opsSaveCloud(e).catch(()=>{}); });
+    }
   } catch(err) {
     console.warn('is_emirleri cloud yüklenemedi, localStorage kullanılıyor:', err);
     opsLoadLocal();
@@ -15153,6 +15169,8 @@ async function opsSaveCloud(obj) {
   }
   if (!_authToken) {
     console.warn('opsSaveCloud: auth token yok, kayıt erteleniyor');
+    obj._syncPending = true;
+    opsSaveLocal();
     return;
   }
 
@@ -15172,6 +15190,16 @@ async function opsSaveCloud(obj) {
       if (!res.ok) {
         const err = await res.text();
         console.error('PATCH hatası:', res.status, err);
+        obj._syncPending = true;
+        obj._syncError   = 'HTTP ' + res.status + ': ' + (err || '').slice(0, 200);
+        opsSaveLocal();
+        if (typeof showToast === 'function') {
+          showToast('İş emri güncellenemedi (senkron hatası): ' + res.status, 'error');
+        }
+      } else {
+        obj._syncPending = false;
+        obj._syncError   = null;
+        opsSaveLocal();
       }
     } else {
       // YENİ KAYIT — id body'e eklenmez, Supabase otomatik atar
@@ -15187,10 +15215,14 @@ async function opsSaveCloud(obj) {
           const realId = created[0].id;
           obj._dbId = realId;
           obj.id    = realId;
+          obj._syncPending = false;
+          obj._syncError   = null;
           const idx = isEmirleri.findIndex(e => e === obj);
           if (idx !== -1) {
             isEmirleri[idx]._dbId = realId;
             isEmirleri[idx].id    = realId;
+            isEmirleri[idx]._syncPending = false;
+            isEmirleri[idx]._syncError   = null;
           }
           opsSaveLocal();
           console.log('is_emirleri kayıt OK, Supabase id:', realId);
@@ -15198,9 +15230,31 @@ async function opsSaveCloud(obj) {
       } else {
         const err = await res.text();
         console.error('POST hatası:', res.status, err);
+        obj._syncPending = true;
+        obj._syncError   = 'HTTP ' + res.status + ': ' + (err || '').slice(0, 200);
+        opsSaveLocal();
+        if (typeof showToast === 'function') {
+          let msg = 'İş emri buluta kaydedilemedi (HTTP ' + res.status + ')';
+          if (res.status === 401 || res.status === 403) {
+            msg += ' — oturum süresi dolmuş olabilir, tekrar giriş yapın.';
+          } else if (res.status === 400 || res.status === 422) {
+            msg += ' — veri doğrulama hatası. Detay: ' + (err || '').slice(0, 120);
+          } else if (res.status === 409) {
+            msg += ' — kayıt çakışması (RLS / yetki).';
+          }
+          showToast(msg, 'error');
+        }
       }
     }
-  } catch(err) { console.error('is_emirleri buluta kaydedilemedi:', err); }
+  } catch(err) {
+    console.error('is_emirleri buluta kaydedilemedi:', err);
+    obj._syncPending = true;
+    obj._syncError   = String(err?.message || err);
+    opsSaveLocal();
+    if (typeof showToast === 'function') {
+      showToast('İş emri kaydında ağ hatası — yerel olarak saklandı, yeniden denenecek.', 'error');
+    }
+  }
 }
 
 // ---- MUSTERI SELECT YENİLE (modal kapalıyken de çağrılabilir) ----
@@ -15339,9 +15393,12 @@ function opsRenderTable() {
     const kontHtml = kontNolar.map(k => `<div style="font-family:var(--font-mono);font-weight:600;letter-spacing:.04em;font-size:11.5px;">${k}</div>`).join('');
     const doluBosRenk = e.kont_durum === 'Boş' ? 'var(--muted)' : 'var(--accent)';
     const doluBosIcon = e.kont_durum === 'Boş' ? '🔲 Boş' : '📦 Dolu';
+    const syncBadge = (e._syncPending === true || (e._dbId == null && !isLocalMode()))
+      ? `<span title="${(e._syncError || 'Buluta kaydedilmedi — yeniden denenecek').replace(/"/g,'&quot;')}" style="display:inline-block;margin-left:4px;width:8px;height:8px;border-radius:50%;background:var(--yellow);box-shadow:0 0 0 2px rgba(234,179,8,.2);vertical-align:middle;cursor:help;"></span>`
+      : '';
     return `
     <tr>
-      <td><span class="mono" style="color:var(--accent);">#${e.id}</span></td>
+      <td><span class="mono" style="color:var(--accent);">#${e.id}</span>${syncBadge}</td>
       <td>${e.musteri_adi || '—'}</td>
       <td><span class="plate-cell">${e.arac_plaka || '—'}</span></td>
       <td>${kontHtml}</td>
