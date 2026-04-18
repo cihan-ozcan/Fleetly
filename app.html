@@ -17737,15 +17737,80 @@ async function soforIsEmirleriYukle() {
     const bugun = new Date();
     const d0 = new Date(bugun.getFullYear(), bugun.getMonth(), bugun.getDate()).toISOString();
 
-    const { data, error } = await sb
+    const FIELDS = 'id, referans_no, konteyner_no, yukle_yeri, teslim_yeri, durum, kont_tip, musteri_adi, atama_zamani, created_at';
+    const DURUMLAR = ['Bekliyor','Yolda','Fabrikada','Teslim Edildi'];
+
+    // 1) sofor_user_id ile eşleşen iş emirleri
+    const { data: q1, error: e1 } = await sb
       .from('is_emirleri')
-      .select('id, referans_no, konteyner_no, yukle_yeri, teslim_yeri, durum, kont_tip, musteri_adi, atama_zamani, created_at')
+      .select(FIELDS)
       .eq('sofor_user_id', user.id)
-      .in('durum', ['Bekliyor','Yolda','Fabrikada','Teslim Edildi'])
+      .in('durum', DURUMLAR)
       .order('atama_zamani', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false })
       .limit(50);
-    if (error) throw error;
+    if (e1) throw e1;
+
+    // 2) Şoförün davet kaydından operatör tarafından girilen tel/ad'ı bul
+    let q2 = [];
+    try {
+      const { data: davet } = await sb
+        .from('surucu_davetleri')
+        .select('ad, telefon')
+        .eq('kullanan_user_id', user.id)
+        .not('kullanildi_at', 'is', null)
+        .order('kullanildi_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (davet) {
+        // sofor_user_id henüz atanmamış iş emirlerini tel veya ad ile bul
+        const q1ids = new Set((q1||[]).map(e => e.id));
+        let ekstraData = [];
+
+        if (davet.telefon) {
+          const { data: byTel } = await sb
+            .from('is_emirleri')
+            .select(FIELDS)
+            .eq('sofor_tel', davet.telefon)
+            .is('sofor_user_id', null)
+            .in('durum', DURUMLAR)
+            .limit(50);
+          ekstraData = [...ekstraData, ...(byTel||[])];
+        }
+        if (davet.ad) {
+          const { data: byAd } = await sb
+            .from('is_emirleri')
+            .select(FIELDS)
+            .eq('sofor', davet.ad)
+            .is('sofor_user_id', null)
+            .in('durum', DURUMLAR)
+            .limit(50);
+          ekstraData = [...ekstraData, ...(byAd||[])];
+        }
+
+        // Tekrarları temizle ve q1'de olmayanları al
+        const seen = new Set(q1ids);
+        q2 = ekstraData.filter(e => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
+
+        // Bulunan eski iş emirlerine sofor_user_id'yi yaz (arka planda)
+        q2.forEach(e => {
+          sb.from('is_emirleri')
+            .update({ sofor_user_id: user.id })
+            .eq('id', e.id)
+            .then(() => {})
+            .catch(() => {});
+        });
+      }
+    } catch(lookupErr) { console.warn('Davet bazlı arama hatası:', lookupErr); }
+
+    const data = [...(q1||[]), ...q2]
+      .sort((a,b) => {
+        const ta = a.atama_zamani || a.created_at || '';
+        const tb = b.atama_zamani || b.created_at || '';
+        return ta < tb ? -1 : ta > tb ? 1 : 0;
+      });
+    const error = null;
 
     soforState.isEmirleri = data || [];
 
