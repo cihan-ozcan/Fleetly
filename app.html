@@ -15053,6 +15053,7 @@ function opsRowToObj(r) {
     arac_plaka    : r.arac_plaka    || '',
     sofor         : r.sofor         || '',
     sofor_tel     : r.sofor_tel     || '',
+    sofor_user_id : r.sofor_user_id || null,
     konteyner_no  : r.konteyner_no  || '',
     kont_tip      : r.kont_tip      || '',
     kont_durum    : r.kont_durum    || 'Dolu',
@@ -15107,6 +15108,7 @@ async function opsObjToRow(obj, isEdit) {
     arac_plaka    : obj.arac_plaka    || null,
     sofor         : obj.sofor         || null,
     sofor_tel     : obj.sofor_tel     || null,
+    sofor_user_id : obj.sofor_user_id || null,
     konteyner_no  : obj.konteyner_no  || null,
     kont_tip      : obj.kont_tip      || null,
     kont_durum    : obj.kont_durum    || 'Dolu',
@@ -15325,6 +15327,8 @@ async function openOperasyonPage() {
   opsRenderKanban();
   opsRenderArsiv();
   await opsLoadCloud();
+  // sofor_user_id eksik iş emirleri varsa geriye dönük eşleştir
+  opsSoforUserIdEslestiir().then(n => { if (n > 0) console.log(`${n} iş emrine sofor_user_id atandı`); }).catch(()=>{});
   opsRenderStats();
   opsRenderTable();
   opsRenderKanban();
@@ -15614,9 +15618,11 @@ function opsRenderArsiv() {
 
 /* ── İŞ EMRİ MODAL ───────────────────────────────────────── */
 let _opsDuzenlemeId = null; // null = yeni kayıt, number = düzenleme
+let _opsSoforUserId = null; // Seçilen şoförün Supabase auth user_id'si
 
 function openOpsIsEmriModal(duzenlemeObj) {
   _opsDuzenlemeId = duzenlemeObj ? duzenlemeObj.id : null;
+  _opsSoforUserId = duzenlemeObj ? (duzenlemeObj.sofor_user_id || null) : null;
 
   // Başlık güncelle
   const titleEl = document.querySelector('#ops-modal-bg .maint-modal-title');
@@ -15868,6 +15874,7 @@ function saveOpsIsEmri() {
     e.arac_plaka   = aracPlaka;
     e.sofor        = document.getElementById('ops-m-sofor').value.trim();
     e.sofor_tel    = document.getElementById('ops-m-sofor-tel').value.trim();
+    e.sofor_user_id = _opsSoforUserId !== null ? _opsSoforUserId : (e.sofor_user_id || null);
     e.konteyner_no = document.getElementById('ops-m-konteyner').value.trim().toUpperCase();
     e.kont_tip     = document.getElementById('ops-m-kont-tip').value;
     e.kont_durum   = document.getElementById('ops-m-kont-durum').value;
@@ -15918,6 +15925,7 @@ function saveOpsIsEmri() {
     arac_plaka     : aracPlaka,
     sofor          : document.getElementById('ops-m-sofor').value.trim(),
     sofor_tel      : document.getElementById('ops-m-sofor-tel').value.trim(),
+    sofor_user_id  : _opsSoforUserId,
     konteyner_no   : document.getElementById('ops-m-konteyner').value.trim().toUpperCase(),
     kont_tip       : document.getElementById('ops-m-kont-tip').value,
     kont_durum     : document.getElementById('ops-m-kont-durum').value,
@@ -16303,7 +16311,7 @@ function opsAracAra(q) {
     </div>`).join('');
 }
 
-function opsAracSec(plaka, sofor, tel) {
+async function opsAracSec(plaka, sofor, tel) {
   document.getElementById('ops-m-arac').value        = plaka;
   document.getElementById('ops-m-arac-search').value = plaka;
   const soforEl = document.getElementById('ops-m-sofor');
@@ -16312,6 +16320,62 @@ function opsAracSec(plaka, sofor, tel) {
   if (telEl   && !telEl.value   && tel)   telEl.value   = tel;
   const dd = document.getElementById('ops-arac-dropdown');
   if (dd) dd.style.display = 'none';
+  // Şoförün Supabase auth user_id'sini surucu_davetleri'nden bul
+  _opsSoforUserId = null;
+  try {
+    const sb = getSB();
+    const { data } = await sb
+      .from('surucu_davetleri')
+      .select('kullanan_user_id, ad, telefon')
+      .not('kullanildi_at', 'is', null)
+      .order('kullanildi_at', { ascending: false })
+      .limit(50);
+    if (data && data.length > 0) {
+      const arananTel = (tel  || '').replace(/[\s\-\(\)]/g, '');
+      const arananAd  = (sofor|| '').toLowerCase().trim();
+      const eslesme =
+        data.find(d => arananTel && (d.telefon||'').replace(/[\s\-\(\)]/g,'') === arananTel) ||
+        data.find(d => arananAd  && (d.ad||'').toLowerCase().trim() === arananAd);
+      if (eslesme?.kullanan_user_id) _opsSoforUserId = eslesme.kullanan_user_id;
+    }
+  } catch(e) { console.warn('opsAracSec: şoför user_id aranamadı', e); }
+}
+
+/* ── ŞOFÖR USER_ID EŞLEŞTIR (geriye dönük düzeltme) ─────── */
+async function opsSoforUserIdEslestiir() {
+  // Daveti kabul etmiş şoförleri çek
+  const sb = getSB();
+  const { data: davetler, error: dErr } = await sb
+    .from('surucu_davetleri')
+    .select('kullanan_user_id, ad, telefon')
+    .not('kullanildi_at', 'is', null);
+  if (dErr || !davetler?.length) { console.warn('Davet listesi alınamadı', dErr); return 0; }
+
+  // sofor_user_id boş olan iş emirlerini bul
+  const bosIsEmirleri = (isEmirleri || []).filter(e => !e.sofor_user_id && (e.sofor || e.sofor_tel));
+  if (!bosIsEmirleri.length) return 0;
+
+  let guncellenen = 0;
+  for (const e of bosIsEmirleri) {
+    const arananTel = (e.sofor_tel || '').replace(/[\s\-\(\)]/g, '');
+    const arananAd  = (e.sofor    || '').toLowerCase().trim();
+    const eslesme =
+      davetler.find(d => arananTel && (d.telefon||'').replace(/[\s\-\(\)]/g,'') === arananTel) ||
+      davetler.find(d => arananAd  && (d.ad||'').toLowerCase().trim() === arananAd);
+    if (eslesme?.kullanan_user_id) {
+      e.sofor_user_id = eslesme.kullanan_user_id;
+      if (e._dbId) {
+        await fetch(sbUrl('is_emirleri?id=eq.' + e._dbId), {
+          method : 'PATCH',
+          headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+          body   : JSON.stringify({ sofor_user_id: eslesme.kullanan_user_id }),
+        }).catch(err => console.warn('patch hata', e._dbId, err));
+      }
+      guncellenen++;
+    }
+  }
+  opsSaveLocal();
+  return guncellenen;
 }
 
 /* ── WHATSAPP PAYLAŞIMI ──────────────────────────────────── */
