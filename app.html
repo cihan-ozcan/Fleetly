@@ -18060,9 +18060,14 @@ async function soforDurumGuncelle(yeniDurum) {
   if (!e) return;
   try {
     const sb = getSB();
+    const now = new Date().toISOString();
+    const durumPatch = { durum: yeniDurum };
+    if (yeniDurum === 'Yolda'         && !e.yola_zaman)    { durumPatch.yola_zaman    = now; e.yola_zaman    = now; }
+    if (yeniDurum === 'Fabrikada'     && !e.fabrika_giris) { durumPatch.fabrika_giris = now; e.fabrika_giris = now; }
+    if (yeniDurum === 'Teslim Edildi' && !e.teslim_zamani) { durumPatch.teslim_zamani = now; e.teslim_zamani = now; }
     const { error } = await sb
       .from('is_emirleri')
-      .update({ durum: yeniDurum })
+      .update(durumPatch)
       .eq('id', e.id);
     if (error) throw error;
     e.durum = yeniDurum;
@@ -18099,6 +18104,14 @@ function soforKonumStart(manual) {
           p_is_emri  : e?.id || null,
           p_tip      : manual ? 'live' : 'auto'
         });
+        // Müşteri takip sayfasının okuyabilmesi için is_emirleri'ni de doğrudan güncelle
+        if (e?.id) {
+          await sb.from('is_emirleri').update({
+            konum_lat   : pos.coords.latitude,
+            konum_lng   : pos.coords.longitude,
+            konum_zaman : new Date().toISOString(),
+          }).eq('id', e.id);
+        }
       } catch (err) { /* sessiz */ }
     }, () => {}, { enableHighAccuracy:true, timeout:15000, maximumAge:30000 });
   };
@@ -18562,6 +18575,14 @@ async function soforKonumSimdiGonder() {
         p_tip: 'manual'
       });
       if (error) throw error;
+      // is_emirleri'ni de doğrudan güncelle (müşteri takip için)
+      if (e?.id) {
+        await sb.from('is_emirleri').update({
+          konum_lat   : pos.coords.latitude,
+          konum_lng   : pos.coords.longitude,
+          konum_zaman : new Date().toISOString(),
+        }).eq('id', e.id);
+      }
       soforToast('Konum gönderildi ✓', 'ok');
       soforKonumSonlariYukle();
     } catch (err) { soforToast('Gönderilemedi: ' + (err?.message||'hata'), 'err'); }
