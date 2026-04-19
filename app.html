@@ -17791,46 +17791,76 @@ async function soforProfilYukle(force) {
 
     // --- surucu_belgeler'dan eksik belge tarihlerini tamamla ---
     // v_sofor_profil'de belge tarihleri boşsa, operatörün girdiği
-    // surucu_belgeler tablosundan telefon eşleştirmesiyle çek
+    // surucu_belgeler tablosundan telefon eşleştirmesiyle çek.
+    // Strateji 1: firma_id + ILIKE ile son 10 rakam (en güvenilir)
+    // Strateji 2: tam telefon varyantları ile eq
     const belgelerEksik = !profilObj.ehliyet_bitis && !profilObj.src_bitis && !profilObj.psiko_bitis;
-    if (belgelerEksik && user.phone) {
+    if (belgelerEksik) {
       try {
-        const telVaryantlari = _soforTelVariantlari(user.phone);
-        // Her varyant için dene; ilk başarılı sonucu kullan
-        for (const tel of telVaryantlari) {
-          const { data: belge } = await sb
-            .from('surucu_belgeler')
-            // Hem yeni (_bitis) hem eski sütunları çek
-            .select('ad, tel, ehliyet, src, psiko, takograf, ehliyet_bitis, src_bitis, psiko_bitis, saglik_bitis, ehliyet_no, ehliyet_sinifi')
-            .eq('tel', tel)
+        let belge = null;
+
+        // -- Strateji 1: firma_id'yi firma_kullanicilar'dan al, ILIKE ile eşleş --
+        if (user?.id) {
+          const { data: fk } = await sb
+            .from('firma_kullanicilar')
+            .select('firma_id')
+            .eq('user_id', user.id)
+            .eq('rol', 'sofor')
             .limit(1)
             .maybeSingle();
-          if (belge) {
-            // Yeni sütunu tercih et, yoksa eski sütuna bak
-            const eh  = belge.ehliyet_bitis || belge.ehliyet  || null;
-            const src = belge.src_bitis     || belge.src      || null;
-            const ps  = belge.psiko_bitis   || belge.psiko    || null;
-            const sg  = belge.saglik_bitis  || belge.takograf || null;
-            if (eh  && !profilObj.ehliyet_bitis)  profilObj.ehliyet_bitis  = eh;
-            if (src && !profilObj.src_bitis)      profilObj.src_bitis      = src;
-            if (ps  && !profilObj.psiko_bitis)    profilObj.psiko_bitis    = ps;
-            if (sg  && !profilObj.saglik_bitis)   profilObj.saglik_bitis   = sg;
-            if (belge.ehliyet_no     && !profilObj.ehliyet_no)     profilObj.ehliyet_no     = belge.ehliyet_no;
-            if (belge.ehliyet_sinifi && !profilObj.ehliyet_sinifi) profilObj.ehliyet_sinifi = belge.ehliyet_sinifi;
-            if (belge.ad && !profilObj.ad) profilObj.ad = belge.ad;
-            // Bulunan tarihleri sofor_profil_guncelle ile kalıcı hale getir (arka planda)
-            try {
-              await sb.rpc('sofor_profil_guncelle', {
-                p_ehliyet_bitis  : eh  || null,
-                p_src_bitis      : src || null,
-                p_psiko_bitis    : ps  || null,
-                p_saglik_bitis   : sg  || null,
-                p_ehliyet_no     : belge.ehliyet_no     || null,
-                p_ehliyet_sinifi : belge.ehliyet_sinifi || null,
-              });
-            } catch(syncErr) { /* RPC erişim yoksa sessizce geç */ }
-            break;
+
+          if (fk?.firma_id && user.phone) {
+            const coreDigits = (user.phone || '').replace(/\D/g, '').slice(-10);
+            if (coreDigits.length === 10) {
+              const { data: belgeler } = await sb
+                .from('surucu_belgeler')
+                .select('ad, tel, ehliyet, src, psiko, takograf, ehliyet_bitis, src_bitis, psiko_bitis, saglik_bitis, ehliyet_no, ehliyet_sinifi')
+                .eq('firma_id', fk.firma_id)
+                .ilike('tel', '%' + coreDigits + '%')
+                .limit(5);
+              if (belgeler?.length) belge = belgeler[0];
+            }
           }
+        }
+
+        // -- Strateji 2: firma_id yoksa / bulunamadıysa, tam varyant döngüsü --
+        if (!belge && user.phone) {
+          const telVaryantlari = _soforTelVariantlari(user.phone);
+          for (const tel of telVaryantlari) {
+            const { data: b } = await sb
+              .from('surucu_belgeler')
+              .select('ad, tel, ehliyet, src, psiko, takograf, ehliyet_bitis, src_bitis, psiko_bitis, saglik_bitis, ehliyet_no, ehliyet_sinifi')
+              .eq('tel', tel)
+              .limit(1)
+              .maybeSingle();
+            if (b) { belge = b; break; }
+          }
+        }
+
+        if (belge) {
+          // Yeni sütunu tercih et, yoksa eski sütuna bak
+          const eh  = belge.ehliyet_bitis || belge.ehliyet  || null;
+          const src = belge.src_bitis     || belge.src      || null;
+          const ps  = belge.psiko_bitis   || belge.psiko    || null;
+          const sg  = belge.saglik_bitis  || belge.takograf || null;
+          if (eh  && !profilObj.ehliyet_bitis)  profilObj.ehliyet_bitis  = eh;
+          if (src && !profilObj.src_bitis)      profilObj.src_bitis      = src;
+          if (ps  && !profilObj.psiko_bitis)    profilObj.psiko_bitis    = ps;
+          if (sg  && !profilObj.saglik_bitis)   profilObj.saglik_bitis   = sg;
+          if (belge.ehliyet_no     && !profilObj.ehliyet_no)     profilObj.ehliyet_no     = belge.ehliyet_no;
+          if (belge.ehliyet_sinifi && !profilObj.ehliyet_sinifi) profilObj.ehliyet_sinifi = belge.ehliyet_sinifi;
+          if (belge.ad && !profilObj.ad) profilObj.ad = belge.ad;
+          // Bulunan tarihleri sofor_profil_guncelle ile kalıcı hale getir (arka planda)
+          try {
+            await sb.rpc('sofor_profil_guncelle', {
+              p_ehliyet_bitis  : eh  || null,
+              p_src_bitis      : src || null,
+              p_psiko_bitis    : ps  || null,
+              p_saglik_bitis   : sg  || null,
+              p_ehliyet_no     : belge.ehliyet_no     || null,
+              p_ehliyet_sinifi : belge.ehliyet_sinifi || null,
+            });
+          } catch(syncErr) { /* RPC erişim yoksa sessizce geç */ }
         }
       } catch(belgeErr) { console.warn('surucu_belgeler erişim hatası (RLS?):', belgeErr); }
     }
