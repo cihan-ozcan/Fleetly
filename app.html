@@ -5614,10 +5614,13 @@ let _authListenerRegistered = false;
 let _isLoggingOut = false;
 
 async function checkAuth() {
-  // Şoför portalı (#/sofor) route'u aktifse operatör auth akışına girme.
-  // Aksi halde şoför davet linkini açan kullanıcı kısa süreliğine veya
-  // CSS gecikmesi nedeniyle operatör giriş ekranıyla karşılaşabiliyor.
-  if (location.hash.startsWith('#/sofor')) return;
+  // Şoför portalı route'u aktifse operatör auth akışına girme.
+  // (hem #/sofor hem ?sofor=1 formatlarını destekliyoruz)
+  try {
+    if (location.hash.startsWith('#/sofor')) return;
+    const sp = new URLSearchParams(location.search || '');
+    if (sp.get('sofor') === '1' || sp.get('sofor') === 'true') return;
+  } catch (_) {}
 
   const sb = getSB();
   if (!sb) { showLoginOverlay(); return; }
@@ -10492,13 +10495,17 @@ function soforDavetWhatsApp() {
   const ad  = _sonDavet.ad;
   const tel = _sonDavet.telefon;
 
-  // Davet linki — şoför portalı AÇIKÇA app.html#/sofor olarak açar.
-  // Önemli: location.pathname operatörün bulunduğu URL'ye göre "/", "/index.html"
-  // veya "/app.html" olabilir; sırf pathname'i kullanırsak link landing sayfasına
-  // (index.html) düşebiliyor ve şoför operatör girişiyle karşılaşıyor.
-  // Bu yüzden dizin kısmını koruyup dosya adını "app.html" olarak zorluyoruz.
+  // Davet linki — şoför portalı AÇIKÇA app.html olarak açılır.
+  // Önemli:
+  //  1) location.pathname operatörün bulunduğu URL'ye göre "/", "/index.html"
+  //     veya "/app.html" olabilir; sırf pathname'i kullanırsak link landing sayfasına
+  //     (index.html) düşebiliyor ve şoför operatör girişiyle karşılaşıyor.
+  //  2) Query parametresi (?sofor=1&kod=...) hash'ten daha dayanıklıdır —
+  //     bazı in-app browser'lar (WhatsApp, Instagram, Discord önizleme) hash
+  //     kısmını düşürebiliyor. Hem query hem hash veriyoruz ki her ortamda çalışsın.
   const basePath = (location.pathname || '/').replace(/[^/]*$/, '') || '/';
-  const portalUrl = location.origin + basePath + 'app.html#/sofor?kod=' + encodeURIComponent(kod);
+  const kodEnc   = encodeURIComponent(kod);
+  const portalUrl = location.origin + basePath + 'app.html?sofor=1&kod=' + kodEnc + '#/sofor?kod=' + kodEnc;
 
   const mesaj = [
     `Merhaba ${ad},`,
@@ -17611,9 +17618,20 @@ const soforState = {
   fisFotoBlob   : null
 };
 
-// URL: #/sofor → sofor modu
+// URL: #/sofor  ya da  ?sofor=1  → sofor modu
+// Not: Hash-only routing (WhatsApp/Instagram in-app browser, Discord preview,
+// bazı iOS deep-link handler'ları) vb. ortamlarda bazen "#" sonrası kısmı
+// düşürüyor. Bu yüzden query parametresini de destekliyoruz.
+function soforRouteAktifMi() {
+  if (location.hash.startsWith('#/sofor')) return true;
+  try {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('sofor') === '1' || sp.get('sofor') === 'true') return true;
+  } catch (_) {}
+  return false;
+}
 function soforCheckRoute() {
-  const isSofor = location.hash.startsWith('#/sofor');
+  const isSofor = soforRouteAktifMi();
   document.body.classList.toggle('sofor-mode', isSofor);
   const app = document.getElementById('sofor-app');
   if (!app) return;
@@ -17642,9 +17660,11 @@ async function soforInit() {
       }
     }
 
-    // URL'de ?kod=XXX varsa otomatik doldur
-    const qs = new URLSearchParams(location.hash.split('?')[1] || '');
-    const kodParam = qs.get('kod');
+    // URL'de ?kod=XXX varsa otomatik doldur — hem hash'teki hem search'teki
+    // query'yi kontrol et (davet linki her iki formatta da gelebilir).
+    const qsHash   = new URLSearchParams(location.hash.split('?')[1] || '');
+    const qsSearch = new URLSearchParams(location.search || '');
+    const kodParam = qsHash.get('kod') || qsSearch.get('kod');
     if (kodParam) {
       const el = document.getElementById('sofor-kod');
       if (el) el.value = kodParam.toUpperCase();
