@@ -5614,6 +5614,11 @@ let _authListenerRegistered = false;
 let _isLoggingOut = false;
 
 async function checkAuth() {
+  // Şoför portalı (#/sofor) route'u aktifse operatör auth akışına girme.
+  // Aksi halde şoför davet linkini açan kullanıcı kısa süreliğine veya
+  // CSS gecikmesi nedeniyle operatör giriş ekranıyla karşılaşabiliyor.
+  if (location.hash.startsWith('#/sofor')) return;
+
   const sb = getSB();
   if (!sb) { showLoginOverlay(); return; }
 
@@ -10487,8 +10492,13 @@ function soforDavetWhatsApp() {
   const ad  = _sonDavet.ad;
   const tel = _sonDavet.telefon;
 
-  // Davet linki — şoför portalı app.html#/sofor olarak açacak
-  const portalUrl = location.origin + location.pathname + '#/sofor?kod=' + encodeURIComponent(kod);
+  // Davet linki — şoför portalı AÇIKÇA app.html#/sofor olarak açar.
+  // Önemli: location.pathname operatörün bulunduğu URL'ye göre "/", "/index.html"
+  // veya "/app.html" olabilir; sırf pathname'i kullanırsak link landing sayfasına
+  // (index.html) düşebiliyor ve şoför operatör girişiyle karşılaşıyor.
+  // Bu yüzden dizin kısmını koruyup dosya adını "app.html" olarak zorluyoruz.
+  const basePath = (location.pathname || '/').replace(/[^/]*$/, '') || '/';
+  const portalUrl = location.origin + basePath + 'app.html#/sofor?kod=' + encodeURIComponent(kod);
 
   const mesaj = [
     `Merhaba ${ad},`,
