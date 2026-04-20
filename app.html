@@ -4515,7 +4515,6 @@ function exportCSV() { crmExportCSV(); }
               <select class="driver-inp" id="f-davet-arac">
                 <option value="">— Sabit araç yok (sefer bazlı) —</option>
               </select>
-              <div id="f-davet-arac-hint" style="font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.4;display:none"></div>
             </div>
             <div class="driver-form-group">
               <label>Not (opsiyonel)</label>
@@ -5614,14 +5613,6 @@ let _authListenerRegistered = false;
 let _isLoggingOut = false;
 
 async function checkAuth() {
-  // Şoför portalı route'u aktifse operatör auth akışına girme.
-  // (hem #/sofor hem ?sofor=1 formatlarını destekliyoruz)
-  try {
-    if (location.hash.startsWith('#/sofor')) return;
-    const sp = new URLSearchParams(location.search || '');
-    if (sp.get('sofor') === '1' || sp.get('sofor') === 'true') return;
-  } catch (_) {}
-
   const sb = getSB();
   if (!sb) { showLoginOverlay(); return; }
 
@@ -10209,15 +10200,8 @@ function _fillDriverForm(d) {
 function _fillDriverPlacaSelect(selectedId) {
   const sel = document.getElementById('f-driver-plaka');
   if (!sel) return;
-  // Sürücü/araç karışıklığını önlemek için dropdown'da sadece plaka
-  // (+ araç tipi/markası) gösterilir. "Kimin aracı?" bilgisi sürücü
-  // kartında ayrıca zaten görünüyor.
   sel.innerHTML = '<option value="">— Araç Seçin —</option>' +
-    vehicles.map(v => {
-      const ekBilgi = [v.tip, v.marka, v.model].filter(Boolean).join(' ');
-      const etiket  = ekBilgi ? `${v.plaka}  ·  ${ekBilgi}` : v.plaka;
-      return `<option value="${v.id}" ${v.id === selectedId ? 'selected' : ''}>${etiket}</option>`;
-    }).join('');
+    vehicles.map(v => `<option value="${v.id}" ${v.id === selectedId ? 'selected' : ''}>${v.plaka}${v.sofor ? ' · ' + v.sofor : ''}</option>`).join('');
 }
 
 // ── Kaydet ──
@@ -10366,35 +10350,11 @@ function renderDsDriverList() {
 let _sonDavet = null;
 
 // Araç listesini davet formundaki select'e doldur
-// ÖNEMLİ: Burada araç dropdown'ında KASITLI OLARAK mevcut atanmış şoförün
-// adı gösterilmez. Çünkü form zaten yeni davet edilen şoförün ad/tel
-// bilgisini üstte soruyor — plakanın yanına eski şoförü yazmak operatörü
-// yanıltıyor ("seçilen araç = seçilen kişi" gibi algılanıyor). Sadece
-// plaka + (varsa) araç tipi/markası görünür. Mevcut atanmış şoför varsa
-// select değişiminde küçük bir bilgi notu gösterilir.
 function _fillDavetAracSelect() {
   const sel = document.getElementById('f-davet-arac');
   if (!sel) return;
   sel.innerHTML = '<option value="">— Sabit araç yok (sefer bazlı) —</option>' +
-    vehicles.map(v => {
-      const ekBilgi = [v.tip, v.marka, v.model].filter(Boolean).join(' ');
-      const etiket  = ekBilgi ? `${v.plaka}  ·  ${ekBilgi}` : v.plaka;
-      return `<option value="${v.id}">${etiket}</option>`;
-    }).join('');
-
-  // Seçim değişince mevcut atanmış şoför varsa bilgi notunu göster
-  sel.onchange = function() {
-    const hint = document.getElementById('f-davet-arac-hint');
-    if (!hint) return;
-    const v = vehicles.find(x => x.id === sel.value);
-    if (v && v.sofor) {
-      hint.style.display = '';
-      hint.innerHTML = `ℹ️ Bu aracın mevcut atanmış şoförü: <b>${v.sofor}</b>. Davet kabul edildiğinde araç yeni şoföre bağlanacaktır.`;
-    } else {
-      hint.style.display = 'none';
-      hint.innerHTML = '';
-    }
-  };
+    vehicles.map(v => `<option value="${v.id}">${v.plaka}${v.sofor ? ' · ' + v.sofor : ''}</option>`).join('');
 }
 
 // Davet kodu oluştur — RPC çağırır
@@ -10495,17 +10455,8 @@ function soforDavetWhatsApp() {
   const ad  = _sonDavet.ad;
   const tel = _sonDavet.telefon;
 
-  // Davet linki — şoför portalı AÇIKÇA app.html olarak açılır.
-  // Önemli:
-  //  1) location.pathname operatörün bulunduğu URL'ye göre "/", "/index.html"
-  //     veya "/app.html" olabilir; sırf pathname'i kullanırsak link landing sayfasına
-  //     (index.html) düşebiliyor ve şoför operatör girişiyle karşılaşıyor.
-  //  2) Query parametresi (?sofor=1&kod=...) hash'ten daha dayanıklıdır —
-  //     bazı in-app browser'lar (WhatsApp, Instagram, Discord önizleme) hash
-  //     kısmını düşürebiliyor. Hem query hem hash veriyoruz ki her ortamda çalışsın.
-  const basePath = (location.pathname || '/').replace(/[^/]*$/, '') || '/';
-  const kodEnc   = encodeURIComponent(kod);
-  const portalUrl = location.origin + basePath + 'app.html?sofor=1&kod=' + kodEnc + '#/sofor?kod=' + kodEnc;
+  // Davet linki — şoför portalı app.html#/sofor olarak açacak
+  const portalUrl = location.origin + location.pathname + '#/sofor?kod=' + encodeURIComponent(kod);
 
   const mesaj = [
     `Merhaba ${ad},`,
@@ -17618,20 +17569,9 @@ const soforState = {
   fisFotoBlob   : null
 };
 
-// URL: #/sofor  ya da  ?sofor=1  → sofor modu
-// Not: Hash-only routing (WhatsApp/Instagram in-app browser, Discord preview,
-// bazı iOS deep-link handler'ları) vb. ortamlarda bazen "#" sonrası kısmı
-// düşürüyor. Bu yüzden query parametresini de destekliyoruz.
-function soforRouteAktifMi() {
-  if (location.hash.startsWith('#/sofor')) return true;
-  try {
-    const sp = new URLSearchParams(location.search);
-    if (sp.get('sofor') === '1' || sp.get('sofor') === 'true') return true;
-  } catch (_) {}
-  return false;
-}
+// URL: #/sofor → sofor modu
 function soforCheckRoute() {
-  const isSofor = soforRouteAktifMi();
+  const isSofor = location.hash.startsWith('#/sofor');
   document.body.classList.toggle('sofor-mode', isSofor);
   const app = document.getElementById('sofor-app');
   if (!app) return;
@@ -17660,11 +17600,9 @@ async function soforInit() {
       }
     }
 
-    // URL'de ?kod=XXX varsa otomatik doldur — hem hash'teki hem search'teki
-    // query'yi kontrol et (davet linki her iki formatta da gelebilir).
-    const qsHash   = new URLSearchParams(location.hash.split('?')[1] || '');
-    const qsSearch = new URLSearchParams(location.search || '');
-    const kodParam = qsHash.get('kod') || qsSearch.get('kod');
+    // URL'de ?kod=XXX varsa otomatik doldur
+    const qs = new URLSearchParams(location.hash.split('?')[1] || '');
+    const kodParam = qs.get('kod');
     if (kodParam) {
       const el = document.getElementById('sofor-kod');
       if (el) el.value = kodParam.toUpperCase();
@@ -17852,62 +17790,41 @@ async function soforProfilYukle(force) {
     const profilObj = (!error && profil) ? { ...profil } : {};
 
     // --- surucu_belgeler'dan eksik belge tarihlerini tamamla ---
-    // v_sofor_profil operatörün elle girdiği belge tarihlerini her zaman
-    // göstermeyebilir (kayıt user_id'ye bağlı değilse). Bu yüzden profildeki
-    // HERHANGİ bir belge alanı eksikse, surucu_belgeler tablosundan telefon
-    // eşleştirmesiyle eksikleri tamamlamayı dene.
-    // Strateji 1: firma_id altındaki tüm belgeleri çek, JS tarafında son 10
-    //             haneyi karşılaştır (formatlama/boşluk farkları tolere edilir)
-    // Strateji 2: kayıtlı tel varyantlarıyla exact-match
-    const belgelerEksik = !profilObj.ehliyet_bitis
-                       || !profilObj.src_bitis
-                       || !profilObj.psiko_bitis
-                       || !profilObj.saglik_bitis
-                       || !profilObj.ehliyet_no
-                       || !profilObj.ehliyet_sinifi;
+    // Önce SECURITY DEFINER RPC ile dene (RLS bypass, server-side normalize telefon).
+    // Fallback: doğrudan tablo sorgusu (telefon varyantları).
+    const belgelerEksik = !profilObj.ehliyet_bitis && !profilObj.src_bitis && !profilObj.psiko_bitis;
     if (belgelerEksik) {
       try {
         let belge = null;
 
-        // Telefon karşılaştırma yardımcısı: son 10 haneyi çıkarır
-        const _son10 = (s) => (s || '').replace(/\D/g, '').slice(-10);
-        const userCore = _son10(user?.phone);
+        // -- Strateji 1: SECURITY DEFINER RPC (en güvenilir, RLS'i bypass eder) --
+        try {
+          const { data: rpcSonuc, error: rpcErr } = await sb.rpc('get_sofor_belgeler_for_me');
+          if (!rpcErr && rpcSonuc?.length) belge = rpcSonuc[0];
+          else if (rpcErr) console.warn('get_sofor_belgeler_for_me RPC hatası:', rpcErr.message);
+        } catch(rpcEx) { console.warn('get_sofor_belgeler_for_me çağrılamadı:', rpcEx); }
 
-        // -- Strateji 1: firma_id altındaki şoförleri çek, JS'te eşleştir --
-        // ILIKE ile PostgREST'te sorgulamak, saklanan telefonda boşluk/ayraç
-        // olduğunda "%1234567890%" desenine UYMAZ. Bu yüzden firma altındaki
-        // kayıtları çekip son 10 haneyi kıyaslamak daha güvenilir.
-        if (user?.id && userCore.length === 10) {
+        // -- Strateji 2: Doğrudan tablo + firma_id + telefon varyantları --
+        if (!belge && user?.id && user.phone) {
+          let firmaId = null;
           const { data: fk } = await sb
             .from('firma_kullanicilar')
             .select('firma_id')
             .eq('user_id', user.id)
-            .eq('rol', 'sofor')
             .limit(1)
             .maybeSingle();
+          if (fk?.firma_id) firmaId = fk.firma_id;
 
-          if (fk?.firma_id) {
-            const { data: belgeler } = await sb
-              .from('surucu_belgeler')
-              .select('ad, tel, ehliyet, src, psiko, takograf, ehliyet_bitis, src_bitis, psiko_bitis, saglik_bitis, ehliyet_no, ehliyet_sinifi')
-              .eq('firma_id', fk.firma_id)
-              .limit(500);
-            if (belgeler?.length) {
-              belge = belgeler.find(b => _son10(b.tel) === userCore) || null;
-            }
-          }
-        }
-
-        // -- Strateji 2: firma_id bulunamadıysa, tam varyant döngüsü --
-        if (!belge && user.phone) {
           const telVaryantlari = _soforTelVariantlari(user.phone);
           for (const tel of telVaryantlari) {
-            const { data: b } = await sb
+            const q = sb
               .from('surucu_belgeler')
               .select('ad, tel, ehliyet, src, psiko, takograf, ehliyet_bitis, src_bitis, psiko_bitis, saglik_bitis, ehliyet_no, ehliyet_sinifi')
               .eq('tel', tel)
               .limit(1)
               .maybeSingle();
+            if (firmaId) q.eq('firma_id', firmaId);
+            const { data: b } = await q;
             if (b) { belge = b; break; }
           }
         }
@@ -17937,7 +17854,7 @@ async function soforProfilYukle(force) {
             });
           } catch(syncErr) { /* RPC erişim yoksa sessizce geç */ }
         }
-      } catch(belgeErr) { console.warn('surucu_belgeler erişim hatası (RLS?):', belgeErr); }
+      } catch(belgeErr) { console.warn('surucu_belgeler erişim hatası:', belgeErr); }
     }
     // -------------------------------------------------------
 
@@ -18847,4 +18764,14 @@ async function soforCikis() {
 
 /* ---- PWA / Service Worker (basit) ---- */
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  navigator.serviceWorker.getRegistrations().the
+  navigator.serviceWorker.getRegistrations().then(() => {
+    // Opsiyonel: sw.js dosyası varsa kaydet. Yoksa sessizce geç.
+    fetch('/sw.js', { method: 'HEAD' }).then(r => {
+      if (r.ok) navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }).catch(() => {});
+  });
+}
+</script>
+
+</body>
+</html>
