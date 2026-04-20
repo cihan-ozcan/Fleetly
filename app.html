@@ -4515,6 +4515,7 @@ function exportCSV() { crmExportCSV(); }
               <select class="driver-inp" id="f-davet-arac">
                 <option value="">— Sabit araç yok (sefer bazlı) —</option>
               </select>
+              <div id="f-davet-arac-hint" style="font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.4;display:none"></div>
             </div>
             <div class="driver-form-group">
               <label>Not (opsiyonel)</label>
@@ -10200,8 +10201,15 @@ function _fillDriverForm(d) {
 function _fillDriverPlacaSelect(selectedId) {
   const sel = document.getElementById('f-driver-plaka');
   if (!sel) return;
+  // Sürücü/araç karışıklığını önlemek için dropdown'da sadece plaka
+  // (+ araç tipi/markası) gösterilir. "Kimin aracı?" bilgisi sürücü
+  // kartında ayrıca zaten görünüyor.
   sel.innerHTML = '<option value="">— Araç Seçin —</option>' +
-    vehicles.map(v => `<option value="${v.id}" ${v.id === selectedId ? 'selected' : ''}>${v.plaka}${v.sofor ? ' · ' + v.sofor : ''}</option>`).join('');
+    vehicles.map(v => {
+      const ekBilgi = [v.tip, v.marka, v.model].filter(Boolean).join(' ');
+      const etiket  = ekBilgi ? `${v.plaka}  ·  ${ekBilgi}` : v.plaka;
+      return `<option value="${v.id}" ${v.id === selectedId ? 'selected' : ''}>${etiket}</option>`;
+    }).join('');
 }
 
 // ── Kaydet ──
@@ -10350,11 +10358,35 @@ function renderDsDriverList() {
 let _sonDavet = null;
 
 // Araç listesini davet formundaki select'e doldur
+// ÖNEMLİ: Burada araç dropdown'ında KASITLI OLARAK mevcut atanmış şoförün
+// adı gösterilmez. Çünkü form zaten yeni davet edilen şoförün ad/tel
+// bilgisini üstte soruyor — plakanın yanına eski şoförü yazmak operatörü
+// yanıltıyor ("seçilen araç = seçilen kişi" gibi algılanıyor). Sadece
+// plaka + (varsa) araç tipi/markası görünür. Mevcut atanmış şoför varsa
+// select değişiminde küçük bir bilgi notu gösterilir.
 function _fillDavetAracSelect() {
   const sel = document.getElementById('f-davet-arac');
   if (!sel) return;
   sel.innerHTML = '<option value="">— Sabit araç yok (sefer bazlı) —</option>' +
-    vehicles.map(v => `<option value="${v.id}">${v.plaka}${v.sofor ? ' · ' + v.sofor : ''}</option>`).join('');
+    vehicles.map(v => {
+      const ekBilgi = [v.tip, v.marka, v.model].filter(Boolean).join(' ');
+      const etiket  = ekBilgi ? `${v.plaka}  ·  ${ekBilgi}` : v.plaka;
+      return `<option value="${v.id}">${etiket}</option>`;
+    }).join('');
+
+  // Seçim değişince mevcut atanmış şoför varsa bilgi notunu göster
+  sel.onchange = function() {
+    const hint = document.getElementById('f-davet-arac-hint');
+    if (!hint) return;
+    const v = vehicles.find(x => x.id === sel.value);
+    if (v && v.sofor) {
+      hint.style.display = '';
+      hint.innerHTML = `ℹ️ Bu aracın mevcut atanmış şoförü: <b>${v.sofor}</b>. Davet kabul edildiğinde araç yeni şoföre bağlanacaktır.`;
+    } else {
+      hint.style.display = 'none';
+      hint.innerHTML = '';
+    }
+  };
 }
 
 // Davet kodu oluştur — RPC çağırır
@@ -17790,17 +17822,32 @@ async function soforProfilYukle(force) {
     const profilObj = (!error && profil) ? { ...profil } : {};
 
     // --- surucu_belgeler'dan eksik belge tarihlerini tamamla ---
-    // v_sofor_profil'de belge tarihleri boşsa, operatörün girdiği
-    // surucu_belgeler tablosundan telefon eşleştirmesiyle çek.
-    // Strateji 1: firma_id + ILIKE ile son 10 rakam (en güvenilir)
-    // Strateji 2: tam telefon varyantları ile eq
-    const belgelerEksik = !profilObj.ehliyet_bitis && !profilObj.src_bitis && !profilObj.psiko_bitis;
+    // v_sofor_profil operatörün elle girdiği belge tarihlerini her zaman
+    // göstermeyebilir (kayıt user_id'ye bağlı değilse). Bu yüzden profildeki
+    // HERHANGİ bir belge alanı eksikse, surucu_belgeler tablosundan telefon
+    // eşleştirmesiyle eksikleri tamamlamayı dene.
+    // Strateji 1: firma_id altındaki tüm belgeleri çek, JS tarafında son 10
+    //             haneyi karşılaştır (formatlama/boşluk farkları tolere edilir)
+    // Strateji 2: kayıtlı tel varyantlarıyla exact-match
+    const belgelerEksik = !profilObj.ehliyet_bitis
+                       || !profilObj.src_bitis
+                       || !profilObj.psiko_bitis
+                       || !profilObj.saglik_bitis
+                       || !profilObj.ehliyet_no
+                       || !profilObj.ehliyet_sinifi;
     if (belgelerEksik) {
       try {
         let belge = null;
 
-        // -- Strateji 1: firma_id'yi firma_kullanicilar'dan al, ILIKE ile eşleş --
-        if (user?.id) {
+        // Telefon karşılaştırma yardımcısı: son 10 haneyi çıkarır
+        const _son10 = (s) => (s || '').replace(/\D/g, '').slice(-10);
+        const userCore = _son10(user?.phone);
+
+        // -- Strateji 1: firma_id altındaki şoförleri çek, JS'te eşleştir --
+        // ILIKE ile PostgREST'te sorgulamak, saklanan telefonda boşluk/ayraç
+        // olduğunda "%1234567890%" desenine UYMAZ. Bu yüzden firma altındaki
+        // kayıtları çekip son 10 haneyi kıyaslamak daha güvenilir.
+        if (user?.id && userCore.length === 10) {
           const { data: fk } = await sb
             .from('firma_kullanicilar')
             .select('firma_id')
@@ -17809,21 +17856,19 @@ async function soforProfilYukle(force) {
             .limit(1)
             .maybeSingle();
 
-          if (fk?.firma_id && user.phone) {
-            const coreDigits = (user.phone || '').replace(/\D/g, '').slice(-10);
-            if (coreDigits.length === 10) {
-              const { data: belgeler } = await sb
-                .from('surucu_belgeler')
-                .select('ad, tel, ehliyet, src, psiko, takograf, ehliyet_bitis, src_bitis, psiko_bitis, saglik_bitis, ehliyet_no, ehliyet_sinifi')
-                .eq('firma_id', fk.firma_id)
-                .ilike('tel', '%' + coreDigits + '%')
-                .limit(5);
-              if (belgeler?.length) belge = belgeler[0];
+          if (fk?.firma_id) {
+            const { data: belgeler } = await sb
+              .from('surucu_belgeler')
+              .select('ad, tel, ehliyet, src, psiko, takograf, ehliyet_bitis, src_bitis, psiko_bitis, saglik_bitis, ehliyet_no, ehliyet_sinifi')
+              .eq('firma_id', fk.firma_id)
+              .limit(500);
+            if (belgeler?.length) {
+              belge = belgeler.find(b => _son10(b.tel) === userCore) || null;
             }
           }
         }
 
-        // -- Strateji 2: firma_id yoksa / bulunamadıysa, tam varyant döngüsü --
+        // -- Strateji 2: firma_id bulunamadıysa, tam varyant döngüsü --
         if (!belge && user.phone) {
           const telVaryantlari = _soforTelVariantlari(user.phone);
           for (const tel of telVaryantlari) {
@@ -18772,14 +18817,4 @@ async function soforCikis() {
 
 /* ---- PWA / Service Worker (basit) ---- */
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  navigator.serviceWorker.getRegistrations().then(() => {
-    // Opsiyonel: sw.js dosyası varsa kaydet. Yoksa sessizce geç.
-    fetch('/sw.js', { method: 'HEAD' }).then(r => {
-      if (r.ok) navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }).catch(() => {});
-  });
-}
-</script>
-
-</body>
-</html>
+  navigator.serviceWorker.getRegistrations().the
