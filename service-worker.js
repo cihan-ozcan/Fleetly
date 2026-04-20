@@ -6,8 +6,11 @@
    - Fontlar / CDN kaynakları → Cache First
 ═══════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'fleetly-v2';
-const CACHE_NAME_CDN = 'fleetly-cdn-v2';
+// NOT: Uygulama kabuğu (app.html vb.) değişince CACHE_NAME sürümünü bump'la.
+// Aksi halde tarayıcı/PWA eski sayfayı cache'ten yükler ve yeni davet-link
+// düzeltmesi gibi değişiklikler son kullanıcıya ulaşmaz.
+const CACHE_NAME = 'fleetly-v3';
+const CACHE_NAME_CDN = 'fleetly-cdn-v3';
 
 /* Uygulama kabuğu — her zaman önbellekle */
 const APP_SHELL = [
@@ -82,7 +85,30 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  /* Uygulama kabuğu → önce önbellek, yoksa ağdan */
+  /* HTML (navigate) istekleri → Network-First (yeni sürüm hemen yansısın) */
+  // Önceden "cache-first" idi; ancak tek bir app.html eskidiğinde kullanıcının
+  // elle cache temizlemesi gerekiyordu (davet linki gibi değişiklikler yansımıyordu).
+  // Artık HTML her zaman önce ağdan alınır, ağ yoksa cache'den dönülür.
+  const istekHtmlMi =
+    event.request.mode === 'navigate' ||
+    (event.request.headers.get('accept') || '').includes('text/html');
+
+  if (istekHtmlMi) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        }
+        return response;
+      }).catch(() =>
+        caches.match(event.request).then(c => c || caches.match('/app.html') || caches.match('/index.html'))
+      )
+    );
+    return;
+  }
+
+  /* Diğer uygulama kabuğu kaynakları (CSS/JS/resim) → önce önbellek, yoksa ağdan */
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
