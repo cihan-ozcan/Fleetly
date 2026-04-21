@@ -1,0 +1,352 @@
+/* ===================================================================
+   sofor-embedded.css — Şoför portalı için app.html içinde gömülü stil
+   Orijinali app.html içindeydi. İşlevsellik aynı; sadece dosyaya taşındı.
+   NOT: sofor.html'in ayrı stil dosyasından farklıdır; bu blok app.html içindeki
+        sofor modülü için geçerlidir.
+   =================================================================== */
+  /* Şoför portalı — ayrı, tam ekran, mobil-öncelikli */
+  #sofor-app {
+    display:none;
+    position:fixed; inset:0;
+    background:#0f172a;
+    color:#e2e8f0;
+    z-index:9000;
+    overflow:auto;
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+  }
+  #sofor-app.active { display:block; }
+  body.sofor-mode > header,
+  body.sofor-mode > main,
+  body.sofor-mode > #login-overlay,
+  body.sofor-mode > #subscription-overlay,
+  body.sofor-mode > #trial-banner { display:none !important; }
+
+  .sofor-container { max-width:640px; margin:0 auto; padding:16px; padding-bottom:88px; }
+  .sofor-header {
+    position:sticky; top:0; z-index:10;
+    background:rgba(15,23,42,.92); backdrop-filter:blur(8px);
+    padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.08);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .sofor-header .logo { font-size:18px; font-weight:800; color:#fff; letter-spacing:-.01em; }
+  .sofor-header .logo span { color:#818cf8; }
+  .sofor-header .user { display:flex; align-items:center; gap:8px; font-size:13px; color:#cbd5e1; }
+  .sofor-header .logout { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); color:#ef4444; border-radius:8px; padding:6px 10px; font-size:11.5px; font-weight:600; cursor:pointer; }
+
+  /* Login kart */
+  .sofor-login { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .sofor-login-card {
+    width:100%; max-width:380px;
+    background:linear-gradient(180deg,#1e293b,#0f172a);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:20px; padding:28px;
+    box-shadow:0 24px 60px rgba(0,0,0,.4);
+  }
+  .sofor-login-card .logo {
+    font-size:32px; font-weight:900; color:#fff; letter-spacing:-.02em; text-align:center; margin-bottom:6px;
+  }
+  .sofor-login-card .logo .badge { display:inline-block; background:linear-gradient(135deg,#6366f1,#8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .sofor-login-card .subtitle { text-align:center; color:#94a3b8; font-size:13px; margin-bottom:24px; }
+  .sofor-step { display:none; }
+  .sofor-step.active { display:block; }
+  .sofor-inp {
+    width:100%; background:rgba(15,23,42,.6); border:1px solid rgba(255,255,255,.1);
+    color:#fff; border-radius:10px; padding:12px 14px; font-size:15px; font-family:inherit;
+    box-sizing:border-box; margin-bottom:12px; outline:none; transition:border .2s;
+  }
+  .sofor-inp:focus { border-color:#818cf8; box-shadow:0 0 0 3px rgba(129,140,248,.15); }
+  .sofor-inp.kod { font-family:monospace; font-size:22px; font-weight:700; letter-spacing:4px; text-align:center; text-transform:uppercase; }
+  .sofor-btn {
+    width:100%; background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; color:#fff;
+    border-radius:10px; padding:13px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit;
+    transition:transform .12s, filter .12s;
+  }
+  .sofor-btn:active { transform:scale(.98); }
+  .sofor-btn:disabled { filter:grayscale(.6) opacity(.6); cursor:not-allowed; }
+  .sofor-btn.secondary { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); }
+  .sofor-hint { font-size:11.5px; color:#94a3b8; text-align:center; margin-top:12px; line-height:1.5; }
+  .sofor-error { font-size:12px; color:#fca5a5; margin-top:8px; padding:8px 10px; background:rgba(239,68,68,.1); border-radius:8px; display:none; }
+  .sofor-error.show { display:block; }
+  .sofor-success { font-size:12px; color:#86efac; margin-top:8px; padding:8px 10px; background:rgba(34,197,94,.1); border-radius:8px; display:none; }
+  .sofor-success.show { display:block; }
+
+  /* Dashboard */
+  .sofor-greet { padding:18px 4px 10px; }
+  .sofor-greet .hi { font-size:14px; color:#94a3b8; }
+  .sofor-greet .name { font-size:22px; font-weight:800; color:#fff; margin-top:2px; }
+  .sofor-greet .plaka { display:inline-block; margin-top:6px; background:rgba(99,102,241,.15); color:#a5b4fc; border:1px solid rgba(99,102,241,.3); border-radius:8px; padding:3px 10px; font-size:12px; font-weight:700; }
+
+  .sofor-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:12px 0 18px; }
+  .sofor-stat { background:rgba(30,41,59,.6); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:12px; }
+  .sofor-stat .label { font-size:10.5px; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; }
+  .sofor-stat .val { font-size:22px; font-weight:800; color:#fff; margin-top:2px; }
+
+  .sofor-section-title { font-size:12px; font-weight:700; color:#cbd5e1; text-transform:uppercase; letter-spacing:.08em; margin:18px 0 10px; display:flex; align-items:center; justify-content:space-between; }
+  .sofor-job-list { display:flex; flex-direction:column; gap:10px; }
+  .sofor-job-card {
+    background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.06); border-radius:14px;
+    padding:14px; cursor:pointer; transition:transform .12s, border-color .2s;
+  }
+  .sofor-job-card:active { transform:scale(.98); }
+  .sofor-job-card .top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:8px; }
+  .sofor-job-card .ref { font-size:11px; color:#94a3b8; font-family:monospace; }
+  .sofor-job-card .status { font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+  .sofor-job-card .status.yeni { background:rgba(56,189,248,.15); color:#38bdf8; }
+  .sofor-job-card .status.yolda { background:rgba(245,158,11,.15); color:#f59e0b; }
+  .sofor-job-card .status.teslim { background:rgba(34,197,94,.15); color:#22c55e; }
+  .sofor-job-card .status.iptal { background:rgba(239,68,68,.15); color:#ef4444; }
+  .sofor-job-card .route { display:flex; align-items:center; gap:8px; font-size:14px; color:#fff; font-weight:600; line-height:1.3; }
+  .sofor-job-card .route .arrow { color:#64748b; }
+  .sofor-job-card .meta { margin-top:8px; font-size:12px; color:#94a3b8; display:flex; flex-wrap:wrap; gap:10px; }
+  .sofor-empty { text-align:center; padding:40px 20px; color:#64748b; font-size:13px; }
+
+  /* Alt bar */
+  .sofor-tabbar {
+    position:fixed; bottom:0; left:0; right:0; z-index:100;
+    background:rgba(15,23,42,.96); backdrop-filter:blur(10px);
+    border-top:1px solid rgba(255,255,255,.08);
+    display:flex; justify-content:space-around; padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+  }
+  .sofor-tab {
+    background:transparent; border:none; color:#64748b; font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:6px 14px; cursor:pointer; font-size:10.5px; font-weight:600;
+    transition:color .2s;
+  }
+  .sofor-tab .ico { font-size:20px; }
+  .sofor-tab.active { color:#818cf8; }
+
+  /* Drawer (iş emri detayı) */
+  .sofor-drawer {
+    position:fixed; inset:0; z-index:9500;
+    background:#0f172a; overflow:auto;
+    transform:translateY(100%); transition:transform .25s ease;
+  }
+  .sofor-drawer.open { transform:translateY(0); }
+  .sofor-drawer .head {
+    position:sticky; top:0; z-index:5; background:rgba(15,23,42,.95); backdrop-filter:blur(8px);
+    padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.08);
+    display:flex; align-items:center; gap:10px;
+  }
+  .sofor-drawer .head .back { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); color:#fff; border-radius:8px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; }
+  .sofor-drawer .head h2 { font-size:15px; font-weight:700; color:#fff; margin:0; flex:1; }
+  .sofor-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; }
+  .sofor-info { background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:10px 12px; }
+  .sofor-info .lbl { font-size:10.5px; color:#94a3b8; text-transform:uppercase; }
+  .sofor-info .val { font-size:14px; color:#fff; font-weight:600; margin-top:2px; word-break:break-word; }
+  .sofor-info.full { grid-column:1 / -1; }
+
+  .sofor-action-btns { display:flex; flex-direction:column; gap:10px; margin:16px 0 8px; }
+  .sofor-big-btn {
+    padding:16px; border:none; border-radius:14px; color:#fff; font-family:inherit; font-size:15px; font-weight:700;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
+    transition:transform .12s, filter .12s;
+  }
+  .sofor-big-btn:active { transform:scale(.98); }
+  .sofor-big-btn.primary { background:linear-gradient(135deg,#6366f1,#8b5cf6); }
+  .sofor-big-btn.yolda   { background:linear-gradient(135deg,#f59e0b,#f97316); }
+  .sofor-big-btn.teslim  { background:linear-gradient(135deg,#22c55e,#16a34a); }
+  .sofor-big-btn.sec     { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); }
+
+  /* Yakıt fiş yükle modalı */
+  .sofor-fuel-modal {
+    position:fixed; inset:0; z-index:9700; background:rgba(0,0,0,.75); backdrop-filter:blur(4px);
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .sofor-fuel-modal.open { display:flex; }
+  .sofor-fuel-sheet {
+    width:100%; max-width:640px; background:#0f172a; border-top-left-radius:20px; border-top-right-radius:20px;
+    padding:18px 16px calc(18px + env(safe-area-inset-bottom)); max-height:90vh; overflow:auto;
+  }
+  .sofor-fuel-sheet h3 { margin:0 0 14px; font-size:17px; color:#fff; font-weight:700; }
+  .sofor-field { margin-bottom:12px; }
+  .sofor-field label { display:block; font-size:11.5px; color:#94a3b8; margin-bottom:6px; font-weight:600; }
+  .sofor-photo-preview {
+    width:100%; aspect-ratio:4/3; background:rgba(30,41,59,.5); border:2px dashed rgba(255,255,255,.12);
+    border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;
+    font-size:13px; color:#64748b; cursor:pointer; margin-bottom:10px;
+  }
+  .sofor-photo-preview img { width:100%; height:100%; object-fit:cover; }
+  .sofor-input-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+  /* ─── v2 — Marka + yeni ekranlar ─── */
+  .sofor-brand { display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:10px; }
+  .sofor-brand-mark { width:72px; height:72px; border-radius:20px;
+    background:linear-gradient(135deg, rgba(99,102,241,.15), rgba(168,85,247,.15));
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 12px 30px rgba(99,102,241,.25); border:1px solid rgba(129,140,248,.25); }
+  .sofor-brand-text { text-align:center; }
+  .sofor-brand-name { font-size:28px; font-weight:900; letter-spacing:-.02em; color:#fff;
+    background:linear-gradient(135deg,#818cf8,#c084fc);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .sofor-brand-tag { font-size:11.5px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.12em; margin-top:2px; }
+
+  .sofor-hdr-brand { display:flex; align-items:center; gap:10px; }
+  .sofor-hdr-name { font-size:15px; font-weight:800; color:#fff; line-height:1; letter-spacing:-.01em; }
+  .sofor-hdr-tag  { font-size:10.5px; color:#94a3b8; margin-top:3px; text-transform:uppercase; letter-spacing:.08em; }
+  .sofor-hdr-right { display:flex; align-items:center; gap:6px; }
+  .sofor-hdr-ico {
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); color:#cbd5e1;
+    width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:16px; cursor:pointer; transition:background .15s;
+  }
+  .sofor-hdr-ico:hover { background:rgba(255,255,255,.08); }
+  .sofor-hdr-ico .dot { width:9px; height:9px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); transition:background .2s; }
+  .sofor-hdr-ico.offline .dot { background:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.18); }
+
+  /* Greeting kartı */
+  .sofor-greet {
+    background:linear-gradient(135deg, rgba(99,102,241,.18), rgba(168,85,247,.12));
+    border:1px solid rgba(129,140,248,.18); border-radius:18px;
+    padding:16px 18px; margin:4px 0 14px;
+  }
+  .sofor-greet .hi   { font-size:13px; color:#cbd5e1; }
+  .sofor-greet .name { font-size:22px; font-weight:800; color:#fff; margin-top:2px; letter-spacing:-.01em; }
+  .sofor-greet .plaka {
+    display:inline-flex; align-items:center; gap:6px; margin-top:10px;
+    background:rgba(15,23,42,.55); border:1px solid rgba(129,140,248,.25);
+    border-radius:8px; padding:5px 10px; font-family:monospace; font-size:13px; color:#fff; font-weight:700; letter-spacing:.06em;
+  }
+  .sofor-greet .meta { margin-top:6px; font-size:12px; color:#94a3b8; }
+
+  /* 3 kolon quick action */
+  .sofor-quick { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }
+  .sofor-quick button {
+    background:rgba(30,41,59,.55); border:1px solid rgba(255,255,255,.07); color:#cbd5e1;
+    border-radius:14px; padding:14px 8px; font-family:inherit; font-size:11px; font-weight:700;
+    display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;
+    transition:transform .12s, border-color .2s, background .2s;
+  }
+  .sofor-quick button:active { transform:scale(.96); }
+  .sofor-quick button .ico { font-size:22px; }
+
+  /* Uyarı çubuğu */
+  .sofor-warn-list { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .sofor-warn {
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px;
+    background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.28);
+    font-size:12.5px; color:#fbbf24;
+  }
+  .sofor-warn.red { background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.28); color:#fca5a5; }
+  .sofor-warn .ico { font-size:18px; }
+
+  /* Profil ekranı */
+  .sofor-profile-hdr {
+    display:flex; align-items:center; gap:14px; padding:18px 4px 8px;
+  }
+  .sofor-avatar {
+    width:72px; height:72px; border-radius:50%;
+    background:linear-gradient(135deg,#6366f1,#8b5cf6);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:26px; font-weight:800; overflow:hidden;
+    box-shadow:0 10px 24px rgba(99,102,241,.3); cursor:pointer;
+    border:3px solid rgba(255,255,255,.08); position:relative;
+  }
+  .sofor-avatar img { width:100%; height:100%; object-fit:cover; }
+  .sofor-avatar .cam { position:absolute; bottom:-2px; right:-2px; width:26px; height:26px;
+    border-radius:50%; background:#1e293b; color:#cbd5e1; font-size:13px;
+    display:flex; align-items:center; justify-content:center; border:2px solid #0f172a; }
+  .sofor-profile-hdr .name { font-size:20px; font-weight:800; color:#fff; }
+  .sofor-profile-hdr .sub  { font-size:12px; color:#94a3b8; margin-top:4px; }
+
+  .sofor-card {
+    background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.06);
+    border-radius:14px; padding:14px; margin-bottom:12px;
+  }
+  .sofor-card-title {
+    font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em;
+    margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .sofor-card-title .edit {
+    background:transparent; border:none; color:#818cf8; font-family:inherit;
+    font-size:11px; font-weight:700; cursor:pointer; padding:0; letter-spacing:0; text-transform:none;
+  }
+
+  .sofor-kv { display:flex; justify-content:space-between; gap:10px; padding:9px 0;
+    border-bottom:1px dashed rgba(255,255,255,.06); font-size:13px; }
+  .sofor-kv:last-child { border-bottom:none; }
+  .sofor-kv .k { color:#94a3b8; flex-shrink:0; }
+  .sofor-kv .v { color:#fff; text-align:right; word-break:break-word; font-weight:600; }
+  .sofor-kv .v.muted { color:#64748b; font-weight:400; font-style:italic; }
+
+  .sofor-doc {
+    display:flex; align-items:center; gap:12px; padding:11px 12px;
+    background:rgba(15,23,42,.4); border:1px solid rgba(255,255,255,.05);
+    border-radius:10px; margin-bottom:8px; font-size:12.5px;
+  }
+  .sofor-doc .ico { font-size:22px; width:28px; text-align:center; }
+  .sofor-doc .info { flex:1; min-width:0; }
+  .sofor-doc .info .t { color:#fff; font-weight:600; }
+  .sofor-doc .info .d { color:#94a3b8; font-size:11px; margin-top:2px; }
+  .sofor-doc .badge { font-size:10.5px; padding:3px 8px; border-radius:999px; font-weight:700; }
+  .sofor-doc .badge.ok  { background:rgba(34,197,94,.15); color:#22c55e; }
+  .sofor-doc .badge.warn{ background:rgba(245,158,11,.15); color:#f59e0b; }
+  .sofor-doc .badge.red { background:rgba(239,68,68,.15); color:#ef4444; }
+  .sofor-doc .badge.na  { background:rgba(100,116,139,.15); color:#94a3b8; }
+
+  /* Konum ekranı */
+  .sofor-konum-hero {
+    background:linear-gradient(135deg, rgba(56,189,248,.14), rgba(14,165,233,.08));
+    border:1px solid rgba(56,189,248,.18); border-radius:16px; padding:16px; margin-bottom:14px;
+  }
+  .sofor-konum-hero .row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .sofor-konum-hero .lbl { font-size:10.5px; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; }
+  .sofor-konum-hero .val { font-size:16px; color:#fff; font-weight:700; font-family:monospace; }
+  .sofor-konum-hero .sub { font-size:12px; color:#7dd3fc; margin-top:6px; }
+
+  .sofor-switch { display:inline-flex; align-items:center; gap:10px; user-select:none; cursor:pointer; }
+  .sofor-switch input { position:absolute; opacity:0; pointer-events:none; }
+  .sofor-switch .track { width:44px; height:26px; border-radius:999px; background:rgba(255,255,255,.1); position:relative; transition:background .2s; }
+  .sofor-switch .thumb { position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:left .2s; }
+  .sofor-switch input:checked + .track { background:linear-gradient(135deg,#6366f1,#8b5cf6); }
+  .sofor-switch input:checked + .track .thumb { left:21px; }
+  .sofor-switch .txt { font-size:13px; color:#fff; font-weight:600; }
+
+  .sofor-map-embed {
+    width:100%; aspect-ratio:16/10; border:none; border-radius:14px;
+    background:rgba(30,41,59,.5); margin-bottom:12px;
+  }
+
+  /* Yakıt geçmişi */
+  .sofor-fuel-row {
+    display:grid; grid-template-columns:1fr auto auto; gap:10px; padding:12px 14px;
+    background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.06);
+    border-radius:12px; margin-bottom:8px; align-items:center;
+  }
+  .sofor-fuel-row .date { font-size:11px; color:#94a3b8; }
+  .sofor-fuel-row .station { font-size:13.5px; color:#fff; font-weight:600; margin-top:2px; }
+  .sofor-fuel-row .litre { font-size:12px; color:#cbd5e1; }
+  .sofor-fuel-row .tut { font-size:14px; color:#22c55e; font-weight:700; font-family:monospace; }
+  .sofor-fuel-row .foto { width:34px; height:34px; border-radius:8px; overflow:hidden; background:rgba(15,23,42,.6); border:1px solid rgba(255,255,255,.08); flex-shrink:0; }
+  .sofor-fuel-row .foto img { width:100%; height:100%; object-fit:cover; }
+
+  /* Ayarlar */
+  .sofor-setting-row {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:13px 14px; background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.06);
+    border-radius:12px; margin-bottom:8px;
+  }
+  .sofor-setting-row .lft { display:flex; align-items:center; gap:12px; flex:1; min-width:0; }
+  .sofor-setting-row .ico { width:34px; height:34px; border-radius:9px; background:rgba(129,140,248,.15); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .sofor-setting-row .txt { flex:1; min-width:0; }
+  .sofor-setting-row .t { font-size:14px; color:#fff; font-weight:600; }
+  .sofor-setting-row .d { font-size:11.5px; color:#94a3b8; margin-top:2px; }
+  .sofor-setting-row .act { flex-shrink:0; color:#64748b; font-size:14px; }
+
+  /* Form/edit mini-modal */
+  .sofor-editor-field { margin-bottom:12px; }
+  .sofor-editor-field label { display:block; font-size:11.5px; color:#94a3b8; margin-bottom:6px; font-weight:600; }
+  .sofor-editor-actions { display:flex; gap:10px; margin-top:16px; }
+  .sofor-editor-actions > * { flex:1; }
+
+  /* Tostu */
+  .sofor-toast {
+    position:fixed; top:80px; left:50%; transform:translateX(-50%) translateY(-100%);
+    background:linear-gradient(135deg,#1e293b,#0f172a); border:1px solid rgba(129,140,248,.35);
+    color:#fff; padding:12px 18px; border-radius:12px; font-size:13px; font-weight:600;
+    box-shadow:0 16px 36px rgba(0,0,0,.5); z-index:9999; transition:transform .25s, opacity .25s; opacity:0;
+    max-width:90%;
+  }
+  .sofor-toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+  .sofor-toast.ok   { border-color:rgba(34,197,94,.5); }
+  .sofor-toast.err  { border-color:rgba(239,68,68,.5); }

@@ -1,0 +1,17 @@
+<!--
+  components/footer.html — Ortak footer
+  Landing ve uygulama sayfalarında kullanılabilir.
+  İçeriği sade; stil css/components.css içinde (Phase 3 sonrası) gelecek.
+-->
+<footer class="app-footer" role="contentinfo">
+  <p class="footer-legal">
+    &copy; <span id="footer-year"></span> Fleetly — Araç &amp; Bilgi Yönetim Sistemi
+  </p>
+  <p class="footer-credit">created by cihanozcan</p>
+</footer>
+<script>
+  (function () {
+    var y = document.getElementById('footer-year');
+    if (y) y.textContent = new Date().getFullYear();
+  })();
+</script>

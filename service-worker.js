@@ -9,8 +9,10 @@
 // NOT: Uygulama kabuğu (app.html vb.) değişince CACHE_NAME sürümünü bump'la.
 // Aksi halde tarayıcı/PWA eski sayfayı cache'ten yükler ve yeni davet-link
 // düzeltmesi gibi değişiklikler son kullanıcıya ulaşmaz.
-const CACHE_NAME = 'fleetly-v3';
-const CACHE_NAME_CDN = 'fleetly-cdn-v3';
+// Phase 1-5 refactor: CSS / JS dosyaları ayrıldı → cache shell'i güncellendi.
+// Sürüm bump: v3 → v4 (eski cache otomatik temizlenir).
+const CACHE_NAME = 'fleetly-v4';
+const CACHE_NAME_CDN = 'fleetly-cdn-v4';
 
 /* Uygulama kabuğu — her zaman önbellekle */
 const APP_SHELL = [
@@ -18,8 +20,36 @@ const APP_SHELL = [
   '/index.html',
   '/app.html',
   '/register.html',
+  '/portal.html',
+  '/musteri_takip.html',
+  '/sofor.html',
   '/config.js',
   '/manifest.json',
+
+  // ── CSS dosyaları (Phase 1 + Phase 3 refactor) ──
+  '/css/tokens.css',
+  '/css/reset.css',
+  '/css/pages/app.css',
+  '/css/pages/sofor-embedded.css',
+  '/css/pages/landing.css',
+  '/css/pages/register.css',
+  '/css/pages/portal.css',
+  '/css/pages/musteri-takip.css',
+  '/css/pages/sofor.css',
+
+  // ── JS dosyaları (Phase 4 refactor) ──
+  '/js/core/include.js',
+  '/js/pages/app-chunk-01.js',
+  '/js/pages/app-chunk-02.js',
+  '/js/pages/app-chunk-03.js',
+  '/js/pages/app-chunk-04.js',
+  '/js/pages/app-chunk-05.js',
+  '/js/pages/app-chunk-06.js',
+
+  // ── Görseller (Phase 4: base64 çıkarıldı) ──
+  '/assets/img/favicon.png',
+  '/assets/img/logo.png',
+  '/assets/img/logo2.png',
 ];
 
 /* CDN kaynakları — önbellekte tut */

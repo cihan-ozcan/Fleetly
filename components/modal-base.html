@@ -1,0 +1,31 @@
+<!--
+  components/modal-base.html — Modal shell şablonu
+  -----------------------------------------------------------
+  Gelecekte tüm modalları bu şablondan türetmeyi hedefliyoruz.
+  Şu an app.html'de 14 ayrı modal var; her biri kendi markup'ını
+  ve kapatma fonksiyonunu yazıyor.
+
+  Kullanım taslağı (ileride):
+    <fleetly-include
+      src="components/modal-base.html"
+      data-id="maint-modal-backdrop"
+      data-title="Bakım / Arıza Takibi"
+    ></fleetly-include>
+
+  Şu an: referans şablon, app.html'deki modallara dokunulmadı.
+-->
+<div class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Başlık</h2>
+      <button class="modal-close" type="button" aria-label="Kapat">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Gövde: sayfa kendi içeriğini slot gibi basar -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" type="button">İptal</button>
+      <button class="btn-sm accent" type="button">Kaydet</button>
+    </div>
+  </div>
+</div>

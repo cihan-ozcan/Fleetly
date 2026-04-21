@@ -1,0 +1,37 @@
+/* ===================================================================
+   tokens.css — Design tokens (CSS Custom Properties)
+   Tüm sayfaların ortak renk/typography token'ları burada.
+   =================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+:root {
+  --bg:        #08091a;
+  --bg2:       #0c0e22;
+  --surface:   #10142a;
+  --surface2:  #161b34;
+  --surface3:  #1c2240;
+  --border:    #222844;
+  --border2:   #2c3558;
+  --accent:    #e8521a;
+  --accent2:   #ff7340;
+  --accent-dim:#5c1f08;
+  --text:      #e6eeff;
+  --text2:     #a8b8d8;
+  --muted:     #506080;
+  --green:     #22c55e;
+  --green-dim: #0f3d20;
+  --yellow:    #d4a847;
+  --yellow-dim:#4a3510;
+  --red:       #ef4444;
+  --red-dim:   #7f1d1d;
+  --blue:      #38bdf8;
+  --blue-dim:  #0c3a56;
+  --purple:    #a78bfa;
+  --teal:      #2dd4bf;
+  --radius:    10px;
+  --radius-lg: 14px;
+  --font-display: 'Big Shoulders Display', sans-serif;
+  --font-body:    'Instrument Sans', sans-serif;
+  --font-mono:    'IBM Plex Mono', monospace;
+}
