@@ -1,0 +1,133 @@
+<!--
+  components/app-header.html — Fleetly uygulama header'ı (app.html için)
+  -------------------------------------------------------------------------
+  Canonical kaynak: burası.
+  app.html'in gövdesinde bu blok inline şekilde DE KALMAYA devam eder
+  (oradaki JS/DOM timing'ini bozmamak için). Fakat ileride app.html de
+  <fleetly-include src="components/app-header.html"></fleetly-include>
+  şeklinde sadeleştirilebilir.
+
+  Bu component'te kullanılan onclick handler'ları (openOperasyonPage,
+  openMusteriPage, openModal, toggleSettings, ...) app.html'in inline
+  script'lerinde tanımlı. İleride event delegation + data-action'a
+  çevrilecek (Phase 4/5).
+-->
+<header>
+  <div class="header-left">
+    <div class="header-logo" onclick="window.scrollTo(0,0)" style="cursor:pointer">
+      <img src="assets/img/logo.jpg" alt="Fleetly" style="height:32px;width:auto;" />
+    </div>
+    <div class="header-divider"></div>
+    <span class="header-subtitle" id="header-subtitle">LOJİSTİK YÖNETİM</span>
+  </div>
+  <div class="header-actions">
+
+    <!-- ── NAV GROUP 1: CRM & İŞ ── -->
+    <div class="nav-group">
+      <button class="nav-btn nav-orange" onclick="openOperasyonPage()" title="Konteyner Operasyonu">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M5 7V5a3 3 0 016 0v2M9 11v2m-3-1h6" stroke-linecap="round"/></svg>
+        <span>Operasyon</span>
+      </button>
+      <button class="nav-btn nav-teal" onclick="openMusteriPage()" title="Müşteri & Sipariş">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M16 17a6 6 0 10-12 0"/><path d="M18 12h-4m2-2v4" stroke-linecap="round"/></svg>
+        <span>Müşteri</span>
+      </button>
+      <button class="nav-btn nav-purple" onclick="openSeferModal()" title="Sefer Takibi">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10h14M10 3l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Seferler</span>
+      </button>
+      <button class="nav-btn nav-yellow" onclick="openTeklifModal()" title="Fiyat Teklifi">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h10l3 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v3h3M7 10h6M7 13h6M7 7h3" stroke-linecap="round"/></svg>
+        <span>Teklifler</span>
+      </button>
+      <button class="nav-btn nav-yellow" onclick="openMasrafModal()" title="Masraf Takibi">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="16" height="11" rx="2"/><path d="M2 9h16M6 14h2m3 0h3" stroke-linecap="round"/></svg>
+        <span>Masraflar</span>
+      </button>
+      <button class="nav-btn nav-pink" onclick="openRaporModal()" title="Raporlar">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7" stroke-linecap="round"/></svg>
+        <span>Raporlar</span>
+      </button>
+    </div>
+
+    <div class="nav-separator"></div>
+
+    <!-- ── NAV GROUP 2: ARAÇ OPS ── -->
+    <div class="nav-group">
+      <button class="nav-btn nav-orange" onclick="openFuelSummary()" title="Yakıt Yönetimi">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h6l3 3v2h1a1 1 0 011 1v7a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 13v-3m0 3h4m-4 0v-3a2 2 0 014 0v3" stroke-linecap="round"/></svg>
+        <span>Yakıt</span>
+      </button>
+      <button class="nav-btn nav-blue" onclick="openMaintSummaryModal()" title="Bakım & Arıza">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l.3-.3a3 3 0 00-4.2-4.2l-.3.3a1 1 0 000 1.4l1.6 1.6M2.3 17.7l8-8" stroke-linecap="round"/></svg>
+        <span>Bakım</span>
+      </button>
+      <button class="nav-btn nav-green" onclick="openDriverModal()" title="Sürücü Belgeleri">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="16" height="12" rx="2"/><circle cx="7" cy="10" r="2"/><path d="M11 9h4m-4 2.5h3" stroke-linecap="round"/></svg>
+        <span>Sürücü</span>
+      </button>
+    </div>
+
+    <div class="nav-separator"></div>
+
+    <!-- ── AYARLAR & PWA ── -->
+    <button id="pwa-desktop-btn" class="nav-btn nav-muted" onclick="pwaShowInfo()" style="display:none" title="Uygulamayı Yükle">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2v10m-4-4l4 4 4-4M4 16h12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Yükle</span>
+    </button>
+
+    <div class="settings-wrap" id="settings-wrap">
+      <button class="nav-btn nav-muted" id="settings-btn" onclick="toggleSettings()" title="Ayarlar">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="3"/><path d="M10 2v2m0 12v2M2 10h2m12 0h2m-3.17-4.83 1.42-1.42M4.75 15.25l1.42-1.42M4.75 4.75l1.42 1.42M14.83 14.83l1.42 1.42" stroke-linecap="round"/></svg>
+        <span>Ayarlar</span>
+      </button>
+      <div class="settings-dropdown hidden" id="settings-dropdown">
+        <div class="settings-item" id="settings-pwa-item" onclick="pwaInstall();closeSettings()" style="display:none">📲 Ana Ekrana Ekle</div>
+        <div class="settings-sep" id="settings-pwa-sep" style="display:none"></div>
+        <div class="settings-item" onclick="openDashEdit();closeSettings()">🎛 Dashboard Düzenle</div>
+        <div class="settings-item" onclick="openBrandingModal();closeSettings()">🎨 Marka &amp; Portal Ayarları</div>
+        <div class="settings-sep"></div>
+        <div class="settings-item" onclick="exportJSON();closeSettings()">⬇ Dışa Aktar</div>
+        <label class="settings-item" style="cursor:pointer">⬆ İçe Aktar<input type="file" accept=".json" style="display:none" onchange="importJSON(this);closeSettings()" /></label>
+        <div class="settings-sep"></div>
+        <div class="settings-item danger" onclick="confirmReset();closeSettings()">⊘ Tüm Verileri Sıfırla</div>
+        <div class="settings-sep"></div>
+        <div class="settings-item danger" onclick="closeSettings();doLogout()">⏻ Çıkış Yap</div>
+      </div>
+    </div>
+
+    <!-- ── PRIMARY CTA ── -->
+    <button class="nav-cta" onclick="openModal()">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg>
+      ARAÇ EKLE
+    </button>
+
+    <!-- Mobil hamburger -->
+    <button id="mob-menu-btn" onclick="toggleMobMenu()" title="Menü">☰</button>
+  </div>
+</header>
+
+<div id="mob-menu">
+  <button class="btn-sm accent" onclick="openModal();closeMobMenu()">+ Araç Ekle</button>
+  <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+  <button class="btn-sm" onclick="openOperasyonPage();closeMobMenu()" style="color:var(--accent)">📦 Operasyon</button>
+  <button class="btn-sm" onclick="openMusteriPage();closeMobMenu()" style="color:#2dd4bf">🤝 Müşteri &amp; Sipariş</button>
+  <button class="btn-sm" onclick="openSeferModal();closeMobMenu()" style="color:var(--purple)">🗺 Seferler</button>
+  <button class="btn-sm" onclick="openTeklifModal();closeMobMenu()" style="color:var(--yellow)">💼 Fiyat Teklifi</button>
+  <button class="btn-sm" onclick="openMasrafModal();closeMobMenu()" style="color:var(--yellow)">💸 Masraflar</button>
+  <button class="btn-sm" onclick="openRaporModal();closeMobMenu()" style="color:#e879f9">📊 Raporlar</button>
+  <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+  <button class="btn-sm" onclick="openFuelSummary();closeMobMenu()" style="color:var(--accent)">⛽ Yakıt Yönetimi</button>
+  <button class="btn-sm" onclick="openMaintSummaryModal();closeMobMenu()" style="color:var(--blue)">🔧 Bakım & Arıza</button>
+  <button class="btn-sm" onclick="openDriverModal();closeMobMenu()" style="color:var(--green)">👤 Sürücü Belgeleri</button>
+  <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+  <button class="btn-sm" onclick="exportJSON();closeMobMenu()">⬇ Dışa Aktar</button>
+  <label class="btn-sm" style="cursor:pointer">
+    ⬆ İçe Aktar<input type="file" accept=".json" style="display:none" onchange="importJSON(this);closeMobMenu()" />
+  </label>
+  <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+  <button class="btn-sm danger" onclick="confirmReset();closeMobMenu()">⊘ Sıfırla</button>
+  <button class="btn-sm danger" onclick="closeMobMenu();doLogout()">Çıkış Yap</button>
+</div>
+
+

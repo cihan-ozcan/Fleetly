@@ -1,1 +1,11 @@
 config.js
+
+# Refactor yedek klasörü — yalnızca lokal, repo'ya GİTMEZ
+_backup_pre_refactor/
+
+# Yaygın sistem / editör dosyaları
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
