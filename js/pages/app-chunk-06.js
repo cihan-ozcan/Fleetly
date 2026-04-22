@@ -174,10 +174,14 @@ async function soforOtpDogrula() {
     if (error) throw error;
     soforState.session = data.session;
 
-    // Davet kabul RPC
+    // Davet kabul RPC — REFACTOR 2026-04-22: önce _v2, yoksa v1
     const kod = soforState.davet?.davet_kodu;
     if (kod) {
-      const { error: kabulErr } = await sb.rpc('sofor_davet_kabul', { p_kod: kod });
+      let kabulErr;
+      ({ error: kabulErr } = await sb.rpc('sofor_davet_kabul_v2', { p_kod: kod }));
+      if (kabulErr && /function.*does not exist|42883/i.test(kabulErr.message || kabulErr.code || '')) {
+        ({ error: kabulErr } = await sb.rpc('sofor_davet_kabul', { p_kod: kod }));
+      }
       if (kabulErr) {
         console.warn('Davet kabul hatası:', kabulErr);
         // telefon uyuşmazlığı en tipik hata
