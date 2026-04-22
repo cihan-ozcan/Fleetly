@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#08091a">
+  <title>Fleetly — Profil ve Belgeler</title>
+  <script src="config.js" onerror="console.warn('config.js yüklenemedi')"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{
+      --bg:#08091a; --card:#0f1127; --card2:#151838; --border:#1f2248; --border2:#2a2e5c;
+      --text:#e8ebff; --muted:#7a7fa8;
+      --green:#22c55e; --red:#ef4444; --yellow:#f59e0b; --blue:#6366f1;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         background:var(--bg);color:var(--text);padding:16px;max-width:640px;margin:0 auto}
+    h1{font-size:22px;margin:0 0 4px}
+    .sub{color:var(--muted);font-size:12.5px;margin-bottom:20px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px}
+    .card h2{font-size:13px;margin:0 0 10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+    .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border2)}
+    .row:last-child{border-bottom:none}
+    .row label{font-size:12px;color:var(--muted)}
+    .row .val{font-weight:600;font-size:13px}
+    .belge{border:1px solid var(--border2);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--card2)}
+    .belge-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .belge-title{font-weight:700;font-size:14px}
+    .belge-dur{font-size:10.5px;padding:3px 8px;border-radius:999px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    .dur-onayli{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.35)}
+    .dur-bekliyor{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.35)}
+    .dur-reddedildi{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.35)}
+    .dur-yok{background:rgba(122,127,168,.15);color:var(--muted);border:1px solid var(--border2)}
+    .belge-body{font-size:12px;color:var(--muted);line-height:1.7}
+    .belge-kalan{font-size:11.5px;font-weight:600;margin-top:4px}
+    .kalan-ok{color:#22c55e}
+    .kalan-yak{color:#f59e0b}
+    .kalan-gec{color:#ef4444}
+    .btn{background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;padding:8px 14px;
+         border-radius:8px;font-weight:600;font-size:12.5px;cursor:pointer}
+    .btn-sec{background:transparent;border:1px solid var(--border2);color:var(--text)}
+    .field{margin-bottom:10px}
+    .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+    .field input{width:100%;background:var(--card);border:1px solid var(--border2);color:var(--text);
+                 border-radius:8px;padding:10px;font-size:13px;font-family:inherit}
+    .field input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(99,102,241,.2)}
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;
+              justify-content:center;z-index:999;padding:16px}
+    .modal-bg.show{display:flex}
+    .modal{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:18px;
+           max-width:480px;width:100%;max-height:90vh;overflow:auto}
+    .modal h3{margin:0 0 14px;font-size:16px}
+    .modal-acts{display:flex;gap:8px;margin-top:14px}
+    .modal-acts .btn{flex:1}
+    .red-kutu{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:8px;
+              padding:10px;margin-top:8px;font-size:11.5px;color:#fca5a5}
+    .err{color:var(--red);text-align:center;padding:40px 20px}
+    .load{color:var(--muted);text-align:center;padding:40px 20px}
+    a{color:var(--blue);text-decoration:none}
+  </style>
+</head>
+<body>
+
+<div id="root">
+  <div class="load">Profil yükleniyor…</div>
+</div>
+
+<!-- Belge düzenleme modali -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h3 id="modal-title">Belgeyi Güncelle</h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+      Girdiğiniz bilgiler <b>ofis onayına</b> gönderilir. Onaylanana kadar eski hali geçerli kalır.
+    </div>
+    <form id="belge-form" onsubmit="belgeGonder(event)">
+      <input type="hidden" id="m-belge-turu" />
+      <div class="field">
+        <label>Belge No</label>
+        <input type="text" id="m-belge-no" placeholder="—" />
+      </div>
+      <div class="field">
+        <label>Sınıf (ehliyet için: B, C, CE, D1...)</label>
+        <input type="text" id="m-sinif" placeholder="B" />
+      </div>
+      <div class="field">
+        <label>Veren Kurum</label>
+        <input type="text" id="m-veren-kurum" placeholder="—" />
+      </div>
+      <div class="field">
+        <label>Veriliş Tarihi</label>
+        <input type="date" id="m-verilis" />
+      </div>
+      <div class="field">
+        <label>Bitiş Tarihi</label>
+        <input type="date" id="m-bitis" required />
+      </div>
+      <div class="modal-acts">
+        <button type="button" class="btn btn-sec" onclick="modalKapat()">Vazgeç</button>
+        <button type="submit" class="btn">📤 Onaya Gönder</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const BELGE_TURLERI = [
+    { kod:'ehliyet',  ad:'Sürücü Belgesi',   icon:'🪪', gerekli:true  },
+    { kod:'src',      ad:'SRC Belgesi',       icon:'📋', gerekli:true  },
+    { kod:'psiko',    ad:'Psikoteknik',       icon:'🧠', gerekli:false },
+    { kod:'saglik',   ad:'Sağlık Raporu',     icon:'🏥', gerekli:false },
+    { kod:'takograf', ad:'Takograf Kartı',    icon:'📡', gerekli:false },
+  ];
+
+  let sb = null;
+  let profil = null;
+
+  function durumClass(kalan, onay){
+    if (onay === 'bekliyor')    return 'dur-bekliyor';
+    if (onay === 'reddedildi')  return 'dur-reddedildi';
+    return 'dur-onayli';
+  }
+  function kalanClass(gun){
+    if (gun == null)   return '';
+    if (gun < 0)       return 'kalan-gec';
+    if (gun <= 30)     return 'kalan-yak';
+    return 'kalan-ok';
+  }
+  function kalanText(gun){
+    if (gun == null) return '';
+    if (gun < 0)     return `${Math.abs(gun)} gün önce geçti`;
+    if (gun === 0)   return 'Bugün bitiyor!';
+    return `${gun} gün kaldı`;
+  }
+
+  async function init(){
+    try {
+      if (!window.supabase || !window.SUPABASE_URL) throw new Error('Konfig eksik');
+      sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        document.getElementById('root').innerHTML =
+          '<div class="err">Giriş yapılmamış. <a href="sofor.html">Giriş sayfası</a></div>';
+        return;
+      }
+      await yukle();
+    } catch (err) {
+      console.error(err);
+      document.getElementById('root').innerHTML =
+        '<div class="err">Profil yüklenemedi: ' + (err.message||'hata') + '</div>';
+    }
+  }
+
+  async function yukle(){
+    const { data: { user } } = await sb.auth.getUser();
+    const { data, error } = await sb.from('v_surucu_dosyasi')
+      .select('*')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      document.getElementById('root').innerHTML =
+        '<div class="err">Sürücü kaydınız bulunamadı.<br>Ofis ile iletişime geçin.</div>';
+      return;
+    }
+    profil = data;
+    render();
+  }
+
+  function render(){
+    const belgeMap = {};
+    (profil.belgeler || []).forEach(b => belgeMap[b.tur] = b);
+
+    const karts = BELGE_TURLERI.map(t => {
+      const b = belgeMap[t.kod];
+      if (!b) {
+        return `
+        <div class="belge">
+          <div class="belge-hdr">
+            <div class="belge-title">${t.icon} ${t.ad}</div>
+            <span class="belge-dur dur-yok">Eklenmemiş</span>
+          </div>
+          <div class="belge-body">Bu belge sisteme kayıtlı değil.</div>
+          <div style="margin-top:10px">
+            <button class="btn" onclick="belgeDuzenle('${t.kod}', null)">+ Belge Ekle</button>
+          </div>
+        </div>`;
+      }
+      const durC = durumClass(b.kalan_gun, b.onay_durumu);
+      const durL = b.onay_durumu === 'bekliyor' ? 'ONAY BEKLİYOR'
+                : b.onay_durumu === 'reddedildi' ? 'REDDEDİLDİ' : 'ONAYLI';
+      const redNot = (b.onay_durumu === 'reddedildi' && b.red_nedeni)
+        ? `<div class="red-kutu">❌ Reddetme nedeni: ${b.red_nedeni}</div>` : '';
+      return `
+      <div class="belge">
+        <div class="belge-hdr">
+          <div class="belge-title">${t.icon} ${t.ad}</div>
+          <span class="belge-dur ${durC}">${durL}</span>
+        </div>
+        <div class="belge-body">
+          ${b.belge_no ? 'No: <b>'+b.belge_no+'</b><br>' : ''}
+          ${b.sinif   ? 'Sınıf: <b>'+b.sinif+'</b><br>' : ''}
+          Bitiş: <b>${b.bitis || '—'}</b>
+          <div class="belge-kalan ${kalanClass(b.kalan_gun)}">${kalanText(b.kalan_gun)}</div>
+        </div>
+        ${redNot}
+        <div style="margin-top:10px">
+          <button class="btn btn-sec" onclick='belgeDuzenle(${JSON.stringify(t.kod)}, ${JSON.stringify(b)})'>✎ Güncelle</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('root').innerHTML = `
+      <h1>${profil.ad || '—'}</h1>
+      <div class="sub">
+        ${profil.telefon_e164 || ''} ${profil.arac_plaka ? ' · 🚛 '+profil.arac_plaka : ''}
+      </div>
+
+      <div class="card">
+        <h2>Kişisel Bilgiler</h2>
+        <div class="row"><label>Ad Soyad</label><span class="val">${profil.ad || '—'}</span></div>
+        <div class="row"><label>Telefon</label><span class="val">${profil.telefon_e164 || '—'}</span></div>
+        <div class="row"><label>E-posta</label><span class="val">${profil.email || '—'}</span></div>
+        <div class="row"><label>Atanmış Araç</label><span class="val">${profil.arac_plaka || '(yok)'}</span></div>
+      </div>
+
+      <div class="card">
+        <h2>Belgelerim</h2>
+        ${karts}
+      </div>
+
+      <div style="text-align:center;padding:20px;font-size:11px;color:var(--muted)">
+        Fleetly · Değişiklikler ofis onayından sonra geçerli olur.
+      </div>
+    `;
+  }
+
+  window.belgeDuzenle = function(turKod, mevcut){
+    const t = BELGE_TURLERI.find(x => x.kod === turKod);
+    document.getElementById('modal-title').textContent =
+      (mevcut ? 'Güncelle' : 'Ekle') + ': ' + (t ? t.icon + ' ' + t.ad : turKod);
+    document.getElementById('m-belge-turu').value = turKod;
+    document.getElementById('m-belge-no').value    = mevcut?.belge_no   || '';
+    document.getElementById('m-sinif').value       = mevcut?.sinif      || '';
+    document.getElementById('m-veren-kurum').value = mevcut?.veren_kurum || '';
+    document.getElementById('m-verilis').value     = mevcut?.verilis_tarihi || '';
+    document.getElementById('m-bitis').value       = mevcut?.bitis      || '';
+    document.getElementById('modal-bg').classList.add('show');
+  };
+
+  window.modalKapat = function(){
+    document.getElementById('modal-bg').classList.remove('show');
+  };
+
+  window.belgeGonder = async function(ev){
+    ev.preventDefault();
+    const tur = document.getElementById('m-belge-turu').value;
+    const veri = {
+      belge_no     : document.getElementById('m-belge-no').value.trim() || null,
+      sinif        : document.getElementById('m-sinif').value.trim()    || null,
+      veren_kurum  : document.getElementById('m-veren-kurum').value.trim() || null,
+      verilis_tarihi: document.getElementById('m-verilis').value         || null,
+      bitis_tarihi : document.getElementById('m-bitis').value            || null,
+    };
+    try {
+      const { error } = await sb.rpc('surucu_belge_guncelle', {
+        p_belge_turu: tur, p_veri: veri
+      });
+      if (error) throw error;
+      modalKapat();
+      alert('✓ Onaya gönderildi. Ofis onayı bekleniyor.');
+      await yukle();
+    } catch (err) {
+      console.error(err);
+      alert('Gönderilemedi: ' + (err.message || 'hata'));
+    }
+  };
+
+  window.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>

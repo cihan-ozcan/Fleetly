@@ -1750,6 +1750,10 @@
         <button class="vs-tab active" id="ds-tab-suruculer" onclick="switchDsTab('suruculer')">👤 Sürücüler</button>
         <button class="vs-tab" id="ds-tab-ozet" onclick="switchDsTab('ozet')">📊 Genel Özet</button>
         <button class="vs-tab" id="ds-tab-davet" onclick="switchDsTab('davet')">📲 Davet</button>
+        <button class="vs-tab" id="ds-tab-onay" onclick="switchDsTab('onay')">
+          ✅ Onay Kuyruğu
+          <span id="ds-onay-badge" style="display:none;margin-left:6px;background:#ef4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700">0</span>
+        </button>
         <button class="vs-tab" id="ds-tab-ayarlar" onclick="switchDsTab('ayarlar')">⚙️ Yönetim</button>
       </div>
 
@@ -1820,10 +1824,18 @@
             </div>
             <div class="driver-form-group">
               <label>Telefon * <span style="color:var(--muted);font-weight:400">(05XX)</span></label>
-              <input class="driver-inp" type="tel" id="f-davet-tel" placeholder="05xx xxx xx xx" />
+              <input class="driver-inp" type="tel" id="f-davet-tel" placeholder="05xx xxx xx xx"
+                     onblur="soforDavetTelLookup(this.value)" />
+              <div id="f-davet-tel-hint" style="display:none;margin-top:4px;font-size:11px;font-weight:600"></div>
             </div>
             <div class="driver-form-group">
-              <label>Araç (opsiyonel)</label>
+              <label style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <span>Araç (opsiyonel)</span>
+                <span style="font-size:10.5px;font-weight:500;color:var(--muted)">
+                  <input type="checkbox" id="f-davet-sadece-bos" onchange="_fillDavetAracSelect()"
+                    style="vertical-align:middle;margin-right:4px"> Sadece boş araçlar
+                </span>
+              </label>
               <select class="driver-inp" id="f-davet-arac">
                 <option value="">— Sabit araç yok (sefer bazlı) —</option>
               </select>
@@ -1859,6 +1871,22 @@
         </div>
         <div id="davet-liste" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;padding-right:4px">
           <div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Yükleniyor…</div>
+        </div>
+      </div>
+
+      <!-- SEKME: Onay Kuyruğu (portal → ofis belge güncelleme talepleri) -->
+      <div class="vs-tab-panel" id="dspanel-onay">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+          Şoförlerin portal üzerinden gönderdiği belge güncelleme talepleri burada listelenir.
+          Her talep için <b>eski</b> ve <b>yeni</b> değerleri karşılaştırabilir, onaylayabilir veya
+          reddedebilirsiniz.
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+          <span>🔔 Bekleyen Onaylar</span>
+          <button onclick="onayKuyruguYukle()" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:10.5px;font-weight:600;cursor:pointer">🔄 Yenile</button>
+        </div>
+        <div id="onay-liste" style="display:flex;flex-direction:column;gap:10px;max-height:540px;overflow:auto;padding-right:4px">
+          <div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Yüklemek için yenile'ye basın.</div>
         </div>
       </div>
 

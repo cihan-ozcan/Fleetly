@@ -574,25 +574,51 @@ async function loadVehicles() {
 
   showToast('Veriler yükleniyor…', 'info');
   try {
-    const res = await fetch(sbUrl('araclar?select=*&order=created_at.asc'), {
-      headers: sbHeaders()
+    // REFACTOR 2026-04-22: Önce v_arac_secim view'ını dene (yeni şema).
+    //   View mevcut değilse (henüz migration çalıştırılmamışsa) araclar'a fallback.
+    //   View sorgusu başarılıysa gosterim_adi + bos_mu alanları da gelir.
+    let rows = null;
+    let useView = false;
+    try {
+      const resV = await fetch(sbUrl('v_arac_secim?select=*&order=plaka.asc'), { headers: sbHeaders() });
+      if (resV.ok) { rows = await resV.json(); useView = true; }
+    } catch (_) { /* fallback below */ }
+
+    if (!useView) {
+      const res = await fetch(sbUrl('araclar?select=*&order=created_at.asc'), {
+        headers: sbHeaders()
+      });
+      if (!res.ok) throw new Error('Sunucu hatası: ' + res.status);
+      rows = await res.json();
+    }
+
+    // Supabase satırlarını uygulama formatına dönüştür.
+    // View kullanılıyorsa gosterim_adi/bos_mu doğrudan gelir; yoksa eski şekilde üret.
+    vehicles = rows.map(r => {
+      const sofor = useView ? (r.sofor_ad || '') : (r.sofor || '');
+      return {
+        id      : r.id,
+        plaka   : r.plaka,
+        tip     : useView ? (r.arac_tipi || '') : (r.tip || ''),
+        esleme  : r.esleme   || '',
+        sofor   : sofor,
+        telefon : useView ? (r.sofor_tel || '') : (r.telefon || ''),
+        durum   : useView ? (r.arac_durumu || 'Aktif') : (r.durum || 'Aktif'),
+        muayene : r.muayene  || '',
+        sigorta : r.sigorta  || '',
+        takograf: r.takograf || '',
+        notlar  : r.notlar   || '',
+        marka   : r.marka    || '',
+        model   : r.model    || '',
+        yil     : r.yil      || null,
+        // REFACTOR 2026-04-22: Yeni alanlar — view'dan gelir, yoksa hesapla
+        surucu_id    : useView ? (r.surucu_id || null) : null,
+        gosterim_adi : useView
+          ? (r.gosterim_adi || r.plaka)
+          : (r.plaka + (sofor ? ' — ' + sofor : ' (boş)')),
+        bos_mu       : useView ? !!r.bos_mu : !sofor,
+      };
     });
-    if (!res.ok) throw new Error('Sunucu hatası: ' + res.status);
-    const rows = await res.json();
-    // Supabase satırlarını uygulama formatına dönüştür
-    vehicles = rows.map(r => ({
-      id      : r.id,
-      plaka   : r.plaka,
-      tip     : r.tip,
-      esleme  : r.esleme   || '',
-      sofor   : r.sofor    || '',
-      telefon : r.telefon  || '',
-      durum   : r.durum    || 'Aktif',
-      muayene : r.muayene  || '',
-      sigorta : r.sigorta  || '',
-      takograf: r.takograf || '',
-      notlar  : r.notlar   || '',
-    }));
     localStorage.setItem('filo_araclar', JSON.stringify(vehicles));
     showToast('Veriler buluttan yüklendi ✓', 'success');
   } catch (err) {
@@ -630,21 +656,30 @@ async function saveVehicles() {
   if (!user) { showToast('Oturum süresi dolmuş, lütfen tekrar giriş yapın.', 'error'); return; }
 
   try {
-    const rows = vehicles.map(v => ({
-      id      : v.id,
-      user_id : user.id,
-      firma_id: currentFirmaId,       // ← firma bazlı paylaşım
-      plaka   : v.plaka,
-      tip     : v.tip,
-      esleme  : v.esleme   || null,
-      sofor   : v.sofor    || null,
-      telefon : v.telefon  || null,
-      durum   : v.durum    || 'Aktif',
-      muayene : v.muayene  || null,
-      sigorta : v.sigorta  || null,
-      takograf: v.takograf || null,
-      notlar  : v.notlar   || null,
-    }));
+    const rows = vehicles.map(v => {
+      const row = {
+        id      : v.id,
+        user_id : user.id,
+        firma_id: currentFirmaId,       // ← firma bazlı paylaşım
+        plaka   : v.plaka,
+        tip     : v.tip,
+        esleme  : v.esleme   || null,
+        // REFACTOR 2026-04-22: sofor/telefon text alanları Faz 4'te drop edilecek.
+        //   Şimdilik trigger ile birincil_surucu_id'den sync ediliyor; frontend de yazmaya
+        //   devam ediyor ki eski kod (migration deploy öncesi) çalışsın.
+        sofor   : v.sofor    || null,
+        telefon : v.telefon  || null,
+        durum   : v.durum    || 'Aktif',
+        muayene : v.muayene  || null,
+        sigorta : v.sigorta  || null,
+        takograf: v.takograf || null,
+        notlar  : v.notlar   || null,
+      };
+      // Yeni şema kolonu varsa doldur; yoksa upsert payload'ında görünmez olur
+      //   (Supabase text→json cast yapmaz, undefined alan payload'dan düşer).
+      if (v.surucu_id) row.birincil_surucu_id = v.surucu_id;
+      return row;
+    });
 
     const res = await fetch(sbUrl('araclar'), {
       method : 'POST',
@@ -4462,71 +4497,108 @@ async function loadDriverData() {
     const sb = getSB();
     if (!sb) { driverLoaded = true; return; }
 
-    // surucu_belgeler tablosundan kayıtları çek
-    const { data: rows, error } = await sb
-      .from('surucu_belgeler')
-      .select('*')
-      .order('ad', { ascending: true });
-
-    if (error) {
-      console.error('Sürücü yükle Supabase hatası:', error.code, error.message, error.details);
-    }
-
-    const belgeRows = (rows || []).map(r => ({
-      id      : r.id,
-      ad      : r.ad,
-      tel     : r.tel      || '',
-      plaka   : r.arac_id  || '',
-      ehliyet : r.ehliyet  || '',
-      src     : r.src      || '',
-      psiko   : r.psiko    || '',
-      takograf: r.takograf || '',
-      _kaynak : 'belge'
-    }));
-
-    // araclar tablosundaki sofor alanından da sürücüleri çek
-    // vehicles zaten yüklenmiş olmalı; değilse Supabase'den al
-    let aracList = vehicles.length > 0 ? vehicles : [];
-    if (aracList.length === 0) {
-      const { data: aracRows } = await sb.from('araclar').select('id,plaka,sofor,telefon');
-      aracList = (aracRows || []).map(r => ({ id: r.id, plaka: r.plaka, sofor: r.sofor, telefon: r.telefon }));
-    }
-
-    // Araçlarda şoför adı olan ama surucu_belgeler'de kaydı olmayan sürücüleri ekle
-    const belgeAracIds = new Set(belgeRows.map(d => d.plaka).filter(Boolean));
-    const belgeAdlar   = new Set(belgeRows.map(d => (d.ad||'').toLowerCase().trim()).filter(Boolean));
-
-    const aracKaynakli = aracList
-      .filter(v => v.sofor && v.sofor.trim())
-      .filter(v => !belgeAracIds.has(v.id) && !belgeAdlar.has(v.sofor.toLowerCase().trim()))
-      .map(v => ({
-        id      : 'arac_' + v.id,
-        ad      : v.sofor,
-        tel     : v.telefon || '',
-        plaka   : v.id,
-        ehliyet : '',
-        src     : '',
-        psiko   : '',
-        takograf: '',
-        _kaynak : 'arac'   // belge eklenmemiş, araçtan geliyor
-      }));
-
-    // Araçtan gelen listede aynı isim birden fazla araçta olabilir (çekici + dorse).
-    // Ad + tel kombinasyonunu tekilleştir; plaka bilgisini ilk eşleşmeden al.
-    const aracKaynakliUniq = [];
-    const seen = new Set();
-    aracKaynakli.forEach(d => {
-      const key = (d.ad||'').toLowerCase().trim() + '|' + (d.tel||'').trim();
-      if (!seen.has(key)) {
-        seen.add(key);
-        aracKaynakliUniq.push(d);
+    // REFACTOR 2026-04-22: Önce v_surucu_dosyasi view'ını dene (tek kaynaklı).
+    //   View yoksa eski surucu_belgeler + araclar birleşimine fallback.
+    let belgeRows = null;
+    let viewOk = false;
+    try {
+      const { data: vdata, error: verr } = await sb
+        .from('v_surucu_dosyasi')
+        .select('*')
+        .eq('firma_id', currentFirmaId)
+        .order('ad', { ascending: true });
+      if (!verr && Array.isArray(vdata)) {
+        viewOk = true;
+        belgeRows = vdata.map(r => {
+          // belgeler jsonb array; her belge türünü ayrı alan olarak expose et
+          const byTur = {};
+          (r.belgeler || []).forEach(b => { byTur[b.tur] = b; });
+          return {
+            id       : r.surucu_id,
+            surucu_id: r.surucu_id,
+            auth_user_id: r.auth_user_id,
+            ad       : r.ad,
+            tel      : r.telefon_e164 || '',
+            plaka    : r.arac_id || '',
+            ehliyet  : byTur.ehliyet?.bitis  || '',
+            src      : byTur.src?.bitis      || '',
+            psiko    : byTur.psiko?.bitis    || '',
+            takograf : byTur.takograf?.bitis || '',
+            saglik   : byTur.saglik?.bitis   || '',
+            ehliyet_no    : byTur.ehliyet?.belge_no || '',
+            ehliyet_sinifi: byTur.ehliyet?.sinif    || '',
+            belgeler : r.belgeler || [],
+            _kaynak  : 'view'
+          };
+        });
       }
-    });
+    } catch (_) { /* view yok → fallback */ }
+
+    if (!viewOk) {
+      // LEGACY FALLBACK: surucu_belgeler tablosundan kayıtları çek
+      const { data: rows, error } = await sb
+        .from('surucu_belgeler')
+        .select('*')
+        .order('ad', { ascending: true });
+
+      if (error) {
+        console.error('Sürücü yükle Supabase hatası:', error.code, error.message, error.details);
+      }
+
+      belgeRows = (rows || []).map(r => ({
+        id      : r.id,
+        ad      : r.ad,
+        tel     : r.tel      || '',
+        plaka   : r.arac_id  || '',
+        ehliyet : r.ehliyet  || '',
+        src     : r.src      || '',
+        psiko   : r.psiko    || '',
+        takograf: r.takograf || '',
+        _kaynak : 'belge'
+      }));
+    }
+
+    // REFACTOR 2026-04-22: View aktifse araclar fallback mantığını atla — view kapsar.
+    let aracKaynakliUniq = [];
+    if (!viewOk) {
+      // LEGACY PATH: araclar.sofor text alanından dedup'lu sürücü türet
+      let aracList = vehicles.length > 0 ? vehicles : [];
+      if (aracList.length === 0) {
+        const { data: aracRows } = await sb.from('araclar').select('id,plaka,sofor,telefon');
+        aracList = (aracRows || []).map(r => ({ id: r.id, plaka: r.plaka, sofor: r.sofor, telefon: r.telefon }));
+      }
+
+      const belgeAracIds = new Set(belgeRows.map(d => d.plaka).filter(Boolean));
+      const belgeAdlar   = new Set(belgeRows.map(d => (d.ad||'').toLowerCase().trim()).filter(Boolean));
+
+      const aracKaynakli = aracList
+        .filter(v => v.sofor && v.sofor.trim())
+        .filter(v => !belgeAracIds.has(v.id) && !belgeAdlar.has(v.sofor.toLowerCase().trim()))
+        .map(v => ({
+          id      : 'arac_' + v.id,
+          ad      : v.sofor,
+          tel     : v.telefon || '',
+          plaka   : v.id,
+          ehliyet : '',
+          src     : '',
+          psiko   : '',
+          takograf: '',
+          _kaynak : 'arac'
+        }));
+
+      const seen = new Set();
+      aracKaynakli.forEach(d => {
+        const key = (d.ad||'').toLowerCase().trim() + '|' + (d.tel||'').trim();
+        if (!seen.has(key)) { seen.add(key); aracKaynakliUniq.push(d); }
+      });
+    }
 
     driverData = [...belgeRows, ...aracKaynakliUniq]
       .sort((a, b) => (a.ad||'').localeCompare(b.ad||'', 'tr'));
 
-    console.log('Sürücü verisi:', belgeRows.length, 'belgeli +', aracKaynakliUniq.length, 'araçtan =', driverData.length, 'toplam');
+    console.log('Sürücü verisi [' + (viewOk ? 'view' : 'legacy') + ']:',
+                belgeRows.length, 'sürücü +', aracKaynakliUniq.length, 'araçtan =',
+                driverData.length, 'toplam');
     saveDriverDataLocal();
     driverLoaded = true;
   } catch (err) {
@@ -4536,6 +4608,8 @@ async function loadDriverData() {
 }
 
 // ── Supabase: kaydet (upsert) ──
+// REFACTOR 2026-04-22: Yeni şema varsa suruculer + surucu_belgeleri'ne böl,
+//   yoksa eski surucu_belgeler tablosuna upsert (fallback).
 async function saveDriverEntryCloud(entry) {
   saveDriverDataLocal();
   if (isLocalMode()) return;
@@ -4543,6 +4617,82 @@ async function saveDriverEntryCloud(entry) {
     const sb = getSB();
     const { data: { user } } = await sb.auth.getUser();
     if (!user) return;
+
+    // Yeni yapıya yaz (suruculer tablosu varsa)
+    let useNew = false;
+    if (entry.surucu_id) {
+      useNew = true;
+    } else {
+      // Var mı kontrolü: suruculer tablosu mevcut mu? Boş select ile probe et.
+      try {
+        const { error: probeErr } = await sb.from('suruculer').select('id').limit(0);
+        useNew = !probeErr;
+      } catch (_) { useNew = false; }
+    }
+
+    if (useNew) {
+      // 1) Kişi kaydı: mevcutsa update, yoksa upsert
+      const telE164 = _telNormalize(entry.tel);
+      let surucuId = entry.surucu_id;
+      if (!surucuId && telE164) {
+        const { data: found } = await sb.from('suruculer').select('id')
+          .eq('firma_id', currentFirmaId)
+          .eq('telefon_e164', telE164).maybeSingle();
+        surucuId = found?.id || null;
+      }
+      if (surucuId) {
+        await sb.from('suruculer').update({
+          ad           : entry.ad,
+          telefon_e164 : telE164,
+          telefon_raw  : entry.tel || null,
+        }).eq('id', surucuId);
+      } else {
+        const ins = await sb.from('suruculer').insert({
+          firma_id     : currentFirmaId,
+          ad           : entry.ad,
+          telefon_e164 : telE164,
+          telefon_raw  : entry.tel || null,
+          durum        : 'pasif',
+          created_by   : user.id
+        }).select('id').single();
+        surucuId = ins.data?.id;
+      }
+
+      // 2) Belgeler: her türü ayrı satır olarak upsert
+      const belgeler = [
+        ['ehliyet', entry.ehliyet, entry.ehliyet_sinifi, entry.ehliyet_no],
+        ['src',     entry.src,     null, null],
+        ['psiko',   entry.psiko,   null, null],
+        ['takograf',entry.takograf,null, null],
+        ['saglik',  entry.saglik,  null, null],
+      ].filter(([,bitis,,no]) => bitis || no);
+
+      for (const [tur, bitis, sinif, no] of belgeler) {
+        await sb.from('surucu_belgeleri').upsert({
+          surucu_id    : surucuId,
+          firma_id     : currentFirmaId,
+          belge_turu   : tur,
+          bitis_tarihi : bitis || null,
+          sinif        : sinif || null,
+          belge_no     : no || null,
+          onay_durumu  : 'onayli',
+          kaynak       : 'ofis',
+          updated_by   : user.id
+        }, { onConflict: 'surucu_id,belge_turu' });
+      }
+
+      // 3) Araç ataması değiştiyse
+      if (entry.plaka) {
+        const { error: ataErr } = await sb.rpc('arac_sofor_ata', {
+          p_arac_id  : entry.plaka,
+          p_surucu_id: surucuId
+        });
+        if (ataErr) console.warn('Araç atama uyarısı:', ataErr.message);
+      }
+      return;
+    }
+
+    // LEGACY: eski tek-satır upsert (migration öncesi)
     const row = {
       id      : entry.id,
       user_id : user.id,
@@ -4678,11 +4828,28 @@ function _fillDriverForm(d) {
   if (btn) btn.textContent = '💾 Güncelle';
 }
 
+// REFACTOR 2026-04-22: Araç seçicileri merkezi helper'dan besle.
+//   v_arac_secim view yüklendiyse gosterim_adi (örn. "34FSB145 — Cihan Özcan")
+//   ve bos_mu bayrağı hazır gelir; yoksa vehicles objesi üzerinde hesaplanır.
+function _aracSecimOption(v, opts) {
+  const selectedId = opts && opts.selectedId;
+  const label = v.gosterim_adi || (v.plaka + (v.sofor ? ' — ' + v.sofor : ' (boş)'));
+  const sel = (selectedId != null && v.id === selectedId) ? ' selected' : '';
+  return `<option value="${v.id}"${sel} data-bos="${v.bos_mu ? 1 : 0}">${label}</option>`;
+}
+function _filteredVehicles(filter) {
+  // filter: { onlyEmpty?: bool, durum?: 'Aktif' }
+  let list = vehicles;
+  if (filter && filter.onlyEmpty) list = list.filter(v => v.bos_mu);
+  if (filter && filter.durum)    list = list.filter(v => (v.durum || 'Aktif') === filter.durum);
+  return list;
+}
+
 function _fillDriverPlacaSelect(selectedId) {
   const sel = document.getElementById('f-driver-plaka');
   if (!sel) return;
   sel.innerHTML = '<option value="">— Araç Seçin —</option>' +
-    vehicles.map(v => `<option value="${v.id}" ${v.id === selectedId ? 'selected' : ''}>${v.plaka}${v.sofor ? ' · ' + v.sofor : ''}</option>`).join('');
+    _filteredVehicles().map(v => _aracSecimOption(v, { selectedId })).join('');
 }
 
 // ── Kaydet ──
@@ -4749,7 +4916,7 @@ function editDriverEntry(id) {
 
 // ── Sekme geçişi ──
 function switchDsTab(name) {
-  ['suruculer','ozet','davet','ayarlar'].forEach(t => {
+  ['suruculer','ozet','davet','onay','ayarlar'].forEach(t => {
     document.getElementById('ds-tab-' + t)?.classList.toggle('active', t === name);
     document.getElementById('dspanel-' + t)?.classList.toggle('active', t === name);
   });
@@ -4758,6 +4925,108 @@ function switchDsTab(name) {
   if (name === 'davet') {
     _fillDavetAracSelect();
     soforDavetlerYukle();
+  }
+  if (name === 'onay') onayKuyruguYukle();
+}
+
+// REFACTOR 2026-04-22: Belge onay kuyruğu — surucu_belge_onaylari tablosu
+async function onayKuyruguYukle() {
+  const host = document.getElementById('onay-liste');
+  if (!host) return;
+  if (isLocalMode() || !_authToken) {
+    host.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Buluta bağlı değilsiniz.</div>';
+    return;
+  }
+  host.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Yükleniyor…</div>';
+  try {
+    const sb = getSB();
+    const { data, error } = await sb.from('surucu_belge_onaylari')
+      .select('id, talep_tipi, eski_veri, yeni_veri, talep_zamani, karar, belge_id, surucu:suruculer(ad, telefon_e164)')
+      .is('karar', null)
+      .eq('firma_id', currentFirmaId)
+      .order('talep_zamani', { ascending: false });
+
+    if (error) {
+      // Tablo yoksa (migration öncesi) kullanıcıyı bilgilendir
+      if (/relation|does not exist|42P01/i.test(error.message || error.code || '')) {
+        host.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Onay kuyruğu sistem güncellemesi bekleniyor.<br>(Migration henüz deploy edilmedi)</div>';
+        return;
+      }
+      throw error;
+    }
+
+    const badge = document.getElementById('ds-onay-badge');
+    if (badge) {
+      badge.textContent = String((data || []).length);
+      badge.style.display = (data || []).length > 0 ? '' : 'none';
+    }
+
+    if (!data || data.length === 0) {
+      host.innerHTML = '<div style="text-align:center;color:var(--muted);padding:26px;font-size:12px">✓ Bekleyen onay yok.</div>';
+      return;
+    }
+
+    host.innerHTML = data.map(o => _onayKartiHtml(o)).join('');
+  } catch (err) {
+    console.error('Onay kuyruğu hatası:', err);
+    host.innerHTML = '<div style="text-align:center;color:#ef4444;padding:18px;font-size:12px">Yüklenemedi: ' + (err.message||'hata') + '</div>';
+  }
+}
+
+function _onayKartiHtml(o) {
+  const ad  = o.surucu?.ad || '—';
+  const tel = o.surucu?.telefon_e164 || '';
+  const eski = o.eski_veri || {};
+  const yeni = o.yeni_veri || {};
+  const zaman = o.talep_zamani ? new Date(o.talep_zamani).toLocaleString('tr-TR') : '—';
+  const tur = yeni.belge_turu || '—';
+
+  // diff için anahtarlar: bitis_tarihi, belge_no, sinif, veren_kurum
+  const alanlar = ['belge_turu','belge_no','sinif','veren_kurum','verilis_tarihi','bitis_tarihi','dosya_url'];
+  const rows = alanlar.map(k => {
+    const e = eski[k] ?? '';
+    const y = yeni[k] ?? '';
+    if (e === y) return '';
+    return `<div style="display:flex;gap:8px;font-size:11px;padding:3px 0;border-bottom:1px dashed var(--border2)">
+      <span style="min-width:100px;color:var(--muted)">${k}</span>
+      <span style="color:#94a3b8;text-decoration:line-through;flex:1">${e || '—'}</span>
+      <span style="color:#22c55e;font-weight:600;flex:1">${y || '—'}</span>
+    </div>`;
+  }).join('') || '<div style="font-size:11px;color:var(--muted);padding:4px 0">(değişiklik tespit edilemedi)</div>';
+
+  return `
+  <div style="border:1px solid var(--border2);border-radius:12px;padding:12px;background:var(--card)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div>
+        <div style="font-weight:700;font-size:13px">${ad} <span style="color:var(--muted);font-weight:500">· ${tel}</span></div>
+        <div style="font-size:11px;color:var(--muted)">${o.talep_tipi === 'ekleme' ? '+ Yeni Belge' : '✎ Güncelleme'} · ${tur} · ${zaman}</div>
+      </div>
+    </div>
+    ${rows}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="onayKarar(${o.id}, 'onayli')" style="flex:1;background:linear-gradient(135deg,#10b981,#22c55e);border:none;color:#fff;border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer">✓ Onayla</button>
+      <button onclick="onayKarar(${o.id}, 'reddedildi')" style="flex:1;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer">✗ Reddet</button>
+    </div>
+  </div>`;
+}
+
+async function onayKarar(onayId, karar) {
+  let not = null;
+  if (karar === 'reddedildi') {
+    not = prompt('Red nedeni (şoför görecek):', '');
+    if (not === null) return; // iptal
+  }
+  try {
+    const sb = getSB();
+    const { error } = await sb.rpc('surucu_belge_onayla', {
+      p_onay_id: onayId, p_karar: karar, p_not: not
+    });
+    if (error) throw error;
+    showToast(karar === 'onayli' ? 'Onaylandı ✓' : 'Reddedildi', karar === 'onayli' ? 'success' : 'info');
+    onayKuyruguYukle();
+  } catch (err) {
+    console.error(err);
+    showToast('Karar kaydedilemedi: ' + (err.message||'hata'), 'error');
   }
 }
 
@@ -4834,11 +5103,60 @@ let _sonDavet = null;
 function _fillDavetAracSelect() {
   const sel = document.getElementById('f-davet-arac');
   if (!sel) return;
+  // Davette sadece boş araç filtresi var mı?
+  const onlyEmpty = !!document.getElementById('f-davet-sadece-bos')?.checked;
   sel.innerHTML = '<option value="">— Sabit araç yok (sefer bazlı) —</option>' +
-    vehicles.map(v => `<option value="${v.id}">${v.plaka}${v.sofor ? ' · ' + v.sofor : ''}</option>`).join('');
+    _filteredVehicles({ onlyEmpty }).map(v => _aracSecimOption(v)).join('');
 }
 
 // Davet kodu oluştur — RPC çağırır
+// REFACTOR 2026-04-22: Telefon normalizasyon yardımcısı (frontend tarafı)
+//   Migration'daki fn_normalize_tel ile aynı kuralı uygular. TR default +90.
+function _telNormalize(raw) {
+  if (!raw) return null;
+  const d = String(raw).replace(/\D/g, '');
+  if (!d) return null;
+  if (d.length === 10)                             return '+90' + d;
+  if (d.length === 11 && d.startsWith('0'))        return '+90' + d.substring(1);
+  if (d.length === 12 && d.startsWith('90'))       return '+'   + d;
+  if (String(raw).startsWith('+'))                 return '+'   + d;
+  return '+' + d;
+}
+
+// REFACTOR 2026-04-22: Telefon alanı blur'unda mevcut sürücüyü ara.
+//   Eşleşme varsa ad alanı otomatik dolar ve "mevcut sürücü" rozeti çıkar.
+//   suruculer tablosu yoksa (migration deploy öncesi) sessizce vazgeçer.
+async function soforDavetTelLookup(rawTel) {
+  const hint = document.getElementById('f-davet-tel-hint');
+  const adInp = document.getElementById('f-davet-ad');
+  if (!hint || !adInp) return;
+  hint.style.display = 'none';
+  hint.textContent = '';
+  const tel = _telNormalize(rawTel);
+  if (!tel || isLocalMode() || !_authToken) return;
+  try {
+    const sb = getSB();
+    // Yeni şema: suruculer tablosundan telefonla ara
+    const { data, error } = await sb.from('suruculer')
+      .select('id, ad, durum, telefon_e164')
+      .eq('firma_id', currentFirmaId)
+      .eq('telefon_e164', tel)
+      .maybeSingle();
+    if (error && error.code !== 'PGRST116') return; // tablo yok → sessiz fallback
+    if (data) {
+      if (!adInp.value.trim()) adInp.value = data.ad || '';
+      hint.style.color = '#22c55e';
+      hint.textContent = '✓ Mevcut sürücü bulundu: ' + (data.ad || '—')
+        + ' · ' + (data.durum === 'aktif' ? 'Aktif' : 'Davet bekliyor');
+      hint.style.display = '';
+    } else {
+      hint.style.color = '#818cf8';
+      hint.textContent = 'ℹ Bu telefon sisteme yeni kaydedilecek.';
+      hint.style.display = '';
+    }
+  } catch (_) { /* sessiz */ }
+}
+
 async function soforDavetOlustur() {
   const ad    = (document.getElementById('f-davet-ad').value   || '').trim();
   const tel   = (document.getElementById('f-davet-tel').value  || '').trim();
@@ -4862,17 +5180,35 @@ async function soforDavetOlustur() {
 
   try {
     const sb = getSB();
-    const { data, error } = await sb.rpc('sofor_davet_olustur', {
+    // REFACTOR 2026-04-22: Önce v2 RPC'yi dene (telefon-first dedup).
+    //   v2 yoksa (migration deploy öncesi) v1'e fallback.
+    let data, error;
+    ({ data, error } = await sb.rpc('sofor_davet_olustur_v2', {
+      p_firma_id: currentFirmaId,
       p_ad      : ad,
       p_telefon : tel,
       p_arac_id : arac || null,
       p_not     : not  || null
-    });
+    }));
+    if (error && /function.*does not exist|42883/i.test(error.message || error.code || '')) {
+      // v1 fallback
+      ({ data, error } = await sb.rpc('sofor_davet_olustur', {
+        p_ad      : ad,
+        p_telefon : tel,
+        p_arac_id : arac || null,
+        p_not     : not  || null
+      }));
+    }
     if (error) throw error;
 
-    // RPC surucu_davetleri satırını tam döndürür
+    // RPC surucu_davetleri satırını tam döndürür (v1) veya {davet_kodu, surucu_id, yeni_sofor} (v2)
     const rec = Array.isArray(data) ? data[0] : data;
     if (!rec || !rec.davet_kodu) throw new Error('Davet kodu üretilemedi.');
+
+    // v2 ise yeni/mevcut ayrımını kullanıcıya bildir
+    if (rec.yeni_sofor === false) {
+      showToast('Mevcut sürücü kaydı kullanıldı ✓', 'info');
+    }
 
     _sonDavet = {
       kod      : rec.davet_kodu,
@@ -6136,7 +6472,7 @@ function _fillSeferAracSelect() {
   const sel = document.getElementById('f-sefer-arac');
   if(!sel) return;
   sel.innerHTML = '<option value="">— Araç Seçin —</option>' +
-    vehicles.map(v=>`<option value="${v.id}">${v.plaka}${v.sofor?' · '+v.sofor:''}</option>`).join('');
+    _filteredVehicles().map(v => _aracSecimOption(v)).join('');
 }
 
 function saveSeferEntry() {
@@ -7510,7 +7846,7 @@ function _fillMasrafAracSelect() {
   const sel = document.getElementById('f-masraf-arac');
   if(!sel) return;
   sel.innerHTML = '<option value="">— Tüm Filo —</option>' +
-    vehicles.map(v=>`<option value="${v.id}">${v.plaka}${v.sofor?' · '+v.sofor:''}</option>`).join('');
+    _filteredVehicles().map(v => _aracSecimOption(v)).join('');
 }
 
 function saveMasrafEntry() {
