@@ -3,35 +3,38 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#021530">
-  <title>Fleetly — Ambarlı'nın Filo Sirkülasyonu, Tek Panelde</title>
-  <meta name="description" content="Ambarlı limanından Çerkezköy'e, Hadımköy'e, Gebze'ye çıkan filolar için saha panosu. Sefer durumu, muayene takvimi, sürücü belgeleri — lacivert ve temiz.">
+  <meta name="theme-color" content="#0f172a">
+  <title>Fleetly — Filo Yönetimi, Tek Panelde</title>
+  <meta name="description" content="Ambarlı limanından Çerkezköy, Hadımköy, Gebze rotalarına çıkan filolar için profesyonel filo yönetim paneli. Sefer, muayene, belge takibi.">
 
-  <!-- Tipografi: Fraunces (editorial serif) + Inter + JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,30..100;1,9..144,300..600,30..100&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="icon" href="favicon.ico">
   <link rel="stylesheet" href="css/pages/landing.css">
+<base target="_blank">
 </head>
 <body>
 
-  <!-- =======================================================================
-       NAV
-       ======================================================================= -->
+  <!-- NAV -->
   <nav class="nav" id="topnav">
     <div class="container nav-inner">
       <a href="/" class="brand" aria-label="Fleetly">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span class="brand-name">Fleet<em>ly</em></span>
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <rect x="2" y="8" width="18" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
+          <rect x="20" y="11" width="6" height="9" rx="1.5" stroke="currentColor" stroke-width="2"/>
+          <circle cx="8" cy="20" r="2.5" fill="currentColor"/>
+          <circle cx="18" cy="20" r="2.5" fill="currentColor"/>
+        </svg>
+        <span class="brand-name">Fleetly</span>
       </a>
 
       <div class="nav-links">
-        <a href="#problem">Saha</a>
-        <a href="#ozellikler">Özellikler</a>
-        <a href="#panel">Panel</a>
-        <a href="#fiyat">Fiyat</a>
+        <a href="#problem">Sorun</a>
+        <a href="#features">Özellikler</a>
+        <a href="#pricing">Fiyat</a>
+        <a href="#faq">SSS</a>
         <a href="register.html" class="nav-cta">Ücretsiz dene</a>
       </div>
 
@@ -42,312 +45,239 @@
   </nav>
 
 
-  <!-- =======================================================================
-       HERO
-       ======================================================================= -->
+  <!-- HERO -->
   <header class="hero">
-
-    <!-- Ambient silhouette: konteyner gemisi + liman vinci -->
-    <svg class="hero-bg" viewBox="0 0 900 500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="hfade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"  stop-color="#c8102e" stop-opacity="0"/>
-          <stop offset="70%" stop-color="#e8ddb5" stop-opacity="0.55"/>
-          <stop offset="100%" stop-color="#e8ddb5" stop-opacity="0.9"/>
-        </linearGradient>
-      </defs>
-      <!-- deniz çizgisi -->
-      <line x1="0" y1="420" x2="900" y2="420" stroke="#e8ddb5" stroke-width="0.6" opacity="0.6"/>
-      <!-- konteyner gemisi silueti -->
-      <g fill="url(#hfade)">
-        <path d="M120 420 L120 380 L180 360 L680 360 L720 380 L760 420 Z"/>
-        <!-- konteyner istifleri -->
-        <rect x="200" y="310" width="60" height="50"/>
-        <rect x="262" y="310" width="60" height="50"/>
-        <rect x="324" y="310" width="60" height="50"/>
-        <rect x="386" y="310" width="60" height="50"/>
-        <rect x="448" y="310" width="60" height="50"/>
-        <rect x="510" y="310" width="60" height="50"/>
-        <rect x="572" y="310" width="60" height="50"/>
-        <rect x="231" y="258" width="60" height="50"/>
-        <rect x="293" y="258" width="60" height="50"/>
-        <rect x="355" y="258" width="60" height="50"/>
-        <rect x="417" y="258" width="60" height="50"/>
-        <rect x="479" y="258" width="60" height="50"/>
-        <rect x="541" y="258" width="60" height="50"/>
-        <rect x="324" y="206" width="60" height="50"/>
-        <rect x="386" y="206" width="60" height="50"/>
-        <rect x="448" y="206" width="60" height="50"/>
-        <!-- gemi kulesi -->
-        <rect x="640" y="220" width="38" height="140"/>
-        <rect x="648" y="200" width="8" height="25"/>
-      </g>
-      <!-- liman vinci -->
-      <g stroke="#e8ddb5" stroke-width="1.2" fill="none" opacity="0.55">
-        <line x1="80"  y1="420" x2="80"  y2="110"/>
-        <line x1="100" y1="420" x2="100" y2="110"/>
-        <line x1="80"  y1="110" x2="300" y2="110"/>
-        <line x1="100" y1="140" x2="280" y2="140"/>
-        <line x1="80"  y1="110" x2="40"  y2="210"/>
-        <line x1="100" y1="110" x2="60"  y2="210"/>
-        <line x1="160" y1="110" x2="160" y2="250"/>
-        <line x1="160" y1="250" x2="150" y2="270"/>
-        <line x1="160" y1="250" x2="170" y2="270"/>
-        <rect x="140" y="270" width="40" height="26"/>
-      </g>
-    </svg>
-
     <div class="container hero-grid">
-
       <div class="hero-left">
-        <span class="eyebrow">AMBARLI · ÇERKEZKÖY · HADIMKÖY · GEBZE</span>
-
+        <span class="eyebrow">FİLO YÖNETİMİ</span>
         <h1 class="hero-title">
-          <span class="line">Kapıdan</span>
-          <span class="line"><em>limana,</em></span>
-          <span class="line">tek <span class="red">nefeste.</span></span>
+          Filonuzu <em>kontrol altında</em> tutun.
         </h1>
-
         <p class="hero-lede">
-          Ambarlı'dan çıkan <strong>40'lık konteynerler,</strong> Çerkezköy OSB'ye dönen çekici–dorse takımları, Hadımköy'de sıra bekleyen şoförler. Fleetly hepsini tek bir <strong>lacivert panoda</strong> canlı tutar; sefer durumu, muayene takvimi, belge son kullanma — kağıt dosyaya, WhatsApp grubuna, "kim nereyi biliyordu"ya elveda.
+          Ambarlı'dan çıkan konteynerler, Çerkezköy OSB'ye dönen çekiciler, Hadımköy'de bekleyen şoförler. Hepsi tek panelde. Sefer durumu, muayene takvimi, belge son kullanma — kağıt dosyaya ve WhatsApp karmaşasına son.
         </p>
-
         <div class="hero-actions">
           <a href="register.html" class="btn btn-primary">
-            Ücretsiz başla
+            14 gün ücretsiz dene
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M1 8h14M9 2l6 6-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/>
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </a>
           <a href="#panel" class="btn btn-secondary">Paneli gör</a>
         </div>
-
-        <div class="hero-stamp">
-          <span class="dot"></span>
-          <span>34 plakalı 180+ araç için saha geri bildirimi ile kuruldu</span>
+        <div class="hero-trust">
+          <div class="trust-avatars">
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <p>34 plakalı <strong>180+ araç</strong> için saha geri bildirimiyle kuruldu</p>
         </div>
       </div>
 
-      <!-- Hero kartı: canlı "şu anda sahada" özeti -->
       <aside class="hero-card" aria-label="Canlı filo özeti">
-        <span class="hero-card-chip">CANLI · ŞU AN</span>
-
-        <div class="hero-card-head">
-          <h3>Bugün sahada</h3>
-          <span>24 Nisan · 14:32</span>
+        <div class="hero-card-header">
+          <div class="live-dot"><span></span> CANLI</div>
+          <span class="hero-card-time">24 Nisan · 14:32</span>
         </div>
 
         <div class="hc-row">
           <div>
             <div class="hc-plate">34 FSB 145</div>
-            <div class="hc-driver">Mehmet Y. · Ambarlı → Çerkezköy OSB</div>
+            <div class="hc-driver">Mehmet Y. · Ambarlı → Çerkezköy</div>
           </div>
-          <span class="hc-status go">YOLDA</span>
+          <span class="hc-status go">Yolda</span>
         </div>
         <div class="hc-row">
           <div>
             <div class="hc-plate">34 DV 8821</div>
-            <div class="hc-driver">Hasan K. · Gebze → Ambarlı (dönüş)</div>
+            <div class="hc-driver">Hasan K. · Gebze → Ambarlı</div>
           </div>
-          <span class="hc-status go">YOLDA</span>
+          <span class="hc-status go">Yolda</span>
         </div>
         <div class="hc-row">
           <div>
             <div class="hc-plate">34 LP 3452</div>
             <div class="hc-driver">Ramazan B. · Muayene 6 gün</div>
           </div>
-          <span class="hc-status warn">UYARI</span>
+          <span class="hc-status warn">Uyarı</span>
         </div>
         <div class="hc-row">
           <div>
             <div class="hc-plate">34 TN 9014</div>
-            <div class="hc-driver">Sürücü SRC3 süresi dolmuş</div>
+            <div class="hc-driver">SRC3 süresi dolmuş</div>
           </div>
-          <span class="hc-status stop">DUR</span>
+          <span class="hc-status stop">Dur</span>
         </div>
 
         <div class="hc-kpis">
           <div class="hc-kpi">
-            <label>AKTİF</label>
-            <strong>42<em>/58</em></strong>
+            <label>Aktif</label>
+            <strong>42<span>/58</span></strong>
           </div>
           <div class="hc-kpi">
-            <label>SEFER / GÜN</label>
+            <label>Sefer/gün</label>
             <strong>87</strong>
           </div>
           <div class="hc-kpi">
-            <label>BEKLEYEN</label>
-            <strong>6<em>*</em></strong>
+            <label>Bekleyen</label>
+            <strong>6<span>*</span></strong>
           </div>
         </div>
       </aside>
-
     </div>
-
-    <div class="hero-scroll-hint">KAYDIR · AŞAĞI</div>
   </header>
 
 
-  <!-- =======================================================================
-       STATS BANT
-       ======================================================================= -->
+  <!-- STATS -->
   <section class="stats-bar">
     <div class="container stats-bar-inner">
       <div class="stat-item">
-        <div class="num">180<em>+</em></div>
-        <div class="label">Filo · ARAÇ</div>
+        <div class="num">180<span>+</span></div>
+        <div class="label">Araç filosu</div>
       </div>
       <div class="stat-item">
-        <div class="num">12.400<em>+</em></div>
-        <div class="label">Aylık Sefer</div>
+        <div class="num">12.400<span>+</span></div>
+        <div class="label">Aylık sefer</div>
       </div>
       <div class="stat-item">
         <div class="num">%94</div>
-        <div class="label">Zamanında Varış</div>
+        <div class="label">Zamanında varış</div>
       </div>
       <div class="stat-item">
-        <div class="num">0<em>·</em></div>
-        <div class="label">Kağıt Dosya</div>
+        <div class="num">0<span>·</span></div>
+        <div class="label">Kağıt dosya</div>
       </div>
     </div>
   </section>
 
 
-  <!-- =======================================================================
-       PROBLEM STRIPE
-       ======================================================================= -->
+  <!-- PROBLEM -->
   <section class="problems" id="problem">
     <div class="container">
       <div class="section-head">
-        <span class="eyebrow">SAHA · GERÇEĞİ</span>
-        <h2>Liman <em>bekleme sırası</em> uzun; <span class="red">belirsizlik</span> daha uzun.</h2>
+        <span class="eyebrow">SAHA GERÇEĞİ</span>
+        <h2>Liman bekleme sırası uzun; <em>belirsizlik</em> daha uzun.</h2>
       </div>
 
       <div class="problem-grid">
         <article class="problem">
-          <div class="problem-num">01 · DEFTER</div>
-          <h3>Şoförün <em>SRC'si</em> hangi tarihe kadar geçerli?</h3>
+          <div class="problem-num">01</div>
+          <h3>Şoförün SRC'si hangi tarihe kadar geçerli?</h3>
           <p>Belgeler kimi zaman müdürün çekmecesinde, kimi zaman şoförün cebinde. Ambarlı kapısında "ruhsat fotoğrafını at" diye aranıyorsa, sistem o gün kaybetti.</p>
-          <span class="problem-tag">SRC · PSK · MUAYENE</span>
+          <span class="problem-tag">SRC · PSK · Muayene</span>
         </article>
 
         <article class="problem">
-          <div class="problem-num">02 · WHATSAPP</div>
-          <h3>"Bu sefer <em>kime</em> verildi, hangi konteynerle?"</h3>
-          <p>Sekiz farklı grupta dönen bilgi aynı anda hem eski hem yeni. Çerkezköy OSB teslimi Hadımköy'de sanılıyor — şoför arar, dispeçer bakar, müdür arar, dispeçer tekrar bakar.</p>
-          <span class="problem-tag">WHATSAPP KARMAŞA</span>
+          <div class="problem-num">02</div>
+          <h3>"Bu sefer kime verildi, hangi konteynerle?"</h3>
+          <p>Sekiz farklı grupta dönen bilgi aynı anda hem eski hem yeni. Çerkezköy teslimi Hadımköy'de sanılıyor — şoför arar, dispeçer bakar, müdür arar.</p>
+          <span class="problem-tag">WhatsApp Karmaşası</span>
         </article>
 
         <article class="problem">
-          <div class="problem-num">03 · EXCEL</div>
-          <h3>Excel <em>büyüdükçe</em> kimse güvenmiyor.</h3>
-          <p>V14_son_SON_REVIZE.xlsx. Farklı iki kişi aynı gün kaydedince gidiyor. Rapor istediğinde "ben akşam toparlayayım" cevabı — rapor bir hafta gecikiyor.</p>
-          <span class="problem-tag">VERSİYON KAYBI</span>
+          <div class="problem-num">03</div>
+          <h3>Excel büyüdükçe kimse güvenmiyor.</h3>
+          <p>V14_son_SON_REVIZE.xlsx. Farklı iki kişi aynı gün kaydedince gidiyor. Rapor istediğinde "ben akşam toparlayayım" — rapor bir hafta gecikiyor.</p>
+          <span class="problem-tag">Versiyon Kaybı</span>
         </article>
       </div>
     </div>
   </section>
 
 
-  <!-- =======================================================================
-       FEATURES
-       ======================================================================= -->
-  <section class="features" id="ozellikler">
+  <!-- FEATURES -->
+  <section class="features" id="features">
     <div class="container">
       <div class="section-head">
-        <span class="eyebrow">TEMELLER</span>
-        <h2>Konteyneri <em>takip</em> etmek <span class="red">kolaydır</span>, geri kalan her şeyi biz taşıdık.</h2>
+        <span class="eyebrow">ÖZELLİKLER</span>
+        <h2>Konteyneri takip etmek kolaydır, <em>geri kalanı</em> biz taşıdık.</h2>
       </div>
 
       <div class="feature-grid">
-
-        <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <rect x="2" y="6" width="13" height="10" stroke="currentColor" stroke-width="1.5"/>
-              <rect x="15" y="9" width="5" height="7" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="6" cy="17" r="1.7" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="16" cy="17" r="1.7" stroke="currentColor" stroke-width="1.5"/>
+        <article class="feature feature-large">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="6" width="14" height="10" rx="1.5"/>
+              <rect x="16" y="9" width="6" height="7" rx="1"/>
+              <circle cx="6" cy="17" r="1.5"/>
+              <circle cx="17" cy="17" r="1.5"/>
             </svg>
           </div>
           <h3>Araç kartı, tek kaynak</h3>
-          <p>34 FSB 145'in ruhsatı, muayenesi, sigorta bitişi, K1 yetkisi, bakım geçmişi — hepsi tek kartta. Yeni bir şoför atandığında geçmiş de onunla gelir.</p>
-          <a href="#" class="feature-link">Araç modülü</a>
+          <p>34 FSB 145'in ruhsatı, muayenesi, sigorta bitişi, K1 yetkisi, bakım geçmişi — hepsi tek kartta. Yeni şoför atandığında geçmiş de onunla gelir.</p>
+          <a href="#" class="feature-link">Araç modülü →</a>
         </article>
 
         <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <circle cx="11" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M3 19c1.5-4 5-5.5 8-5.5s6.5 1.5 8 5.5" stroke="currentColor" stroke-width="1.5"/>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="8" r="3.5"/>
+              <path d="M4 20c1.5-4 5-5.5 8-5.5s6.5 1.5 8 5.5"/>
             </svg>
           </div>
-          <h3>Sürücü dosyası, sahne arkasında</h3>
-          <p>SRC sınıfı, psikoteknik, ehliyet, iş sağlığı — her belge kendi son kullanma tarihini kendisi hatırlatır. Süre dolmadan uyarır, dolduğunda o aracı listede kilitler.</p>
-          <a href="#" class="feature-link">Sürücü modülü</a>
+          <h3>Sürücü dosyası</h3>
+          <p>SRC, psikoteknik, ehliyet, iş sağlığı — her belge kendi son kullanma tarihini hatırlatır. Süre dolmadan uyarır, dolduğunda aracı listede kilitler.</p>
+          <a href="#" class="feature-link">Sürücü modülü →</a>
         </article>
 
         <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <path d="M3 11h7l2-5 2 10 2-5h3" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 12h7l2-5 2 10 2-5h5"/>
             </svg>
           </div>
           <h3>Sefer akışı, canlı</h3>
-          <p>Ambarlı kapıda yüklenen konteynerden Çerkezköy OSB kapısına kadar tek durum çubuğu. "Geçti mi, geçmedi mi" diye aramak yerine panele bakarsın.</p>
-          <a href="#" class="feature-link">Sefer modülü</a>
+          <p>Ambarlı kapıdan Çerkezköy OSB kapısına kadar tek durum çubuğu. "Geçti mi, geçmedi mi" diye aramak yerine panele bakarsınız.</p>
+          <a href="#" class="feature-link">Sefer modülü →</a>
         </article>
 
         <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <rect x="3" y="4" width="16" height="16" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M3 8h16M7 4v3M15 4v3" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="16" cy="14" r="1.5" fill="currentColor"/>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <path d="M3 9h18M8 4v4M16 4v4"/>
+              <circle cx="17" cy="15" r="1.5" fill="currentColor"/>
             </svg>
           </div>
           <h3>Takvim, susmayan hafıza</h3>
           <p>Muayene, sigorta, takograf indirme, lastik, fren — hepsinin tarihi birden fazla kanala düşer. Dispeçerin telefonunda titrer, müdürün e-postasına gider.</p>
-          <a href="#" class="feature-link">Takvim modülü</a>
+          <a href="#" class="feature-link">Takvim modülü →</a>
         </article>
 
         <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <path d="M4 18V8l7-4 7 4v10" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M4 18h14M9 18v-5h4v5" stroke="currentColor" stroke-width="1.5"/>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="4" y="2" width="16" height="20" rx="2"/>
+              <circle cx="12" cy="18" r="1.5" fill="currentColor"/>
             </svg>
           </div>
           <h3>Şoför portalı, cepten</h3>
           <p>Şoförün telefonunda sade bir PWA: bugünün seferi, bir sonraki muayene, avans talebi. SMS OTP ile giriş; uygulama yüklemeye zorlamaz.</p>
-          <a href="#" class="feature-link">Şoför PWA</a>
+          <a href="#" class="feature-link">Şoför PWA →</a>
         </article>
 
         <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <rect x="3" y="6" width="16" height="12" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M3 6l8 7 8-7" stroke="currentColor" stroke-width="1.5"/>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 4h16v16H4z"/>
+              <path d="M4 8h16M8 4v4"/>
+              <circle cx="12" cy="14" r="2"/>
             </svg>
           </div>
           <h3>Müşteri takip bağlantısı</h3>
-          <p>Gönderici, "yolda mı geldi mi" diye aramak yerine tek bir linkten görür: konteyner no, araç, şoför, tahmini varış. Karşı tarafın gözünde hep şeffaf.</p>
-          <a href="#" class="feature-link">Takip linki</a>
+          <p>Gönderici "yolda mı geldi mi" diye aramak yerine tek linkten görür: konteyner no, araç, şoför, tahmini varış.</p>
+          <a href="#" class="feature-link">Takip linki →</a>
         </article>
-
       </div>
     </div>
   </section>
 
 
-  <!-- =======================================================================
-       PANEL PREVIEW
-       ======================================================================= -->
+  <!-- PANEL PREVIEW -->
   <section class="preview" id="panel">
     <div class="container">
-      <div class="section-head">
+      <div class="section-head center">
         <span class="eyebrow">PANEL</span>
-        <h2>Her sabah <em>aynı ekran,</em> her akşam <span class="red">daha az soru.</span></h2>
+        <h2>Her sabah aynı ekran, <em>her akşam</em> daha az soru.</h2>
       </div>
 
       <p class="preview-lede">
@@ -356,13 +286,13 @@
 
       <div class="preview-frame">
         <div class="preview-chrome">
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="url">fleetly.app / panel / ambarli-filo</span>
-          <span style="width:10px"></span>
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="url">fleetly.app/panel/ambarli-filo</span>
         </div>
 
         <div class="preview-body">
-
           <aside class="preview-side">
             <div class="preview-side-title">FİLO · 58</div>
             <ul>
@@ -371,7 +301,7 @@
               <li>Sürücüler <span class="count">63</span></li>
               <li>Muayene yaklaşan <span class="count">6</span></li>
               <li>Belge yaklaşan <span class="count">9</span></li>
-              <li>Servis / Bakım <span class="count">3</span></li>
+              <li>Servis/Bakım <span class="count">3</span></li>
               <li>Müşteriler <span class="count">14</span></li>
             </ul>
           </aside>
@@ -379,73 +309,70 @@
           <div class="preview-main">
             <div class="preview-main-head">
               <h4>Bugünün sirkülasyonu</h4>
-              <span>24 NİSAN · 14:32 · CANLI</span>
+              <span class="live-badge">● CANLI · 14:32</span>
             </div>
 
             <div class="preview-kpis">
               <div class="pv-kpi">
-                <label>AKTİF SEFER</label>
-                <strong>42<em>+3</em></strong>
+                <label>Aktif Sefer</label>
+                <strong>42<span class="up">+3</span></strong>
               </div>
               <div class="pv-kpi">
-                <label>AMBARLI ↔ ÇERKEZKÖY</label>
+                <label>Ambarlı ↔ Çerkezköy</label>
                 <strong>18</strong>
               </div>
               <div class="pv-kpi">
-                <label>DOLULUK</label>
-                <strong>%87<em>+4</em></strong>
+                <label>Doluluk</label>
+                <strong>%87<span class="up">+4</span></strong>
               </div>
-              <div class="pv-kpi neg">
-                <label>GECİKME</label>
-                <strong>2<em>−1</em></strong>
+              <div class="pv-kpi">
+                <label>Gecikme</label>
+                <strong>2<span class="down">−1</span></strong>
               </div>
             </div>
 
             <div class="preview-chart" aria-hidden="true">
               <svg viewBox="0 0 680 150" preserveAspectRatio="none">
-                <line x1="0" y1="120" x2="680" y2="120" stroke="#1a3560" stroke-width="0.5"/>
-                <line x1="0" y1="80"  x2="680" y2="80"  stroke="#1a3560" stroke-width="0.5" stroke-dasharray="2 4"/>
-                <line x1="0" y1="40"  x2="680" y2="40"  stroke="#1a3560" stroke-width="0.5" stroke-dasharray="2 4"/>
+                <line x1="0" y1="120" x2="680" y2="120" stroke="#334155" stroke-width="0.5"/>
+                <line x1="0" y1="80"  x2="680" y2="80"  stroke="#334155" stroke-width="0.5" stroke-dasharray="2 4"/>
+                <line x1="0" y1="40"  x2="680" y2="40"  stroke="#334155" stroke-width="0.5" stroke-dasharray="2 4"/>
 
-                <polyline fill="none" stroke="#e8ddb5" stroke-width="1.5"
+                <polyline fill="none" stroke="#94a3b8" stroke-width="1.5"
                   points="10,95 60,82 110,70 160,55 210,48 260,62 310,45 360,30 410,38 460,25 510,40 560,32 610,20 660,28"/>
-                <polyline fill="rgba(232,221,181,0.06)" stroke="none"
+                <polyline fill="rgba(148,163,184,0.06)" stroke="none"
                   points="10,95 60,82 110,70 160,55 210,48 260,62 310,45 360,30 410,38 460,25 510,40 560,32 610,20 660,28 660,120 10,120"/>
 
-                <polyline fill="none" stroke="#c8102e" stroke-width="1.2" stroke-dasharray="4 3"
+                <polyline fill="none" stroke="#6366f1" stroke-width="1.2" stroke-dasharray="4 3"
                   points="10,110 60,108 110,105 160,112 210,100 260,104 310,98 360,108 410,90 460,96 510,88 560,92 610,85 660,80"/>
 
-                <text x="10"  y="142" fill="#7d8fa6" font-family="JetBrains Mono" font-size="9">06:00</text>
-                <text x="160" y="142" fill="#7d8fa6" font-family="JetBrains Mono" font-size="9">09:00</text>
-                <text x="310" y="142" fill="#7d8fa6" font-family="JetBrains Mono" font-size="9">12:00</text>
-                <text x="460" y="142" fill="#7d8fa6" font-family="JetBrains Mono" font-size="9">15:00</text>
-                <text x="610" y="142" fill="#7d8fa6" font-family="JetBrains Mono" font-size="9">18:00</text>
+                <text x="10"  y="142" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="9">06:00</text>
+                <text x="160" y="142" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="9">09:00</text>
+                <text x="310" y="142" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="9">12:00</text>
+                <text x="460" y="142" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="9">15:00</text>
+                <text x="610" y="142" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="9">18:00</text>
 
-                <circle cx="510" cy="40" r="3" fill="#c8102e"/>
-                <text x="518" y="34" fill="#e8ddb5" font-family="JetBrains Mono" font-size="9">ŞU AN · 42</text>
+                <circle cx="510" cy="40" r="3" fill="#6366f1"/>
+                <text x="518" y="34" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="9">ŞU AN · 42</text>
               </svg>
             </div>
           </div>
-
         </div>
       </div>
     </div>
   </section>
 
 
-  <!-- =======================================================================
-       PRICING — tek plan, aylık / yıllık toggle
-       ======================================================================= -->
-  <section class="pricing" id="fiyat">
+  <!-- PRICING -->
+  <section class="pricing" id="pricing">
     <div class="container">
-      <div class="section-head">
+      <div class="section-head center">
         <span class="eyebrow">FİYAT</span>
-        <h2>Tek <em>plan.</em> Gizli kalem, kademe, sürpriz <span class="red">yok.</span></h2>
+        <h2>Tek plan. Gizli kalem, kademe, sürpriz <em>yok.</em></h2>
       </div>
 
       <div class="pricing-toggle" role="tablist" aria-label="Fatura dönemi">
-        <button type="button" class="active" data-period="aylik" role="tab" aria-selected="true">AYLIK</button>
-        <button type="button" data-period="yillik" role="tab" aria-selected="false">YILLIK <span class="save">%25</span></button>
+        <button type="button" class="active" data-period="aylik" role="tab" aria-selected="true">Aylık</button>
+        <button type="button" data-period="yillik" role="tab" aria-selected="false">Yıllık <span class="save">%25</span></button>
       </div>
 
       <article class="pricing-card">
@@ -457,8 +384,8 @@
           <div class="price">
             <strong data-price-aylik><span class="currency">₺</span>990</strong>
             <strong data-price-yillik hidden><span class="currency">₺</span>8.900</strong>
-            <span class="period" data-period-aylik>/ AY · KDV HARİÇ</span>
-            <span class="period" data-period-yillik hidden>/ YIL · KDV HARİÇ</span>
+            <span class="period" data-period-aylik>/ ay · KDV hariç</span>
+            <span class="period" data-period-yillik hidden>/ yıl · KDV hariç</span>
             <span class="equiv" data-equiv-aylik>Yıllık ödemede %25 tasarruf</span>
             <span class="equiv" data-equiv-yillik hidden>≈ ₺742 / ay · peşin ödeme</span>
           </div>
@@ -481,75 +408,69 @@
           <a href="register.html" class="btn btn-primary">
             14 gün ücretsiz dene
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M1 8h14M9 2l6 6-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/>
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </a>
           <a href="#" class="btn btn-secondary">Demo iste</a>
         </div>
 
         <div class="pricing-note">
-          KREDİ KARTI · HAVALE · CARİ · İADE GARANTİSİ İLK 30 GÜN
+          Kredi kartı · Havale · Cari · İade garantisi ilk 30 gün
         </div>
       </article>
     </div>
   </section>
 
 
-  <!-- =======================================================================
-       FAQ
-       ======================================================================= -->
-  <section class="faq">
+  <!-- FAQ -->
+  <section class="faq" id="faq">
     <div class="container">
-      <div class="section-head">
+      <div class="section-head center">
         <span class="eyebrow">SIK GELEN</span>
-        <h2>Cevaplar · <em>kısa</em> ve <span class="red">dürüst.</span></h2>
+        <h2>Cevaplar <em>kısa</em> ve dürüst.</h2>
       </div>
 
       <div class="faq-list">
         <details class="faq-item" open>
           <summary>Ambarlı'da kapı işlemleri için entegrasyon var mı?</summary>
-          <p>Kapı sistemleriyle doğrudan API entegrasyonu bazı operatörlerde mevcut, bazılarında değil. Olmayanlar için dispeçer tek tuşla kapı giriş/çıkış saatini kaydeder; sefer kartına otomatik işler. Yol haritasında TCDD ve Ro-Ro entegrasyonu yaz sonu için planlı.</p>
+          <p>Kapı sistemleriyle doğrudan API entegrasyonu bazı operatörlerde mevcut. Olmayanlar için dispeçer tek tuşla kapı giriş/çıkış saatini kaydeder; sefer kartına otomatik işler.</p>
         </details>
         <details class="faq-item">
           <summary>Mevcut Excel dosyalarımızı yükleyebilir miyiz?</summary>
-          <p>Evet. Araçlar, sürücüler, müşteriler için hazır şablonlar veriyoruz; ekip üyemiz ilk hafta sizinle birlikte yüklüyor. Çoğu filo 2–3 gün içinde tam anlamıyla devreye giriyor.</p>
+          <p>Evet. Hazır şablonlar veriyoruz; ekip üyemiz ilk hafta sizinle birlikte yüklüyor. Çoğu filo 2–3 gün içinde tam anlamıyla devreye giriyor.</p>
         </details>
         <details class="faq-item">
           <summary>Şoförler uygulama yüklemek zorunda mı?</summary>
-          <p>Hayır. Sistem PWA olarak çalışır — şoför telefonunda tarayıcıdan açar, ana ekrana ekler, bitti. SMS OTP ile giriş, şifre yok. Eski modellerde de sorunsuz çalışır.</p>
+          <p>Hayır. PWA olarak çalışır — tarayıcıdan açar, ana ekrana ekler, bitti. SMS OTP ile giriş, şifre yok.</p>
         </details>
         <details class="faq-item">
           <summary>Verilerimiz nerede tutuluyor?</summary>
-          <p>Supabase altyapısında (Frankfurt bölgesi, AB-GDPR uyumlu). Her firma kendi RLS'i ile izole; başka firmanın verisini kimse göremez. Günlük yedek, 30 gün geri dönüş noktası. Talep üzerine verinin tamamı dışa aktarılır.</p>
+          <p>Supabase altyapısında (Frankfurt, AB-GDPR uyumlu). Her firma kendi RLS'i ile izole. Günlük yedek, 30 gün geri dönüş noktası.</p>
         </details>
         <details class="faq-item">
           <summary>50 araçtan büyük filoya ölçeklenir mi?</summary>
-          <p>Evet. Ambarlı'da 180+ araçla operasyon yürüten filolarda sahadayız. Aynı veritabanı şeması, aynı RLS, aynı panel. 500 araca kadar performans düşmeden çalıştığını ölçtük.</p>
+          <p>Evet. 180+ araçla operasyon yürüten filolarda sahadayız. Aynı veritabanı, aynı panel. 500 araca kadar performans düşmeden.</p>
         </details>
         <details class="faq-item">
           <summary>Sözleşme kilidi var mı?</summary>
-          <p>Yok. Aylık abonelikte istediğin ay iptal edersin; yıllık planda kullanılmayan ayların iadesi pro-rata yapılır. Veriyi dışa aktarıp gitmek istersen tek tıkla JSON + Excel.</p>
+          <p>Yok. Aylık abonelikte istediğiniz ay iptal. Yıllık planda kullanılmayan aylar pro-rata iade. Veriyi dışa aktarıp gitmek isterseniz tek tıkla JSON + Excel.</p>
         </details>
       </div>
     </div>
   </section>
 
 
-  <!-- =======================================================================
-       FOOTER CTA
-       ======================================================================= -->
+  <!-- FOOTER CTA -->
   <section class="footer-cta">
     <div class="container">
-      <span class="eyebrow">AYARLANMIŞ · HAZIR</span>
-      <h2>Ambarlı <em>sabah 06:00.</em> Paneliniz <span class="red">açık mı?</span></h2>
-      <p>
-        14 gün ücretsiz. Kredi kartı istemiyoruz. Kurulum dahil, ekibinizle birlikte kuruyoruz. Beğenmezseniz — verinin tamamı sizin, kapı tek tıkla açık.
-      </p>
+      <span class="eyebrow">HAZIR</span>
+      <h2>Ambarlı sabah 06:00. <em>Paneliniz</em> açık mı?</h2>
+      <p>14 gün ücretsiz. Kredi kartı istemiyoruz. Kurulum dahil, ekibinizle birlikte kuruyoruz.</p>
       <div class="footer-cta-actions">
         <a href="register.html" class="btn btn-primary">
           Ücretsiz başla
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M1 8h14M9 2l6 6-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/>
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </a>
         <a href="#" class="btn btn-secondary">Demo ayarla</a>
@@ -558,33 +479,35 @@
   </section>
 
 
-  <!-- =======================================================================
-       FOOTER
-       ======================================================================= -->
+  <!-- FOOTER -->
   <footer class="footer">
     <div class="container">
-
       <div class="footer-inner">
         <div class="footer-brand">
           <a href="/" class="brand">
-            <span class="brand-mark" aria-hidden="true"></span>
-            <span class="brand-name">Fleet<em>ly</em></span>
+            <svg width="24" height="24" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+              <rect x="2" y="8" width="18" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
+              <rect x="20" y="11" width="6" height="9" rx="1.5" stroke="currentColor" stroke-width="2"/>
+              <circle cx="8" cy="20" r="2.5" fill="currentColor"/>
+              <circle cx="18" cy="20" r="2.5" fill="currentColor"/>
+            </svg>
+            <span class="brand-name">Fleetly</span>
           </a>
           <p>Ambarlı limanı trafiğine göre ayarlanmış, Türkiye karayolu taşımacılığı için tasarlanmış filo panosu.</p>
         </div>
 
         <div>
-          <h5>ÜRÜN</h5>
+          <h5>Ürün</h5>
           <ul>
-            <li><a href="#ozellikler">Özellikler</a></li>
+            <li><a href="#features">Özellikler</a></li>
             <li><a href="#panel">Panel</a></li>
-            <li><a href="#fiyat">Fiyat</a></li>
+            <li><a href="#pricing">Fiyat</a></li>
             <li><a href="register.html">Başla</a></li>
           </ul>
         </div>
 
         <div>
-          <h5>ŞİRKET</h5>
+          <h5>Şirket</h5>
           <ul>
             <li><a href="#">Hakkımızda</a></li>
             <li><a href="#">Güvenlik</a></li>
@@ -594,30 +517,26 @@
         </div>
 
         <div>
-          <h5>DESTEK</h5>
+          <h5>Destek</h5>
           <ul>
             <li><a href="#">Yardım merkezi</a></li>
             <li><a href="#">Durum sayfası</a></li>
             <li><a href="#">Yol haritası</a></li>
-            <li><a href="#">destek@fleetly.app</a></li>
+            <li><a href="mailto:destek@fleetly.app">destek@fleetly.app</a></li>
           </ul>
         </div>
       </div>
 
       <div class="footer-bottom">
-        <div>© 2026 FLEETLY · AMBARLI İÇİN KURULDU</div>
-        <div><a href="#">GİZLİLİK</a> · <a href="#">ŞARTLAR</a> · <a href="#">KVKK</a></div>
+        <div>© 2026 Fleetly · Ambarlı için kuruldu</div>
+        <div><a href="#">Gizlilik</a> · <a href="#">Şartlar</a> · <a href="#">KVKK</a></div>
       </div>
-
     </div>
   </footer>
 
 
-  <!-- =======================================================================
-       MINIMAL JS — nav scroll state, pricing toggle, mobil menü
-       ======================================================================= -->
   <script>
-    // Nav blur yoğunlaştırma
+    // Nav scroll state
     (function () {
       var nav = document.getElementById('topnav');
       if (!nav) return;
@@ -629,7 +548,7 @@
       window.addEventListener('scroll', onScroll, { passive: true });
     })();
 
-    // Fiyat toggle (aylık / yıllık)
+    // Pricing toggle
     (function () {
       var buttons = document.querySelectorAll('.pricing-toggle button');
       if (!buttons.length) return;
@@ -654,7 +573,7 @@
       });
     })();
 
-    // Mobil menü (basit)
+    // Mobile menu
     (function () {
       var toggle = document.querySelector('.nav-toggle');
       var links  = document.querySelector('.nav-links');
@@ -662,10 +581,27 @@
       toggle.addEventListener('click', function () {
         var open = links.classList.toggle('is-open');
         if (open) {
-          links.style.cssText = 'display:flex;position:absolute;top:80px;left:0;right:0;background:rgba(1,9,22,0.96);backdrop-filter:blur(32px) saturate(200%);-webkit-backdrop-filter:blur(32px) saturate(200%);flex-direction:column;gap:24px;padding:32px 48px;border-bottom:1px solid rgba(26,53,96,0.8);box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+          links.style.cssText = 'display:flex;position:absolute;top:72px;left:0;right:0;background:rgba(15,23,42,0.98);backdrop-filter:blur(24px);flex-direction:column;gap:20px;padding:32px 24px;border-bottom:1px solid rgba(51,65,85,0.5);box-shadow:0 20px 40px rgba(0,0,0,0.4);';
         } else {
           links.style.cssText = '';
         }
+      });
+    })();
+
+    // Intersection Observer for fade-in animations
+    (function () {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+      document.querySelectorAll('.problem, .feature, .faq-item, .stat-item').forEach(function (el) {
+        el.classList.add('fade-in');
+        observer.observe(el);
       });
     })();
   </script>
