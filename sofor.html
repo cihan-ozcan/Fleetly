@@ -221,6 +221,55 @@
 
 <div id="toast"></div>
 
+<!-- ══════════════════════════════════════════════
+     YAKIT YÜKLE MODALI
+══════════════════════════════════════════════ -->
+<div class="dlg-bg" id="yakit-modal">
+  <div class="dlg" style="max-width:400px;">
+    <h3>⛽ Yakıt Yükle</h3>
+    <p style="margin-bottom:14px;font-size:13px;color:var(--text2);">Doldurulan yakıtı kaydedin. Tutar ve litre opsiyonel bırakılabilir.</p>
+
+    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Litre</label>
+    <input id="yakit-litre" type="number" step="0.1" min="0" placeholder="Ör: 120.5"
+      style="width:100%;background:var(--surface2);border:1.5px solid var(--border2);border-radius:10px;padding:11px 13px;color:var(--text);font-size:14px;margin-bottom:12px;outline:none;">
+
+    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Tutar (₺)</label>
+    <input id="yakit-tutar" type="number" step="0.01" min="0" placeholder="Ör: 4250.00"
+      style="width:100%;background:var(--surface2);border:1.5px solid var(--border2);border-radius:10px;padding:11px 13px;color:var(--text);font-size:14px;margin-bottom:12px;outline:none;">
+
+    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">İstasyon / Not (opsiyonel)</label>
+    <input id="yakit-not" type="text" placeholder="Ör: Shell Gebze"
+      style="width:100%;background:var(--surface2);border:1.5px solid var(--border2);border-radius:10px;padding:11px 13px;color:var(--text);font-size:14px;margin-bottom:16px;outline:none;">
+
+    <div class="dlg-btns">
+      <button class="dlg-cancel" onclick="closeYakitModal()">İptal</button>
+      <button class="dlg-ok" onclick="kaydetYakit()">Kaydet ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     OPERASYONLA KONUŞ MODALI
+══════════════════════════════════════════════ -->
+<div class="dlg-bg" id="mesaj-modal">
+  <div class="dlg" style="max-width:400px;">
+    <h3>💬 Operasyonla Konuş</h3>
+
+    <div id="mesaj-gecmis" style="max-height:200px;overflow-y:auto;background:var(--surface2);border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;line-height:1.7;color:var(--text2);white-space:pre-wrap;">
+      Yükleniyor…
+    </div>
+
+    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Mesajınız</label>
+    <textarea id="mesaj-text" rows="3" placeholder="Operasyona bir not bırakın…"
+      style="width:100%;background:var(--surface2);border:1.5px solid var(--border2);border-radius:10px;padding:11px 13px;color:var(--text);font-size:14px;margin-bottom:16px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+
+    <div class="dlg-btns">
+      <button class="dlg-cancel" onclick="closeMesajModal()">Kapat</button>
+      <button class="dlg-ok" onclick="gonderiMesaj()">Gönder ✓</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ─── CONFIG ─── */
 const CFG    = (typeof window.FILO_CONFIG!=='undefined')?window.FILO_CONFIG:null;
@@ -380,6 +429,8 @@ function buildMobActs(e,durum,isActive){
   // Navigasyon — tek butonla yol tarifi (varsayılan teslim yerine, yoksa alım)
   if(canNavigate(e,durum)) h+=`<button class="act a-blue" onclick="openNav()"><span class="ai">🧭</span>NAVİGASYON</button>`;
   h+=`<button class="act a-ghost" onclick="openFotoSheet()"><span class="ai">📸</span>FOTOĞRAF EKLE</button>`;
+  h+=`<button class="act a-ghost" onclick="openYakitModal()"><span class="ai">⛽</span>YAKIT YÜKLE</button>`;
+  h+=`<button class="act a-ghost" onclick="openMesajModal()"><span class="ai">💬</span>OPERASYONLA KONUŞ</button>`;
   return h;
 }
 
@@ -392,6 +443,8 @@ function buildPcActs(e,durum,isActive){
   if(durum==='Yolda'||durum==='Fabrikada') h+=`<button class="pact pa-green" onclick="openDialog()"><span class="ai">🎯</span>TESLİM ETTİM</button>`;
   if(canNavigate(e,durum)) h+=`<button class="pact pa-blue" onclick="openNav()"><span class="ai">🧭</span>NAVİGASYON</button>`;
   h+=`<button class="pact pa-ghost" onclick="openFotoSheet()"><span class="ai">📸</span>FOTOĞRAF EKLE</button>`;
+  h+=`<button class="pact pa-ghost" onclick="openYakitModal()"><span class="ai">⛽</span>YAKIT YÜKLE</button>`;
+  h+=`<button class="pact pa-ghost" onclick="openMesajModal()"><span class="ai">💬</span>OPERASYONLA KONUŞ</button>`;
   return h;
 }
 function canNavigate(e,durum){
@@ -623,7 +676,95 @@ async function flushPending(){if(!pendingSync.length)return;const q=[...pendingS
 window.addEventListener('online',()=>{isOnline=true;document.body.classList.remove('offline');syncUI('synced');flushPending();});
 window.addEventListener('offline',()=>{isOnline=false;document.body.classList.add('offline');syncUI('offline');});
 
-/* ─── INIT ─── */
+/* ══════════════════════════════════════════════
+   YAKIT YÜKLE
+══════════════════════════════════════════════ */
+function openYakitModal(){
+  document.getElementById('yakit-litre').value='';
+  document.getElementById('yakit-tutar').value='';
+  document.getElementById('yakit-not').value='';
+  document.getElementById('yakit-modal').classList.add('open');
+}
+function closeYakitModal(){document.getElementById('yakit-modal').classList.remove('open');}
+
+async function kaydetYakit(){
+  const litre  = parseFloat(document.getElementById('yakit-litre').value)||null;
+  const tutar  = parseFloat(document.getElementById('yakit-tutar').value)||null;
+  const not    = (document.getElementById('yakit-not').value||'').trim()||null;
+
+  if(!litre && !tutar){showToast('Litre veya tutar giriniz.','error');return;}
+
+  // Araç ID'sini iş emrinden al
+  const aracId = isEmri?.arac_id || null;
+  const soforId= isEmri?.sofor_id|| null;
+  const tarih  = new Date().toISOString();
+
+  // 1. Yerel optimistik kayıt
+  const lokalKayit = {id:'lok_'+Date.now(), is_emri_id:isEmriId, arac_id:aracId, sofor_id:soforId, litre, tutar_tl:tutar, notlar:not, tarih, _pending:true};
+  try{const q=JSON.parse(localStorage.getItem('fleetly_yakit')||'[]');q.push(lokalKayit);localStorage.setItem('fleetly_yakit',JSON.stringify(q));}catch{}
+
+  closeYakitModal();
+  showToast('⛽ Yakıt kaydı oluşturuldu','success');
+
+  // 2. Buluta gönder
+  if(SB_URL&&SB_ANON&&isOnline){
+    try{
+      await fetch(`${SB_URL}/rest/v1/yakit_girisleri`,{
+        method:'POST',
+        headers:{'apikey':SB_ANON,'Authorization':`Bearer ${getSBToken()}`,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({is_emri_id:isEmri?._dbId||isEmriId, arac_id:aracId, sofor_id:soforId, litre, tutar_tl:tutar, notlar:not, tarih})
+      });
+      // Yerel pending bayrağını kaldır
+      try{const q=JSON.parse(localStorage.getItem('fleetly_yakit')||'[]');const upd=q.map(r=>r.id===lokalKayit.id?{...r,_pending:false}:r);localStorage.setItem('fleetly_yakit',JSON.stringify(upd));}catch{}
+    }catch{showToast('Yakıt çevrimdışı kaydedildi, sonra senkronize edilecek','info');}
+  }
+}
+
+/* ══════════════════════════════════════════════
+   OPERASYONLA KONUŞ
+══════════════════════════════════════════════ */
+function openMesajModal(){
+  document.getElementById('mesaj-text').value='';
+  _renderMesajGecmis();
+  document.getElementById('mesaj-modal').classList.add('open');
+}
+function closeMesajModal(){document.getElementById('mesaj-modal').classList.remove('open');}
+
+function _renderMesajGecmis(){
+  const el=document.getElementById('mesaj-gecmis');
+  if(!el)return;
+  const notlar=(isEmri&&isEmri.notlar)||'';
+  // notlar alanından mesaj bloklarını filtrele
+  const satirlar=notlar.split('\n');
+  // Tüm notları göster; şoför mesajları [ŞOFÖR] prefix ile vurgulanır
+  if(!notlar.trim()){el.textContent='Henüz mesaj yok.';return;}
+  el.innerHTML=satirlar.map(s=>{
+    if(s.startsWith('[ŞOFÖR')){ return `<span style="color:var(--green);">${s}</span>`; }
+    if(s.startsWith('[OPS')  ){ return `<span style="color:var(--blue,#60a5fa);">${s}</span>`; }
+    if(s.trim())               { return `<span style="color:var(--muted);">${s}</span>`; }
+    return '';
+  }).filter(Boolean).join('<br>');
+  el.scrollTop=el.scrollHeight;
+}
+
+async function gonderiMesaj(){
+  const text=(document.getElementById('mesaj-text').value||'').trim();
+  if(!text){showToast('Mesaj boş olamaz.','error');return;}
+
+  const saat=new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+  const yeniSatir=`[ŞOFÖR @ ${saat}]: ${text}`;
+
+  // Mevcut notlara ekle
+  const mevcutNotlar=(isEmri&&isEmri.notlar)||'';
+  const yeniNotlar=mevcutNotlar?(mevcutNotlar+'\n'+yeniSatir):yeniSatir;
+
+  document.getElementById('mesaj-text').value='';
+  await applyUpdate({notlar:yeniNotlar});
+  _renderMesajGecmis();
+  showToast('💬 Mesaj gönderildi','success');
+}
+
+/* ─── INIT — cache-first, cloud in background ─── */
 async function init(){
   const p=new URLSearchParams(window.location.search),tok=p.get('t');
   if(!tok){showError('Link parametresi bulunamadı. Lütfen şoför linkinizi doğru açın.');return;}
@@ -631,22 +772,38 @@ async function init(){
   if(sid)isEmriId=sid;
   else{try{const d=atob(tok);if(d.startsWith('ops_'))isEmriId=d.split('_')[1];}catch{}}
   if(!isEmriId){showError('İş emri bulunamadı. Lütfen yeni bir link isteyin.');return;}
+
+  // ① Önce localStorage'dan yükle — hızlı ilk render
   try{const all=JSON.parse(localStorage.getItem('fleetly_is_emirleri')||'[]');isEmri=all.find(e=>String(e.id)===String(isEmriId))||null;}catch{}
-  const cd=await fetchCloud(isEmriId);if(cd){isEmri=cd;saveLocal();}
-  if(!isEmri){showError('Bu iş emrine erişim sağlanamadı. Bağlantı kontrolü yapın.');return;}
-  document.getElementById('error-state').style.display='none';
-  if(!isOnline){document.body.classList.add('offline');syncUI('offline');}
-  if(IS_PC){
-    document.getElementById('pc-bar').style.display='flex';
-    document.getElementById('pc-body').style.display='grid';
-  }else{
-    const m=document.getElementById('mob-main');m.style.display='flex';
+
+  // ② Cache verisi varsa hemen göster (kullanıcı beklemez)
+  if(isEmri){
+    document.getElementById('error-state').style.display='none';
+    if(!isOnline){document.body.classList.add('offline');syncUI('offline');}
+    if(IS_PC){document.getElementById('pc-bar').style.display='flex';document.getElementById('pc-body').style.display='grid';}
+    else{document.getElementById('mob-main').style.display='flex';}
+    render();
+    if(isEmri.durum==='Yolda') startGPS();
   }
-  render();
-  // Arka planda alım/teslim adreslerini koordinata çevir (müşteri takip rotası için)
-  ensureCoords();
-  // "Yolda" durumdaysa GPS'i otomatik aç (sayfa yenilendikten sonra dahi)
-  if(isEmri && isEmri.durum==='Yolda') startGPS();
+
+  // ③ Arka planda buluttan güncelle
+  const cd=await fetchCloud(isEmriId);
+  if(cd){
+    isEmri=cd;saveLocal();
+    if(!document.getElementById('error-state').style.display || document.getElementById('error-state').style.display==='flex'){
+      // İlk kez yüklendi (cache yoktu)
+      document.getElementById('error-state').style.display='none';
+      if(!isOnline){document.body.classList.add('offline');syncUI('offline');}
+      if(IS_PC){document.getElementById('pc-bar').style.display='flex';document.getElementById('pc-body').style.display='grid';}
+      else{document.getElementById('mob-main').style.display='flex';}
+      if(isEmri.durum==='Yolda') startGPS();
+    }
+    render(); // güncelle
+    ensureCoords();
+  } else if(!isEmri){
+    showError('Bu iş emrine erişim sağlanamadı. Bağlantı kontrolü yapın.');
+    return;
+  }
 }
 function showError(m){document.getElementById('error-state').style.display='flex';document.getElementById('error-msg').textContent=m;}
 init();
