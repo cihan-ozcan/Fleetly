@@ -4659,27 +4659,64 @@ async function saveDriverEntryCloud(entry) {
       }
 
       // 2) Belgeler: her türü ayrı satır olarak upsert
-      const belgeler = [
-        ['ehliyet', entry.ehliyet, entry.ehliyet_sinifi, entry.ehliyet_no],
+      //    — dolu olanları ekle/güncelle
+      //    — daha önce doluyken ops şimdi boş bıraktıysa bitis_tarihi'ni NULL yap
+      const BELGE_TURLERI_LIST = [
+        ['ehliyet', entry.ehliyet, entry.ehliyet_sinifi || null, entry.ehliyet_no || null],
         ['src',     entry.src,     null, null],
         ['psiko',   entry.psiko,   null, null],
         ['takograf',entry.takograf,null, null],
         ['saglik',  entry.saglik,  null, null],
-      ].filter(([,bitis,,no]) => bitis || no);
+      ];
 
-      for (const [tur, bitis, sinif, no] of belgeler) {
-        await sb.from('surucu_belgeleri').upsert({
-          surucu_id    : surucuId,
-          firma_id     : currentFirmaId,
-          belge_turu   : tur,
-          bitis_tarihi : bitis || null,
-          sinif        : sinif || null,
-          belge_no     : no || null,
-          onay_durumu  : 'onayli',
-          kaynak       : 'ofis',
-          updated_by   : user.id
-        }, { onConflict: 'surucu_id,belge_turu' });
+      for (const [tur, bitis, sinif, no] of BELGE_TURLERI_LIST) {
+        if (bitis || no) {
+          // Dolu: upsert (oluştur veya güncelle)
+          await sb.from('surucu_belgeleri').upsert({
+            surucu_id    : surucuId,
+            firma_id     : currentFirmaId,
+            belge_turu   : tur,
+            bitis_tarihi : bitis || null,
+            sinif        : sinif || null,
+            belge_no     : no    || null,
+            onay_durumu  : 'onayli',
+            kaynak       : 'ofis',
+            updated_by   : user.id
+          }, { onConflict: 'surucu_id,belge_turu' });
+        } else {
+          // Boş bırakıldı: eğer mevcut bir satır varsa bitis_tarihi = NULL yap
+          // (onayli olmayanları (bekliyor/reddedildi) koruyoruz)
+          await sb.from('surucu_belgeleri')
+            .update({ bitis_tarihi: null, updated_by: user.id })
+            .eq('surucu_id', surucuId)
+            .eq('belge_turu', tur)
+            .eq('onay_durumu', 'onayli');
+        }
       }
+
+      // 2b) Eski surucu_belgeler tablosunu da güncelle (SQL trigger yeterli değilse
+      //     fallback olarak doğrudan yaz; telefon normalizasyonu ile eşleştir)
+      try {
+        const telNorm = _telNormalize(entry.tel);
+        if (telNorm) {
+          const legacyPatch = {
+            ehliyet       : entry.ehliyet  || null,
+            ehliyet_bitis : entry.ehliyet  || null,
+            ehliyet_sinifi: entry.ehliyet_sinifi || null,
+            ehliyet_no    : entry.ehliyet_no     || null,
+            src           : entry.src      || null,
+            src_bitis     : entry.src      || null,
+            psiko         : entry.psiko    || null,
+            psiko_bitis   : entry.psiko    || null,
+            takograf      : entry.takograf || null,
+          };
+          // PostgREST'te sunucu tarafı fn_normalize_tel'i match için kullan
+          await sb.from('surucu_belgeler')
+            .update(legacyPatch)
+            .eq('firma_id', currentFirmaId)
+            .eq('tel', entry.tel || '');   // tel ham değer ile eşleştir
+        }
+      } catch (_) { /* eski tablo yoksa veya başarısızsa sessizce geç */ }
 
       // 3) Araç ataması değiştiyse
       if (entry.plaka) {
