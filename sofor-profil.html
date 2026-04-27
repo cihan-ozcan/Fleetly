@@ -138,8 +138,9 @@
 
   async function init(){
     try {
-      if (!window.supabase || !window.SUPABASE_URL) throw new Error('Konfig eksik');
-      sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+      const CFG = window.FILO_CONFIG || {};
+      if (!window.supabase || !CFG.SUPABASE_URL) throw new Error('Konfig eksik');
+      sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON);
       const { data: { session } } = await sb.auth.getSession();
       if (!session) {
         document.getElementById('root').innerHTML =
