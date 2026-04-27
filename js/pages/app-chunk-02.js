@@ -5099,6 +5099,29 @@ function renderDsDriverList() {
 // Son oluşturulan davetin bilgileri (kopyala + whatsapp için)
 let _sonDavet = null;
 
+// Araç seçildiğinde şoför adını otomatik doldur
+function _davetAracOnChange() {
+  const sel   = document.getElementById('f-davet-arac');
+  const adInp = document.getElementById('f-davet-ad');
+  const hint  = document.getElementById('f-davet-tel-hint');
+  if (!sel || !adInp) return;
+  const aracId = sel.value;
+  if (!aracId) return;
+  // vehicles dizisinden seçilen aracın şoför adını bul
+  const all = (typeof vehicles !== 'undefined' ? vehicles : []);
+  const v = all.find(x => String(x.id) === String(aracId));
+  if (!v) return;
+  const soforAd = v.sofor_ad || v.driver_name || v.ad || '';
+  if (soforAd && !adInp.value.trim()) {
+    adInp.value = soforAd;
+    if (hint) {
+      hint.style.color  = '#22c55e';
+      hint.textContent  = '✓ Araçtan otomatik dolduruldu: ' + soforAd;
+      hint.style.display = '';
+    }
+  }
+}
+
 // Araç listesini davet formundaki select'e doldur
 function _fillDavetAracSelect() {
   const sel = document.getElementById('f-davet-arac');
@@ -5107,6 +5130,8 @@ function _fillDavetAracSelect() {
   const onlyEmpty = !!document.getElementById('f-davet-sadece-bos')?.checked;
   sel.innerHTML = '<option value="">— Sabit araç yok (sefer bazlı) —</option>' +
     _filteredVehicles({ onlyEmpty }).map(v => _aracSecimOption(v)).join('');
+  // Araç değiştiğinde şoför adını otomatik doldur
+  sel.onchange = _davetAracOnChange;
 }
 
 // Davet kodu oluştur — RPC çağırır
@@ -5158,12 +5183,18 @@ async function soforDavetTelLookup(rawTel) {
 }
 
 async function soforDavetOlustur() {
-  const ad    = (document.getElementById('f-davet-ad').value   || '').trim();
+  let ad      = (document.getElementById('f-davet-ad').value   || '').trim();
   const tel   = (document.getElementById('f-davet-tel').value  || '').trim();
   const arac  = document.getElementById('f-davet-arac').value || '';
   const not   = (document.getElementById('f-davet-not').value  || '').trim();
 
-  if (!ad)  { showToast('Ad Soyad zorunludur.', 'error'); return; }
+  // Araç seçiliyse şoför adı opsiyonel — araçtaki mevcut ismi kullan
+  if (!ad && arac) {
+    const all = (typeof vehicles !== 'undefined' ? vehicles : []);
+    const v = all.find(x => String(x.id) === String(arac));
+    if (v) ad = v.sofor_ad || v.driver_name || v.ad || '';
+  }
+  if (!ad)  { showToast('Ad Soyad zorunludur (veya şoförü olan bir araç seçin).', 'error'); return; }
   if (!tel) { showToast('Telefon numarası zorunludur.', 'error'); return; }
 
   // Basit telefon temizle (sadece rakam)
