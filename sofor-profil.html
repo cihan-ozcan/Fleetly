@@ -157,11 +157,66 @@
 
   async function yukle(){
     const { data: { user } } = await sb.auth.getUser();
-    const { data, error } = await sb.from('v_surucu_dosyasi')
+
+    // 1) v_surucu_dosyasi view'ından yükle (birincil yol)
+    let { data, error } = await sb.from('v_surucu_dosyasi')
       .select('*')
       .eq('auth_user_id', user.id)
       .maybeSingle();
     if (error) throw error;
+
+    // 2) View boş dönerse (eski şema / auth_user_id henüz bağlı değil):
+    //    suruculer tablosundan auth_user_id ile ara, ardından belgelerini çek
+    if (!data) {
+      const { data: surRow } = await sb.from('suruculer')
+        .select('id, ad, soyad, telefon_e164, email, durum, avatar_url, arac_id:arac_sofor_atamalari(arac_id)')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      if (surRow) {
+        const { data: belgeler } = await sb.from('surucu_belgeleri')
+          .select(`
+            belge_turu,
+            belge_no,
+            sinif,
+            veren_kurum,
+            bitis_tarihi,
+            onay_durumu,
+            red_nedeni,
+            dosya_url,
+            updated_at
+          `)
+          .eq('surucu_id', surRow.id);
+
+        // v_surucu_dosyasi formatına uygun nesne oluştur
+        data = {
+          surucu_id   : surRow.id,
+          auth_user_id: user.id,
+          ad          : surRow.ad,
+          soyad       : surRow.soyad,
+          telefon_e164: surRow.telefon_e164,
+          email       : surRow.email,
+          durum       : surRow.durum,
+          avatar_url  : surRow.avatar_url,
+          arac_plaka  : null,
+          belgeler    : (belgeler || []).map(b => ({
+            tur         : b.belge_turu,
+            belge_no    : b.belge_no,
+            sinif       : b.sinif,
+            veren_kurum : b.veren_kurum,
+            bitis       : b.bitis_tarihi,
+            kalan_gun   : b.bitis_tarihi
+                          ? Math.round((new Date(b.bitis_tarihi) - new Date()) / 86400000)
+                          : null,
+            onay_durumu : b.onay_durumu,
+            red_nedeni  : b.red_nedeni,
+            dosya_url   : b.dosya_url,
+            updated_at  : b.updated_at
+          }))
+        };
+      }
+    }
+
     if (!data) {
       document.getElementById('root').innerHTML =
         '<div class="err">Sürücü kaydınız bulunamadı.<br>Ofis ile iletişime geçin.</div>';
