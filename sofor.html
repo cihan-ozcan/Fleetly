@@ -13,6 +13,7 @@
   <script src="config.js" onerror="console.warn('config.js yüklenemedi')"></script>
   <link rel="stylesheet" href="css/pages/sofor.css" />
   <script src="js/core/include.js" defer></script>
+  <script src="js/core/push-notify.js" defer></script>
 </head>
 <body>
 <div id="app">
@@ -148,6 +149,10 @@
           <span class="foto-badge" id="mob-foto-cnt">0</span>
         </div>
         <div class="foto-grid" id="mob-foto-grid"></div>
+        <!-- Mühür eksik uyarı bandı — render() tarafından gösterilip gizlenir -->
+        <div id="muhur-eksik-band" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-left:3px solid var(--yellow);border-radius:10px;font-size:12px;color:var(--yellow);cursor:pointer;" onclick="selectFotoType('Mühür')">
+          🔒 <strong>Mühür fotoğrafı eksik</strong> — eklemek için buraya dokunun
+        </div>
         <input type="file" id="foto-input" accept="image/*" capture="environment">
       </div>
 
@@ -187,6 +192,46 @@
       <div class="sheet-opt" onclick="selectFotoType('Mühür')"><div class="s-icon">🔒</div>Mühür</div>
       <div class="sheet-opt" onclick="selectFotoType('Hasar')"><div class="s-icon">⚠️</div>Hasar</div>
       <div class="sheet-opt" onclick="selectFotoType('Diğer')"><div class="s-icon">📷</div>Diğer</div>
+    </div>
+  </div>
+</div>
+
+<!-- MÜHÜR HATIRLATMA — Konteyner fotoğrafından sonra otomatik açılır -->
+<div class="dlg-bg" id="muhur-hatirlatma">
+  <div class="dlg" style="max-width:360px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px;">🔒</div>
+    <h3 style="margin-bottom:8px;">Mühür Fotoğrafı</h3>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.6;">
+      Konteyner fotoğrafı eklendi.<br>
+      <strong style="color:var(--text);">Mühür numarasını da fotoğraflayın</strong> — teslimatta anlaşmazlık olursa kanıt olur.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="dlg-ok" style="font-size:15px;" onclick="closeMuhurHatirlatma(true)">
+        📸 Şimdi Mühür Fotoğrafı Ekle
+      </button>
+      <button class="dlg-cancel" style="font-size:13px;opacity:.75;" onclick="closeMuhurHatirlatma(false)">
+        Mühür yok / sonra eklerim
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MÜHÜR UYARISI — Göreve başlarken mühür eksikse -->
+<div class="dlg-bg" id="muhur-uyari">
+  <div class="dlg" style="max-width:360px;text-align:center;">
+    <div style="font-size:44px;margin-bottom:8px;">⚠️</div>
+    <h3 style="margin-bottom:8px;color:var(--yellow);">Mühür Fotoğrafı Eksik</h3>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.6;">
+      Konteyner fotoğrafı var ama <strong style="color:var(--text);">mühür fotoğrafı eklenmemiş.</strong><br>
+      Mühür eksikse ilerleyebilirsiniz, ancak bu tutanağa not düşülecek.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="dlg-ok" style="font-size:15px;background:var(--yellow);color:#000;" onclick="closeMuhurUyari(true)">
+        📸 Geri Dön, Mühür Ekle
+      </button>
+      <button class="dlg-cancel" style="font-size:13px;border-color:rgba(239,68,68,.4);color:var(--red);" onclick="closeMuhurUyari(false)">
+        Mühürsüz Devam Et (konteyner boş/açık)
+      </button>
     </div>
   </div>
 </div>
@@ -495,6 +540,13 @@ function render(){
   setEl('mob-foto-cnt',String(fotos.length));
   const mfg=document.getElementById('mob-foto-grid');
   if(mfg){let h=fotos.map(f=>`<div class="foto-tw"><img class="foto-th" src="${f.url}" alt="${f.tip||''}" onerror="this.style.display='none'"><div class="foto-tl">${f.tip||''}</div></div>`).join('');if(isActive)h+=`<div class="foto-add" onclick="openFotoSheet()"><span style="font-size:24px;">＋</span><span>Ekle</span></div>`;mfg.innerHTML=h||`<div style="color:var(--muted);font-size:12px;padding:8px 0;grid-column:1/-1;">Henüz fotoğraf yok</div>`;}
+  // Mühür eksik bandı: konteyner fotoğrafı var ama mühür yoksa göster (aktif operasyonda)
+  const muhurBand=document.getElementById('muhur-eksik-band');
+  if(muhurBand){
+    const kontVar=fotos.some(f=>(f.tip||'').includes('Konteyner'));
+    const muhurVar=fotos.some(f=>f.tip==='Mühür');
+    muhurBand.style.display=(isActive&&kontVar&&!muhurVar)?'':'none';
+  }
   const mn=document.getElementById('mob-notlar');if(mn){if(e.notlar){mn.style.display='';setEl('mob-notlar-text',e.notlar);}else mn.style.display='none';}
 
   /* ── PC ── */
@@ -520,6 +572,41 @@ function openFotoSheet(){document.getElementById('foto-sheet').classList.add('op
 function closeFotoSheet(){document.getElementById('foto-sheet').classList.remove('open');}
 function selectFotoType(t){_fotoType=t;closeFotoSheet();document.getElementById('foto-input').click();}
 
+/* ─── Mühür hatırlatma & uyarı ─── */
+function _hasFoto(tip){
+  return parseFotos(isEmri).some(f=>f.tip===tip);
+}
+function openMuhurHatirlatma(){
+  document.getElementById('muhur-hatirlatma').classList.add('open');
+}
+function closeMuhurHatirlatma(ekle){
+  document.getElementById('muhur-hatirlatma').classList.remove('open');
+  if(ekle){
+    // Kısa bekleme: diyalog kapandıktan sonra kamera aç
+    setTimeout(()=>{ _fotoType='Mühür'; document.getElementById('foto-input').click(); }, 250);
+  }
+}
+
+let _goreve_basla_callback=null;
+function openMuhurUyari(onDevam){
+  _goreve_basla_callback=onDevam;
+  document.getElementById('muhur-uyari').classList.add('open');
+}
+function closeMuhurUyari(geriDon){
+  document.getElementById('muhur-uyari').classList.remove('open');
+  if(!geriDon && _goreve_basla_callback){
+    // Mühürsüz devam: notlara otomatik not düş
+    const not='[SİSTEM]: Mühür fotoğrafı eklenmeden göreve başlandı.';
+    const mevcutNotlar=(isEmri&&isEmri.notlar)||'';
+    const yeniNotlar=mevcutNotlar?(mevcutNotlar+'\n'+not):not;
+    applyUpdate({notlar:yeniNotlar}).then(()=>_goreve_basla_callback());
+  } else if(geriDon){
+    // Geri dön: mühür fotoğrafı ekle
+    setTimeout(()=>{ _fotoType='Mühür'; document.getElementById('foto-input').click(); }, 250);
+  }
+  _goreve_basla_callback=null;
+}
+
 document.getElementById('foto-input').addEventListener('change',async function(){
   const file=this.files[0];if(!file)return;
   showToast('⏳ Fotoğraf yükleniyor…');
@@ -532,6 +619,11 @@ document.getElementById('foto-input').addEventListener('change',async function()
     isEmri.fotograflar=fotos;saveLocal();render();
     await syncCloud(isEmri.id,{fotograflar:JSON.stringify(fotos)});
     showToast('📸 Fotoğraf eklendi!','success');
+
+    // ── Mühür hatırlatması: konteyner fotoğrafı yüklendiyse ve mühür yoksa ──
+    if((_fotoType||'').includes('Konteyner') && !_hasFoto('Mühür')){
+      setTimeout(openMuhurHatirlatma, 600); // toast'tan sonra aç
+    }
   }catch{showToast('Fotoğraf yüklenemedi','error');}
   this.value='';
 });
@@ -633,8 +725,32 @@ async function ensureCoords(){
 /* ─── AKSİYONLAR ─── */
 async function doAction(a){
   if(!isEmri)return;
-  const now=new Date().toISOString();let u={};
-  if(a==='goreve_basla'){u={durum:'Yolda',yola_zaman:now};startGPS();}
+  const now=new Date().toISOString();
+
+  if(a==='goreve_basla'){
+    // Konteyner fotoğrafı var ama mühür yoksa → uyarı kapısı
+    const kontVar  = _hasFoto('Konteyner & Çekici Plaka');
+    const muhurVar = _hasFoto('Mühür');
+    if(kontVar && !muhurVar){
+      openMuhurUyari(async()=>{
+        // Kullanıcı "Mühürsüz Devam" seçti — göreve başla
+        await applyUpdate({durum:'Yolda',yola_zaman:new Date().toISOString()});
+        startGPS();
+        showToast('✓ Göreve başlandı','success');
+      });
+      return; // uyarı kapanana kadar bekle
+    }
+    // Konteyner hiç yoksa — bilgi toast'u (zorunlu değil, yumuşak uyarı)
+    if(!kontVar){
+      showToast('💡 İpucu: Hareket öncesi konteyner ve mühür fotoğrafı eklemeyi unutmayın.','info');
+    }
+    await applyUpdate({durum:'Yolda',yola_zaman:now});
+    startGPS();
+    showToast('✓ Güncellendi','success');
+    return;
+  }
+
+  let u={};
   if(a==='fabrika_giris')u={durum:'Fabrikada',fabrika_giris:now};
   if(a==='fabrika_cikis')u={fabrika_cikis:now};
   await applyUpdate(u);showToast('✓ Güncellendi','success');
@@ -803,6 +919,14 @@ async function init(){
   } else if(!isEmri){
     showError('Bu iş emrine erişim sağlanamadı. Bağlantı kontrolü yapın.');
     return;
+  }
+
+  // ④ Push bildirim aboneliği — surucu_id varsa kaydet
+  //    İlk açılışta izin diyaloğu gösterilir, sonrasında sessiz çalışır
+  const surucuIdForPush = isEmri?.surucu_id || null;
+  if(surucuIdForPush && window.FleetlyPush){
+    // 3 saniye bekle: sayfa tam yüklendikten sonra izin iste (daha iyi UX)
+    setTimeout(()=>{ window.FleetlyPush.register(surucuIdForPush); }, 3000);
   }
 }
 function showError(m){document.getElementById('error-state').style.display='flex';document.getElementById('error-msg').textContent=m;}
