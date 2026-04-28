@@ -361,7 +361,7 @@ async function soforIsEmirleriYukle() {
     const bugun = new Date();
     const d0 = new Date(bugun.getFullYear(), bugun.getMonth(), bugun.getDate()).toISOString();
 
-    const FIELDS = 'id, referans_no, konteyner_no, yukle_yeri, teslim_yeri, durum, kont_tip, musteri_adi, atama_zamani, created_at';
+    const FIELDS = 'id, referans_no, konteyner_no, yukle_yeri, teslim_yeri, durum, kont_tip, musteri_adi, atama_zamani, created_at, fotograflar';
     const DURUMLAR = ['Bekliyor','Yolda','Fabrikada','Teslim Edildi'];
 
     // user.phone: Supabase'in sakladığı E.164 formatı (+905321234567)
@@ -451,6 +451,28 @@ function soforJobAc(id) {
     navBtns.push(`<button class="sofor-big-btn sec" onclick="soforNavigate('${(e.teslim_yeri||'').replace(/'/g,"\\'")}')">🏁 Teslim Noktasına Git</button>`);
   }
 
+  // Fotoğraflar bölümü
+  let fotolar = [];
+  try {
+    if (e.fotograflar) {
+      fotolar = typeof e.fotograflar === 'string' ? JSON.parse(e.fotograflar) : (Array.isArray(e.fotograflar) ? e.fotograflar : []);
+    }
+  } catch(_) { fotolar = []; }
+
+  const fotoHtml = `
+    <div class="sofor-section-title" style="margin-top:14px">
+      <span>📸 Fotoğraflar ${fotolar.length ? `<span style="background:rgba(129,140,248,.2);color:#a5b4fc;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:4px;">${fotolar.length}</span>` : ''}</span>
+      <button onclick="soforFotoEkleAc()" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">+ Fotoğraf Ekle</button>
+    </div>
+    ${fotolar.length ? `
+    <div class="sofor-foto-grid">
+      ${fotolar.map((f, i) => `
+        <div class="sofor-foto-item" onclick="soforFotoGoruntule('${f.url}')">
+          <img src="${f.url}" alt="${f.tip || 'Fotoğraf'}" loading="lazy">
+          <div class="sofor-foto-tip">${f.tip || 'Fotoğraf'}</div>
+        </div>`).join('')}
+    </div>` : `<div class="sofor-foto-bos">Henüz fotoğraf eklenmedi.<br><small>Konteyner, mühür veya hasar fotoğrafı ekleyin.</small></div>`}`;
+
   body.innerHTML = `
     <div class="sofor-info-grid">
       <div class="sofor-info full"><div class="lbl">Durum</div><div class="val">
@@ -463,8 +485,9 @@ function soforJobAc(id) {
       ${e.kont_tip ? `<div class="sofor-info"><div class="lbl">Tip</div><div class="val">${e.kont_tip}</div></div>` : ''}
       ${e.atama_zamani ? `<div class="sofor-info full"><div class="lbl">🗓 Atama Zamanı</div><div class="val">${new Date(e.atama_zamani).toLocaleString('tr-TR')}</div></div>` : ''}
     </div>
-    ${navBtns.length ? `<div class="sofor-section-title" style="margin-top:10px"><span>🧭 Navigasyon</span></div><div class="sofor-action-btns">${navBtns.join('')}</div>` : ''}
-    <div class="sofor-section-title" style="margin-top:10px"><span>⚡ İşlemler</span></div>
+    ${fotoHtml}
+    ${navBtns.length ? `<div class="sofor-section-title" style="margin-top:14px"><span>🧭 Navigasyon</span></div><div class="sofor-action-btns">${navBtns.join('')}</div>` : ''}
+    <div class="sofor-section-title" style="margin-top:14px"><span>⚡ İşlemler</span></div>
     <div class="sofor-action-btns">${actions}</div>`;
   document.getElementById('sofor-job-drawer').classList.add('open');
 }
@@ -530,6 +553,93 @@ function soforJobActionsHTML(e) {
   btns.push(`<button class="sofor-big-btn sec" onclick="soforProblemBildir()" style="color:#fbbf24;border-color:rgba(245,158,11,.3)">⚠️ Problem Bildir</button>`);
   btns.push(`<button class="sofor-big-btn sec" onclick="soforJobKapat()">Kapat</button>`);
   return btns.join('');
+}
+
+/* ================================================================
+   FOTOĞRAF YÖNETİMİ — Şoför portalı iş emri fotoğrafları
+   ================================================================ */
+
+/** Foto tipi seçim sayfasını aç */
+function soforFotoEkleAc() {
+  const sheet = document.getElementById('sofor-foto-sheet');
+  if (sheet) sheet.classList.add('open');
+}
+
+/** Foto sayfasını kapat */
+function soforFotoEkleKapat() {
+  const sheet = document.getElementById('sofor-foto-sheet');
+  if (sheet) sheet.classList.remove('open');
+}
+
+/** Tip seçildi → kamera/galeri aç */
+function soforFotoTipSec(tip) {
+  soforState.aktifFotoTip = tip;
+  soforFotoEkleKapat();
+  const input = document.getElementById('sofor-foto-input');
+  if (input) { input.value = ''; input.click(); }
+}
+
+/** Dosya seçildi → upload et → is_emirleri.fotograflar güncelle */
+async function soforFotoIsle(event) {
+  const file = event.target.files?.[0];
+  if (!file || !soforState.aktifIsEmri) return;
+  const tip = soforState.aktifFotoTip || 'Diğer';
+  const e = soforState.aktifIsEmri;
+
+  soforToast('Fotoğraf yükleniyor…', '');
+
+  try {
+    const sb = getSB();
+    const { data: { user } } = await sb.auth.getUser();
+
+    // 1) Storage'a yükle (bucket: operasyon-foto)
+    const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase();
+    const yol = `${e.id}/${user.id}_${Date.now()}.${ext}`;
+    let fotoUrl = null;
+    try {
+      const up = await sb.storage.from('operasyon-foto').upload(yol, file, { contentType: file.type, upsert: false });
+      if (up.error) throw up.error;
+      const pub = sb.storage.from('operasyon-foto').getPublicUrl(yol);
+      fotoUrl = pub?.data?.publicUrl || null;
+    } catch (upErr) {
+      console.warn('Storage yükleme hatası — base64 fallback:', upErr);
+      // Offline / bucket yoksa base64 olarak sakla
+      fotoUrl = await new Promise((res) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => res(ev.target.result);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 2) Mevcut fotograflar'ı çek, yeni kaydı ekle
+    const { data: cur } = await sb.from('is_emirleri').select('fotograflar').eq('id', e.id).maybeSingle();
+    let fotolar = [];
+    try {
+      if (cur?.fotograflar) {
+        fotolar = typeof cur.fotograflar === 'string' ? JSON.parse(cur.fotograflar) : (Array.isArray(cur.fotograflar) ? cur.fotograflar : []);
+      }
+    } catch(_) { fotolar = []; }
+    fotolar.push({ url: fotoUrl, tip, ts: new Date().toISOString() });
+
+    // 3) is_emirleri güncelle
+    const { error } = await sb.from('is_emirleri')
+      .update({ fotograflar: JSON.stringify(fotolar) })
+      .eq('id', e.id);
+    if (error) throw error;
+
+    // 4) Yerel state güncelle ve drawer'ı yeniden render et
+    e.fotograflar = JSON.stringify(fotolar);
+    soforToast('Fotoğraf eklendi ✓', 'ok');
+    soforJobAc(e.id);
+  } catch (err) {
+    console.error('Fotoğraf yükleme hatası:', err);
+    soforToast('Fotoğraf eklenemedi: ' + (err?.message || 'hata'), 'err');
+  }
+}
+
+/** Fotoğrafı yeni sekmede tam ekran aç */
+function soforFotoGoruntule(url) {
+  window.open(url, '_blank');
 }
 
 async function soforDurumGuncelle(yeniDurum) {
