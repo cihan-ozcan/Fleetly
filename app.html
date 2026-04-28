@@ -938,55 +938,92 @@
       <div id="ops-drawer-title" style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:2px;"></div>
       <div id="ops-drawer-sub" style="font-size:11px;color:var(--muted);"></div>
     </div>
-    <button class="modal-close" onclick="closeOpsDrawer()" aria-label="Kapat">✕</button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="opsDrawerYenile()" title="Şoförden gelen verileri yenile" style="background:var(--surface2);border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Yenile
+      </button>
+      <button class="modal-close" onclick="closeOpsDrawer()" aria-label="Kapat">✕</button>
+    </div>
   </div>
   <div class="drawer-body">
+
     <!-- Durum & özet -->
     <div class="drawer-section">
       <div class="drawer-section-title">Durum & Konteyner</div>
       <div id="ops-drawer-durum-row" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;"></div>
       <div id="ops-drawer-detaylar"></div>
     </div>
+
+    <!-- Şoför Anlık Durum (GPS + KM) -->
+    <div class="drawer-section" id="ops-drawer-sofor-durum-section">
+      <div class="drawer-section-title">Şoför Anlık Durum</div>
+      <div id="ops-drawer-sofor-durum"></div>
+    </div>
+
+    <!-- Teslim Belgesi (POD) — şoför teslim ettikten sonra görünür -->
+    <div class="drawer-section" id="ops-drawer-pod-section" style="display:none">
+      <div class="drawer-section-title">Teslim Belgesi (POD)</div>
+      <div id="ops-drawer-pod"></div>
+    </div>
+
     <!-- Yakıt & Maliyet -->
     <div class="drawer-section">
       <div class="drawer-section-title">Yakıt & Maliyet</div>
       <div id="ops-drawer-yakit-card"></div>
     </div>
+
     <!-- Zaman çizelgesi -->
     <div class="drawer-section">
       <div class="drawer-section-title">Zaman Çizelgesi</div>
       <div class="ops-timeline" id="ops-drawer-timeline"></div>
     </div>
-    <!-- Fotoğraflar -->
+
+    <!-- Fotoğraflar (şoförden otomatik gelir) -->
     <div class="drawer-section">
-      <div class="drawer-section-title">Fotoğraflar <span id="ops-drawer-foto-count" style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></div>
+      <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Fotoğraflar <span id="ops-drawer-foto-count" style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></span>
+      </div>
       <div id="ops-drawer-fotograflar"></div>
     </div>
+
     <!-- Manuel durum güncelle -->
     <div class="drawer-section">
       <div class="drawer-section-title">Durum Güncelle</div>
       <div style="display:flex;flex-direction:column;gap:6px;" id="ops-drawer-actions"></div>
     </div>
-    <!-- Not Ekle -->
+
+    <!-- İletişim: ops → şoför çift yönlü mesajlaşma -->
     <div class="drawer-section">
-      <div class="drawer-section-title">Not Ekle</div>
-      <div style="display:flex;gap:6px;">
-        <input id="ops-drawer-not-inp" class="srm-inp" placeholder="Yeni not..." style="flex:1;font-size:12.5px;" onkeydown="if(event.key==='Enter')opsDrawerNotEkle()" />
-        <button onclick="opsDrawerNotEkle()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-family:var(--font-body);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Ekle</button>
+      <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>İletişim <span id="ops-drawer-mesaj-count" style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:99px;margin-left:4px;display:none"></span></span>
+      </div>
+      <!-- Mesaj akışı -->
+      <div id="ops-drawer-mesajlar" style="margin-bottom:12px;max-height:280px;overflow-y:auto;"></div>
+      <!-- Duyuru gönder (şoför panelinde belirgin görünür) -->
+      <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+        <div style="font-size:10.5px;font-weight:700;color:var(--yellow);margin-bottom:7px;text-transform:uppercase;letter-spacing:.05em;">📢 Şoföre Duyuru Gönder</div>
+        <div style="display:flex;gap:6px;">
+          <input id="ops-drawer-duyuru-inp" class="srm-inp" placeholder="Şoför panelinde belirgin gösterilir..." style="flex:1;font-size:12.5px;" onkeydown="if(event.key==='Enter')opsDrawerDuyuruGonder()" />
+          <button onclick="opsDrawerDuyuruGonder()" style="background:var(--yellow);color:#000;border:none;border-radius:8px;padding:6px 12px;font-family:var(--font-body);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">📢 Gönder</button>
+        </div>
+      </div>
+      <!-- İç not (sadece ops görür) -->
+      <div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.05em;">📝 İç Not (şoför görmez)</div>
+        <div style="display:flex;gap:6px;">
+          <input id="ops-drawer-not-inp" class="srm-inp" placeholder="Operasyon notu..." style="flex:1;font-size:12.5px;" onkeydown="if(event.key==='Enter')opsDrawerNotEkle()" />
+          <button onclick="opsDrawerNotEkle()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 12px;font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">+ Ekle</button>
+        </div>
       </div>
     </div>
-    <!-- Paylaşım linki -->
-    <div class="drawer-section">
-      <div class="drawer-section-title">Şoför Erişimi</div>
-      <button onclick="opsWhatsappGonder()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;color:#fff;border-radius:9px;padding:11px;font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;letter-spacing:.01em;">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="#fff" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        WhatsApp ile Gönder
-      </button>
-      <button onclick="opsKopyalaLink()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:9px;padding:10px;font-family:var(--font-body);font-size:12.5px;font-weight:600;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-        🔗 Şoföre Link Kopyala
-      </button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">WhatsApp: iş detayları anında şoföre iletilir</div>
+
+    <!-- Şoför ile ilk temas (yeni şoförse WhatsApp'tan bildir) -->
+    <div class="drawer-section" id="ops-drawer-sofor-erisim-section">
+      <div class="drawer-section-title">Şoför Daveti</div>
+      <div id="ops-drawer-sofor-erisim"></div>
     </div>
+
     <!-- Müşteri Portalı + Tekil Takip linkleri -->
     <div class="drawer-section">
       <div class="drawer-section-title">Müşteri Takip</div>
@@ -1000,6 +1037,7 @@
       </button>
       <div style="font-size:10.5px;color:var(--muted);text-align:center;">Müşteri tüm sevkiyatlarını takip edebilir</div>
     </div>
+
   </div>
 </div>
 
@@ -3316,6 +3354,35 @@
   </div>
   <!-- Gizli file input — kamera veya galeri -->
   <input type="file" id="sofor-foto-input" accept="image/*" capture="environment" style="display:none" onchange="soforFotoIsle(event)" />
+
+  <!-- KM Giriş Modalı (yola çıkarken / teslim ederken) -->
+  <div class="sofor-fuel-modal" id="sofor-km-modal" onclick="if(event.target===this)soforKmKapat()">
+    <div class="sofor-fuel-sheet">
+      <h3 id="sofor-km-title">📏 Kilometre Girişi</h3>
+      <p id="sofor-km-aciklama" style="font-size:12.5px;color:#94a3b8;margin:-4px 0 14px;line-height:1.5;"></p>
+      <div class="sofor-field">
+        <label id="sofor-km-label">Araç km (gösterge)</label>
+        <input class="sofor-inp" type="number" id="sofor-km-inp" placeholder="Örn: 125430" inputmode="numeric" style="font-size:20px;font-weight:700;letter-spacing:.04em;text-align:center;" />
+      </div>
+      <button class="sofor-big-btn primary" onclick="soforKmKaydet()">Devam Et →</button>
+      <button class="sofor-big-btn sec" style="margin-top:8px" onclick="soforKmAtla()">Şimdilik Atla</button>
+      <div class="sofor-error" id="sofor-km-err" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- Mesaj Gönder Modalı (operasyona) -->
+  <div class="sofor-fuel-modal" id="sofor-mesaj-modal" onclick="if(event.target===this)soforMesajKapat()">
+    <div class="sofor-fuel-sheet">
+      <h3>💬 Operasyona Mesaj</h3>
+      <div class="sofor-field">
+        <label>Mesajınız</label>
+        <textarea id="sofor-mesaj-inp" class="sofor-inp" rows="4" placeholder="Problem, gecikme, bilgi..." style="resize:none;line-height:1.5;"></textarea>
+      </div>
+      <button class="sofor-big-btn primary" onclick="soforMesajGonder()">📨 Gönder</button>
+      <button class="sofor-big-btn sec" style="margin-top:8px" onclick="soforMesajKapat()">İptal</button>
+      <div class="sofor-error" id="sofor-mesaj-err" style="margin-top:10px"></div>
+    </div>
+  </div>
 
   <!-- Yakıt Fişi Yükle Modalı -->
   <div class="sofor-fuel-modal" id="sofor-fuel-modal" onclick="if(event.target===this)soforYakitKapat()">

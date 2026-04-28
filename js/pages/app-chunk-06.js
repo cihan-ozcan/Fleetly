@@ -361,7 +361,7 @@ async function soforIsEmirleriYukle() {
     const bugun = new Date();
     const d0 = new Date(bugun.getFullYear(), bugun.getMonth(), bugun.getDate()).toISOString();
 
-    const FIELDS = 'id, referans_no, konteyner_no, yukle_yeri, teslim_yeri, durum, kont_tip, musteri_adi, atama_zamani, created_at, fotograflar';
+    const FIELDS = 'id, referans_no, konteyner_no, yukle_yeri, teslim_yeri, durum, kont_tip, musteri_adi, atama_zamani, created_at, fotograflar, notlar, baslangic_km, bitis_km';
     const DURUMLAR = ['Bekliyor','Yolda','Fabrikada','Teslim Edildi'];
 
     // user.phone: Supabase'in sakladığı E.164 formatı (+905321234567)
@@ -473,6 +473,50 @@ function soforJobAc(id) {
         </div>`).join('')}
     </div>` : `<div class="sofor-foto-bos">Henüz fotoğraf eklenmedi.<br><small>Konteyner, mühür veya hasar fotoğrafı ekleyin.</small></div>`}`;
 
+  // Ops duyurularını ve mesaj thread'ini hazırla
+  const satirlar = (e.notlar || '').split('\n').filter(s => s.trim());
+  const duyurular = satirlar.filter(s => /\[DUYURU/i.test(s));
+  const mesajlar  = satirlar.filter(s => !/\[İÇ NOT/i.test(s)); // İç notları şoför görmez
+
+  const duyuruHtml = duyurular.length ? `
+    <div class="sofor-section-title" style="margin-top:14px"><span>📢 Operasyon Duyuruları</span></div>
+    ${duyurular.map(s => {
+      const match = s.match(/^\[([^\]]+)\]\s*(.*)/s);
+      const prefix = match ? match[1] : '';
+      const metin  = match ? match[2] : s;
+      return `<div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+        <div style="font-size:10.5px;font-weight:700;color:#fbbf24;margin-bottom:5px;">📢 ${prefix.replace(/DUYURU[\s·]*/i,'').trim()}</div>
+        <div style="font-size:14px;color:#fff;line-height:1.5;font-weight:500;">${metin}</div>
+      </div>`;
+    }).join('')}` : '';
+
+  const mesajThreadHtml = mesajlar.length ? `
+    <div class="sofor-section-title" style="margin-top:14px"><span>💬 Mesajlar</span></div>
+    <div style="max-height:200px;overflow-y:auto;margin-bottom:8px;">
+      ${mesajlar.map(s => {
+        const isSofor  = /\[ŞOFÖR/i.test(s);
+        const isDuyuru = /\[DUYURU/i.test(s);
+        const match  = s.match(/^\[([^\]]+)\]\s*(.*)/s);
+        const prefix = match ? match[1] : '';
+        const metin  = match ? match[2] : s;
+        const bg = isSofor ? 'rgba(129,140,248,.1)' : isDuyuru ? 'rgba(245,158,11,.08)' : 'rgba(30,41,59,.6)';
+        const border = isSofor ? 'rgba(129,140,248,.3)' : isDuyuru ? 'rgba(245,158,11,.25)' : 'rgba(255,255,255,.06)';
+        const name = isSofor ? '🚛 Sen' : isDuyuru ? '📢 OPS' : '🎯 OPS';
+        const nameColor = isSofor ? '#a5b4fc' : isDuyuru ? '#fbbf24' : '#94a3b8';
+        return `<div style="background:${bg};border:1px solid ${border};border-radius:10px;padding:9px 12px;margin-bottom:7px;">
+          <div style="font-size:10px;font-weight:700;color:${nameColor};margin-bottom:3px;">${name} &nbsp;<span style="font-weight:400;color:#64748b;">${prefix.replace(/[A-ZÇŞÜĞÖİ\s·]+/i,'').trim()}</span></div>
+          <div style="font-size:12.5px;color:#e2e8f0;line-height:1.5;">${metin}</div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  // KM bilgisi varsa göster
+  const kmHtml = (e.baslangic_km != null || e.bitis_km != null) ? `
+    <div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:10px 14px;margin:10px 0;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:12px;color:#94a3b8;">📏 Km Sayacı</span>
+      <span style="font-family:monospace;font-size:13px;color:#fff;font-weight:700;">${e.baslangic_km ?? '?'} → ${e.bitis_km ?? '?'}${(e.baslangic_km != null && e.bitis_km != null) ? ` <span style="color:#38bdf8;">(${(e.bitis_km - e.baslangic_km).toLocaleString('tr-TR')} km)</span>` : ''}</span>
+    </div>` : '';
+
   body.innerHTML = `
     <div class="sofor-info-grid">
       <div class="sofor-info full"><div class="lbl">Durum</div><div class="val">
@@ -485,7 +529,10 @@ function soforJobAc(id) {
       ${e.kont_tip ? `<div class="sofor-info"><div class="lbl">Tip</div><div class="val">${e.kont_tip}</div></div>` : ''}
       ${e.atama_zamani ? `<div class="sofor-info full"><div class="lbl">🗓 Atama Zamanı</div><div class="val">${new Date(e.atama_zamani).toLocaleString('tr-TR')}</div></div>` : ''}
     </div>
+    ${kmHtml}
+    ${duyuruHtml}
     ${fotoHtml}
+    ${mesajlar.length ? mesajThreadHtml : ''}
     ${navBtns.length ? `<div class="sofor-section-title" style="margin-top:14px"><span>🧭 Navigasyon</span></div><div class="sofor-action-btns">${navBtns.join('')}</div>` : ''}
     <div class="sofor-section-title" style="margin-top:14px"><span>⚡ İşlemler</span></div>
     <div class="sofor-action-btns">${actions}</div>`;
@@ -512,22 +559,110 @@ async function soforMusteriAra() {
   } catch { soforToast('Bulunamadı', 'err'); }
 }
 
-async function soforProblemBildir() {
+/* ── Operasyona Mesaj Modalı ── */
+function soforMesajModalAc() {
+  const modal = document.getElementById('sofor-mesaj-modal');
+  const inp   = document.getElementById('sofor-mesaj-inp');
+  const err   = document.getElementById('sofor-mesaj-err');
+  if (modal) modal.classList.add('open');
+  if (inp) inp.value = '';
+  if (err) { err.textContent = ''; err.classList.remove('show'); }
+}
+function soforMesajKapat() {
+  document.getElementById('sofor-mesaj-modal')?.classList.remove('open');
+}
+async function soforMesajGonder() {
   const e = soforState.aktifIsEmri; if (!e) return;
-  const mesaj = prompt('Problemi yazın (operasyon ekibine iletilecek):');
-  if (!mesaj || !mesaj.trim()) return;
+  const inp  = document.getElementById('sofor-mesaj-inp');
+  const errEl = document.getElementById('sofor-mesaj-err');
+  const metin = (inp?.value || '').trim();
+  if (!metin) { if(errEl){errEl.textContent='Mesaj boş olamaz';errEl.classList.add('show');} return; }
   try {
     const sb = getSB();
-    // is_emirleri.aciklama'ya ekle (append)
-    const { data: cur } = await sb.from('is_emirleri').select('aciklama').eq('id', e.id).maybeSingle();
-    const eskisi = cur?.aciklama || '';
-    const yeni = (eskisi ? eskisi + '\n\n' : '') + `[ŞOFÖR · ${new Date().toLocaleString('tr-TR')}] ${mesaj.trim()}`;
-    const { error } = await sb.from('is_emirleri').update({ aciklama: yeni }).eq('id', e.id);
+    const tarih = new Date().toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    // notlar'a [ŞOFÖR] prefix ile ekle — ops panelinde renk kodlu gösterilir
+    const { data: cur } = await sb.from('is_emirleri').select('notlar').eq('id', e.id).maybeSingle();
+    const eskisi = cur?.notlar || '';
+    const yeni   = (eskisi ? eskisi + '\n' : '') + `[ŞOFÖR · ${tarih}] ${metin}`;
+    const { error } = await sb.from('is_emirleri').update({ notlar: yeni }).eq('id', e.id);
     if (error) throw error;
-    soforToast('Bildirim gönderildi ✓', 'ok');
+    // Yerel state güncelle
+    e.notlar = yeni;
+    soforMesajKapat();
+    soforToast('Mesaj gönderildi ✓', 'ok');
+    soforJobAc(e.id); // drawer'ı yeniden render et
   } catch (err) {
-    soforToast('Gönderilemedi: ' + (err?.message||'hata'), 'err');
+    if(errEl){errEl.textContent='Gönderilemedi: '+(err?.message||'hata');errEl.classList.add('show');}
+    soforToast('Gönderilemedi', 'err');
   }
+}
+
+/* ── KM Girişi Modal (yola çıkarken / teslim ederken) ── */
+function soforKmGirisAc(durumHedef) {
+  soforState._kmHedefDurum = durumHedef;
+  const isBaslangic = durumHedef === 'Yolda';
+  const titleEl  = document.getElementById('sofor-km-title');
+  const aclEl    = document.getElementById('sofor-km-aciklama');
+  const labelEl  = document.getElementById('sofor-km-label');
+  const inp      = document.getElementById('sofor-km-inp');
+  const errEl    = document.getElementById('sofor-km-err');
+  if (titleEl) titleEl.textContent = isBaslangic ? '🚛 Yola Çıkış KM' : '✅ Teslim KM';
+  if (aclEl)   aclEl.textContent  = isBaslangic
+    ? 'Aracın şu anki km göstergesini girin. Yakıt ve maliyet hesabında kullanılır.'
+    : 'Teslim anındaki km göstergesini girin. Toplam mesafe hesaplanacak.';
+  if (labelEl) labelEl.textContent = isBaslangic ? 'Başlangıç km (gösterge)' : 'Bitiş km (gösterge)';
+  if (inp) inp.value = '';
+  if (errEl) { errEl.textContent = ''; errEl.classList.remove('show'); }
+  document.getElementById('sofor-km-modal')?.classList.add('open');
+}
+function soforKmKapat() {
+  document.getElementById('sofor-km-modal')?.classList.remove('open');
+}
+async function soforKmKaydet() {
+  const inp    = document.getElementById('sofor-km-inp');
+  const errEl  = document.getElementById('sofor-km-err');
+  const kmVal  = parseFloat(inp?.value || '');
+  const durum  = soforState._kmHedefDurum;
+  if (!durum) return;
+
+  if (!isFinite(kmVal) || kmVal <= 0) {
+    if(errEl){errEl.textContent='Geçerli bir km değeri girin';errEl.classList.add('show');} return;
+  }
+  const e = soforState.aktifIsEmri;
+  if (!e) return;
+
+  // Basit doğrulama: bitiş km başlangıçtan küçük olmamalı
+  if (durum === 'Teslim Edildi' && e.baslangic_km != null && kmVal < e.baslangic_km) {
+    if(errEl){errEl.textContent=`Bitiş km (${kmVal}) başlangıç km'den (${e.baslangic_km}) küçük olamaz`;errEl.classList.add('show');} return;
+  }
+
+  soforKmKapat();
+
+  // DB'ye km kaydet ve durumu güncelle
+  try {
+    const sb   = getSB();
+    const now  = new Date().toISOString();
+    const patch = { durum };
+    if (durum === 'Yolda')          { patch.baslangic_km = kmVal; patch.yola_zaman    = now; e.baslangic_km = kmVal; e.yola_zaman    = now; }
+    if (durum === 'Teslim Edildi')  { patch.bitis_km     = kmVal; patch.teslim_zamani = now; e.bitis_km     = kmVal; e.teslim_zamani = now; }
+    const { error } = await sb.from('is_emirleri').update(patch).eq('id', e.id);
+    if (error) throw error;
+    e.durum = durum;
+    soforToast(`${durum === 'Yolda' ? '🚛 Yola çıkıldı' : '✅ Teslim tamamlandı'} — ${kmVal.toLocaleString('tr-TR')} km kaydedildi`, 'ok');
+    soforJobAc(e.id);
+    soforIsEmirleriYukle();
+    if (durum === 'Yolda') soforKonumStart();
+    else soforKonumStop();
+  } catch (err) {
+    console.error(err);
+    soforToast('Kaydedilemedi: ' + (err?.message || 'hata'), 'err');
+  }
+}
+/** KM girişini atla ve sadece durumu güncelle */
+async function soforKmAtla() {
+  soforKmKapat();
+  const durum = soforState._kmHedefDurum;
+  if (durum) await soforDurumGuncelle(durum);
 }
 
 function soforJobKapat() {
@@ -539,19 +674,19 @@ function soforJobKapat() {
 function soforJobActionsHTML(e) {
   const d = (e.durum || 'Bekliyor').toLowerCase();
   const btns = [];
-  // is_emirleri.durum CHECK: ('Bekliyor','Yolda','Fabrikada','Teslim Edildi','İptal')
+  // Durum geçişleri — km girişi modali üzerinden
   if (d.includes('bekliyor') || d === '') {
-    btns.push(`<button class="sofor-big-btn yolda" onclick="soforDurumGuncelle('Yolda')">🚛 Yola Çıktım</button>`);
+    btns.push(`<button class="sofor-big-btn yolda" onclick="soforKmGirisAc('Yolda')">🚛 Yola Çıktım</button>`);
   } else if (d.includes('yolda')) {
-    btns.push(`<button class="sofor-big-btn primary" onclick="soforDurumGuncelle('Fabrikada')">🏭 Fabrikadayım</button>`);
-    btns.push(`<button class="sofor-big-btn teslim" onclick="soforDurumGuncelle('Teslim Edildi')">✅ Teslim Ettim</button>`);
+    btns.push(`<button class="sofor-big-btn primary" onclick="soforDurumGuncelle('Fabrikada')">🏭 Fabrikaya Girdim</button>`);
+    btns.push(`<button class="sofor-big-btn teslim" onclick="soforKmGirisAc('Teslim Edildi')">✅ Teslim Ettim</button>`);
   } else if (d.includes('fabrika')) {
-    btns.push(`<button class="sofor-big-btn teslim" onclick="soforDurumGuncelle('Teslim Edildi')">✅ Teslim Ettim</button>`);
+    btns.push(`<button class="sofor-big-btn teslim" onclick="soforKmGirisAc('Teslim Edildi')">✅ Teslim Ettim</button>`);
   }
   btns.push(`<button class="sofor-big-btn sec" onclick="soforYakitFisAc()">⛽ Yakıt Fişi Yükle</button>`);
   btns.push(`<button class="sofor-big-btn sec" onclick="soforMusteriAra()">📞 Müşteriyi Ara</button>`);
-  btns.push(`<button class="sofor-big-btn sec" onclick="soforProblemBildir()" style="color:#fbbf24;border-color:rgba(245,158,11,.3)">⚠️ Problem Bildir</button>`);
-  btns.push(`<button class="sofor-big-btn sec" onclick="soforJobKapat()">Kapat</button>`);
+  btns.push(`<button class="sofor-big-btn sec" onclick="soforMesajModalAc()" style="color:#fbbf24;border-color:rgba(245,158,11,.3)">💬 Operasyona Mesaj</button>`);
+  btns.push(`<button class="sofor-big-btn sec" onclick="soforJobKapat()">← Geri</button>`);
   return btns.join('');
 }
 
