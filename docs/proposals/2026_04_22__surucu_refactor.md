@@ -352,3 +352,22 @@ Sprint N+2:
 
 **Geriye dönük güvenlik stratejisi:**
 Tüm yeni kod `v2 RPC' → `v1 RPC' fallback pattern'i kullanır; `v_arac_secim`/`v_surucu_dosyasi` view'ları yoksa eski `araclar`/`surucu_belgeler` tablolarından okur. Migration çalıştırılmadan önce de, çalıştırıldıktan sonra da frontend bozulmaz. Migration sırasında kısa bir "karışık veri" penceresinde bile kullanıcı gözünden görünür bir kırılma olmaz.
+
+---
+
+## 10. HOTFIX — 2026-04-22b (deploy sonrası düzeltmeler)
+
+Ana migration (`2026_04_22__surucu_refactor.sql`) deploy edildikten sonra üç
+üretim hatası çıktı. `css/db/migrations/2026_04_22b__hotfix_views_and_rpc.sql`
+tümünü tek transaction'da düzeltir, idempotenttir.
+
+| # | Belirti | Kök neden | Düzeltme |
+|---|---------|-----------|----------|
+| B1 | "Tek sürücü çekici+dorsede kayıtlıysa listede iki kez gözüküyor, sürücü sayısı şişiyor." | `v_surucu_dosyasi` view'ı `LEFT JOIN arac_sofor_atamalari … birincil_mi=true` kullanıyordu. Bir sürücü iki araca birincil_mi=true atandığında JOIN her araç için yeni satır üretti. | View yeniden yazıldı: ana kaynak `suruculer`, araç atamaları scalar subquery ile tekilleştirildi. Ek alanlar: `arac_plakalari text[]`, `arac_sayisi int`. Bir sürücü = bir satır garantisi. |
+| B2 | "Kayıtlı muayene/sigorta/takograf bitiş tarihleri panelde gözükmüyor." | `v_arac_secim` view'ı `muayene/sigorta/takograf/esleme/notlar` sütunlarını expose etmiyordu. `loadVehicles()` view yolunu tercih edince bu alanlar `undefined` olup boş string atandı. | View'a eksik 5 sütun eklendi: `a.muayene, a.sigorta, a.takograf, a.esleme, a.notlar`. |
+| B3 | SMS OTP sonrası giriş: `column reference "firma_id" is ambiguous`. | `sofor_davet_kabul_v2` fonksiyonu `RETURNS TABLE(surucu_id uuid, firma_id uuid)` OUT parametreleriyle tanımlıydı. `RETURNING id, firma_id INTO surucu_id, firma_id` ifadesinde OUT param ↔ `suruculer.firma_id` sütunu çakıştı (PG 42702). | `DROP FUNCTION` + yeniden oluştur. OUT isimleri `out_surucu_id`, `out_firma_id` olarak değiştirildi; RETURNING iç değişkenlere (`v_surucu_id`, `v_firma_id`) yazıyor; tablo-nitelikli `s.firma_id` kullanıldı. Frontend `.rpc()` çağrısı dönen data yapısını okumuyor, sadece `error` kontrol ediyor → breaking change değil. |
+
+**Deploy adımı:** Supabase SQL editor'da `2026_04_22b__hotfix_views_and_rpc.sql`
+içeriğini aç-yapıştır-çalıştır. Tek `BEGIN…COMMIT` işlemdir; herhangi bir
+statement düşerse tüm değişiklikler rollback edilir. Frontend değişikliği
+gerektirmez.

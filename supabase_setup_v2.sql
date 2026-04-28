@@ -23,6 +23,23 @@ CREATE TABLE public.activity_log (
   CONSTRAINT activity_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT activity_log_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id)
 );
+CREATE TABLE public.arac_sofor_atamalari (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  arac_id text NOT NULL,
+  surucu_id uuid NOT NULL,
+  firma_id uuid NOT NULL,
+  baslangic timestamp with time zone NOT NULL DEFAULT now(),
+  bitis timestamp with time zone,
+  birincil_mi boolean NOT NULL DEFAULT true,
+  atayan uuid,
+  notlar text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT arac_sofor_atamalari_pkey PRIMARY KEY (id),
+  CONSTRAINT arac_sofor_atamalari_arac_id_fkey FOREIGN KEY (arac_id) REFERENCES public.araclar(id),
+  CONSTRAINT arac_sofor_atamalari_surucu_id_fkey FOREIGN KEY (surucu_id) REFERENCES public.suruculer(id),
+  CONSTRAINT arac_sofor_atamalari_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
+  CONSTRAINT arac_sofor_atamalari_atayan_fkey FOREIGN KEY (atayan) REFERENCES auth.users(id)
+);
 CREATE TABLE public.araclar (
   id text NOT NULL,
   plaka text NOT NULL,
@@ -41,9 +58,11 @@ CREATE TABLE public.araclar (
   marka text,
   model text,
   yil integer,
+  birincil_surucu_id uuid,
   CONSTRAINT araclar_pkey PRIMARY KEY (id),
   CONSTRAINT araclar_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT araclar_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id)
+  CONSTRAINT araclar_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
+  CONSTRAINT araclar_birincil_surucu_id_fkey FOREIGN KEY (birincil_surucu_id) REFERENCES public.suruculer(id)
 );
 CREATE TABLE public.bakim_kayitlari (
   id text NOT NULL,
@@ -62,6 +81,14 @@ CREATE TABLE public.bakim_kayitlari (
   CONSTRAINT bakim_kayitlari_pkey PRIMARY KEY (id),
   CONSTRAINT bakim_kayitlari_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT bakim_kayitlari_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id)
+);
+CREATE TABLE public.belge_turleri (
+  kod text NOT NULL,
+  ad text NOT NULL,
+  uyari_gun_varsayilan integer NOT NULL DEFAULT 30,
+  sofor_duzenleyebilir boolean NOT NULL DEFAULT true,
+  gerekli_mi boolean NOT NULL DEFAULT false,
+  CONSTRAINT belge_turleri_pkey PRIMARY KEY (kod)
 );
 CREATE TABLE public.firma_kullanicilar (
   user_id uuid NOT NULL,
@@ -137,11 +164,13 @@ CREATE TABLE public.is_emirleri (
   yakit_tutar numeric,
   diger_masraf numeric,
   sofor_user_id uuid,
+  surucu_id uuid,
   CONSTRAINT is_emirleri_pkey PRIMARY KEY (id),
   CONSTRAINT is_emirleri_firma_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
   CONSTRAINT is_emirleri_user_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT is_emirleri_musteri_fkey FOREIGN KEY (musteri_id) REFERENCES public.musteriler(id),
-  CONSTRAINT is_emirleri_sofor_user_id_fkey FOREIGN KEY (sofor_user_id) REFERENCES auth.users(id)
+  CONSTRAINT is_emirleri_sofor_user_id_fkey FOREIGN KEY (sofor_user_id) REFERENCES auth.users(id),
+  CONSTRAINT is_emirleri_surucu_id_fkey FOREIGN KEY (surucu_id) REFERENCES public.suruculer(id)
 );
 CREATE TABLE public.kayit_log (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -239,10 +268,12 @@ CREATE TABLE public.seferler (
   bitis_km numeric,
   yakit_litre numeric,
   yakit_tutar numeric,
+  surucu_id uuid,
   CONSTRAINT seferler_pkey PRIMARY KEY (id),
   CONSTRAINT seferler_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT seferler_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
-  CONSTRAINT seferler_ops_id_fkey FOREIGN KEY (ops_id) REFERENCES public.is_emirleri(id)
+  CONSTRAINT seferler_ops_id_fkey FOREIGN KEY (ops_id) REFERENCES public.is_emirleri(id),
+  CONSTRAINT seferler_surucu_id_fkey FOREIGN KEY (surucu_id) REFERENCES public.suruculer(id)
 );
 CREATE TABLE public.siparisler (
   id text NOT NULL DEFAULT ('SIP-'::text || lpad((nextval('siparisler_seq'::regclass))::text, 4, '0'::text)),
@@ -263,6 +294,27 @@ CREATE TABLE public.siparisler (
   CONSTRAINT siparisler_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
   CONSTRAINT siparisler_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT siparisler_musteri_id_fkey FOREIGN KEY (musteri_id) REFERENCES public.musteriler(id)
+);
+CREATE TABLE public.surucu_belge_onaylari (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  belge_id uuid NOT NULL,
+  surucu_id uuid NOT NULL,
+  firma_id uuid NOT NULL,
+  talep_tipi text NOT NULL CHECK (talep_tipi = ANY (ARRAY['ekleme'::text, 'guncelleme'::text, 'silme'::text])),
+  eski_veri jsonb,
+  yeni_veri jsonb NOT NULL,
+  talep_eden uuid NOT NULL,
+  talep_zamani timestamp with time zone NOT NULL DEFAULT now(),
+  karar text CHECK (karar = ANY (ARRAY['onayli'::text, 'reddedildi'::text])),
+  karar_veren uuid,
+  karar_zamani timestamp with time zone,
+  karar_notu text,
+  CONSTRAINT surucu_belge_onaylari_pkey PRIMARY KEY (id),
+  CONSTRAINT surucu_belge_onaylari_belge_id_fkey FOREIGN KEY (belge_id) REFERENCES public.surucu_belgeleri(id),
+  CONSTRAINT surucu_belge_onaylari_surucu_id_fkey FOREIGN KEY (surucu_id) REFERENCES public.suruculer(id),
+  CONSTRAINT surucu_belge_onaylari_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
+  CONSTRAINT surucu_belge_onaylari_talep_eden_fkey FOREIGN KEY (talep_eden) REFERENCES auth.users(id),
+  CONSTRAINT surucu_belge_onaylari_karar_veren_fkey FOREIGN KEY (karar_veren) REFERENCES auth.users(id)
 );
 CREATE TABLE public.surucu_belgeler (
   id text NOT NULL,
@@ -297,6 +349,32 @@ CREATE TABLE public.surucu_belgeler (
   CONSTRAINT surucu_belgeler_arac_id_fkey FOREIGN KEY (arac_id) REFERENCES public.araclar(id),
   CONSTRAINT surucu_belgeler_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id)
 );
+CREATE TABLE public.surucu_belgeleri (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  surucu_id uuid NOT NULL,
+  firma_id uuid NOT NULL,
+  belge_turu text NOT NULL,
+  belge_no text,
+  sinif text,
+  veren_kurum text,
+  verilis_tarihi date,
+  bitis_tarihi date,
+  dosya_url text,
+  onay_durumu text NOT NULL DEFAULT 'onayli'::text CHECK (onay_durumu = ANY (ARRAY['onayli'::text, 'bekliyor'::text, 'reddedildi'::text])),
+  onaylayan uuid,
+  onay_zamani timestamp with time zone,
+  red_nedeni text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_by uuid,
+  kaynak text NOT NULL DEFAULT 'ofis'::text CHECK (kaynak = ANY (ARRAY['ofis'::text, 'portal'::text, 'migration'::text])),
+  CONSTRAINT surucu_belgeleri_pkey PRIMARY KEY (id),
+  CONSTRAINT surucu_belgeleri_surucu_id_fkey FOREIGN KEY (surucu_id) REFERENCES public.suruculer(id),
+  CONSTRAINT surucu_belgeleri_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
+  CONSTRAINT surucu_belgeleri_belge_turu_fkey FOREIGN KEY (belge_turu) REFERENCES public.belge_turleri(kod),
+  CONSTRAINT surucu_belgeleri_onaylayan_fkey FOREIGN KEY (onaylayan) REFERENCES auth.users(id),
+  CONSTRAINT surucu_belgeleri_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES auth.users(id)
+);
 CREATE TABLE public.surucu_davetleri (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   firma_id uuid NOT NULL,
@@ -311,11 +389,42 @@ CREATE TABLE public.surucu_davetleri (
   iptal_mi boolean DEFAULT false,
   notlar text,
   created_at timestamp with time zone DEFAULT now(),
+  surucu_id uuid,
+  telefon_e164 text,
+  davet_durumu text NOT NULL DEFAULT 'gonderildi'::text CHECK (davet_durumu = ANY (ARRAY['gonderildi'::text, 'kabul'::text, 'suresi_doldu'::text, 'iptal'::text])),
   CONSTRAINT surucu_davetleri_pkey PRIMARY KEY (id),
   CONSTRAINT surucu_davetleri_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
   CONSTRAINT surucu_davetleri_davet_eden_fkey FOREIGN KEY (davet_eden) REFERENCES auth.users(id),
   CONSTRAINT surucu_davetleri_arac_id_fkey FOREIGN KEY (arac_id) REFERENCES public.araclar(id),
-  CONSTRAINT surucu_davetleri_kullanan_user_id_fkey FOREIGN KEY (kullanan_user_id) REFERENCES auth.users(id)
+  CONSTRAINT surucu_davetleri_kullanan_user_id_fkey FOREIGN KEY (kullanan_user_id) REFERENCES auth.users(id),
+  CONSTRAINT surucu_davetleri_surucu_id_fkey FOREIGN KEY (surucu_id) REFERENCES public.suruculer(id)
+);
+CREATE TABLE public.suruculer (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  firma_id uuid NOT NULL,
+  auth_user_id uuid UNIQUE,
+  ad text NOT NULL,
+  soyad text,
+  telefon_e164 text NOT NULL,
+  telefon_raw text,
+  email text,
+  dogum_tarihi date,
+  adres text,
+  avatar_url text,
+  acil_kontak_ad text,
+  acil_kontak_tel text,
+  durum text NOT NULL DEFAULT 'davet_bekliyor'::text CHECK (durum = ANY (ARRAY['davet_bekliyor'::text, 'aktif'::text, 'pasif'::text, 'silindi'::text])),
+  aktif_mi boolean DEFAULT (durum = 'aktif'::text),
+  son_giris timestamp with time zone,
+  fcm_token text,
+  ayarlar jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_by uuid,
+  CONSTRAINT suruculer_pkey PRIMARY KEY (id),
+  CONSTRAINT suruculer_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
+  CONSTRAINT suruculer_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id),
+  CONSTRAINT suruculer_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
 );
 CREATE TABLE public.tarifeler (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -400,8 +509,10 @@ CREATE TABLE public.yakit_girisleri (
   depo_doluluk numeric,
   anomali_flag text,
   fis_url text,
+  surucu_id uuid,
   CONSTRAINT yakit_girisleri_pkey PRIMARY KEY (id),
   CONSTRAINT yakit_girisleri_arac_id_fkey FOREIGN KEY (arac_id) REFERENCES public.araclar(id),
   CONSTRAINT yakit_girisleri_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT yakit_girisleri_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id)
+  CONSTRAINT yakit_girisleri_firma_id_fkey FOREIGN KEY (firma_id) REFERENCES public.firmalar(id),
+  CONSTRAINT yakit_girisleri_surucu_id_fkey FOREIGN KEY (surucu_id) REFERENCES public.suruculer(id)
 );
