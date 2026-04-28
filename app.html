@@ -3289,6 +3289,34 @@
     <div class="sofor-container" id="sofor-job-body"></div>
   </div>
 
+  <!-- Fotoğraf Tipi Seçim Sayfası -->
+  <div class="sofor-fuel-modal" id="sofor-foto-sheet" onclick="if(event.target===this)soforFotoEkleKapat()">
+    <div class="sofor-fuel-sheet">
+      <h3>📸 Fotoğraf Tipi Seç</h3>
+      <div class="sofor-foto-tip-grid">
+        <button class="sofor-foto-tip-btn" onclick="soforFotoTipSec('Konteyner & Çekici Plaka')">
+          <span class="sofor-foto-tip-ico">🚢</span>
+          <span>Konteyner Ön</span>
+        </button>
+        <button class="sofor-foto-tip-btn" onclick="soforFotoTipSec('Mühür')">
+          <span class="sofor-foto-tip-ico">🔒</span>
+          <span>Mühür</span>
+        </button>
+        <button class="sofor-foto-tip-btn" onclick="soforFotoTipSec('Hasar')">
+          <span class="sofor-foto-tip-ico">⚠️</span>
+          <span>Hasar</span>
+        </button>
+        <button class="sofor-foto-tip-btn" onclick="soforFotoTipSec('Diğer')">
+          <span class="sofor-foto-tip-ico">📷</span>
+          <span>Diğer</span>
+        </button>
+      </div>
+      <button class="sofor-big-btn sec" style="margin-top:6px" onclick="soforFotoEkleKapat()">İptal</button>
+    </div>
+  </div>
+  <!-- Gizli file input — kamera veya galeri -->
+  <input type="file" id="sofor-foto-input" accept="image/*" capture="environment" style="display:none" onchange="soforFotoIsle(event)" />
+
   <!-- Yakıt Fişi Yükle Modalı -->
   <div class="sofor-fuel-modal" id="sofor-fuel-modal" onclick="if(event.target===this)soforYakitKapat()">
     <div class="sofor-fuel-sheet">
