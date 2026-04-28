@@ -706,9 +706,13 @@ function opsRowToObj(r) {
     /* ── Km sayacı & yakıt cache ── */
     baslangic_km  : r.baslangic_km  != null ? parseFloat(r.baslangic_km) : null,
     bitis_km      : r.bitis_km      != null ? parseFloat(r.bitis_km)     : null,
-    yakit_litre   : r.yakit_litre   != null ? parseFloat(r.yakit_litre)  : null,
-    yakit_tutar   : r.yakit_tutar   != null ? parseFloat(r.yakit_tutar)  : null,
-    diger_masraf  : r.diger_masraf  != null ? parseFloat(r.diger_masraf) : null,
+    yakit_litre      : r.yakit_litre   != null ? parseFloat(r.yakit_litre)  : null,
+    yakit_tutar      : r.yakit_tutar   != null ? parseFloat(r.yakit_tutar)  : null,
+    diger_masraf     : r.diger_masraf  != null ? parseFloat(r.diger_masraf) : null,
+    /* ── POD (Teslim Belgesi) ── */
+    teslim_alan_ad      : r.teslim_alan_ad      || null,
+    teslim_not_musteri  : r.teslim_not_musteri   || null,
+    imza_url            : r.imza_url             || null,
   };
 }
 
@@ -1616,25 +1620,41 @@ function openOpsDrawer(id) {
   const e = opsById(id);
   if (!e) return;
   opsDrawerActiveId = id;
-  const eId = e._dbId ?? e.id; // gerçek Supabase id (inline onclick'lerde kullanılır)
+  _opsDrawerRender(e);
+  document.getElementById('ops-drawer-bg').classList.remove('hidden');
+  document.getElementById('ops-drawer').classList.remove('hidden');
+}
 
-  document.getElementById('ops-drawer-title').textContent = e.konteyner_no ? e.konteyner_no.split('\n')[0] + (e.konteyner_no.split('\n').length > 1 ? ` +${e.konteyner_no.split('\n').length-1}` : '') : ('İş Emri #' + e.id);
-  document.getElementById('ops-drawer-sub').textContent   =
+/** Tüm drawer içeriğini yeniden render eder */
+function _opsDrawerRender(e) {
+  if (!e) return;
+  const eId = e._dbId ?? e.id;
+
+  document.getElementById('ops-drawer-title').textContent = e.konteyner_no
+    ? e.konteyner_no.split('\n')[0] + (e.konteyner_no.split('\n').length > 1 ? ` +${e.konteyner_no.split('\n').length-1}` : '')
+    : ('İş Emri #' + e.id);
+  document.getElementById('ops-drawer-sub').textContent =
     [e.arac_plaka, e.kont_tip, e.kont_durum, e.musteri_adi, e.sofor].filter(Boolean).join(' · ');
 
-  // Durum + konteyner/mühür
+  // Durum + mühür + başlangıç km rozeti
   document.getElementById('ops-drawer-durum-row').innerHTML =
     opsDurumBadge(e.durum) +
-    (e.muhur_no ? `<span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);border:1px solid var(--border);padding:2px 8px;border-radius:5px;">Mühür: ${e.muhur_no}</span>` : '');
+    (e.muhur_no ? `<span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);border:1px solid var(--border);padding:2px 8px;border-radius:5px;">Mühür: ${e.muhur_no}</span>` : '') +
+    (e.baslangic_km != null ? `<span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);border:1px solid var(--border);padding:2px 8px;border-radius:5px;">🛣 ${e.baslangic_km.toLocaleString('tr-TR')} km</span>` : '');
 
   // Bağlantılı sefer kaydını bul
   const bagliSefer = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
 
   // Şoför bağlantı durumu
+  const bagliSefer  = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
   const soforBagliMi = !!e.sofor_user_id;
   const soforBagliHtml = soforBagliMi
     ? `<span style="font-size:10px;background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);border-radius:4px;padding:1px 7px;margin-left:6px;">✓ Uygulamaya bağlı</span>`
     : `<span style="font-size:10px;background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25);border-radius:4px;padding:1px 7px;margin-left:6px;">⚠ Bağlı değil</span>`;
+
+  const kmSatiri = (e.baslangic_km != null || e.bitis_km != null)
+    ? `<div class="detail-row"><span class="detail-key">Km Aralığı</span><span class="detail-val" style="font-family:var(--font-mono);">${e.baslangic_km ?? '?'} → ${e.bitis_km ?? '?'}${(e.baslangic_km != null && e.bitis_km != null) ? ` <span style="color:var(--blue);">(${(e.bitis_km - e.baslangic_km).toLocaleString('tr-TR')} km)</span>` : ''}</span></div>`
+    : '';
 
   document.getElementById('ops-drawer-detaylar').innerHTML = [
     ['Müşteri',           e.musteri_adi || '—'],
@@ -1650,8 +1670,8 @@ function openOpsDrawer(id) {
     ['Teslim Yeri',       e.teslim_yeri || '—'],
     ['Boş Dönüş',         e.bos_donus   || '—'],
     ['Bekleme Süresi',    opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)],
-    ['Notlar',            e.notlar      || '—'],
   ].map(([k,v]) => `<div class="detail-row"><span class="detail-key">${k}</span><span class="detail-val">${v}</span></div>`).join('') +
+  kmSatiri +
   (bagliSefer ? `<div style="margin-top:8px;background:rgba(167,139,250,.08);border-radius:9px;padding:10px 12px;border:1px solid rgba(167,139,250,.25);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <span style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.05em;">🗺 Sefer Kaydı</span>
@@ -1664,65 +1684,63 @@ function openOpsDrawer(id) {
       ${bagliSefer.tarih    ? `<span style="font-size:11px;color:var(--muted);">${bagliSefer.tarih}</span>` : ''}
     </div>
   </div>` : (e.durum === 'Teslim Edildi' ? '' : `<div style="margin-top:8px;opacity:.5;font-size:11px;color:var(--muted);padding:4px 0;">🗺 Sefer kaydı "Teslim Edildi" durumunda otomatik oluşturulur</div>`))
-  + (!soforBagliMi && e.sofor ? `
-    <div style="margin-top:10px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 12px;">
-      <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:6px;">⚠ Şoför uygulamaya bağlı değil</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Şoför bu iş emrini kendi panelinde göremez. Daveti kabul ettikten sonra manuel olarak bağlayabilirsiniz.</div>
-      <button id="ops-sofor-ata-btn-${eId}" onclick="opsManuelSoforAta(${eId})"
-        style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">
-        🔗 Şoföre Bağla
-      </button>
-      <div id="ops-sofor-ata-secim-${eId}"></div>
-    </div>` : '');
+  + ''; // (bağlı değil uyarısı artık "Şoför Daveti" bölümünde gösteriliyor)
 
-  // ⛽ Yakıt / Maliyet kartı — iş emrine düşen yakıt ve kâr hesabı
+  // ── Şoför anlık durum (GPS + KM) ──
+  _opsRenderSoforDurum(e);
+
+  // ── Teslim belgesi (POD) ──
+  _opsRenderPOD(e);
+
+  // ⛽ Yakıt / Maliyet kartı
   const yakitCardEl = document.getElementById('ops-drawer-yakit-card');
   if (yakitCardEl) yakitCardEl.innerHTML = _opsYakitCardHtml(e);
 
-  // Zaman çizelgesi
+  // ── Zaman çizelgesi (km bilgisiyle zenginleştirilmiş) ──
   const milestones = [
-    { label: 'İş Emri Atandı',    zaman: e.atama_zamani,  },
-    { label: 'Yola Çıkıldı',      zaman: e.yola_zaman,    },
-    { label: 'Fabrika Girişi',     zaman: e.fabrika_giris, },
-    { label: 'Fabrikadan Çıkış',   zaman: e.fabrika_cikis, },
-    { label: 'Teslim Tamamlandı',  zaman: e.teslim_zamani, },
+    { label: 'İş Emri Atandı',   zaman: e.atama_zamani,  km: null },
+    { label: 'Yola Çıkıldı',     zaman: e.yola_zaman,    km: e.baslangic_km },
+    { label: 'Fabrika Girişi',   zaman: e.fabrika_giris, km: null },
+    { label: 'Fabrikadan Çıkış', zaman: e.fabrika_cikis, km: null },
+    { label: 'Teslim Tamamlandı',zaman: e.teslim_zamani, km: e.bitis_km },
   ];
   const durumSira = ['Bekliyor','Yolda','Fabrikada','Fabrikada','Teslim Edildi'];
   const aktifIdx  = durumSira.indexOf(e.durum);
   document.getElementById('ops-drawer-timeline').innerHTML = milestones.map((m, i) => {
-    const cls = m.zaman ? 'done' : (i === aktifIdx ? 'active' : 'pending');
-    const icon = m.zaman ? '✓' : (i === aktifIdx ? '●' : '○');
-    return `
-      <div class="ops-tl-item">
-        <div class="ops-tl-dot ${cls}">${icon}</div>
-        <div class="ops-tl-body">
-          <div class="ops-tl-label">${m.label}</div>
-          <div class="ops-tl-time">${m.zaman ? opsFmtZaman(m.zaman) : '—'}</div>
-        </div>
-      </div>`;
+    const cls  = m.zaman ? 'done' : (i === aktifIdx ? 'active' : 'pending');
+    const icon = m.zaman ? '✓'   : (i === aktifIdx ? '●' : '○');
+    const kmBadge = m.km != null
+      ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--blue);margin-left:6px;">${m.km.toLocaleString('tr-TR')} km</span>`
+      : '';
+    return `<div class="ops-tl-item">
+      <div class="ops-tl-dot ${cls}">${icon}</div>
+      <div class="ops-tl-body">
+        <div class="ops-tl-label">${m.label}${kmBadge}</div>
+        <div class="ops-tl-time">${m.zaman ? opsFmtZaman(m.zaman) : '—'}</div>
+      </div>
+    </div>`;
   }).join('');
 
-  // Fotoğraflar — fotograflar alanı string JSON veya array olabilir
+  // ── Fotoğraflar ──
   const fotos = opsFotoArray(e);
-  document.getElementById('ops-drawer-foto-count').textContent = fotos.length;
+  document.getElementById('ops-drawer-foto-count').textContent = fotos.length || '';
   document.getElementById('ops-drawer-fotograflar').innerHTML = (fotos.length ?
     `<div class="ops-foto-grid">${fotos.map((f, fi) => `
       <div class="ops-foto-card" style="position:relative;">
-        <img src="${f.url}" alt="${f.tip}" onclick="window.open('${f.url}','_blank')" style="cursor:pointer;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+        <img src="${f.url}" alt="${f.tip||''}" onclick="window.open('${f.url}','_blank')" style="cursor:pointer;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
         <div style="display:none;align-items:center;justify-content:center;height:100%;font-size:24px;">📷</div>
-        <div class="ops-foto-tip">${f.tip}</div>
+        <div class="ops-foto-tip">${f.tip||''}</div>
         <button onclick="event.stopPropagation();opsFotoSil(${eId},${fi})" title="Fotoğrafı sil" style="position:absolute;top:4px;right:4px;background:rgba(239,68,68,.85);border:none;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:#fff;font-weight:900;line-height:1;padding:0;">✕</button>
       </div>`).join('')}</div>` :
-    `<div class="ops-foto-empty">📷<br>Henüz fotoğraf yüklenmedi</div>`) +
+    `<div class="ops-foto-empty">📷<br>Şoför henüz fotoğraf eklemedi</div>`) +
     `<div style="margin-top:10px;">
       <label style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-        📎 Fotoğraf Ekle
+        📎 Operasyon Fotoğrafı Ekle
         <input type="file" accept="image/*" multiple style="display:none;" onchange="opsFotoEkle(${eId}, this)">
       </label>
-      <span style="font-size:10.5px;color:var(--muted);margin-left:8px;">JPG/PNG — cihazdan seç</span>
     </div>`;
 
-  // Durum güncelleme butonları
+  // ── Durum güncelleme butonları ──
   const durumSecenekler = ['Bekliyor','Yolda','Fabrikada','Teslim Edildi','İptal'].filter(d => d !== e.durum);
   document.getElementById('ops-drawer-actions').innerHTML = durumSecenekler.map(d => {
     const renk = { 'Bekliyor':'var(--yellow)','Yolda':'var(--blue)','Fabrikada':'var(--accent)','Teslim Edildi':'var(--green)','İptal':'var(--red)' }[d];
@@ -1731,13 +1749,137 @@ function openOpsDrawer(id) {
     </button>`;
   }).join('');
 
-  document.getElementById('ops-drawer-bg').classList.remove('hidden');
-  document.getElementById('ops-drawer').classList.remove('hidden');
+  // ── Mesaj thread'i ──
+  _opsRenderMesajlar(e);
+
+  // ── Şoför davet bölümü (bağlı değilse) ──
+  const erisimEl  = document.getElementById('ops-drawer-sofor-erisim');
+  const erisimSec = document.getElementById('ops-drawer-sofor-erisim-section');
+  if (erisimEl && erisimSec) {
+    if (!soforBagliMi && e.sofor) {
+      erisimSec.style.display = '';
+      erisimEl.innerHTML = `
+        <button onclick="opsWhatsappGonder()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;color:#fff;border-radius:9px;padding:11px;font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          WhatsApp ile Davet Gönder
+        </button>
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:8px;">Şoför daveti kabul edince iş emri portale otomatik düşer</div>
+        <button id="ops-sofor-ata-btn-${eId}" onclick="opsManuelSoforAta(${eId})" style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--accent);border-radius:8px;padding:8px 14px;font-family:var(--font-body);font-size:12px;font-weight:700;cursor:pointer;">🔗 Manuel Bağla</button>
+        <div id="ops-sofor-ata-secim-${eId}"></div>`;
+    } else {
+      erisimSec.style.display = 'none';
+    }
+  }
 }
+
 function closeOpsDrawer() {
   document.getElementById('ops-drawer-bg').classList.add('hidden');
   document.getElementById('ops-drawer').classList.add('hidden');
   opsDrawerActiveId = null;
+}
+
+/* ── Şoför anlık GPS + KM durumu ── */
+function _opsRenderSoforDurum(e) {
+  const el  = document.getElementById('ops-drawer-sofor-durum');
+  if (!el) return;
+  const hasKonum  = e.konum_lat != null && e.konum_lng != null;
+  const hasKm     = e.baslangic_km != null;
+  const hasEta    = e.eta_iso != null;
+  const hasMesafe = e.kalan_km != null;
+  if (!hasKonum && !hasKm && !hasEta) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);">Şoför henüz konum veya km bilgisi göndermedi.</div>';
+    return;
+  }
+  const konumZaman = e.konum_zaman
+    ? new Date(e.konum_zaman).toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+    : null;
+  el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    ${hasKonum ? `<div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:9px;padding:10px 12px;grid-column:1/-1;">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">📍 Son Konum</div>
+      <div style="font-family:var(--font-mono);font-size:11.5px;color:var(--text);">${e.konum_lat.toFixed(5)}, ${e.konum_lng.toFixed(5)}</div>
+      ${konumZaman ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;">${konumZaman}</div>` : ''}
+      <a href="https://www.google.com/maps?q=${e.konum_lat},${e.konum_lng}" target="_blank" style="display:inline-block;margin-top:6px;font-size:11px;color:var(--blue);text-decoration:none;font-weight:600;">🗺 Haritada Gör →</a>
+    </div>` : ''}
+    ${hasEta ? `<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:10px 12px;">
+      <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">⏱ Tahmini Varış</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);">${new Date(e.eta_iso).toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' })}</div>
+    </div>` : ''}
+    ${hasMesafe ? `<div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:9px;padding:10px 12px;">
+      <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">🛣 Kalan Mesafe</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);">${Math.round(e.kalan_km)} km</div>
+    </div>` : ''}
+    ${hasKm ? `<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">📏 Km Sayacı</div>
+      <div style="font-family:var(--font-mono);font-size:12px;color:var(--text);">${e.baslangic_km != null ? e.baslangic_km.toLocaleString('tr-TR') : '?'} → ${e.bitis_km != null ? e.bitis_km.toLocaleString('tr-TR') : '?'}</div>
+      ${(e.baslangic_km != null && e.bitis_km != null) ? `<div style="font-size:11px;color:var(--blue);font-weight:700;margin-top:2px;">${(e.bitis_km - e.baslangic_km).toLocaleString('tr-TR')} km</div>` : ''}
+    </div>` : ''}
+  </div>`;
+}
+
+/* ── Teslim belgesi (POD) ── */
+function _opsRenderPOD(e) {
+  const el  = document.getElementById('ops-drawer-pod');
+  const sec = document.getElementById('ops-drawer-pod-section');
+  if (!el || !sec) return;
+  const hasPOD = e.teslim_alan_ad || e.imza_url;
+  sec.style.display = hasPOD ? '' : 'none';
+  if (!hasPOD) return;
+  el.innerHTML = `<div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px 14px;">
+    ${e.teslim_alan_ad ? `<div class="detail-row"><span class="detail-key">Teslim Alan</span><span class="detail-val">${e.teslim_alan_ad}</span></div>` : ''}
+    ${e.teslim_not_musteri ? `<div class="detail-row"><span class="detail-key">Müşteri Notu</span><span class="detail-val">${e.teslim_not_musteri}</span></div>` : ''}
+    ${e.imza_url ? `<div style="margin-top:10px;"><div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Dijital İmza</div>
+      <img src="${e.imza_url}" alt="İmza" style="max-width:100%;border-radius:8px;border:1px solid var(--border2);background:#fff;cursor:pointer;" onclick="window.open('${e.imza_url}','_blank')" /></div>` : ''}
+  </div>`;
+}
+
+/* ── Mesaj thread'i render ── */
+function _opsRenderMesajlar(e) {
+  const el    = document.getElementById('ops-drawer-mesajlar');
+  const cntEl = document.getElementById('ops-drawer-mesaj-count');
+  if (!el) return;
+  const satirlar = (e.notlar || '').split('\n').filter(s => s.trim());
+  if (cntEl) { cntEl.textContent = satirlar.length || ''; cntEl.style.display = satirlar.length ? '' : 'none'; }
+  if (!satirlar.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:10px 0;">Henüz mesaj veya not yok.</div>';
+    return;
+  }
+  el.innerHTML = satirlar.map(s => {
+    const isSofor  = /\[ŞOFÖR/i.test(s);
+    const isDuyuru = /\[DUYURU/i.test(s);
+    const match  = s.match(/^\[([^\]]+)\]\s*(.*)/s);
+    const prefix = match ? match[1] : '';
+    const metin  = match ? match[2] : s;
+    if (isSofor) return `<div style="border-radius:10px;border:1px solid rgba(34,197,94,.25);background:rgba(34,197,94,.07);padding:10px 12px;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:4px;">🚛 Şoför &nbsp;<span style="font-weight:400;color:var(--muted);font-size:10px;">${prefix.replace(/ŞOFÖR[\s·]*/i,'').trim()}</span></div>
+      <div style="font-size:13px;color:var(--text);line-height:1.5;">${metin}</div></div>`;
+    if (isDuyuru) return `<div style="border-radius:10px;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.09);padding:10px 12px;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--yellow);margin-bottom:4px;">📢 Duyuru &nbsp;<span style="font-weight:400;color:var(--muted);font-size:10px;">${prefix.replace(/DUYURU[\s·]*/i,'').trim()}</span></div>
+      <div style="font-size:13px;color:var(--text);line-height:1.5;">${metin}</div></div>`;
+    return `<div style="border-radius:10px;border:1px solid rgba(100,116,139,.2);background:rgba(100,116,139,.06);padding:10px 12px;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;">📝 OPS &nbsp;<span style="font-weight:400;font-size:10px;">${prefix.replace(/İÇ NOT[\s·]*/i,'').replace(/OPS[\s·]*/i,'').trim()}</span></div>
+      <div style="font-size:13px;color:var(--text);line-height:1.5;">${metin}</div></div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ── Drawer yenile — Supabase'den güncel veriyi çek ── */
+async function opsDrawerYenile() {
+  if (!opsDrawerActiveId) return;
+  const e = opsById(opsDrawerActiveId);
+  if (!e || !(e._dbId > 0)) { showToast('Kayıt henüz senkronize edilmedi', 'error'); return; }
+  showToast('Yenileniyor…');
+  try {
+    const { data, error } = await getSB().from('is_emirleri').select('*').eq('id', e._dbId).maybeSingle();
+    if (error) throw error;
+    if (!data) { showToast('Kayıt bulunamadı', 'error'); return; }
+    Object.assign(e, opsRowToObj(data));
+    opsSaveLocal();
+    _opsDrawerRender(e);
+    showToast('Güncellendi ✓');
+  } catch (err) {
+    console.error('Drawer yenileme hatası:', err);
+    showToast('Yenilenemedi: ' + (err?.message || 'hata'), 'error');
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1851,23 +1993,32 @@ function opsDrawerNotEkle() {
   const e = opsById(opsDrawerActiveId);
   if (!e) return;
   const tarih = new Date().toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-  e.notlar = (e.notlar ? e.notlar + '\n' : '') + '[' + tarih + '] ' + notMetin;
+  // [İÇ NOT] prefix — şoför görmez, sadece ops takibi için
+  e.notlar = (e.notlar ? e.notlar + '\n' : '') + '[İÇ NOT · ' + tarih + '] ' + notMetin;
   opsSaveLocal();
   opsSaveCloud(e);
   inp.value = '';
-  // Drawer detaylar bölümünü güncelle
-  const detaylar = document.getElementById('ops-drawer-detaylar');
-  if (detaylar) {
-    const rows = detaylar.querySelectorAll('.detail-row');
-    rows.forEach(r => {
-      const key = r.querySelector('.detail-key');
-      if (key && key.textContent === 'Notlar') {
-        const val = r.querySelector('.detail-val');
-        if (val) val.textContent = e.notlar;
-      }
-    });
-  }
+  _opsRenderMesajlar(e);
   showToast('Not eklendi ✓');
+}
+
+/** Şoför panelinde duyuru olarak gösterilecek mesaj gönder */
+function opsDrawerDuyuruGonder() {
+  if (!opsDrawerActiveId) return;
+  const inp = document.getElementById('ops-drawer-duyuru-inp');
+  if (!inp) return;
+  const metin = inp.value.trim();
+  if (!metin) { showToast('Duyuru boş olamaz', 'error'); return; }
+  const e = opsById(opsDrawerActiveId);
+  if (!e) return;
+  const tarih = new Date().toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  // [DUYURU] prefix — şoförün panelinde belirgin biçimde gösterilir
+  e.notlar = (e.notlar ? e.notlar + '\n' : '') + '[DUYURU · ' + tarih + '] ' + metin;
+  opsSaveLocal();
+  opsSaveCloud(e);
+  inp.value = '';
+  _opsRenderMesajlar(e);
+  showToast('📢 Duyuru şoföre gönderildi ✓');
 }
 
 /* ── ŞOFÖRE LİNK ─────────────────────────────────────────── */
