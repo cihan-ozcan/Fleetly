@@ -1646,7 +1646,6 @@ function _opsDrawerRender(e) {
   const bagliSefer = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
 
   // Şoför bağlantı durumu
-  const bagliSefer  = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
   const soforBagliMi = !!e.sofor_user_id;
   const soforBagliHtml = soforBagliMi
     ? `<span style="font-size:10px;background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);border-radius:4px;padding:1px 7px;margin-left:6px;">✓ Uygulamaya bağlı</span>`
