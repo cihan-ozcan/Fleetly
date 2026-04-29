@@ -966,6 +966,17 @@
       <div id="ops-drawer-sofor-durum"></div>
     </div>
 
+    <!-- Güzergah (rota geçmişi) -->
+    <div class="drawer-section" id="ops-drawer-guzergah-section">
+      <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>🛣 Güzergah <span id="ops-drawer-guzergah-count" style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:99px;margin-left:4px;display:none;"></span></span>
+        <button id="ops-drawer-guzergah-refresh" onclick="opsGuzergahYukle()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:2px 8px;font-size:10.5px;cursor:pointer;">↻ Yenile</button>
+      </div>
+      <div id="ops-drawer-guzergah-stats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-family:var(--font-mono);font-size:11px;color:var(--text2);"></div>
+      <div id="ops-drawer-guzergah-map" style="width:100%;height:240px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);"></div>
+      <div id="ops-drawer-guzergah-empty" style="text-align:center;padding:20px;color:var(--muted);font-size:12px;display:none;">Bu iş emri için henüz konum kaydı yok.</div>
+    </div>
+
     <!-- Teslim Belgesi (POD) — şoför teslim ettikten sonra görünür -->
     <div class="drawer-section" id="ops-drawer-pod-section" style="display:none">
       <div class="drawer-section-title">Teslim Belgesi (POD)</div>

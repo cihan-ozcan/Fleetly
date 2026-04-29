@@ -1070,6 +1070,130 @@ async function opsKanbanDrop(ev, hedefDurum) {
   }
 }
 
+/* ── GÜZERGAH HARİTASI (Drawer içi) ──────────────────────── */
+let _opsGuzergahMap = null;
+let _opsGuzergahLayers = []; // polyline + markerlar
+
+function _opsGuzergahHaritaInit() {
+  const el = document.getElementById('ops-drawer-guzergah-map');
+  if (!el || _opsGuzergahMap) return _opsGuzergahMap;
+  _opsGuzergahMap = L.map(el, { zoomControl: true, attributionControl: false }).setView([39.9, 32.8], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(_opsGuzergahMap);
+  L.control.attribution({ prefix: '© OpenStreetMap' }).addTo(_opsGuzergahMap);
+  return _opsGuzergahMap;
+}
+
+function _opsGuzergahHaritaTemizle() {
+  _opsGuzergahLayers.forEach(l => { try { _opsGuzergahMap.removeLayer(l); } catch {} });
+  _opsGuzergahLayers = [];
+}
+
+/** Drawer'daki aktif iş emri için konum_izleri çek, çiz */
+async function opsGuzergahYukle() {
+  if (!opsDrawerActiveId) return;
+  const e = opsById(opsDrawerActiveId);
+  if (!e) return;
+  const dbId = e._dbId || e.id;
+  const sec      = document.getElementById('ops-drawer-guzergah-section');
+  const mapEl    = document.getElementById('ops-drawer-guzergah-map');
+  const statsEl  = document.getElementById('ops-drawer-guzergah-stats');
+  const cntEl    = document.getElementById('ops-drawer-guzergah-count');
+  const emptyEl  = document.getElementById('ops-drawer-guzergah-empty');
+  const btn      = document.getElementById('ops-drawer-guzergah-refresh');
+  if (!sec || !mapEl) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = '↻ Yükleniyor...'; }
+
+  try {
+    const sb = getSB();
+    if (!sb) throw new Error('Supabase istemcisi yok');
+    const { data, error } = await sb
+      .from('konum_izleri')
+      .select('lat,lng,hiz,ts')
+      .eq('is_emri_id', dbId)
+      .order('ts', { ascending: true });
+    if (error) throw error;
+
+    const izler = data || [];
+    if (cntEl) {
+      cntEl.textContent = izler.length;
+      cntEl.style.display = izler.length ? '' : 'none';
+    }
+
+    if (!izler.length) {
+      mapEl.style.display    = 'none';
+      statsEl.innerHTML      = '';
+      emptyEl.style.display  = '';
+      return;
+    }
+    mapEl.style.display    = '';
+    emptyEl.style.display  = 'none';
+
+    // İstatistik hesapla
+    const dist = (a, b) => {
+      const R = 6371, toRad = d => d*Math.PI/180;
+      const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+      const x = Math.sin(dLat/2)**2 + Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
+      return R * 2 * Math.asin(Math.sqrt(x));
+    };
+    let toplamKm = 0;
+    let hizSayac = 0, hizToplam = 0;
+    for (let i = 1; i < izler.length; i++) {
+      toplamKm += dist(izler[i-1], izler[i]);
+      if (izler[i].hiz != null && izler[i].hiz > 0) { hizToplam += +izler[i].hiz; hizSayac++; }
+    }
+    const sureMs = new Date(izler[izler.length-1].ts) - new Date(izler[0].ts);
+    const sureDk = Math.round(sureMs / 60000);
+    const sureStr = sureDk < 60 ? `${sureDk} dk` : `${Math.floor(sureDk/60)}s ${sureDk%60}dk`;
+    const ortHiz  = hizSayac ? Math.round(hizToplam / hizSayac) : null;
+    const baslaStr = new Date(izler[0].ts).toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const bitirStr = new Date(izler[izler.length-1].ts).toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+
+    statsEl.innerHTML = `
+      <span title="Toplam katedilen mesafe" style="background:rgba(56,189,248,.10);border:1px solid rgba(56,189,248,.25);color:var(--blue);padding:3px 10px;border-radius:5px;font-weight:700;">📏 ${toplamKm.toFixed(1)} km</span>
+      <span title="GPS sürelerine göre" style="background:rgba(99,102,241,.10);border:1px solid rgba(99,102,241,.25);color:var(--accent);padding:3px 10px;border-radius:5px;">⏱ ${sureStr}</span>
+      ${ortHiz != null ? `<span title="GPS ortalama hızı" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text);padding:3px 10px;border-radius:5px;">🚚 ort ${ortHiz} km/sa</span>` : ''}
+      <span style="background:var(--surface3);border:1px solid var(--border2);color:var(--text2);padding:3px 10px;border-radius:5px;">${izler.length} nokta</span>
+      <span style="color:var(--muted);font-size:10.5px;align-self:center;">${baslaStr} → ${bitirStr}</span>`;
+
+    // Harita
+    _opsGuzergahHaritaInit();
+    setTimeout(() => _opsGuzergahMap.invalidateSize(), 60);
+    _opsGuzergahHaritaTemizle();
+
+    const latlngs = izler.map(p => [p.lat, p.lng]);
+    const polyline = L.polyline(latlngs, { color: '#38bdf8', weight: 4, opacity: .9 }).addTo(_opsGuzergahMap);
+    _opsGuzergahLayers.push(polyline);
+
+    // Başlangıç markeri (yeşil)
+    const startIcon = L.divIcon({
+      className: 'ops-marker-start',
+      html: '<div style="width:14px;height:14px;border-radius:50%;background:#22c55e;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3);"></div>',
+      iconSize: [14, 14], iconAnchor: [7, 7]
+    });
+    const endIcon = L.divIcon({
+      className: 'ops-marker-end',
+      html: '<div style="width:14px;height:14px;border-radius:50%;background:#ef4444;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3);"></div>',
+      iconSize: [14, 14], iconAnchor: [7, 7]
+    });
+    const m1 = L.marker(latlngs[0], { icon: startIcon, title: 'Başlangıç: ' + baslaStr }).addTo(_opsGuzergahMap);
+    const m2 = L.marker(latlngs[latlngs.length-1], { icon: endIcon, title: 'Son nokta: ' + bitirStr }).addTo(_opsGuzergahMap);
+    _opsGuzergahLayers.push(m1, m2);
+
+    _opsGuzergahMap.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+  } catch (err) {
+    console.error('Güzergah yükleme hatası:', err);
+    if (statsEl) statsEl.innerHTML = '';
+    if (emptyEl) {
+      emptyEl.style.display = '';
+      emptyEl.textContent = 'Güzergah yüklenemedi: ' + (err?.message || 'hata');
+    }
+    if (mapEl) mapEl.style.display = 'none';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Yenile'; }
+  }
+}
+
 /* ── "NEREDESİN?" PUSH GÖNDER ─────────────────────────────── */
 async function opsPushNeredesin(opsId) {
   const e = isEmirleri.find(x => x.id === opsId);
@@ -1889,6 +2013,8 @@ function openOpsDrawer(id) {
   _opsDrawerRender(e);
   document.getElementById('ops-drawer-bg').classList.remove('hidden');
   document.getElementById('ops-drawer').classList.remove('hidden');
+  // Güzergah verisini çek (drawer açıldığında bir kere)
+  setTimeout(() => opsGuzergahYukle(), 80);
 }
 
 /** Tüm drawer içeriğini yeniden render eder */
@@ -2041,6 +2167,12 @@ function closeOpsDrawer() {
   document.getElementById('ops-drawer-bg').classList.add('hidden');
   document.getElementById('ops-drawer').classList.add('hidden');
   opsDrawerActiveId = null;
+  // Güzergah haritasını temizle (sonraki açılışta tazelensin)
+  if (_opsGuzergahMap) {
+    try { _opsGuzergahHaritaTemizle(); _opsGuzergahMap.remove(); } catch {}
+    _opsGuzergahMap = null;
+    _opsGuzergahLayers = [];
+  }
 }
 
 /* ── Şoför anlık GPS + KM durumu ── */
