@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\\\Users\\\\cihan\\\\Desktop\\\\Fleetly-main\\\\supabase\")"
+    ]
+  }
+}

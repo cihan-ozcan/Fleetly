@@ -24,6 +24,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Leaflet (filo haritası) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -41,6 +42,7 @@
   <link rel="stylesheet" href="css/pages/app.css" />
   <link rel="stylesheet" href="css/pages/sofor-embedded.css" />
   <link rel="stylesheet" href="css/pages/surucu-takip.css" />
+  <link rel="stylesheet" href="css/pages/kpi-rapor.css" />
   <script src="js/core/include.js" defer></script>
 </head>
 <body>
@@ -1806,6 +1808,7 @@
         <button class="vs-tab active" id="ds-tab-suruculer" onclick="switchDsTab('suruculer')">👤 Sürücüler</button>
         <button class="vs-tab" id="ds-tab-takip" onclick="switchDsTab('takip')">📍 Sürücü Takibi</button>
         <button class="vs-tab" id="ds-tab-ozet" onclick="switchDsTab('ozet')">📊 Genel Özet</button>
+        <button class="vs-tab" id="ds-tab-kpi" onclick="switchDsTab('kpi')">📈 KPI Raporu</button>
         <button class="vs-tab" id="ds-tab-davet" onclick="switchDsTab('davet')">📲 Davet</button>
         <button class="vs-tab" id="ds-tab-onay" onclick="switchDsTab('onay')">
           ✅ Onay Kuyruğu
@@ -1881,6 +1884,11 @@
             <div id="ds-critical-list" style="display:flex;flex-direction:column;gap:6px"></div>
           </div>
         </div>
+      </div>
+
+      <!-- SEKME 2.5: KPI Raporu (Aylık Sürücü Bazlı) -->
+      <div class="vs-tab-panel" id="dspanel-kpi">
+        <!-- Panel içeriği app-chunk-kpi-rapor.js tarafından doldurulur -->
       </div>
 
       <!-- SEKME 3: Şoför Daveti (mobil/web şoför portalı davet kodu) -->
@@ -3469,6 +3477,7 @@
 </div>
 
 <script src="js/pages/app-chunk-06.js"></script>
+<script src="js/pages/app-chunk-kpi-rapor.js"></script>
 <script src="js/pages/app-chunk-surucu-takip.js"></script>
 
 <!-- ─────────────────────────────────────────────────────────────────────
