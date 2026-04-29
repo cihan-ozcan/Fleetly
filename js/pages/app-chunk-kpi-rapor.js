@@ -17,6 +17,61 @@ window.kpiRaporState = {
 const _KPI = window.kpiRaporState;
 
 /* ──────────────────────────────────────────────────────────────────────
+   TÜRKÇE FONT YÜKLEYİCİ — jsPDF'in default Helvetica'sı Latin-1, Türkçe
+   karakterleri (ş ğ ı İ ç ö ü) göstermez. CDN'den Roboto TTF çekip
+   jsPDF'e kaydederek Türkçe destekli PDF üretiyoruz.
+   ──────────────────────────────────────────────────────────────────── */
+let _kpiPdfFont = 'helvetica'; // fallback (font yüklenmezse)
+const _KPI_FONT_CDN = {
+  reg : 'https://cdn.jsdelivr.net/npm/@expo-google-fonts/roboto@0.2.3/Roboto_400Regular.ttf',
+  bold: 'https://cdn.jsdelivr.net/npm/@expo-google-fonts/roboto@0.2.3/Roboto_700Bold.ttf',
+};
+
+function _kpiArrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  // chunk'lı çevirim büyük buffer'lar için stack overflow'u önler
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+async function _kpiLoadTurkceFont(pdf) {
+  // Cache: önceki PDF'ten kalan base64'leri varsa tekrar fetch etme
+  try {
+    if (!window._kpiRobotoReg || !window._kpiRobotoBold) {
+      const [regBuf, boldBuf] = await Promise.all([
+        fetch(_KPI_FONT_CDN.reg).then(r => { if (!r.ok) throw new Error('reg ' + r.status); return r.arrayBuffer(); }),
+        fetch(_KPI_FONT_CDN.bold).then(r => { if (!r.ok) throw new Error('bold ' + r.status); return r.arrayBuffer(); }),
+      ]);
+      window._kpiRobotoReg  = _kpiArrayBufferToBase64(regBuf);
+      window._kpiRobotoBold = _kpiArrayBufferToBase64(boldBuf);
+    }
+    pdf.addFileToVFS('Roboto-Regular.ttf', window._kpiRobotoReg);
+    pdf.addFileToVFS('Roboto-Bold.ttf',    window._kpiRobotoBold);
+    pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+    pdf.addFont('Roboto-Bold.ttf',    'Roboto', 'bold');
+    _kpiPdfFont = 'Roboto';
+    return true;
+  } catch (err) {
+    console.warn('KPI: Türkçe font yüklenemedi, ASCII fallback kullanılacak:', err);
+    _kpiPdfFont = 'helvetica';
+    return false;
+  }
+}
+
+/** Helvetica fallback için Türkçe → ASCII transliterasyon (font yüklenmezse) */
+function _kpiTrAscii(s) {
+  if (_kpiPdfFont !== 'helvetica' || s == null) return String(s ?? '');
+  return String(s)
+    .replace(/ş/g,'s').replace(/Ş/g,'S').replace(/ğ/g,'g').replace(/Ğ/g,'G')
+    .replace(/ı/g,'i').replace(/İ/g,'I').replace(/ç/g,'c').replace(/Ç/g,'C')
+    .replace(/ö/g,'o').replace(/Ö/g,'O').replace(/ü/g,'u').replace(/Ü/g,'U');
+}
+
+/* ──────────────────────────────────────────────────────────────────────
    GİRİŞ — Sürücü Belge Yönetimi modal'ı 'kpi' tab'ı açıldığında çağrılır
    ──────────────────────────────────────────────────────────────────── */
 async function kpiRaporAc() {
@@ -459,6 +514,12 @@ async function kpiRaporPdfIndir() {
   try {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    // Türkçe karakter desteği: Roboto TTF yükle (başarısız olursa helvetica + ASCII fallback)
+    if (btn) btn.textContent = '⏳ Font yükleniyor...';
+    await _kpiLoadTurkceFont(pdf);
+    if (btn) btn.textContent = '⏳ PDF oluşturuluyor...';
+
     const sorted = [..._KPI.veri.perDriver].sort((a,b) => b.performans_skoru - a.performans_skoru);
 
     const W = 210, H = 297;
@@ -469,17 +530,17 @@ async function kpiRaporPdfIndir() {
     pdf.setFillColor(232, 82, 26); // accent
     pdf.rect(0, 0, W, 38, 'F');
     pdf.setTextColor(255, 255, 255);
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(22);
-    pdf.text(firmaAdi, 14, 22);
-    pdf.setFontSize(11); pdf.setFont('helvetica', 'normal');
-    pdf.text('Sürücü KPI Raporu', 14, 30);
+    pdf.setFont(_kpiPdfFont, 'bold'); pdf.setFontSize(22);
+    pdf.text(_kpiTrAscii(firmaAdi), 14, 22);
+    pdf.setFontSize(11); pdf.setFont(_kpiPdfFont, 'normal');
+    pdf.text(_kpiTrAscii('Sürücü KPI Raporu'), 14, 30);
 
     pdf.setTextColor(20, 20, 30);
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(34);
-    pdf.text(ayLbl, 14, 70);
-    pdf.setFontSize(11); pdf.setFont('helvetica', 'normal');
+    pdf.setFont(_kpiPdfFont, 'bold'); pdf.setFontSize(34);
+    pdf.text(_kpiTrAscii(ayLbl), 14, 70);
+    pdf.setFontSize(11); pdf.setFont(_kpiPdfFont, 'normal');
     pdf.setTextColor(80, 96, 128);
-    pdf.text('Aylık Sürücü Performans Karnesi', 14, 80);
+    pdf.text(_kpiTrAscii('Aylık Sürücü Performans Karnesi'), 14, 80);
 
     // Genel istatistikler kapakta
     const top_is        = sorted.reduce((s,d) => s + d.toplam_is, 0);
@@ -500,7 +561,7 @@ async function kpiRaporPdfIndir() {
 
     pdf.setFontSize(9); pdf.setTextColor(120, 130, 150);
     const olusturma = new Date().toLocaleString('tr-TR', { dateStyle:'long', timeStyle:'short' });
-    pdf.text('Oluşturma: ' + olusturma, 14, 285);
+    pdf.text(_kpiTrAscii('Oluşturma: ' + olusturma), 14, 285);
     pdf.text('Sayfa 1', W - 24, 285);
 
     // ── HER SÜRÜCÜ İÇİN 1 SAYFA ──────────────────────────────────
@@ -535,11 +596,11 @@ function _pdfStat(pdf, x, y, lbl, val) {
   pdf.setFillColor(245, 247, 252);
   pdf.roundedRect(x, y, 44, 22, 2, 2, 'F');
   pdf.setTextColor(80, 96, 128);
-  pdf.setFontSize(8); pdf.setFont('helvetica', 'normal');
-  pdf.text(lbl, x + 3, y + 6);
+  pdf.setFontSize(8); pdf.setFont(_kpiPdfFont, 'normal');
+  pdf.text(_kpiTrAscii(lbl), x + 3, y + 6);
   pdf.setTextColor(20, 25, 50);
-  pdf.setFontSize(13); pdf.setFont('helvetica', 'bold');
-  pdf.text(String(val), x + 3, y + 17);
+  pdf.setFontSize(13); pdf.setFont(_kpiPdfFont, 'bold');
+  pdf.text(_kpiTrAscii(String(val)), x + 3, y + 17);
 }
 
 /* PDF: sürücü sayfası */
@@ -549,20 +610,20 @@ function _pdfDriverPage(pdf, d, idx, total, ayLbl, firmaAdi) {
   pdf.setFillColor(16, 20, 42); // surface
   pdf.rect(0, 0, W, 32, 'F');
   pdf.setTextColor(255,255,255);
-  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(16);
-  pdf.text(d.ad, 14, 16);
-  pdf.setFont('helvetica','normal'); pdf.setFontSize(9);
+  pdf.setFont(_kpiPdfFont, 'bold'); pdf.setFontSize(16);
+  pdf.text(_kpiTrAscii(d.ad), 14, 16);
+  pdf.setFont(_kpiPdfFont,'normal'); pdf.setFontSize(9);
   pdf.setTextColor(168, 184, 216);
-  pdf.text(`${firmaAdi} • ${ayLbl}`, 14, 24);
+  pdf.text(_kpiTrAscii(`${firmaAdi} • ${ayLbl}`), 14, 24);
 
   // Performans skoru rozeti
   const skorRenk = d.performans_skoru >= 75 ? [34,197,94] : d.performans_skoru >= 50 ? [212,168,71] : [239,68,68];
   pdf.setFillColor(skorRenk[0], skorRenk[1], skorRenk[2]);
   pdf.roundedRect(W-50, 6, 36, 20, 3, 3, 'F');
   pdf.setTextColor(255,255,255);
-  pdf.setFont('helvetica','bold'); pdf.setFontSize(20);
+  pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(20);
   pdf.text(String(d.performans_skoru), W-46, 19);
-  pdf.setFontSize(7); pdf.setFont('helvetica','normal');
+  pdf.setFontSize(7); pdf.setFont(_kpiPdfFont,'normal');
   pdf.text('/ 100', W-23, 19);
 
   // 4 KPI kartı (2x2)
@@ -575,8 +636,8 @@ function _pdfDriverPage(pdf, d, idx, total, ayLbl, firmaAdi) {
 
   // Detay metrik tablosu
   y += 44;
-  pdf.setFont('helvetica','bold'); pdf.setFontSize(10); pdf.setTextColor(20,25,50);
-  pdf.text('Detaylı Metrikler', 14, y);
+  pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(10); pdf.setTextColor(20,25,50);
+  pdf.text(_kpiTrAscii('Detaylı Metrikler'), 14, y);
   y += 4;
   pdf.setDrawColor(220, 225, 240); pdf.line(14, y, W-14, y);
   y += 6;
@@ -593,23 +654,23 @@ function _pdfDriverPage(pdf, d, idx, total, ayLbl, firmaAdi) {
     ['Fotoğraflı İş',      d.foto_yuklenen_is,    'adet'],
     ['Eksik POD',          d.eksik_pod,           'adet'],
   ];
-  pdf.setFont('helvetica','normal'); pdf.setFontSize(9);
+  pdf.setFont(_kpiPdfFont,'normal'); pdf.setFontSize(9);
   metrics.forEach((m, i) => {
     const col = i % 2;
     const row = Math.floor(i / 2);
     const x = col === 0 ? 14 : 110;
     const yy = y + row * 7;
     pdf.setTextColor(80, 96, 128);
-    pdf.text(m[0], x, yy);
-    pdf.setTextColor(20, 25, 50); pdf.setFont('helvetica','bold');
-    pdf.text(`${m[1]} ${m[2]}`, x + 60, yy, { align: 'right' });
-    pdf.setFont('helvetica','normal');
+    pdf.text(_kpiTrAscii(m[0]), x, yy);
+    pdf.setTextColor(20, 25, 50); pdf.setFont(_kpiPdfFont,'bold');
+    pdf.text(_kpiTrAscii(`${m[1]} ${m[2]}`), x + 60, yy, { align: 'right' });
+    pdf.setFont(_kpiPdfFont,'normal');
   });
   y += Math.ceil(metrics.length / 2) * 7 + 6;
 
   // Skor breakdown bar
-  pdf.setFont('helvetica','bold'); pdf.setFontSize(10); pdf.setTextColor(20,25,50);
-  pdf.text('Performans Skoru Dağılımı (her bileşen 25 puan)', 14, y);
+  pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(10); pdf.setTextColor(20,25,50);
+  pdf.text(_kpiTrAscii('Performans Skoru Dağılımı (her bileşen 25 puan)'), 14, y);
   y += 4;
   const segs = [
     ['Teslim',   d.teslim_p, [34,197,94]],
@@ -635,53 +696,53 @@ function _pdfDriverPage(pdf, d, idx, total, ayLbl, firmaAdi) {
     const x = 14 + i * 50;
     pdf.setFillColor(s[2][0], s[2][1], s[2][2]);
     pdf.rect(x, y-3, 4, 4, 'F');
-    pdf.setTextColor(80, 96, 128); pdf.setFontSize(8); pdf.setFont('helvetica','normal');
-    pdf.text(`${s[0]}: ${_r1(s[1])}/25`, x + 6, y);
+    pdf.setTextColor(80, 96, 128); pdf.setFontSize(8); pdf.setFont(_kpiPdfFont,'normal');
+    pdf.text(_kpiTrAscii(`${s[0]}: ${_r1(s[1])}/25`), x + 6, y);
   });
 
   // İş emri özeti — son 5
   y += 14;
-  pdf.setFont('helvetica','bold'); pdf.setFontSize(10); pdf.setTextColor(20,25,50);
-  pdf.text('Son İş Emirleri (en güncel 5)', 14, y);
+  pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(10); pdf.setTextColor(20,25,50);
+  pdf.text(_kpiTrAscii('Son İş Emirleri (en güncel 5)'), 14, y);
   y += 5;
   pdf.setDrawColor(220, 225, 240); pdf.line(14, y, W-14, y); y += 5;
 
-  pdf.setFont('helvetica','bold'); pdf.setFontSize(8); pdf.setTextColor(80,96,128);
-  pdf.text('#', 14, y); pdf.text('Müşteri', 25, y); pdf.text('Yükle → Teslim', 75, y); pdf.text('Durum', 160, y);
+  pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(8); pdf.setTextColor(80,96,128);
+  pdf.text('#', 14, y); pdf.text(_kpiTrAscii('Müşteri'), 25, y); pdf.text(_kpiTrAscii('Yükle → Teslim'), 75, y); pdf.text('Durum', 160, y);
   y += 4;
-  pdf.setFont('helvetica','normal');
+  pdf.setFont(_kpiPdfFont,'normal');
   const son = [...(d._ies||[])].sort((a,b)=>new Date(b.atama_zamani)-new Date(a.atama_zamani)).slice(0,5);
   son.forEach(ie => {
     pdf.setTextColor(20, 25, 50);
     pdf.text(String(ie.id), 14, y);
-    pdf.text(_kpiTrunc(ie.musteri_adi || '—', 28), 25, y);
-    pdf.text(_kpiTrunc(`${ie.yukle_yeri || '—'} → ${ie.teslim_yeri || '—'}`, 50), 75, y);
-    pdf.text(ie.durum || '—', 160, y);
+    pdf.text(_kpiTrAscii(_kpiTrunc(ie.musteri_adi || '—', 28)), 25, y);
+    pdf.text(_kpiTrAscii(_kpiTrunc(`${ie.yukle_yeri || '—'} → ${ie.teslim_yeri || '—'}`, 50)), 75, y);
+    pdf.text(_kpiTrAscii(ie.durum || '—'), 160, y);
     y += 5;
   });
   if (!son.length) {
     pdf.setTextColor(120,130,150);
-    pdf.text('Bu ay iş emri yok.', 14, y);
+    pdf.text(_kpiTrAscii('Bu ay iş emri yok.'), 14, y);
   }
 
   // Footer
   pdf.setFontSize(8); pdf.setTextColor(120,130,150);
-  pdf.text(`${firmaAdi} • ${ayLbl}`, 14, 290);
-  pdf.text(`Sayfa ${idx+1} / ${total+2}`, W - 30, 290);
+  pdf.text(_kpiTrAscii(`${firmaAdi} • ${ayLbl}`), 14, 290);
+  pdf.text(_kpiTrAscii(`Sayfa ${idx+1} / ${total+2}`), W - 30, 290);
 }
 
 /* PDF: KPI kartı */
 function _pdfKpiCard(pdf, x, y, lbl, mainVal, sub, puan, maxPuan) {
   pdf.setFillColor(245, 247, 252);
   pdf.roundedRect(x, y, 86, 32, 3, 3, 'F');
-  pdf.setTextColor(80, 96, 128); pdf.setFontSize(8); pdf.setFont('helvetica','bold');
-  pdf.text(lbl, x + 4, y + 7);
+  pdf.setTextColor(80, 96, 128); pdf.setFontSize(8); pdf.setFont(_kpiPdfFont,'bold');
+  pdf.text(_kpiTrAscii(lbl), x + 4, y + 7);
   pdf.setTextColor(20, 25, 50); pdf.setFontSize(15);
-  pdf.text(String(mainVal), x + 4, y + 17);
-  pdf.setFontSize(8); pdf.setFont('helvetica','normal'); pdf.setTextColor(120,130,150);
-  pdf.text(String(sub || ''), x + 4, y + 23);
+  pdf.text(_kpiTrAscii(String(mainVal)), x + 4, y + 17);
+  pdf.setFontSize(8); pdf.setFont(_kpiPdfFont,'normal'); pdf.setTextColor(120,130,150);
+  pdf.text(_kpiTrAscii(String(sub || '')), x + 4, y + 23);
   // Puan
-  pdf.setTextColor(20,25,50); pdf.setFontSize(7); pdf.setFont('helvetica','bold');
+  pdf.setTextColor(20,25,50); pdf.setFontSize(7); pdf.setFont(_kpiPdfFont,'bold');
   pdf.text(`${_r1(puan)}/${maxPuan}p`, x + 82, y + 28, { align: 'right' });
 }
 
@@ -689,54 +750,54 @@ function _pdfKpiCard(pdf, x, y, lbl, mainVal, sub, puan, maxPuan) {
 function _pdfRankingPage(pdf, sorted, ayLbl) {
   const W = 210;
   pdf.setFillColor(16, 20, 42); pdf.rect(0, 0, W, 22, 'F');
-  pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(14);
-  pdf.text('Sıralama Özeti', 14, 14);
-  pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(168,184,216);
-  pdf.text(ayLbl, W-14, 14, { align: 'right' });
+  pdf.setTextColor(255,255,255); pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(14);
+  pdf.text(_kpiTrAscii('Sıralama Özeti'), 14, 14);
+  pdf.setFont(_kpiPdfFont,'normal'); pdf.setFontSize(9); pdf.setTextColor(168,184,216);
+  pdf.text(_kpiTrAscii(ayLbl), W-14, 14, { align: 'right' });
 
   // Top 5
   let y = 36;
-  pdf.setTextColor(34, 197, 94); pdf.setFont('helvetica','bold'); pdf.setFontSize(12);
-  pdf.text('🏆 En İyi 5', 14, y); y += 6;
+  pdf.setTextColor(34, 197, 94); pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(12);
+  pdf.text(_kpiTrAscii('🏆 En İyi 5'), 14, y); y += 6;
   const top5 = sorted.slice(0, 5);
   _pdfRankTable(pdf, 14, y, top5, [34,197,94]);
   y += top5.length * 8 + 10;
 
   // Bottom 5 (en kötüler)
-  pdf.setTextColor(239, 68, 68); pdf.setFont('helvetica','bold'); pdf.setFontSize(12);
-  pdf.text('⚠ Gelişim Gereken 5', 14, y); y += 6;
+  pdf.setTextColor(239, 68, 68); pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(12);
+  pdf.text(_kpiTrAscii('⚠ Gelişim Gereken 5'), 14, y); y += 6;
   const bottom5 = sorted.slice(-5).reverse();
   _pdfRankTable(pdf, 14, y, bottom5, [239,68,68]);
   y += bottom5.length * 8 + 10;
 
   // Tüm sürücüler tablosu (kompakt)
-  pdf.setTextColor(20,25,50); pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
-  pdf.text('Tüm Sürücüler — Tam Liste', 14, y); y += 6;
+  pdf.setTextColor(20,25,50); pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(11);
+  pdf.text(_kpiTrAscii('Tüm Sürücüler — Tam Liste'), 14, y); y += 6;
   pdf.setDrawColor(220,225,240); pdf.line(14, y, W-14, y); y += 5;
 
-  pdf.setFont('helvetica','bold'); pdf.setFontSize(8); pdf.setTextColor(80,96,128);
+  pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(8); pdf.setTextColor(80,96,128);
   ['#', 'Sürücü', 'İş', 'Tamam', 'Başarı %', 'Km', 'Foto %', 'Skor'].forEach((h, i) => {
     const xs = [14, 22, 90, 105, 122, 142, 162, 185];
-    pdf.text(h, xs[i], y);
+    pdf.text(_kpiTrAscii(h), xs[i], y);
   });
   y += 4;
-  pdf.setFont('helvetica','normal');
+  pdf.setFont(_kpiPdfFont,'normal');
   sorted.forEach((d, i) => {
     if (y > 280) { pdf.addPage(); y = 20; }
     pdf.setTextColor(20,25,50);
     const xs = [14, 22, 90, 105, 122, 142, 162, 185];
     pdf.text(String(i+1), xs[0], y);
-    pdf.text(_kpiTrunc(d.ad, 32), xs[1], y);
+    pdf.text(_kpiTrAscii(_kpiTrunc(d.ad, 32)), xs[1], y);
     pdf.text(String(d.toplam_is), xs[2], y);
     pdf.text(String(d.tamamlanan), xs[3], y);
     pdf.text(_r1(d.basari_orani)+'%', xs[4], y);
     pdf.text(Math.round(d.toplam_km).toLocaleString('tr-TR'), xs[5], y);
     pdf.text(_r1(d.foto_yukleme_orani)+'%', xs[6], y);
-    pdf.setFont('helvetica','bold');
+    pdf.setFont(_kpiPdfFont,'bold');
     const c = d.performans_skoru >= 75 ? [34,197,94] : d.performans_skoru >= 50 ? [212,168,71] : [239,68,68];
     pdf.setTextColor(c[0],c[1],c[2]);
     pdf.text(String(d.performans_skoru), xs[7], y);
-    pdf.setFont('helvetica','normal');
+    pdf.setFont(_kpiPdfFont,'normal');
     y += 6;
   });
 }
@@ -745,11 +806,11 @@ function _pdfRankTable(pdf, x, y, list, color) {
   list.forEach((d, i) => {
     pdf.setFillColor(color[0], color[1], color[2], 0.08);
     pdf.roundedRect(x, y - 5, 195, 7, 1, 1, 'F');
-    pdf.setTextColor(color[0], color[1], color[2]); pdf.setFont('helvetica','bold'); pdf.setFontSize(10);
-    pdf.text(`${i+1}. ${d.ad}`, x + 3, y);
-    pdf.setTextColor(80,96,128); pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
-    pdf.text(`${d.tamamlanan}/${d.toplam_is} iş • ${Math.round(d.toplam_km)} km • ${_r1(d.foto_yukleme_orani)}% foto`, x + 60, y);
-    pdf.setTextColor(20,25,50); pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+    pdf.setTextColor(color[0], color[1], color[2]); pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(10);
+    pdf.text(_kpiTrAscii(`${i+1}. ${d.ad}`), x + 3, y);
+    pdf.setTextColor(80,96,128); pdf.setFont(_kpiPdfFont,'normal'); pdf.setFontSize(8);
+    pdf.text(_kpiTrAscii(`${d.tamamlanan}/${d.toplam_is} iş • ${Math.round(d.toplam_km)} km • ${_r1(d.foto_yukleme_orani)}% foto`), x + 60, y);
+    pdf.setTextColor(20,25,50); pdf.setFont(_kpiPdfFont,'bold'); pdf.setFontSize(11);
     pdf.text(`${d.performans_skoru}/100`, x + 178, y);
     y += 8;
   });
