@@ -9,5 +9,5 @@ window.FILO_CONFIG = {
 
   // ── Web Push VAPID (npx web-push generate-vapid-keys ile üretin) ──
   // Ürettikten sonra buraya Public Key'i yapıştırın:
-  VAPID_PUBLIC_KEY: '',   // örn: 'BNxyz...'
+  VAPID_PUBLIC_KEY: 'BD9qOxaOfmLEfObwOqQv5MxqgQ5Oka28oHZgapdbiW-zoPo1hwJYkW57W6ZkHnxvWW_0o-5VnnV4s5mIcnIp24Y',
 };
