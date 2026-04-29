@@ -23,6 +23,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <!-- Leaflet (filo haritası) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -39,6 +40,7 @@
   <link rel="stylesheet" href="css/reset.css" />
   <link rel="stylesheet" href="css/pages/app.css" />
   <link rel="stylesheet" href="css/pages/sofor-embedded.css" />
+  <link rel="stylesheet" href="css/pages/surucu-takip.css" />
   <script src="js/core/include.js" defer></script>
 </head>
 <body>
@@ -1802,6 +1804,7 @@
       <!-- Sekme Navigasyonu -->
       <div class="vs-tabs">
         <button class="vs-tab active" id="ds-tab-suruculer" onclick="switchDsTab('suruculer')">👤 Sürücüler</button>
+        <button class="vs-tab" id="ds-tab-takip" onclick="switchDsTab('takip')">📍 Sürücü Takibi</button>
         <button class="vs-tab" id="ds-tab-ozet" onclick="switchDsTab('ozet')">📊 Genel Özet</button>
         <button class="vs-tab" id="ds-tab-davet" onclick="switchDsTab('davet')">📲 Davet</button>
         <button class="vs-tab" id="ds-tab-onay" onclick="switchDsTab('onay')">
@@ -1822,6 +1825,23 @@
             onblur="this.style.borderColor='var(--border2)';this.style.boxShadow='none'" />
         </div>
         <div id="ds-driver-list"></div>
+      </div>
+
+      <!-- SEKME (yeni): Sürücü Takibi -->
+      <div class="vs-tab-panel" id="dspanel-takip">
+        <div class="st-layout">
+          <!-- Sol: Sürücü Listesi -->
+          <div class="st-left">
+            <div class="st-left-search">
+              <input type="text" id="st-search" placeholder="🔎 Sürücü ara…" oninput="surucuTakipRenderListe()" />
+            </div>
+            <div class="st-driver-scroll" id="st-driver-list"></div>
+          </div>
+          <!-- Sağ: Detay -->
+          <div class="st-right" id="st-right">
+            <div class="st-empty-detail"><div class="icon">👈</div>Soldan bir sürücü seçin.</div>
+          </div>
+        </div>
       </div>
 
       <!-- SEKME 2: Genel Özet -->
@@ -3449,6 +3469,23 @@
 </div>
 
 <script src="js/pages/app-chunk-06.js"></script>
+<script src="js/pages/app-chunk-surucu-takip.js"></script>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     SÜRÜCÜ TAKİBİ — FOTOĞRAF LIGHTBOX MODALI
+     ───────────────────────────────────────────────────────────────────── -->
+<div id="surucu-foto-modal" class="st-lightbox" onclick="if(event.target===this)surucuTakipLightboxKapat()">
+  <div class="st-lightbox-inner">
+    <div class="st-lightbox-stage">
+      <button class="st-lightbox-close" onclick="surucuTakipLightboxKapat()" title="Kapat (Esc)">✕</button>
+      <button id="st-lb-prev" class="st-lightbox-nav st-lightbox-prev" onclick="surucuTakipLightboxGeri()" title="Önceki (←)">‹</button>
+      <img id="st-lb-img" alt="Fotoğraf" />
+      <button id="st-lb-next" class="st-lightbox-nav st-lightbox-next" onclick="surucuTakipLightboxIleri()" title="Sonraki (→)">›</button>
+      <div id="st-lb-counter" class="st-lightbox-counter">0 / 0</div>
+    </div>
+    <aside id="st-lb-side" class="st-lightbox-side"></aside>
+  </div>
+</div>
 
 </body>
 </html>
