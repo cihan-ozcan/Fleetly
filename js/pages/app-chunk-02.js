@@ -4833,6 +4833,8 @@ function closeDriverSelect() {
   document.getElementById('driver-select-backdrop').classList.add('hidden');
   driverModalVehicleFilter = null;
   _resetDriverForm();
+  // Sürücü takibi açıksa kapat (realtime + harita kaynaklarını serbest bırak)
+  if (typeof surucuTakipKapat === 'function') surucuTakipKapat();
 }
 function closeDriverSelectBackdrop(e) {
   if (e.target === document.getElementById('driver-select-backdrop')) closeDriverSelect();
@@ -4953,7 +4955,7 @@ function editDriverEntry(id) {
 
 // ── Sekme geçişi ──
 function switchDsTab(name) {
-  ['suruculer','ozet','davet','onay','ayarlar'].forEach(t => {
+  ['suruculer','takip','ozet','davet','onay','ayarlar'].forEach(t => {
     document.getElementById('ds-tab-' + t)?.classList.toggle('active', t === name);
     document.getElementById('dspanel-' + t)?.classList.toggle('active', t === name);
   });
@@ -4964,6 +4966,9 @@ function switchDsTab(name) {
     soforDavetlerYukle();
   }
   if (name === 'onay') onayKuyruguYukle();
+  // YENİ: Sürücü Takibi
+  if (name === 'takip' && typeof surucuTakipAc === 'function') surucuTakipAc();
+  else if (name !== 'takip' && typeof surucuTakipKapat === 'function') surucuTakipKapat();
 }
 
 // REFACTOR 2026-04-22: Belge onay kuyruğu — surucu_belge_onaylari tablosu
