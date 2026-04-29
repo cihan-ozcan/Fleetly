@@ -947,22 +947,17 @@ async function openOperasyonPage() {
   opsLoadLocal();
   document.getElementById('operasyon-page').classList.add('open');
   document.body.style.overflow = 'hidden';
-  opsRenderStats();
-  opsRenderTable();
-  opsRenderKanban();
-  opsRenderArsiv();
+  opsRenderAll();
   await opsLoadCloud();
   // sofor_user_id eksik iş emirleri varsa geriye dönük eşleştir
   opsSoforUserIdEslestiir().then(n => { if (n > 0) console.log(`${n} iş emrine sofor_user_id atandı`); }).catch(()=>{});
-  opsRenderStats();
-  opsRenderTable();
-  opsRenderKanban();
-  opsRenderArsiv();
-  updateOpsStatCard();
+  opsRenderAll();
+  opsStartRealtime();
 }
 function closeOperasyonPage() {
   document.getElementById('operasyon-page').classList.remove('open');
   document.body.style.overflow = '';
+  opsStopRealtime();
 }
 
 /* ── SEKME ───────────────────────────────────────────────── */
@@ -997,6 +992,175 @@ function opsRenderStats() {
     </div>`).join('');
 }
 
+/* ── DİKKAT BANDI (geciken / sinyalsiz / ETA aşımı) ───────── */
+function opsRenderAlertBar() {
+  const bar = document.getElementById('ops-alert-bar');
+  if (!bar) return;
+  const aktif = isEmirleri.filter(e => e.durum !== 'İptal' && e.durum !== 'Teslim Edildi');
+  const dikkat = aktif
+    .map(e => ({ e, info: opsAlertInfo(e) }))
+    .filter(x => x.info.level !== 'normal');
+  if (!dikkat.length) {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+  bar.style.display = 'flex';
+  const alerts = dikkat.filter(x => x.info.level === 'alert').length;
+  const warns  = dikkat.filter(x => x.info.level === 'warn').length;
+  const headColor = alerts ? 'var(--red)' : 'var(--yellow)';
+  const headBg    = alerts ? 'rgba(239,68,68,.10)' : 'rgba(234,179,8,.10)';
+  const headBorder= alerts ? 'rgba(239,68,68,.30)' : 'rgba(234,179,8,.30)';
+  const chips = dikkat.slice(0, 6).map(({ e, info }) => {
+    const c = info.level === 'alert' ? 'var(--red)' : 'var(--yellow)';
+    const bg= info.level === 'alert' ? 'rgba(239,68,68,.12)' : 'rgba(234,179,8,.12)';
+    const label = e.arac_plaka || (e.konteyner_no || '').split('\n')[0] || `#${e.id}`;
+    return `<button onclick="openOpsDrawer(${e.id})" title="${info.reasons.join(' • ').replace(/"/g,'&quot;')}" style="background:${bg};border:1px solid ${c};color:${c};border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">⚠ ${label}<span style="font-weight:500;opacity:.85;font-size:10px;">${info.reasons[0]}</span></button>`;
+  }).join('');
+  const more = dikkat.length > 6 ? `<span style="font-size:11px;color:var(--muted);">+${dikkat.length - 6} daha</span>` : '';
+  bar.style.cssText = `display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;margin-bottom:12px;background:${headBg};border:1px solid ${headBorder};border-radius:10px;`;
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;font-weight:800;color:${headColor};font-size:13px;">
+      <span>⚠ Dikkat</span>
+      ${alerts ? `<span style="background:rgba(239,68,68,.18);color:var(--red);padding:1px 7px;border-radius:99px;font-size:11px;">${alerts} acil</span>` : ''}
+      ${warns  ? `<span style="background:rgba(234,179,8,.18);color:var(--yellow);padding:1px 7px;border-radius:99px;font-size:11px;">${warns} uyarı</span>` : ''}
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${chips}${more}</div>`;
+}
+
+/* ── KANBAN SÜRÜKLE-BIRAK ─────────────────────────────────── */
+let _opsDragId = null;
+
+function opsKanbanDragStart(ev, id) {
+  _opsDragId = id;
+  try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(id)); } catch {}
+  ev.currentTarget.style.opacity = '.55';
+}
+function opsKanbanDragEnd(ev) {
+  ev.currentTarget.style.opacity = '';
+  document.querySelectorAll('.ops-kanban-col').forEach(c => c.style.outline = '');
+}
+function opsKanbanDragOver(ev) {
+  ev.preventDefault();
+  try { ev.dataTransfer.dropEffect = 'move'; } catch {}
+  ev.currentTarget.style.outline = '2px dashed var(--accent)';
+}
+function opsKanbanDragLeave(ev) {
+  ev.currentTarget.style.outline = '';
+}
+async function opsKanbanDrop(ev, hedefDurum) {
+  ev.preventDefault();
+  ev.currentTarget.style.outline = '';
+  const id = _opsDragId || parseInt(ev.dataTransfer.getData('text/plain'), 10);
+  _opsDragId = null;
+  if (!id) return;
+  const e = opsById(id);
+  if (!e) return;
+  if (e.durum === hedefDurum) return;
+  // Riskli geçişlerde onay iste
+  if (hedefDurum === 'Teslim Edildi') {
+    if (!confirm(`#${e.id} (${e.arac_plaka || ''}) "Teslim Edildi" olarak işaretlensin mi? Bu işlem sefer kaydı oluşturur.`)) return;
+  }
+  try {
+    await opsGuncelleDurum(id, hedefDurum);
+    showToast(`#${e.id} → ${hedefDurum}`, 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Durum güncellenemedi: ' + (err?.message || 'hata'), 'error');
+  }
+}
+
+/* ── "NEREDESİN?" PUSH GÖNDER ─────────────────────────────── */
+async function opsPushNeredesin(opsId) {
+  const e = isEmirleri.find(x => x.id === opsId);
+  if (!e) return;
+  const surucuId = e.surucu_id || e.sofor_user_id;
+  if (!surucuId) {
+    showToast('Bu işe bağlı sürücü bulunamadı', 'error');
+    return;
+  }
+  const btn = document.getElementById('ops-push-neredesin-btn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.6'; btn.textContent = '📡 Gönderiliyor...'; }
+  try {
+    const sb = getSB();
+    if (!sb) throw new Error('Supabase istemcisi yok');
+    const plaka = e.arac_plaka || '';
+    const { error } = await sb.functions.invoke('notify-driver', {
+      body: {
+        surucu_id : surucuId,
+        is_emri_id: e._dbId || e.id,
+        title     : '📡 Operasyon: Neredesin?',
+        body      : (plaka ? `${plaka} — ` : '') + 'Operasyon ekibi konumunuzu sordu. Lütfen uygulamayı açın.',
+        url       : '/sofor.html'
+      }
+    });
+    if (error) throw error;
+    showToast('Sürücüye bildirim gönderildi', 'success');
+    if (btn) { btn.textContent = '✓ Gönderildi'; setTimeout(() => { if(btn){btn.disabled=false;btn.style.opacity='';btn.textContent='📡 Neredesin?';}}, 4000); }
+  } catch (err) {
+    console.error('Push gönderim hatası:', err);
+    showToast('Bildirim gönderilemedi: ' + (err?.message || 'hata'), 'error');
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.textContent = '📡 Neredesin?'; }
+  }
+}
+
+/* ── REALTIME SUBSCRIPTION + PERİYODİK YENİDEN RENDER ────── */
+let _opsRealtimeChannel = null;
+let _opsAutoRefreshTimer = null;
+let _opsTickTimer = null;
+
+function opsStartRealtime() {
+  if (_opsRealtimeChannel) return; // already subscribed
+  const sb = getSB();
+  if (!sb) return;
+  try {
+    _opsRealtimeChannel = sb
+      .channel('ops-is-emirleri')
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'is_emirleri' },
+          () => { opsLoadCloud().then(() => { opsRenderAll(); }); })
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('Ops realtime hata, polling fallback devrede');
+        }
+      });
+  } catch (err) {
+    console.warn('Realtime subscribe hata:', err);
+  }
+  // Yedek: realtime düşerse bile her 30sn'de bir bulut çek
+  if (!_opsAutoRefreshTimer) {
+    _opsAutoRefreshTimer = setInterval(() => {
+      if (!document.getElementById('operasyon-page')?.classList.contains('open')) return;
+      opsLoadCloud().then(() => opsRenderAll()).catch(()=>{});
+    }, 30000);
+  }
+  // Tick: süre/konum yaşı saniye saniye değişmesin diye 20sn'de re-render
+  if (!_opsTickTimer) {
+    _opsTickTimer = setInterval(() => {
+      if (!document.getElementById('operasyon-page')?.classList.contains('open')) return;
+      opsRenderKanban();
+      opsRenderTable();
+      opsRenderAlertBar();
+    }, 20000);
+  }
+}
+function opsStopRealtime() {
+  try { if (_opsRealtimeChannel) getSB()?.removeChannel(_opsRealtimeChannel); } catch {}
+  _opsRealtimeChannel = null;
+  if (_opsAutoRefreshTimer) { clearInterval(_opsAutoRefreshTimer); _opsAutoRefreshTimer = null; }
+  if (_opsTickTimer) { clearInterval(_opsTickTimer); _opsTickTimer = null; }
+}
+
+/* Tüm operasyon görünümlerini tek seferde yenile */
+function opsRenderAll() {
+  opsRenderStats();
+  opsRenderAlertBar();
+  opsRenderTable();
+  opsRenderKanban();
+  opsRenderArsiv();
+  if (typeof updateOpsStatCard === 'function') updateOpsStatCard();
+}
+
 /* ── DURUM BADGE HTML ────────────────────────────────────── */
 function opsDurumBadge(durum) {
   const map = { 'Bekliyor':'bekliyor','Yolda':'yolda','Fabrikada':'fabrikada','Teslim Edildi':'teslim','İptal':'iptal' };
@@ -1020,6 +1184,58 @@ function opsFmtZaman(z) {
          d.toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' });
 }
 
+/* ── GEÇEN SÜREYİ "x dk önce / 2s 14dk" GİBİ FORMATLA ─────── */
+function opsRelTime(iso) {
+  if (!iso) return '';
+  const dk = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (!isFinite(dk) || dk < 0) return '';
+  if (dk < 1) return 'az önce';
+  if (dk < 60) return dk + ' dk önce';
+  const h = Math.floor(dk / 60), m = dk % 60;
+  if (h < 24) return m ? `${h}s ${m}dk önce` : `${h}s önce`;
+  const g = Math.floor(h / 24);
+  return g + ' gün önce';
+}
+
+/* ── BİR İŞ EMRİNİN "DİKKAT" SİNYALLERİNİ HESAPLA ─────────── */
+/* Döner: { level: 'normal'|'warn'|'alert', reasons: [string], color: cssVar }
+   - alert : >6 saat yolda, >2 saat fabrikada, son konum >30dk önce
+   - warn  : >3 saat yolda, >1 saat fabrikada, son konum >15dk önce, ETA aşıldı       */
+function opsAlertInfo(e) {
+  const reasons = [];
+  let level = 'normal';
+  const now = Date.now();
+  const dur = e.durum || 'Bekliyor';
+
+  if (dur === 'Yolda' && e.yola_zaman) {
+    const dk = Math.round((now - new Date(e.yola_zaman)) / 60000);
+    if (dk > 360)      { level = 'alert'; reasons.push(`6+ saattir yolda (${Math.floor(dk/60)}s)`); }
+    else if (dk > 180) { if (level==='normal') level='warn'; reasons.push(`3+ saattir yolda (${Math.floor(dk/60)}s ${dk%60}dk)`); }
+  }
+  if (dur === 'Fabrikada' && e.fabrika_giris && !e.fabrika_cikis) {
+    const dk = Math.round((now - new Date(e.fabrika_giris)) / 60000);
+    if (dk > 120)     { level = 'alert'; reasons.push(`Fabrikada 2+ saat (${Math.floor(dk/60)}s ${dk%60}dk)`); }
+    else if (dk > 60) { if (level==='normal') level='warn'; reasons.push(`Fabrikada 1+ saat (${dk} dk)`); }
+  }
+  if (['Yolda','Fabrikada'].includes(dur) && e.konum_zaman) {
+    const dk = Math.round((now - new Date(e.konum_zaman)) / 60000);
+    if (dk > 30)      { level = 'alert'; reasons.push(`Konum ${dk} dk güncellenmedi`); }
+    else if (dk > 15) { if (level==='normal') level='warn'; reasons.push(`Konum ${dk} dk önce güncellendi`); }
+  } else if (['Yolda','Fabrikada'].includes(dur) && !e.konum_zaman) {
+    if (level==='normal') level='warn';
+    reasons.push('Konum sinyali yok');
+  }
+  if (dur === 'Yolda' && e.eta_iso) {
+    const gec = Math.round((now - new Date(e.eta_iso)) / 60000);
+    if (gec > 0) {
+      if (gec > 30) { level = 'alert'; reasons.push(`ETA ${gec} dk aşıldı`); }
+      else { if (level==='normal') level='warn'; reasons.push(`ETA ${gec} dk aşıldı`); }
+    }
+  }
+  const color = level === 'alert' ? 'var(--red)' : level === 'warn' ? 'var(--yellow)' : 'var(--text2)';
+  return { level, reasons, color };
+}
+
 /* ── TABLO ───────────────────────────────────────────────── */
 function opsRenderTable() {
   const q      = (document.getElementById('ops-search')?.value || '').toLowerCase();
@@ -1034,7 +1250,7 @@ function opsRenderTable() {
   document.getElementById('ops-table-count').textContent = sorted.length + ' kayıt';
   const tbody = document.getElementById('ops-table-body');
   if (!sorted.length) {
-    tbody.innerHTML = `<tr><td colspan="11" class="srm-empty"><div style="text-align:center;padding:32px;color:var(--muted);">Henüz aktif iş emri yok. <button onclick="openOpsIsEmriModal()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-family:var(--font-body);font-size:13px;font-weight:600;">+ Yeni oluştur</button></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="17" class="srm-empty"><div style="text-align:center;padding:32px;color:var(--muted);">Henüz aktif iş emri yok. <button onclick="openOpsIsEmriModal()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-family:var(--font-body);font-size:13px;font-weight:600;">+ Yeni oluştur</button></div></td></tr>`;
     return;
   }
   tbody.innerHTML = sorted.map(e => {
@@ -1057,6 +1273,14 @@ function opsRenderTable() {
       <td style="font-size:12px;color:var(--text2);">${e.teslim_yeri || '—'}</td>
       <td style="font-size:11.5px;color:var(--teal);">${e.bos_donus || '—'}</td>
       <td>${opsDurumBadge(e.durum)}</td>
+      <td><span style="font-family:var(--font-mono);font-size:11.5px;color:${e.yola_zaman?'var(--text)':'var(--muted)'};">${opsFmtZaman(e.yola_zaman)}</span>${e.yola_zaman&&e.durum==='Yolda'?`<div style="font-family:var(--font-mono);font-size:10px;color:var(--blue);margin-top:1px;">${opsRelTime(e.yola_zaman)}</div>`:''}</td>
+      <td>${(() => {
+        const km = (e.baslangic_km != null && e.bitis_km != null) ? (e.bitis_km - e.baslangic_km) : null;
+        const kmHtml = e.baslangic_km != null
+          ? `<div style="font-family:var(--font-mono);font-size:11.5px;color:var(--text);">${e.baslangic_km.toLocaleString('tr-TR')}${e.bitis_km!=null?` → ${e.bitis_km.toLocaleString('tr-TR')}`:''}</div>${km!=null?`<div style="font-family:var(--font-mono);font-size:10px;color:var(--blue);font-weight:700;">${km.toLocaleString('tr-TR')} km</div>`:''}`
+          : '<span style="color:var(--muted);font-size:11px;">—</span>';
+        return kmHtml;
+      })()}</td>
       <td><span style="font-family:var(--font-mono);font-size:11.5px;">${opsFmtZaman(e.fabrika_giris)}</span></td>
       <td><span style="font-family:var(--font-mono);font-size:11.5px;">${opsFmtZaman(e.fabrika_cikis)}</span></td>
       <td><span style="font-family:var(--font-mono);font-size:11.5px;color:${e.fabrika_giris&&e.fabrika_cikis?'var(--yellow)':'var(--muted)'};">${opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)}</span></td>
@@ -1083,7 +1307,10 @@ function opsRenderKanban() {
   document.getElementById('ops-kanban').innerHTML = kolonlar.map(kol => {
     const kartlar = aktif.filter(e => e.durum === kol.key);
     return `
-      <div class="ops-kanban-col">
+      <div class="ops-kanban-col" data-durum="${kol.key}"
+           ondragover="opsKanbanDragOver(event)"
+           ondragleave="opsKanbanDragLeave(event)"
+           ondrop="opsKanbanDrop(event,'${kol.key}')">
         <div class="ops-kanban-col-header">
           <span style="color:${kol.color};">${kol.label}</span>
           <span class="ops-kanban-count" style="color:${kol.color};">${kartlar.length}</span>
@@ -1092,13 +1319,52 @@ function opsRenderKanban() {
           const kontNolar = (e.konteyner_no || '').split('\n').filter(Boolean);
           const kontLabel = kontNolar.length > 1 ? kontNolar[0] + ` +${kontNolar.length-1}` : (kontNolar[0] || '—');
           const doluBosBadge = e.kont_durum === 'Boş' ? '<span style="font-size:10px;color:var(--muted);">🔲 Boş</span>' : '<span style="font-size:10px;color:var(--accent);">📦 Dolu</span>';
+
+          const alert = opsAlertInfo(e);
+          const ringStyle = alert.level === 'alert' ? 'box-shadow:0 0 0 2px rgba(239,68,68,.45);'
+                          : alert.level === 'warn'  ? 'box-shadow:0 0 0 2px rgba(234,179,8,.4);' : '';
+
+          // Canlı bilgi satırı (km, süre, konum)
+          const liveBits = [];
+          if (e.baslangic_km != null) liveBits.push(`<span title="Yola çıkış km">🛣 ${e.baslangic_km.toLocaleString('tr-TR')}</span>`);
+          if (e.bitis_km != null && e.baslangic_km != null) {
+            liveBits.push(`<span style="color:var(--blue);" title="Katedilen km">+${(e.bitis_km - e.baslangic_km).toLocaleString('tr-TR')} km</span>`);
+          }
+          if (kol.key === 'Yolda' && e.yola_zaman) {
+            liveBits.push(`<span title="Yola çıkış: ${opsFmtZaman(e.yola_zaman)}">⏱ ${opsRelTime(e.yola_zaman)}</span>`);
+          }
+          if (kol.key === 'Fabrikada' && e.fabrika_giris && !e.fabrika_cikis) {
+            liveBits.push(`<span title="Fabrika giriş: ${opsFmtZaman(e.fabrika_giris)}" style="color:var(--accent);">🏭 ${opsRelTime(e.fabrika_giris)}</span>`);
+          }
+          if ((kol.key === 'Yolda' || kol.key === 'Fabrikada') && e.konum_zaman) {
+            const dk = Math.round((Date.now() - new Date(e.konum_zaman)) / 60000);
+            const renk = dk > 30 ? 'var(--red)' : dk > 15 ? 'var(--yellow)' : 'var(--green)';
+            liveBits.push(`<span style="color:${renk};" title="Son konum güncellemesi">📍 ${opsRelTime(e.konum_zaman)}</span>`);
+          }
+          const liveHtml = liveBits.length
+            ? `<div class="ops-kcard-live" style="display:flex;flex-wrap:wrap;gap:6px 10px;font-family:var(--font-mono);font-size:10.5px;color:var(--text2);margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">${liveBits.join('')}</div>`
+            : '';
+
+          const alertBadge = alert.level !== 'normal'
+            ? `<div title="${alert.reasons.join(' • ').replace(/"/g,'&quot;')}" style="display:inline-flex;align-items:center;gap:3px;background:${alert.level==='alert'?'rgba(239,68,68,.12)':'rgba(234,179,8,.12)'};color:${alert.color};border-radius:4px;padding:1px 6px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-left:auto;">${alert.level==='alert'?'⚠ Acil':'⚠ Dikkat'}</div>`
+            : '';
+
           return `
-          <div class="ops-kcard" onclick="openOpsDrawer(${e.id})">
-            <div class="ops-kcard-plaka">${e.arac_plaka || '—'} ${e.kont_tip ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-left:4px;">${e.kont_tip}</span>` : ''}</div>
+          <div class="ops-kcard" draggable="true"
+               ondragstart="opsKanbanDragStart(event,${e.id})"
+               ondragend="opsKanbanDragEnd(event)"
+               onclick="openOpsDrawer(${e.id})"
+               style="${ringStyle}cursor:grab;">
+            <div class="ops-kcard-plaka" style="display:flex;align-items:center;gap:6px;">
+              <span>${e.arac_plaka || '—'}</span>
+              ${e.kont_tip ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">${e.kont_tip}</span>` : ''}
+              ${alertBadge}
+            </div>
             <div class="ops-kcard-cont">📦 ${kontLabel} ${doluBosBadge}</div>
             <div class="ops-kcard-musteri">${e.musteri_adi || '—'}</div>
             ${e.bos_donus ? `<div style="font-size:10.5px;color:var(--teal);margin-top:3px;">↩ ${e.bos_donus}</div>` : ''}
             <div class="ops-kcard-time">${opsFmtZaman(e.atama_zamani)}</div>
+            ${liveHtml}
           </div>`;}).join('') :
           `<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Boş</div>`}
       </div>`;
@@ -1785,14 +2051,19 @@ function _opsRenderSoforDurum(e) {
   const hasKm     = e.baslangic_km != null;
   const hasEta    = e.eta_iso != null;
   const hasMesafe = e.kalan_km != null;
+  const surucuId  = e.surucu_id || e.sofor_user_id || null;
+  const pushBtn   = surucuId
+    ? `<button id="ops-push-neredesin-btn" onclick="opsPushNeredesin(${e.id})" style="background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.35);color:var(--blue);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">📡 Neredesin?</button>`
+    : '';
   if (!hasKonum && !hasKm && !hasEta) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--muted);">Şoför henüz konum veya km bilgisi göndermedi.</div>';
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;"><div style="font-size:12px;color:var(--muted);flex:1;">Şoför henüz konum veya km bilgisi göndermedi.</div>${pushBtn}</div>`;
     return;
   }
   const konumZaman = e.konum_zaman
     ? new Date(e.konum_zaman).toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
     : null;
-  el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+  el.innerHTML = `${pushBtn ? `<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">${pushBtn}</div>` : ''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
     ${hasKonum ? `<div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:9px;padding:10px 12px;grid-column:1/-1;">
       <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">📍 Son Konum</div>
       <div style="font-family:var(--font-mono);font-size:11.5px;color:var(--text);">${e.konum_lat.toFixed(5)}, ${e.konum_lng.toFixed(5)}</div>
