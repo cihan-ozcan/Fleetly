@@ -653,6 +653,24 @@ async function soforKmKaydet() {
     soforIsEmirleriYukle();
     if (durum === 'Yolda') soforKonumStart();
     else soforKonumStop();
+
+    // ── POD AKIŞI: teslim olunca imza + taslak PDF modal'ı aç ──
+    if (durum === 'Teslim Edildi' && typeof podModalAc === 'function') {
+      // Aktif iş emrini en güncel haliyle tazele (durum değişikliği işlendi)
+      e.durum = 'Teslim Edildi';
+      e.teslim_zamani = now;
+      e.bitis_km = kmVal;
+      // Modal'ı bir frame sonra aç ki KM toast'ı önce görünsün
+      setTimeout(() => {
+        podModalAc({
+          isEmri: e,
+          onTamamlandi: () => {
+            soforJobAc(e.id);
+            soforIsEmirleriYukle();
+          }
+        });
+      }, 350);
+    }
   } catch (err) {
     console.error(err);
     soforToast('Kaydedilemedi: ' + (err?.message || 'hata'), 'err');

@@ -704,6 +704,9 @@ async function confirmTeslim(){
     teslim_alan_ad : alan,
     teslim_not_musteri: not || null,
     imza_url       : imzaUrl,
+    // POD: Yönetici onayı bekliyor (taslak PDF yönetici drawer'ı açınca üretilir)
+    pod_durum      : 'taslak',
+    pod_olusturma_zaman: new Date().toISOString(),
     // ETA önbelleğini temizle — müşteri sayfasında "Teslim" görünsün
     eta_iso        : null,
     kalan_km       : 0,
@@ -711,7 +714,7 @@ async function confirmTeslim(){
   });
   stopGPS();           // GPS izlemeyi durdur
   _lastEtaCalc = Infinity; // OSRM çağrısının yeniden tetiklenmesini engelle
-  showToast('🎯 Teslim kaydedildi!','success');
+  showToast('🎯 Teslim kaydedildi! Yönetici onayı bekleniyor.','success');
 }
 
 /* ─── COORDS: alım/teslim koordinatları app.html'de manuel
