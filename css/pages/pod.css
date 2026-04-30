@@ -1,0 +1,229 @@
+/* ========================================================================
+   pod.css — POD (Teslim Makbuzu) modal + imza canvas stilleri
+   ======================================================================== */
+
+/* ── Bottom-sheet modal (sürücü teslim onayı) ─────────────────────── */
+.pod-sheet-bg {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(4px);
+  z-index: 9000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.pod-sheet-bg.open { opacity: 1; pointer-events: auto; }
+
+.pod-sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 9010;
+  background: var(--bg, #0e1330);
+  color: var(--text, #f0f3ff);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  border: 1px solid var(--border, rgba(255,255,255,.08));
+  border-bottom: 0;
+  max-height: 92vh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform .25s ease-out;
+  box-shadow: 0 -10px 40px rgba(0,0,0,.45);
+}
+.pod-sheet.open { transform: translateY(0); }
+
+@media (min-width: 720px) {
+  .pod-sheet {
+    left: 50%; right: auto;
+    bottom: 50%;
+    transform: translate(-50%, 50%) scale(.96);
+    width: 640px; max-width: calc(100vw - 32px);
+    max-height: 88vh;
+    border-radius: 16px;
+    border: 1px solid var(--border, rgba(255,255,255,.08));
+    opacity: 0;
+  }
+  .pod-sheet.open { transform: translate(-50%, 50%); opacity: 1; }
+}
+
+.pod-sheet-handle {
+  width: 44px; height: 5px;
+  background: rgba(255,255,255,.18);
+  border-radius: 99px;
+  margin: 9px auto 6px;
+}
+.pod-sheet-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 18px 12px;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,.08));
+}
+.pod-sheet-title {
+  font-size: 17px; font-weight: 800;
+  letter-spacing: -.01em;
+}
+.pod-sheet-close {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border2, rgba(255,255,255,.12));
+  background: rgba(255,255,255,.04);
+  color: var(--text2, #a8b8d8);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pod-sheet-close:hover { background: rgba(255,255,255,.10); }
+
+.pod-sheet-body {
+  padding: 16px 18px 24px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.pod-field-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700;
+  color: var(--text, #f0f3ff);
+  margin-bottom: 6px;
+}
+.pod-field-label .opt {
+  font-size: 10.5px; font-weight: 500;
+  color: var(--muted, #6e7d99);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.pod-input,
+.pod-textarea {
+  width: 100%;
+  background: var(--surface2, rgba(255,255,255,.04));
+  border: 1px solid var(--border2, rgba(255,255,255,.12));
+  color: var(--text, #f0f3ff);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  resize: none;
+}
+.pod-input:focus,
+.pod-textarea:focus {
+  border-color: var(--accent, #e8521a);
+  box-shadow: 0 0 0 3px rgba(232,82,26,.12);
+}
+.pod-textarea { min-height: 64px; }
+
+/* ── İmza canvas ──────────────────────────────────────────────────── */
+.pod-imza-wrap {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid var(--border2, rgba(255,255,255,.12));
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.04);
+}
+.pod-imza-canvas {
+  width: 100%;
+  height: 160px;
+  display: block;
+  cursor: crosshair;
+  touch-action: none; /* mobil: scroll'u engelle */
+}
+.pod-imza-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(0,0,0,.35);
+  font-size: 13px;
+  pointer-events: none;
+  font-style: italic;
+}
+.pod-imza-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 6px;
+}
+.pod-imza-info {
+  font-size: 11px; color: var(--muted, #6e7d99);
+}
+.pod-imza-clear {
+  background: rgba(239,68,68,.12);
+  border: 1px solid rgba(239,68,68,.30);
+  color: var(--red, #ef4444);
+  border-radius: 7px;
+  padding: 5px 11px;
+  font-size: 11.5px; font-weight: 700;
+  cursor: pointer;
+}
+.pod-imza-clear:hover { background: rgba(239,68,68,.20); }
+
+/* ── Foto bölümü ──────────────────────────────────────────────────── */
+.pod-foto-row {
+  display: flex; gap: 8px;
+  align-items: center; flex-wrap: wrap;
+}
+.pod-foto-thumb {
+  width: 56px; height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border2, rgba(255,255,255,.12));
+}
+.pod-foto-add {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(56,189,248,.12);
+  border: 1px dashed rgba(56,189,248,.40);
+  color: var(--blue, #38bdf8);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12.5px; font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── Onayla butonu ────────────────────────────────────────────────── */
+.pod-onay-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--green, #22c55e), #15a346);
+  border: 0;
+  color: #fff;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px; font-weight: 800;
+  letter-spacing: .01em;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform .1s, box-shadow .15s;
+}
+.pod-onay-btn:hover { box-shadow: 0 6px 20px rgba(34,197,94,.35); }
+.pod-onay-btn:active { transform: scale(.985); }
+.pod-onay-btn:disabled {
+  opacity: .55; cursor: not-allowed;
+  background: var(--surface3, rgba(255,255,255,.06));
+  color: var(--muted, #6e7d99);
+}
+
+.pod-progress {
+  display: none;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text2, #a8b8d8);
+  text-align: center;
+}
+.pod-progress.show { display: block; }
+
+/* ── POD onay modal (yönetici tarafı, Faz 2'de kullanılır) ────────── */
+.pod-onay-modal-iframe {
+  width: 100%;
+  height: 60vh;
+  border: 1px solid var(--border, rgba(255,255,255,.08));
+  border-radius: 10px;
+  background: #fff;
+}
+
+/* ── Kanban POD badge ─────────────────────────────────────────────── */
+.pod-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 4px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+.pod-badge.taslak  { background: rgba(212,168,71,.16); color: var(--yellow, #d4a847); border:1px solid rgba(212,168,71,.35); }
+.pod-badge.onayli  { background: rgba(34,197,94,.16);  color: var(--green, #22c55e);  border:1px solid rgba(34,197,94,.35); }
+.pod-badge.red     { background: rgba(239,68,68,.16);  color: var(--red, #ef4444);    border:1px solid rgba(239,68,68,.35); }
