@@ -713,6 +713,13 @@ function opsRowToObj(r) {
     teslim_alan_ad      : r.teslim_alan_ad      || null,
     teslim_not_musteri  : r.teslim_not_musteri   || null,
     imza_url            : r.imza_url             || null,
+    pod_taslak_url      : r.pod_taslak_url      || null,
+    pod_final_url       : r.pod_final_url       || null,
+    pod_olusturma_zaman : r.pod_olusturma_zaman || null,
+    pod_onay_zaman      : r.pod_onay_zaman      || null,
+    pod_onaylayan       : r.pod_onaylayan       || null,
+    pod_onay_notu       : r.pod_onay_notu       || null,
+    pod_durum           : r.pod_durum           || null,
   };
 }
 
@@ -1479,9 +1486,10 @@ function opsRenderKanban() {
                ondragend="opsKanbanDragEnd(event)"
                onclick="openOpsDrawer(${e.id})"
                style="${ringStyle}cursor:grab;">
-            <div class="ops-kcard-plaka" style="display:flex;align-items:center;gap:6px;">
+            <div class="ops-kcard-plaka" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
               <span>${e.arac_plaka || '—'}</span>
               ${e.kont_tip ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">${e.kont_tip}</span>` : ''}
+              ${typeof podKanbanBadgeHtml === 'function' ? podKanbanBadgeHtml(e) : ''}
               ${alertBadge}
             </div>
             <div class="ops-kcard-cont">📦 ${kontLabel} ${doluBosBadge}</div>
@@ -2223,15 +2231,55 @@ function _opsRenderPOD(e) {
   const el  = document.getElementById('ops-drawer-pod');
   const sec = document.getElementById('ops-drawer-pod-section');
   if (!el || !sec) return;
-  const hasPOD = e.teslim_alan_ad || e.imza_url;
-  sec.style.display = hasPOD ? '' : 'none';
-  if (!hasPOD) return;
-  el.innerHTML = `<div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px 14px;">
-    ${e.teslim_alan_ad ? `<div class="detail-row"><span class="detail-key">Teslim Alan</span><span class="detail-val">${e.teslim_alan_ad}</span></div>` : ''}
-    ${e.teslim_not_musteri ? `<div class="detail-row"><span class="detail-key">Müşteri Notu</span><span class="detail-val">${e.teslim_not_musteri}</span></div>` : ''}
+  const teslim = e.durum === 'Teslim Edildi';
+  const hasPODData = e.teslim_alan_ad || e.imza_url || e.pod_taslak_url || e.pod_final_url;
+  // Teslim edildiyse her zaman göster (POD yoksa "oluşturulmadı" diyelim)
+  sec.style.display = (teslim || hasPODData) ? '' : 'none';
+  if (!sec.style.display) return;
+
+  const dur = e.pod_durum;
+  const safe = (s) => s == null ? '' : String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+  // Durum bandı
+  let durumBand = '';
+  if (dur === 'onayli') {
+    const tarih = e.pod_onay_zaman ? new Date(e.pod_onay_zaman).toLocaleString('tr-TR') : '';
+    durumBand = `<div style="background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.35);color:var(--green);border-radius:8px;padding:9px 12px;font-size:12.5px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+      ✅ Onaylandı <span style="font-weight:500;color:var(--text2);font-size:11.5px;margin-left:auto;">${safe(tarih)}</span>
+    </div>`;
+  } else if (dur === 'reddedildi') {
+    durumBand = `<div style="background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);color:var(--red);border-radius:8px;padding:9px 12px;font-size:12.5px;font-weight:700;margin-bottom:10px;">
+      ❌ Reddedildi ${e.pod_onay_notu ? `<div style="font-weight:500;color:var(--text2);font-size:11.5px;margin-top:3px;">${safe(e.pod_onay_notu)}</div>` : ''}
+    </div>`;
+  } else if (dur === 'taslak' || e.pod_taslak_url) {
+    durumBand = `<div style="background:rgba(212,168,71,.10);border:1px solid rgba(212,168,71,.35);color:var(--yellow);border-radius:8px;padding:9px 12px;font-size:12.5px;font-weight:700;margin-bottom:10px;">
+      ⏳ Taslak — Yönetici onayı bekleniyor
+    </div>`;
+  } else if (teslim) {
+    durumBand = `<div style="background:rgba(99,102,241,.10);border:1px solid rgba(99,102,241,.35);color:var(--accent);border-radius:8px;padding:9px 12px;font-size:12.5px;font-weight:700;margin-bottom:10px;">
+      📋 POD oluşturulmadı — Onaylayarak final makbuzu üretebilirsiniz
+    </div>`;
+  }
+
+  // PDF butonları
+  const pdfBtns = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      ${e.pod_taslak_url ? `<a href="${safe(e.pod_taslak_url)}" target="_blank" rel="noopener" style="flex:1;min-width:140px;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:rgba(212,168,71,.12);border:1px solid rgba(212,168,71,.35);color:var(--yellow);border-radius:8px;padding:9px 12px;font-size:12.5px;font-weight:700;text-decoration:none;">📄 Taslak PDF</a>` : ''}
+      ${e.pod_final_url ? `<a href="${safe(e.pod_final_url)}" target="_blank" rel="noopener" style="flex:1;min-width:140px;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:var(--green);border-radius:8px;padding:9px 12px;font-size:12.5px;font-weight:700;text-decoration:none;">✅ Final PDF</a>` : ''}
+      ${(teslim && dur !== 'onayli') ? `<button onclick="podOnayModalAc(opsById(${e.id}))" style="flex:1;min-width:140px;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,var(--green),#15a346);border:0;color:#fff;border-radius:8px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;">✅ POD'u Onayla</button>` : ''}
+      ${(dur === 'onayli') ? `<button onclick="podOnayModalAc(opsById(${e.id}))" style="background:rgba(255,255,255,.04);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:9px 12px;font-size:12px;cursor:pointer;">↻ Yeniden onay</button>` : ''}
+    </div>`;
+
+  // Detay
+  const detay = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+    ${e.teslim_alan_ad ? `<div class="detail-row"><span class="detail-key">Teslim Alan</span><span class="detail-val">${safe(e.teslim_alan_ad)}</span></div>` : ''}
+    ${e.teslim_not_musteri ? `<div class="detail-row"><span class="detail-key">Müşteri Notu</span><span class="detail-val">${safe(e.teslim_not_musteri)}</span></div>` : ''}
+    ${e.pod_onay_notu && dur === 'onayli' ? `<div class="detail-row"><span class="detail-key">Onay Notu</span><span class="detail-val">${safe(e.pod_onay_notu)}</span></div>` : ''}
     ${e.imza_url ? `<div style="margin-top:10px;"><div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Dijital İmza</div>
-      <img src="${e.imza_url}" alt="İmza" style="max-width:100%;border-radius:8px;border:1px solid var(--border2);background:#fff;cursor:pointer;" onclick="window.open('${e.imza_url}','_blank')" /></div>` : ''}
+      <img src="${safe(e.imza_url)}" alt="İmza" style="max-width:100%;max-height:120px;border-radius:8px;border:1px solid var(--border2);background:#fff;cursor:pointer;" onclick="window.open('${safe(e.imza_url)}','_blank')" /></div>` : ''}
   </div>`;
+
+  el.innerHTML = durumBand + pdfBtns + detay;
 }
 
 /* ── Mesaj thread'i render ── */
