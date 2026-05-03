@@ -1912,6 +1912,27 @@ function calcAvgTLPerKm(vehicleId) {
   return totalKm > 0 ? +(totalTl / totalKm).toFixed(2) : 0;
 }
 
+/* Aracın ortalama yakıt tüketimi — klasik tank-to-tank yöntemi.
+   Ardışık iki dolum arası: kmDiff km'de litreYeni litre yakıldı varsayılır.
+   (Depo doluyken alımdan dolu alıma → tüketim tam ölçülür.)
+   Anomalileri (>5000 km gap, negatif km, ≤0 L) filtreler.
+   Dönüş: L/100km. 0 = yetersiz veri. */
+function calcAvgConsumption(vehicleId) {
+  const arr = (fuelData && fuelData[vehicleId]) || [];
+  if (arr.length < 2) return 0;
+  const sorted = arr.slice().sort((a,b) => (a.km||0) - (b.km||0));
+  let totalKm = 0, totalL = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const dKm = (sorted[i].km||0) - (sorted[i-1].km||0);
+    const lit = parseFloat(sorted[i].litre) || 0;
+    if (dKm > 0 && dKm < 5000 && lit > 0) {
+      totalKm += dKm;
+      totalL  += lit;
+    }
+  }
+  return totalKm > 0 ? +((totalL * 100) / totalKm).toFixed(2) : 0;
+}
+
 // Yakıt kaydı sil
 function deleteFuelEntry(vehicleId, entryId) {
   if (!fuelData[vehicleId]) return;
