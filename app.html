@@ -378,7 +378,7 @@
         <div class="settings-dropdown hidden" id="settings-dropdown">
           <div class="settings-item" id="settings-pwa-item" onclick="pwaInstall();closeSettings()" style="display:none">📲 Ana Ekrana Ekle</div>
           <div class="settings-sep" id="settings-pwa-sep" style="display:none"></div>
-          <div class="settings-item" onclick="openDashEdit();closeSettings()">🎛 Dashboard Düzenle</div>
+          <div class="settings-item" onclick="openDashEdit();closeSettings()" style="display:none">🎛 Dashboard Düzenle</div>
           <div class="settings-item" onclick="openBrandingModal();closeSettings()">🎨 Marka &amp; Portal Ayarları</div>
           <div class="settings-sep"></div>
           <div class="settings-item" onclick="exportJSON();closeSettings()">⬇ Dışa Aktar</div>
@@ -853,8 +853,9 @@
     </div>
   </div>
 
-  <!-- 4a. ÖZET KARTLAR -->
-  <div class="stats-grid" id="stats-grid">
+  <!-- 4a. ÖZET KARTLAR (Faz 4: gizlendi — banner + KPI satırı bilgileri taşıyor;
+       MutationObserver mirror sync için DOM'da kalmaya devam ediyor) -->
+  <div class="stats-grid" id="stats-grid" style="display:none" aria-hidden="true">
     <!-- BİRLEŞİK FİLO ÖZET KARTI -->
     <div class="stat-card" id="filo-stat-card" style="grid-column:span 2">
       <div class="stat-card-top">
@@ -1213,11 +1214,15 @@
   <span id="sum-bakim"  style="display:none"></span>
   <span id="sum-pasif"  style="display:none"></span>
 
-  <!-- 4c. ARAÇ TABLOSU -->
-  <div class="table-section">
-    <div class="table-toolbar">
-      <div class="toolbar-left">
-        <div class="search-wrap">
+  <!-- 4c. ARAÇ TABLOSU (Faz 4 — handoff .card sarmasında) -->
+  <div class="card table-section" style="margin-bottom:18px">
+    <div class="card__head" style="flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="card__title">Filo Listesi</div>
+        <div class="card__sub"><span id="table-count">—</span></div>
+      </div>
+      <div class="row" style="gap:10px;flex-wrap:wrap;justify-content:flex-end;flex:1;min-width:0">
+        <div class="search-wrap" style="min-width:220px">
           <span class="icon-search">🔎</span>
           <input type="text" id="search-input" placeholder="Plaka veya şoför ara…" oninput="currentPage=1;renderTable()" />
         </div>
@@ -1227,10 +1232,7 @@
           <div class="tab" data-filter="Dorse" onclick="setFilter('Dorse',this)">Dorse</div>
           <div class="tab" data-filter="yaklasan" onclick="setFilter('yaklasan',this)">⚠ Yaklaşanlar</div>
         </div>
-      </div>
-      <div class="toolbar-right">
-        <span id="table-count" style="font-size:12px;color:var(--muted)"></span>
-        <select id="page-size-select" onchange="pageSize=+this.value;currentPage=1;renderTable()" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border2);border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;margin-left:10px">
+        <select id="page-size-select" onchange="pageSize=+this.value;currentPage=1;renderTable()" style="background:var(--bg-sunk);color:var(--text);border:1px solid var(--border);border-radius:var(--r-md);padding:6px 10px;font-size:12.5px;cursor:pointer;font-family:var(--font-body)">
           <option value="10">10 / sayfa</option>
           <option value="25" selected>25 / sayfa</option>
           <option value="50">50 / sayfa</option>
@@ -1238,47 +1240,49 @@
         </select>
       </div>
     </div>
-  <!-- Mobil kart listesi (tablo yerine) -->
-  <div id="mob-card-list"></div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th onclick="sortBy('plaka')">Plaka / Kod <span class="sort-icon">↕</span></th>
-            <th onclick="sortBy('tip')">Tip <span class="sort-icon">↕</span></th>
-            <th>Eşleşme</th>
-            <th>Şoför</th>
-            <th>Telefon</th>
-            <th onclick="sortBy('muayene')">Muayene Bitiş <span class="sort-icon">↕</span></th>
-            <th onclick="sortBy('sigorta')">Sigorta Bitiş <span class="sort-icon">↕</span></th>
-            <th onclick="sortBy('takograf')">Takograf <span class="sort-icon">↕</span></th>
-            <th onclick="sortBy('kalanGun')">Gün Kalan <span class="sort-icon">↕</span></th>
-            <th>Durum</th>
-            <th onclick="sortBy('tuketim')" title="Ortalama yakıt tüketimi (L/100km)">L/100km <span class="sort-icon">↕</span></th>
-            <th>Notlar</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="table-body"></tbody>
-      </table>
+    <div class="card__body card__body--flush">
+      <!-- Mobil kart listesi (tablo yerine) -->
+      <div id="mob-card-list"></div>
+      <div class="table-wrap" style="border-radius:0;border:none;background:transparent">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortBy('plaka')">Plaka / Kod <span class="sort-icon">↕</span></th>
+              <th onclick="sortBy('tip')">Tip <span class="sort-icon">↕</span></th>
+              <th>Eşleşme</th>
+              <th>Şoför</th>
+              <th>Telefon</th>
+              <th onclick="sortBy('muayene')">Muayene Bitiş <span class="sort-icon">↕</span></th>
+              <th onclick="sortBy('sigorta')">Sigorta Bitiş <span class="sort-icon">↕</span></th>
+              <th onclick="sortBy('takograf')">Takograf <span class="sort-icon">↕</span></th>
+              <th onclick="sortBy('kalanGun')">Gün Kalan <span class="sort-icon">↕</span></th>
+              <th>Durum</th>
+              <th onclick="sortBy('tuketim')" title="Ortalama yakıt tüketimi (L/100km)">L/100km <span class="sort-icon">↕</span></th>
+              <th>Notlar</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <!-- Sayfalama -->
+      <div id="pagination-bar" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;flex-wrap:wrap;border-top:1px solid var(--border)"></div>
     </div>
-    <!-- Sayfalama -->
-    <div id="pagination-bar" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 0 4px;flex-wrap:wrap"></div>
-  </div><!-- /table-section -->
+  </div>
 
-  <!-- 4d. SON DÜZENLEMELER PANELİ -->
-  <div class="activity-panel" style="margin-top:20px">
-    <div class="panel-header">
-      <div class="panel-title">
-        <span class="dot dot-orange"></span>
-        Son Düzenlemeler
+  <!-- 4d. SON DÜZENLEMELER (Faz 4 — handoff .card sarmasında) -->
+  <div class="card" style="margin-top:18px">
+    <div class="card__head">
+      <div>
+        <div class="card__title">Son Düzenlemeler</div>
+        <div class="card__sub">Aktivite geçmişi</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="activity-clear-btn" onclick="clearActivityLog()" title="Geçmişi temizle">✕ Temizle</button>
-      </div>
+      <button class="activity-clear-btn" onclick="clearActivityLog()" title="Geçmişi temizle">✕ Temizle</button>
     </div>
-    <div class="activity-list" id="activity-list">
-      <div class="activity-empty"><div class="icon">📋</div><p>Henüz düzenleme yok.</p></div>
+    <div class="card__body card__body--flush">
+      <div class="activity-list" id="activity-list" style="max-height:340px;overflow-y:auto;padding:8px 10px">
+        <div class="activity-empty"><div class="icon">📋</div><p>Henüz düzenleme yok.</p></div>
+      </div>
     </div>
   </div>
 
