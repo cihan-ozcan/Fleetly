@@ -69,6 +69,7 @@
   <script src="js/core/include.js" defer></script>
   <script src="js/core/theme.js" defer></script>
   <script src="js/core/app-shell.js" defer></script>
+  <script src="js/ui/dashboard-components.js" defer></script>
 </head>
 <body>
 
@@ -431,6 +432,427 @@
      ========================================================= -->
 <main>
 
+  <!-- 4.0 SİNEMATİK BANNER (Faz 3) -->
+  <section class="cine-banner">
+    <div class="cine-banner__head">
+      <div>
+        <div class="cine-banner__live">
+          <span class="live-pill"><span class="dot dot--pulse"></span>Canlı</span>
+          <span class="cine-banner__date" id="cine-banner-date">—</span>
+        </div>
+        <h2 class="cine-banner__title" id="cine-banner-greeting">Günaydın 👋</h2>
+        <p class="cine-banner__sub">
+          Filo komuta merkeziniz. <em>Seferler</em>, <b>bakım</b>, yakıt ve raporlar — tek bakışta.
+        </p>
+      </div>
+      <div class="cine-banner__actions">
+        <button class="btn--ghost-on-dark" onclick="openRaporModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Günlük Rapor
+        </button>
+        <button class="btn--accent" onclick="openSeferModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Yeni Sefer
+        </button>
+      </div>
+    </div>
+    <div class="cine-banner__strip">
+      <div class="cine-banner__stat">
+        <div class="cine-banner__stat-label">
+          <span class="dot" style="background:var(--success)"></span>Çekici
+        </div>
+        <div class="cine-banner__stat-value">
+          <span id="banner-stat-cekici">0</span><span class="cine-banner__stat-total">/ <span id="banner-stat-toplam">0</span></span>
+        </div>
+      </div>
+      <div class="cine-banner__stat">
+        <div class="cine-banner__stat-label">
+          <span class="dot" style="background:var(--blue)"></span>Dorse
+        </div>
+        <div class="cine-banner__stat-value"><span id="banner-stat-dorse">0</span></div>
+      </div>
+      <div class="cine-banner__stat">
+        <div class="cine-banner__stat-label">
+          <span class="dot" style="background:var(--purple)"></span>Diğer
+        </div>
+        <div class="cine-banner__stat-value"><span id="banner-stat-diger">0</span></div>
+      </div>
+      <div class="cine-banner__stat">
+        <div class="cine-banner__stat-label">
+          <span class="dot" style="background:var(--warning)"></span>Muayene
+        </div>
+        <div class="cine-banner__stat-value"><span id="banner-stat-muayene">0</span></div>
+      </div>
+      <div class="cine-banner__stat">
+        <div class="cine-banner__stat-label">
+          <span class="dot" style="background:var(--danger)"></span>Sigorta
+        </div>
+        <div class="cine-banner__stat-value"><span id="banner-stat-sigorta">0</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4.1 KPI ROW (Faz 3) -->
+  <div class="kpi-row">
+    <div class="kpi" onclick="openSeferModal()" style="cursor:pointer">
+      <div class="kpi__head">
+        <div class="kpi__label">Toplam Sefer</div>
+        <div class="kpi__icon kpi__icon--success">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
+        </div>
+      </div>
+      <div class="kpi__value" id="kpi-sefer-val">0</div>
+      <div class="kpi__delta" id="kpi-sefer-delta">Bu ay: 0</div>
+      <div class="kpi__spark kpi__spark--success" data-sparkline="2,3,2,4,3,5,6,4,7,8,7,9,10,12" data-color="currentColor"></div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi__head">
+        <div class="kpi__label">Toplam KM</div>
+        <div class="kpi__icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
+        </div>
+      </div>
+      <div class="kpi__value" id="kpi-km-val">—</div>
+      <div class="kpi__delta">tüm seferler</div>
+      <div class="kpi__spark" data-sparkline="100,120,110,135,140,128,150,160,155,170,180,175,190,210" data-color="currentColor"></div>
+    </div>
+
+    <div class="kpi" onclick="openFuelSummary()" style="cursor:pointer">
+      <div class="kpi__head">
+        <div class="kpi__label">Yakıt</div>
+        <div class="kpi__icon kpi__icon--warning">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22h12M3 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18M14 7h2a3 3 0 0 1 3 3v6a1.5 1.5 0 0 1-3 0V12h-1"/></svg>
+        </div>
+      </div>
+      <div class="kpi__value" id="kpi-yakit-val">0 L</div>
+      <div class="kpi__delta" id="kpi-yakit-delta">Bu ay: 0 L</div>
+      <div class="kpi__spark kpi__spark--warning" data-sparkline="80,85,82,90,88,95,92,98,100,96,105,102,110,108" data-color="currentColor"></div>
+    </div>
+
+    <div class="kpi" onclick="openRaporModal()" style="cursor:pointer">
+      <div class="kpi__head">
+        <div class="kpi__label">Net Kâr / Zarar</div>
+        <div class="kpi__icon kpi__icon--accent">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+      </div>
+      <div class="kpi__value" id="kpi-kar-val">—</div>
+      <div class="kpi__delta">
+        <span style="color:var(--success)">Ciro: <span id="kpi-kar-ciro">—</span></span>
+      </div>
+      <div class="kpi__spark kpi__spark--accent" data-sparkline="40,45,42,50,48,55,52,60,58,65,62,70,68,75" data-color="currentColor"></div>
+    </div>
+  </div>
+
+  <!-- 4.2 HARİTA + AKTİF UYARILAR (Faz 3 genişletme) -->
+  <div class="dash-row dash-row--16-10">
+    <!-- Canlı Konum Haritası -->
+    <div class="card">
+      <div class="card__head">
+        <div>
+          <div class="card__title">Canlı Konum Haritası</div>
+          <div class="card__sub">Filo dağılımı ve durum noktaları</div>
+        </div>
+        <div class="row">
+          <span class="live-pill"><span class="dot dot--pulse"></span>Canlı</span>
+          <button class="btn--ghost btn--sm" onclick="openOperasyonPage()">
+            Tam ekran
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="card__body card__body--flush">
+        <div id="dashboard-map" class="dash-map"></div>
+      </div>
+    </div>
+
+    <!-- Aktif Uyarılar (eski Acil Durumlar paneli buraya taşındı) -->
+    <div class="card">
+      <div class="card__head">
+        <div>
+          <div class="card__title">Aktif Uyarılar</div>
+          <div class="card__sub">Filo, belge ve bakım uyarıları</div>
+        </div>
+        <span class="alert-count-badge" id="alert-count-badge" style="display:none">0</span>
+      </div>
+      <div class="card__body card__body--flush" style="max-height:380px;overflow-y:auto">
+        <div id="alert-list" class="notif-list">
+          <div class="empty-state"><div class="icon">✅</div><p>Aktif uyarı yok</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4.3 30 GÜN GRAFİK + YAKLAŞAN BAKIMLAR (Faz 3 genişletme) -->
+  <div class="dash-row dash-row--16-10">
+    <!-- 30 günlük gelir/maliyet/km grafiği -->
+    <div class="card">
+      <div class="card__head">
+        <div>
+          <div class="card__title">Son 30 Gün — Gelir, Maliyet, KM</div>
+          <div class="card__sub">Aylık performans trendi</div>
+        </div>
+        <div class="chart-legend">
+          <span class="chart-legend__item"><span class="dot" style="background:var(--navy-500)"></span>Gelir</span>
+          <span class="chart-legend__item"><span class="dot" style="background:var(--accent-500)"></span>Maliyet</span>
+          <span class="chart-legend__item"><span class="dot" style="background:var(--success)"></span>KM</span>
+        </div>
+      </div>
+      <div class="card__body">
+        <div class="chart-wrap">
+          <canvas id="revenue-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Yaklaşan Bakımlar -->
+    <div class="card">
+      <div class="card__head">
+        <div>
+          <div class="card__title">Yaklaşan Bakımlar</div>
+          <div class="card__sub">Önümüzdeki 30 gün</div>
+        </div>
+        <button class="btn--ghost btn--sm" onclick="openMaintSummaryModal()">
+          Tümü
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+      <div class="card__body card__body--flush">
+        <div id="upcoming-maint-list">
+          <!-- Faz 4'te canlı veriyle dolacak — şimdilik mock -->
+          <div class="list-row">
+            <div class="list-row__icon-box list-row__icon-box--danger">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div class="list-row__main">
+              <div class="list-row__title">34 ABC 123 <span class="muted" style="font-weight:400">· Yağ Değişimi</span></div>
+              <div class="list-row__sub">28 Nisan 2026</div>
+            </div>
+            <div class="list-row__right">
+              <div class="list-row__metric list-row__metric--danger">5 gün gecikti</div>
+              <div class="list-row__lbl mono">~₺2.400</div>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="list-row__icon-box list-row__icon-box--warning">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div class="list-row__main">
+              <div class="list-row__title">06 XYZ 789 <span class="muted" style="font-weight:400">· Lastik Rotasyon</span></div>
+              <div class="list-row__sub">10 Mayıs 2026</div>
+            </div>
+            <div class="list-row__right">
+              <div class="list-row__metric list-row__metric--warning">7 gün</div>
+              <div class="list-row__lbl mono">~₺1.800</div>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="list-row__icon-box list-row__icon-box--info">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div class="list-row__main">
+              <div class="list-row__title">35 DEF 456 <span class="muted" style="font-weight:400">· Genel Servis</span></div>
+              <div class="list-row__sub">22 Mayıs 2026</div>
+            </div>
+            <div class="list-row__right">
+              <div class="list-row__metric">19 gün</div>
+              <div class="list-row__lbl mono">~₺3.500</div>
+            </div>
+          </div>
+          <div class="list-row" style="opacity:.65">
+            <div class="list-row__icon-box list-row__icon-box--info">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div class="list-row__main">
+              <div class="list-row__title text-subtle" style="color:var(--text-muted)">Faz 4'te canlı veri bağlanacak</div>
+              <div class="list-row__sub">Mevcut bakım modülünün verisi buraya akacak</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4.4 EN İYİ SÜRÜCÜLER + SON SEFERLER (Faz 3 genişletme) -->
+  <div class="dash-row dash-row--10-16">
+    <!-- En İyi Sürücüler -->
+    <div class="card">
+      <div class="card__head">
+        <div>
+          <div class="card__title">En İyi Sürücüler</div>
+          <div class="card__sub">Bu ay performans skoru</div>
+        </div>
+        <button class="btn--ghost btn--sm" onclick="openDriverModal()">
+          Tümü
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+      <div class="card__body card__body--flush">
+        <div id="top-drivers-list">
+          <!-- Faz 4'te canlı veriyle dolacak — şimdilik mock -->
+          <div class="list-row">
+            <div class="list-row__rank">#1</div>
+            <div class="list-row__avatar" style="background:linear-gradient(135deg,#FFD93D,#F4A300)">MK</div>
+            <div class="list-row__main">
+              <div class="list-row__title">Mehmet Kaya ⭐</div>
+              <div class="list-row__sub">28 sefer · 12.450 km</div>
+            </div>
+            <div class="list-row__right">
+              <div class="list-row__metric list-row__metric--success">96</div>
+              <div class="list-row__lbl">SKOR</div>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="list-row__rank">#2</div>
+            <div class="list-row__avatar">AY</div>
+            <div class="list-row__main">
+              <div class="list-row__title">Ahmet Yılmaz</div>
+              <div class="list-row__sub">25 sefer · 11.200 km</div>
+            </div>
+            <div class="list-row__right">
+              <div class="list-row__metric list-row__metric--success">92</div>
+              <div class="list-row__lbl">SKOR</div>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="list-row__rank">#3</div>
+            <div class="list-row__avatar">SD</div>
+            <div class="list-row__main">
+              <div class="list-row__title">Selim Demir</div>
+              <div class="list-row__sub">22 sefer · 9.860 km</div>
+            </div>
+            <div class="list-row__right">
+              <div class="list-row__metric list-row__metric--success">88</div>
+              <div class="list-row__lbl">SKOR</div>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="list-row__rank">#4</div>
+            <div class="list-row__avatar">CO</div>
+            <div class="list-row__main">
+              <div class="list-row__title">Can Özkan</div>
+              <div class="list-row__sub">18 sefer · 7.420 km</div>
+            </div>
+            <div class="list-row__right">
+              <div class="list-row__metric list-row__metric--warning">79</div>
+              <div class="list-row__lbl">SKOR</div>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="list-row__rank">#5</div>
+            <div class="list-row__avatar">BA</div>
+            <div class="list-row__main">
+              <div class="list-row__title">Burak Aslan</div>
+              <div class="list-row__sub">15 sefer · 6.180 km</div>
+            </div>
+            <div class="list-row__right">
+              <div class="list-row__metric list-row__metric--warning">74</div>
+              <div class="list-row__lbl">SKOR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Son Seferler -->
+    <div class="card">
+      <div class="card__head">
+        <div>
+          <div class="card__title">Son Seferler</div>
+          <div class="card__sub">Aktif ve son tamamlananlar</div>
+        </div>
+        <button class="btn--ghost btn--sm" onclick="openSeferModal()">
+          Tümü
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+      <div class="card__body card__body--flush">
+        <div class="tbl-wrap">
+          <table class="tbl" id="recent-trips-table">
+            <thead>
+              <tr>
+                <th>Sefer</th>
+                <th>Plaka</th>
+                <th>Güzergah</th>
+                <th style="width:140px">İlerleme</th>
+                <th>Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Faz 4'te canlı veriyle dolacak — şimdilik mock -->
+              <tr>
+                <td class="tbl__num fw-6">SF-2401</td>
+                <td class="tbl__num">34 ABC 123</td>
+                <td><span class="muted">İSTANBUL</span> → <b>ANKARA</b></td>
+                <td>
+                  <div class="row" style="gap:8px">
+                    <div class="bar" style="flex:1"><div class="bar__fill bar__fill--success" style="width:78%"></div></div>
+                    <span class="mono muted" style="font-size:11px;width:32px">78%</span>
+                  </div>
+                </td>
+                <td><span class="status-pill status-pill--success"><span class="dot"></span>Yolda</span></td>
+              </tr>
+              <tr>
+                <td class="tbl__num fw-6">SF-2400</td>
+                <td class="tbl__num">06 XYZ 789</td>
+                <td><span class="muted">İZMİR</span> → <b>BURSA</b></td>
+                <td>
+                  <div class="row" style="gap:8px">
+                    <div class="bar" style="flex:1"><div class="bar__fill bar__fill--success" style="width:100%"></div></div>
+                    <span class="mono muted" style="font-size:11px;width:32px">100%</span>
+                  </div>
+                </td>
+                <td><span class="status-pill status-pill--success"><span class="dot"></span>Teslim</span></td>
+              </tr>
+              <tr>
+                <td class="tbl__num fw-6">SF-2399</td>
+                <td class="tbl__num">35 DEF 456</td>
+                <td><span class="muted">ANTALYA</span> → <b>İSTANBUL</b></td>
+                <td>
+                  <div class="row" style="gap:8px">
+                    <div class="bar" style="flex:1"><div class="bar__fill bar__fill--warning" style="width:42%"></div></div>
+                    <span class="mono muted" style="font-size:11px;width:32px">42%</span>
+                  </div>
+                </td>
+                <td><span class="status-pill status-pill--warning"><span class="dot"></span>Gecikti</span></td>
+              </tr>
+              <tr>
+                <td class="tbl__num fw-6">SF-2398</td>
+                <td class="tbl__num">34 GHI 234</td>
+                <td><span class="muted">ANKARA</span> → <b>SAMSUN</b></td>
+                <td>
+                  <div class="row" style="gap:8px">
+                    <div class="bar" style="flex:1"><div class="bar__fill bar__fill--success" style="width:65%"></div></div>
+                    <span class="mono muted" style="font-size:11px;width:32px">65%</span>
+                  </div>
+                </td>
+                <td><span class="status-pill status-pill--info"><span class="dot"></span>Yükleme</span></td>
+              </tr>
+              <tr>
+                <td class="tbl__num fw-6">SF-2397</td>
+                <td class="tbl__num">06 JKL 567</td>
+                <td><span class="muted">ADANA</span> → <b>İZMİR</b></td>
+                <td>
+                  <div class="row" style="gap:8px">
+                    <div class="bar" style="flex:1"><div class="bar__fill bar__fill--success" style="width:100%"></div></div>
+                    <span class="mono muted" style="font-size:11px;width:32px">100%</span>
+                  </div>
+                </td>
+                <td><span class="status-pill status-pill--success"><span class="dot"></span>Teslim</span></td>
+              </tr>
+              <tr style="opacity:.6">
+                <td colspan="5" class="muted" style="padding:14px;text-align:center;font-size:12px">
+                  Faz 4'te canlı sefer verisiyle dolacak
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 4a. ÖZET KARTLAR -->
   <div class="stats-grid" id="stats-grid">
     <!-- BİRLEŞİK FİLO ÖZET KARTI -->
@@ -781,23 +1203,8 @@
     </div>
   </div>
 
-  <!-- 4b. ACİL DURUMLAR (tam genişlik) -->
-  <div style="margin-bottom:20px">
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">
-          <span class="dot dot-red"></span>
-          Acil Durumlar
-        </div>
-        <span class="alert-count-badge" id="alert-count-badge" style="display:none">0</span>
-      </div>
-      <div class="panel-body" style="max-height:220px">
-        <div class="alert-list" id="alert-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:0">
-          <div class="empty-state"><div class="icon">✅</div><p>Acil durum yok</p></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- 4b. (KALDIRILDI — Faz 3) Acil Durumlar paneli yeni "Aktif Uyarılar" card'ına taşındı (#alert-list, #alert-count-badge yukarıda) -->
+
   <!-- gizli anchor id'ler — JS güncellemeye devam etsin -->
   <span id="sum-cekici" style="display:none"></span>
   <span id="sum-dorse"  style="display:none"></span>

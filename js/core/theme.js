@@ -36,6 +36,10 @@
     safeSet(STORAGE_KEY, theme);
     if (opts && opts.manual) safeSet(STORAGE_MANUAL, '1');
     updateThemeIcon();
+    // Tema değişimini dinleyenlere haber ver (chart, harita gibi tema-bağımlı UI)
+    try {
+      window.dispatchEvent(new CustomEvent('fleetly:theme-change', { detail: { theme: theme } }));
+    } catch (e) {}
   }
 
   function updateThemeIcon() {
