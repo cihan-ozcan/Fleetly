@@ -2455,9 +2455,13 @@ async function _opsYakitGpsKarsilastirmaYukle(e) {
   const row = document.getElementById('ops-yakit-gps-row');
   if (!row) return;
   const dbId = e._dbId || e.id;
+  console.log('[ops-yakit-gps] dbId =', dbId, 'iş emri:', e.id, 'durum:', e.durum);
   const ozet = await _opsGuzergahOzetGetir(dbId);
+  console.log('[ops-yakit-gps] guzergah ozet:', ozet);
   if (!ozet || !ozet.toplam_km || ozet.toplam_km <= 0) {
-    row.innerHTML = '';
+    row.innerHTML = `<div style="font-size:11px;color:var(--muted);background:var(--surface2);border:1px dashed var(--border2);border-radius:6px;padding:6px 10px;">
+      📡 GPS güzergah kaydı yok — sürücü "Yola çıktım" yapsın ve telefon konum verirken birkaç dakika hareket etsin.
+    </div>`;
     return;
   }
   const gpsKm = +ozet.toplam_km;
