@@ -27,8 +27,8 @@
         -55deg,
         transparent,
         transparent 60px,
-        rgba(232,82,26,.025) 60px,
-        rgba(232,82,26,.025) 61px
+        rgba(255,107,31,.025) 60px,
+        rgba(255,107,31,.025) 61px
       ),
       linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
@@ -36,12 +36,12 @@
     pointer-events: none;
   }
 
-  /* Amber top glow */
+  /* Top glow */
   body::after {
     content: '';
     position: fixed; top: -120px; left: 50%; transform: translateX(-50%);
     width: 900px; height: 280px; z-index: 0;
-    background: radial-gradient(ellipse at center, rgba(232,82,26,.12) 0%, transparent 70%);
+    background: radial-gradient(ellipse at center, rgba(255,107,31,.10) 0%, transparent 70%);
     pointer-events: none;
   }
 
@@ -91,7 +91,7 @@
 
   /* CRM topbar title */
   .crm-topbar {
-    background: rgba(8,9,26,.97) !important;
+    background: rgba(11,26,47,.97) !important;
     border-bottom: 1px solid var(--border) !important;
     box-shadow: inset 3px 0 0 var(--teal) !important;
   }
@@ -222,28 +222,28 @@
   /* ── YAKIT MODALİ ───────────────────────────────────────── */
   .fuel-modal-backdrop {
     position: fixed; inset: 0; z-index: 500;
-    background: rgba(0,0,0,.7);
-    backdrop-filter: blur(6px);
+    background: rgba(0,10,30,.80);
+    backdrop-filter: blur(8px);
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
   }
   .fuel-modal-backdrop.hidden { display: none; }
 
   .fuel-modal {
-    background: var(--surface);
-    border: 1px solid var(--border2);
+    background: #0F2440;
+    border: 1px solid rgba(255,107,31,.20);
     border-radius: 20px;
     width: 100%; max-width: 1100px;
     max-height: 92vh;
     display: flex; flex-direction: column;
-    box-shadow: 0 40px 100px rgba(0,0,0,.8);
+    box-shadow: 0 40px 100px rgba(0,0,0,.75);
   }
 
   .fuel-modal-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 22px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
+    border-bottom: 1px solid rgba(255,107,31,.15);
+    background: linear-gradient(180deg, #132950 0%, #0F2440 100%);
     border-radius: 20px 20px 0 0;
     flex-shrink: 0;
   }
@@ -356,7 +356,7 @@
   }
   .fuel-inp:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+    box-shadow: 0 0 0 3px rgba(255,107,31,.12);
   }
   .fuel-add-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -365,7 +365,7 @@
     border-radius: 9px; padding: 9px 18px;
     font-family: var(--font-body); font-size: 13px; font-weight: 600;
     transition: opacity .2s, transform .15s;
-    box-shadow: 0 3px 12px rgba(249,115,22,.3);
+    box-shadow: 0 3px 12px rgba(255,107,31,.3);
     white-space: nowrap;
   }
   .fuel-add-btn:hover { opacity: .9; transform: translateY(-1px); }
@@ -454,10 +454,10 @@
   /* Araç tablosuna yakıt butonu */
   .icon-btn.fuel {
     color: var(--accent);
-    border-color: rgba(249,115,22,.25);
-    background: rgba(249,115,22,.06);
+    border-color: rgba(255,107,31,.25);
+    background: rgba(255,107,31,.06);
   }
-  .icon-btn.fuel:hover { background: rgba(249,115,22,.15); border-color: var(--accent); }
+  .icon-btn.fuel:hover { background: rgba(255,107,31,.15); border-color: var(--accent); }
 
   /* Araç tablosuna bakım butonu */
   .icon-btn.maint {
@@ -470,26 +470,26 @@
   /* ── BAKIM MODALİ ────────────────────────────────────────── */
   .maint-modal-backdrop {
     position: fixed; inset: 0; z-index: 500;
-    background: rgba(0,0,0,.7);
-    backdrop-filter: blur(6px);
+    background: rgba(0,10,30,.80);
+    backdrop-filter: blur(8px);
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
   }
   .maint-modal-backdrop.hidden { display: none; }
   .maint-modal {
-    background: var(--surface);
-    border: 1px solid var(--border2);
+    background: #0F2440;
+    border: 1px solid rgba(255,107,31,.20);
     border-radius: 20px;
     width: 100%; max-width: 1060px;
     max-height: 92vh;
     display: flex; flex-direction: column;
-    box-shadow: 0 40px 100px rgba(0,0,0,.8);
+    box-shadow: 0 40px 100px rgba(0,0,0,.75);
   }
   .maint-modal-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 22px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
+    border-bottom: 1px solid rgba(255,107,31,.15);
+    background: linear-gradient(180deg, #132950 0%, #0F2440 100%);
     border-radius: 20px 20px 0 0;
     flex-shrink: 0;
   }
@@ -701,26 +701,26 @@
   /* ── SÜRÜCÜ BELGELERİ MODALİ ─────────────────────────── */
   .driver-modal-backdrop {
     position: fixed; inset: 0; z-index: 500;
-    background: rgba(0,0,0,.72);
-    backdrop-filter: blur(6px);
+    background: rgba(0,10,30,.80);
+    backdrop-filter: blur(8px);
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
   }
   .driver-modal-backdrop.hidden { display: none; }
   .driver-modal {
-    background: var(--surface);
-    border: 1px solid var(--border2);
+    background: #0F2440;
+    border: 1px solid rgba(255,107,31,.20);
     border-radius: 20px;
     width: 100%; max-width: 880px;
     max-height: 92vh;
     display: flex; flex-direction: column;
-    box-shadow: 0 40px 100px rgba(0,0,0,.8);
+    box-shadow: 0 40px 100px rgba(0,0,0,.75);
   }
   .driver-modal-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 22px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
+    border-bottom: 1px solid rgba(255,107,31,.15);
+    background: linear-gradient(180deg, #132950 0%, #0F2440 100%);
     border-radius: 20px 20px 0 0;
     flex-shrink: 0;
   }
@@ -839,7 +839,7 @@
   /* ── GİRİŞ ──────────────────────────────────────────────── */
   #login-overlay {
     position: fixed; inset: 0; z-index: 1000;
-    background: var(--bg);
+    background: radial-gradient(ellipse at 50% 0%, #1A3460 0%, #0B1A2F 60%);
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
   }
@@ -850,13 +850,13 @@
     content: '';
     position: absolute; inset: 0;
     background-image:
-      repeating-linear-gradient(-55deg, transparent, transparent 60px, rgba(232,82,26,.03) 60px, rgba(232,82,26,.03) 61px),
+      repeating-linear-gradient(-55deg, transparent, transparent 60px, rgba(255,107,31,.03) 60px, rgba(255,107,31,.03) 61px),
       linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
     background-size: 120px 120px, 80px 80px, 80px 80px;
     pointer-events: none;
   }
-  /* Login amber sol dikey şerit */
+  /* Login accent sol dikey şerit */
   #login-overlay::after {
     content: '';
     position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
@@ -866,21 +866,20 @@
 
   .login-card {
     position: relative; z-index: 1;
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: 16px;
+    background: #0F2440;
+    border: 1px solid rgba(255,107,31,.25);
+    border-radius: 20px;
     padding: 52px 44px;
     width: 100%; max-width: 420px;
     text-align: center;
-    box-shadow: 0 40px 100px rgba(0,0,0,.8), 0 0 0 1px rgba(232,82,26,.1),
-                inset 0 1px 0 rgba(255,255,255,.05);
+    box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);
   }
-  /* Üst amber çizgi */
+  /* Üst accent çizgi */
   .login-card::before {
     content: '';
     position: absolute; top: 0; left: 0; right: 0; height: 3px;
     background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
-    border-radius: 16px 16px 0 0;
+    border-radius: 20px 20px 0 0;
   }
 
   @media (max-width: 480px) {
@@ -913,7 +912,7 @@
   }
   .login-tagline {
     font-family: var(--font-mono);
-    font-size: 10px; letter-spacing: 5px; color: var(--muted);
+    font-size: 10px; letter-spacing: 5px; color: var(--accent);
     text-transform: uppercase; margin-bottom: 6px;
   }
   .login-sub { color: var(--muted); margin-bottom: 32px; font-size: 13px; }
@@ -933,21 +932,21 @@
   }
   .inp:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(232,82,26,.12);
+    box-shadow: 0 0 0 3px rgba(255,107,31,.12);
   }
   .inp::placeholder { color: var(--muted); }
 
   .btn-primary {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    background: var(--accent);
+    background: linear-gradient(135deg, #FF6B1F, #FF8C47);
     color: #fff; border: none; cursor: pointer;
     border-radius: 8px; padding: 12px 24px;
     font-family: var(--font-body); font-size: 14px; font-weight: 700;
     width: 100%; letter-spacing: .04em; text-transform: uppercase;
-    transition: background .2s, transform .15s, box-shadow .2s;
-    box-shadow: 0 4px 20px rgba(232,82,26,.35);
+    transition: opacity .2s, transform .15s, box-shadow .2s;
+    box-shadow: 0 6px 20px rgba(255,107,31,.40);
   }
-  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(232,82,26,.45); }
+  .btn-primary:hover { opacity: .92; transform: translateY(-1px); box-shadow: 0 8px 26px rgba(255,107,31,.50); }
   .btn-primary:active { transform: translateY(0); }
 
   .login-error { color: var(--red); font-size: 12px; margin-top: 8px; min-height: 18px; }
@@ -961,17 +960,15 @@
 
   /* ── HEADER ──────────────────────────────────────────────── */
   header {
-    background: rgba(8,9,26,.96);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #0F2440 0%, #0B1A2F 100%);
+    border-bottom: 1px solid rgba(255,107,31,.20);
     padding: 0 28px;
     padding-left: max(28px, env(safe-area-inset-left));
     padding-right: max(28px, env(safe-area-inset-right));
     height: 62px;
     display: flex; align-items: center; justify-content: space-between;
     position: sticky; top: 0; z-index: 100;
-    /* Amber sol şerit */
-    box-shadow: inset 3px 0 0 var(--accent), 0 1px 0 var(--border);
+    box-shadow: 0 1px 0 rgba(255,107,31,.08), 0 4px 24px rgba(0,0,0,.4);
   }
 
   .header-left { display: flex; align-items: center; gap: 20px; }
@@ -1023,9 +1020,9 @@
   .btn-sm.accent {
     background: var(--accent); border-color: var(--accent);
     color: #fff; font-weight: 700; letter-spacing: .03em;
-    box-shadow: 0 2px 10px rgba(232,82,26,.3);
+    box-shadow: 0 2px 10px rgba(255,107,31,.3);
   }
-  .btn-sm.accent:hover { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 4px 14px rgba(232,82,26,.4); }
+  .btn-sm.accent:hover { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 4px 14px rgba(255,107,31,.4); }
 
   /* ══════════════════════════════════════════════════════════
      NAV BUTTON SİSTEMİ — Demir Yolu
@@ -1079,18 +1076,22 @@
   .nav-btn:hover .nav-icon { transform: translateY(-1px); }
 
   /* Renk varyantları */
-  .nav-teal  { --nav-c: var(--teal);   --nav-bg: rgba(45,212,191,.08); }
-  .nav-purple{ --nav-c: var(--purple); --nav-bg: rgba(167,139,250,.08); }
-  .nav-yellow{ --nav-c: var(--yellow); --nav-bg: rgba(212,168,71,.08); }
-  .nav-pink  { --nav-c: #e879f9;       --nav-bg: rgba(232,121,249,.08); }
-  .nav-orange{ --nav-c: var(--accent); --nav-bg: rgba(232,82,26,.10); }
-  .nav-blue  { --nav-c: var(--blue);   --nav-bg: rgba(56,189,248,.08); }
-  .nav-green { --nav-c: var(--green);  --nav-bg: rgba(34,197,94,.08); }
-  .nav-muted { --nav-c: var(--text2);  --nav-bg: rgba(255,255,255,.04); }
+  .nav-teal  { --nav-c: var(--teal);   --nav-bg: rgba(45,212,191,.08);  --nav-border: rgba(45,212,191,.25); }
+  .nav-purple{ --nav-c: var(--purple); --nav-bg: rgba(167,139,250,.08); --nav-border: rgba(167,139,250,.25); }
+  .nav-yellow{ --nav-c: var(--yellow); --nav-bg: rgba(212,168,71,.08);  --nav-border: rgba(212,168,71,.25); }
+  .nav-pink  { --nav-c: #e879f9;       --nav-bg: rgba(232,121,249,.08); --nav-border: rgba(232,121,249,.25); }
+  .nav-orange{ --nav-c: var(--accent); --nav-bg: rgba(255,107,31,.10);  --nav-border: rgba(255,107,31,.25); }
+  .nav-blue  { --nav-c: var(--blue);   --nav-bg: rgba(56,189,248,.08);  --nav-border: rgba(56,189,248,.25); }
+  .nav-green { --nav-c: var(--green);  --nav-bg: rgba(34,197,94,.08);   --nav-border: rgba(34,197,94,.25); }
+  .nav-muted { --nav-c: var(--text2);  --nav-bg: rgba(255,255,255,.04); --nav-border: rgba(255,255,255,.12); }
+
+  /* Temel nav butonu border */
+  .nav-btn { border: 1px solid transparent; }
 
   .nav-btn:hover {
     color: var(--nav-c);
     background: var(--nav-bg);
+    border-color: var(--nav-border, transparent);
   }
   .nav-btn::after { background: var(--nav-c); }
 
@@ -1098,6 +1099,7 @@
   .nav-btn.nav-active {
     color: var(--nav-c);
     background: var(--nav-bg);
+    border-color: var(--nav-border, transparent);
   }
   .nav-btn.nav-active::after { left: 8px; right: 8px; }
 
@@ -1119,15 +1121,15 @@
   /* Primary CTA — ARAÇ EKLE */
   .nav-cta {
     display: inline-flex; align-items: center; gap: 7px;
-    padding: 8px 16px; border-radius: 7px;
+    padding: 8px 16px; border-radius: 8px;
     border: none; cursor: pointer;
-    background: var(--accent);
+    background: linear-gradient(135deg, #FF6B1F, #FF8C47);
     color: #fff;
     font-family: var(--font-display);
-    font-size: 13px; font-weight: 800;
-    letter-spacing: 2px; text-transform: uppercase;
+    font-size: 13px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
     white-space: nowrap;
-    box-shadow: 0 2px 12px rgba(232,82,26,.4);
+    box-shadow: 0 4px 16px rgba(255,107,31,.40);
     transition: background .15s, box-shadow .15s, transform .12s;
     position: relative; overflow: hidden;
   }
@@ -1140,8 +1142,7 @@
   }
   .nav-cta:hover::before { left: 150%; }
   .nav-cta:hover {
-    background: var(--accent2);
-    box-shadow: 0 4px 20px rgba(232,82,26,.55);
+    box-shadow: 0 6px 24px rgba(255,107,31,.55);
     transform: translateY(-1px);
   }
   .nav-cta:active { transform: translateY(0); }
@@ -1162,20 +1163,20 @@
   /* ── SEFER / MASRAF / RAPOR MODALLERİ ────────────────────── */
   .srm-backdrop {
     position:fixed;inset:0;z-index:500;
-    background:rgba(0,0,0,.75);backdrop-filter:blur(6px);
+    background:rgba(0,10,30,.80);backdrop-filter:blur(8px);
     display:flex;align-items:center;justify-content:center;padding:20px;
   }
   .srm-backdrop.hidden{display:none}
   .srm-modal {
-    background:var(--surface);border:1px solid var(--border2);
+    background:#0F2440;border:1px solid rgba(255,107,31,.20);
     border-radius:20px;width:100%;max-width:1100px;max-height:92vh;
     display:flex;flex-direction:column;
-    box-shadow:0 40px 100px rgba(0,0,0,.8);
+    box-shadow:0 40px 100px rgba(0,0,0,.75);
   }
   .srm-header {
     display:flex;align-items:center;justify-content:space-between;
-    padding:18px 22px;border-bottom:1px solid var(--border);
-    background:var(--surface2);border-radius:20px 20px 0 0;flex-shrink:0;
+    padding:18px 22px;border-bottom:1px solid rgba(255,107,31,.15);
+    background:linear-gradient(180deg,#132950 0%,#0F2440 100%);border-radius:20px 20px 0 0;flex-shrink:0;
   }
   .srm-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:10px}
   .srm-body{padding:22px;overflow-y:auto;flex:1}
@@ -1342,7 +1343,7 @@
     top: 2px; left: 2px;
     transition: transform .2s, background .2s;
   }
-  .toggle-wrap input:checked + .toggle-slider { background: rgba(249,115,22,.2); border-color: var(--accent); }
+  .toggle-wrap input:checked + .toggle-slider { background: rgba(255,107,31,.2); border-color: var(--accent); }
   .toggle-wrap input:checked + .toggle-slider::before { background: var(--accent); transform: translateX(18px); }
   .dash-edit-footer {
     padding: 14px 20px;
@@ -1363,7 +1364,7 @@
     color: #fff; border: none; cursor: pointer;
     border-radius: 9px; padding: 7px 20px;
     font-family: var(--font-body); font-size: 13px; font-weight: 600;
-    box-shadow: 0 3px 10px rgba(249,115,22,.3);
+    box-shadow: 0 3px 10px rgba(255,107,31,.3);
     transition: opacity .2s;
   }
   .dash-save-btn:hover { opacity: .88; }
@@ -1383,7 +1384,7 @@
     background: var(--accent); opacity: 0;
     transition: opacity .2s;
   }
-  .stat-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.3); }
+  .stat-card:hover { background: var(--surface2); border-color: rgba(255,107,31,.25); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.4), 0 0 0 1px rgba(255,107,31,.12); }
   .stat-card:hover::before { opacity: 1; }
 
   .stat-card-top {
@@ -1395,7 +1396,7 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 17px; flex-shrink: 0;
   }
-  .stat-icon.orange { background: rgba(232,82,26,.14); }
+  .stat-icon.orange { background: rgba(255,107,31,.14); }
   .stat-icon.blue   { background: rgba(56,189,248,.12); }
   .stat-icon.green  { background: rgba(34,197,94,.12);  }
   .stat-icon.yellow { background: rgba(212,168,71,.12); }
@@ -1566,7 +1567,7 @@
   }
   .search-wrap input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(249,115,22,.1);
+    box-shadow: 0 0 0 3px rgba(255,107,31,.10);
   }
 
   .filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -1579,8 +1580,8 @@
   }
   .tab:hover { border-color: var(--border2); color: var(--text2); }
   .tab.active {
-    background: rgba(249,115,22,.12);
-    border-color: rgba(249,115,22,.35);
+    background: rgba(255,107,31,.12);
+    border-color: rgba(255,107,31,.35);
     color: var(--accent); font-weight: 600;
   }
 
@@ -1683,25 +1684,25 @@
   /* ── MODAL ──────────────────────────────────────────────── */
   .modal-backdrop {
     position: fixed; inset: 0; z-index: 500;
-    background: rgba(0,0,0,.75); backdrop-filter: blur(6px);
+    background: rgba(0,10,30,.80); backdrop-filter: blur(8px);
     display: flex; align-items: center; justify-content: center;
     padding: 16px;
   }
   .modal-backdrop.hidden { display: none; }
 
   .modal {
-    background: var(--surface);
-    border: 1px solid var(--border2);
+    background: #0F2440;
+    border: 1px solid rgba(255,107,31,.20);
     border-radius: 18px;
     width: 100%; max-width: 620px;
     max-height: 90vh; overflow-y: auto;
-    box-shadow: 0 32px 80px rgba(0,0,0,.8);
+    box-shadow: 0 32px 80px rgba(0,0,0,.75);
   }
   .modal-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 22px;
-    border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; background: var(--surface); z-index: 1;
+    border-bottom: 1px solid rgba(255,107,31,.15);
+    position: sticky; top: 0; background: linear-gradient(180deg, #132950 0%, #0F2440 100%); z-index: 1;
   }
   .modal-title { font-size: 16px; font-weight: 700; letter-spacing: -.2px; }
   .modal-close {
@@ -1958,28 +1959,28 @@
   /* ── ARAÇ SEÇİM MODALİ ─────────────────────────────────── */
   .vehicle-select-backdrop {
     position: fixed; inset: 0; z-index: 490;
-    background: rgba(0,0,0,.75);
-    backdrop-filter: blur(6px);
+    background: rgba(0,10,30,.80);
+    backdrop-filter: blur(8px);
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
   }
   .vehicle-select-backdrop.hidden { display: none; }
 
   .vehicle-select-modal {
-    background: var(--surface);
-    border: 1px solid var(--border2);
+    background: #0F2440;
+    border: 1px solid rgba(255,107,31,.20);
     border-radius: 20px;
     width: 100%; max-width: 560px;
     max-height: 85vh;
     display: flex; flex-direction: column;
-    box-shadow: 0 40px 100px rgba(0,0,0,.8);
+    box-shadow: 0 40px 100px rgba(0,0,0,.75);
   }
 
   .vehicle-select-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 22px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
+    border-bottom: 1px solid rgba(255,107,31,.15);
+    background: linear-gradient(180deg, #132950 0%, #0F2440 100%);
     border-radius: 20px 20px 0 0;
     flex-shrink: 0;
   }
@@ -2014,7 +2015,7 @@
   }
   .vehicle-select-search input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+    box-shadow: 0 0 0 3px rgba(255,107,31,.12);
   }
   .vehicle-select-search .srch-icon {
     position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
@@ -2033,7 +2034,7 @@
   }
   .vs-vehicle-item:hover {
     border-color: var(--accent);
-    background: rgba(249,115,22,.06);
+    background: rgba(255,107,31,.06);
     transform: translateY(-1px);
   }
   .vs-vehicle-item.blue-hover:hover {
@@ -2158,8 +2159,8 @@
   }
   .vs-month-tab:hover { border-color: var(--border2); color: var(--text2); }
   .vs-month-tab.active {
-    background: rgba(249,115,22,.12);
-    border-color: rgba(249,115,22,.35);
+    background: rgba(255,107,31,.12);
+    border-color: rgba(255,107,31,.35);
     color: var(--accent); font-weight: 600;
   }
 
@@ -2226,8 +2227,8 @@
     position: fixed;
     bottom: 0; left: 0; right: 0;
     z-index: 9999;
-    background: linear-gradient(135deg, #111820, #18202c);
-    border-top: 1px solid rgba(249,115,22,.35);
+    background: linear-gradient(135deg, #0D1E36, #0F2440);
+    border-top: 1px solid rgba(255,107,31,.35);
     padding: 14px 18px;
     display: flex; align-items: center; gap: 14px;
     box-shadow: 0 -8px 32px rgba(0,0,0,.5);
@@ -2273,8 +2274,8 @@
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     z-index: 10000;
-    background: #18202c;
-    border: 1px solid rgba(249,115,22,.4);
+    background: #0F2440;
+    border: 1px solid rgba(255,107,31,.4);
     border-radius: 16px;
     padding: 18px 20px;
     width: calc(100% - 40px); max-width: 340px;
@@ -2297,7 +2298,7 @@
   .ios-popup-step:last-of-type { border-bottom: none; }
   .ios-step-icon {
     width: 32px; height: 32px; border-radius: 8px;
-    background: rgba(249,115,22,.12);
+    background: rgba(255,107,31,.12);
     display: flex; align-items: center; justify-content: center;
     font-size: 16px; flex-shrink: 0;
   }
@@ -2391,7 +2392,7 @@
   /* Truck marker */
   .fleet-truck-icon { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2.5px solid;box-shadow:0 2px 8px rgba(0,0,0,.3); }
   .fleet-truck-icon.yolda     { background:#1e40af22;border-color:#3b82f6; }
-  .fleet-truck-icon.fabrikada { background:#e8521a22;border-color:#e8521a; }
+  .fleet-truck-icon.fabrikada { background:#FF6B1F22;border-color:#FF6B1F; }
   .fleet-truck-icon.bekliyor  { background:#a16207aa;border-color:#ca8a04; }
   .fleet-truck-icon.teslim    { background:#14532d55;border-color:#22c55e; }
   .ops-foto-card img { width:100%;height:100%;object-fit:cover;cursor:pointer;transition:opacity .15s; }
