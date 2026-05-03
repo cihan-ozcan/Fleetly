@@ -4891,6 +4891,215 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════
+     A11Y & MOTION POLISH (Faz 5)
+     ══════════════════════════════════════════════════════════════════ */
+
+  /* Focus-visible — klavye odağı net görünür, fare odağı sade */
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--accent-500);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+  }
+  /* Buton ve interaktif elementlerde glow ring */
+  button:focus-visible,
+  .topbar__icon-btn:focus-visible,
+  .topbar__cta:focus-visible,
+  .topbar__menu:focus-visible,
+  .sidebar__item:focus-visible,
+  .sidebar__brand:focus-visible,
+  .btn--accent:focus-visible,
+  .btn--ghost:focus-visible,
+  .btn--ghost-on-dark:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-glow), 0 0 0 2px var(--accent-500);
+  }
+  /* Input/select/textarea zaten focus stilini kendi border ile yönetiyor */
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+  }
+  /* Tab/segment item'ları */
+  .tab:focus-visible,
+  .srm-tab:focus-visible,
+  #crm-page .tab-btn:focus-visible {
+    outline: 2px solid var(--accent-500);
+    outline-offset: -2px;
+  }
+  /* Kart gibi tıklanır container'lar */
+  .kpi[onclick]:focus-visible,
+  .stat-card[onclick]:focus-visible,
+  .ops-kcard:focus-visible {
+    outline: 2px solid var(--accent-500);
+    outline-offset: 2px;
+  }
+
+  /* aria-current="page" sidebar item — active marker fallback */
+  .sidebar__item[aria-current="page"] {
+    background: var(--nav-active-bg);
+    color: var(--nav-active);
+  }
+  .sidebar__item[aria-current="page"]::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 8px; bottom: 8px;
+    width: 3px;
+    background: var(--accent-500);
+    border-radius: 0 3px 3px 0;
+  }
+
+  /* ── Reduced motion — kullanıcı hareket azaltma tercih ettiyse ── */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+    .dot--pulse { animation: none !important; box-shadow: none !important; }
+    .activity-dot { box-shadow: none !important; }
+    .kpi:hover,
+    .notif:hover,
+    .list-row:hover,
+    .stat-card:hover,
+    .driver-card:hover,
+    .maint-stat:hover,
+    .srm-stat:hover,
+    .fuel-stat:hover,
+    .ops-kcard:hover,
+    .topbar__cta:hover,
+    .btn--accent:hover {
+      transform: none !important;
+    }
+    .app-shell main { opacity: 1 !important; transform: none !important; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     PRINT STILLERİ (Faz 5 — dashboard + tablo)
+     ══════════════════════════════════════════════════════════════════ */
+  @media print {
+    @page { size: A4; margin: 12mm; }
+    html, body {
+      background: #fff !important;
+      color: #000 !important;
+      font-size: 11px !important;
+      font-family: 'Inter', sans-serif !important;
+    }
+    body::before, body::after { display: none !important; }
+
+    /* Shell elementleri gizlensin */
+    .sidebar,
+    .topbar,
+    .sidebar-backdrop,
+    #pwa-banner,
+    #pwa-ios-popup,
+    #trial-banner,
+    #login-overlay,
+    .modal-backdrop,
+    .driver-modal-backdrop,
+    .fuel-modal-backdrop,
+    .maint-modal-backdrop,
+    .srm-backdrop,
+    .vehicle-select-backdrop,
+    .dash-edit-backdrop,
+    #toast-container,
+    .pagination-bar,
+    #pagination-bar { display: none !important; }
+
+    .app-shell {
+      display: block !important;
+      grid-template-columns: none !important;
+      grid-template-areas: none !important;
+    }
+    .app-shell > main {
+      grid-area: auto !important;
+      padding: 0 !important;
+      max-width: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    /* Sinematik banner sadeleşsin */
+    .cine-banner {
+      background: #fff !important;
+      color: #000 !important;
+      border: 2px solid #000 !important;
+      box-shadow: none !important;
+      page-break-after: avoid;
+    }
+    .cine-banner::before { display: none !important; }
+    .cine-banner__title,
+    .cine-banner__sub,
+    .cine-banner__date,
+    .cine-banner__stat-value,
+    .cine-banner__stat-total { color: #000 !important; }
+    .cine-banner__stat-label { color: #333 !important; }
+    .cine-banner__actions { display: none !important; }
+    .cine-banner__strip { border-top: 1px solid #000 !important; }
+    .cine-banner__stat { border-right: 1px solid #ddd !important; }
+
+    /* Card'lar */
+    .card,
+    .kpi {
+      background: #fff !important;
+      border: 1px solid #888 !important;
+      box-shadow: none !important;
+      page-break-inside: avoid;
+    }
+    .kpi__value,
+    .kpi__label,
+    .kpi__delta,
+    .card__title,
+    .card__sub { color: #000 !important; }
+    .kpi__icon { background: #eee !important; color: #000 !important; }
+    .kpi__spark { display: none !important; }
+
+    /* Tablo */
+    .table-wrap { max-height: none !important; overflow: visible !important; }
+    table { font-size: 10px !important; min-width: 0 !important; }
+    table th, table td {
+      background: #fff !important;
+      color: #000 !important;
+      border-bottom: 1px solid #999 !important;
+      padding: 6px 8px !important;
+    }
+    table thead { background: #eee !important; }
+    table th.col-islem,
+    table td.col-islem,
+    table th:last-child,
+    table td:last-child { display: none !important; }
+
+    /* Status pill ve badge'ler — outline */
+    .status-pill,
+    .ops-badge,
+    .badge,
+    .driver-doc,
+    .maint-type-badge,
+    .fuel-consumption-badge {
+      background: #fff !important;
+      color: #000 !important;
+      border: 1px solid #666 !important;
+    }
+
+    /* Harita & chart — yer tutucu */
+    .dash-map,
+    .chart-wrap,
+    #revenue-chart { display: none !important; }
+
+    /* Activity panel ve mob-card-list — tek sayfa için yeterli */
+    .activity-list { max-height: none !important; }
+    #mob-card-list { display: none !important; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     END A11Y / MOTION / PRINT POLISH
+     ══════════════════════════════════════════════════════════════════ */
+
+  /* ══════════════════════════════════════════════════════════════════
      END MODAL HANDOFF POLISH
      ══════════════════════════════════════════════════════════════════ */
 

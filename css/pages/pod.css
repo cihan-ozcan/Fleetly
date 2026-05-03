@@ -227,3 +227,171 @@
 .pod-badge.taslak  { background: rgba(212,168,71,.16); color: var(--yellow, #d4a847); border:1px solid rgba(212,168,71,.35); }
 .pod-badge.onayli  { background: rgba(34,197,94,.16);  color: var(--green, #22c55e);  border:1px solid rgba(34,197,94,.35); }
 .pod-badge.red     { background: rgba(239,68,68,.16);  color: var(--red, #ef4444);    border:1px solid rgba(239,68,68,.35); }
+
+/* ════════════════════════════════════════════════════════════════════
+   HANDOFF POLISH (Faz 5)
+   Tema-uyumlu token'lar + handoff card stiline yakın görünüm.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Sheet container */
+.pod-sheet {
+  background: var(--bg-elev, #0F2440);
+  border: 1px solid var(--border, rgba(255,255,255,.09));
+  box-shadow: 0 -10px 40px rgba(0,0,0,.45), 0 0 0 1px rgba(255,107,31,.10);
+}
+[data-theme="light"] .pod-sheet {
+  box-shadow: 0 -10px 40px rgba(11,26,47,.18), 0 0 0 1px rgba(255,107,31,.08);
+}
+
+/* Sheet handle */
+.pod-sheet-handle { background: var(--border-strong, rgba(255,255,255,.18)); }
+
+/* Sheet head */
+.pod-sheet-head {
+  padding: 8px 18px 14px;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,.09));
+}
+.pod-sheet-title {
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--text);
+}
+.pod-sheet-close {
+  border-radius: var(--r-md, 10px);
+  background: var(--bg-sunk, rgba(255,255,255,.04));
+  border: 1px solid var(--border, rgba(255,255,255,.09));
+  color: var(--text-muted, #5B6B82);
+  transition: background .15s, color .15s, border-color .15s;
+}
+.pod-sheet-close:hover {
+  background: var(--danger-bg, #FBE0E0);
+  border-color: var(--danger, #DC3838);
+  color: var(--danger, #DC3838);
+}
+[data-theme="dark"] .pod-sheet-close:hover {
+  background: rgba(220,56,56,.18);
+}
+
+/* Field labels & inputs */
+.pod-field-label {
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #5B6B82);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.pod-field-label .opt {
+  color: var(--text-subtle, #8997AC);
+  font-weight: 500;
+}
+.pod-input,
+.pod-textarea {
+  background: var(--bg-sunk, rgba(255,255,255,.04));
+  border: 1px solid var(--border, rgba(255,255,255,.09));
+  color: var(--text);
+  border-radius: var(--r-md, 10px);
+  font-family: var(--font-body, 'Inter', sans-serif);
+}
+.pod-input:focus,
+.pod-textarea:focus {
+  border-color: var(--accent, #FF6B1F);
+  box-shadow: 0 0 0 3px rgba(255,107,31,.15);
+  background: var(--bg-elev, #0F2440);
+}
+
+/* İmza alanı */
+.pod-imza-wrap {
+  border-radius: var(--r-md, 10px);
+  border: 1px solid var(--border-strong, rgba(255,255,255,.18));
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(11,26,47,.06));
+}
+.pod-imza-clear {
+  background: var(--danger-bg, #FBE0E0);
+  border: 1px solid rgba(220,56,56,.30);
+  color: var(--danger, #DC3838);
+  border-radius: var(--r-md, 10px);
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-weight: 600;
+  transition: background .15s;
+}
+.pod-imza-clear:hover { background: rgba(220,56,56,.20); }
+[data-theme="dark"] .pod-imza-clear { background: rgba(220,56,56,.12); }
+[data-theme="dark"] .pod-imza-clear:hover { background: rgba(220,56,56,.22); }
+
+/* Foto add butonu */
+.pod-foto-add {
+  background: var(--navy-50, rgba(56,189,248,.12));
+  border: 1px dashed rgba(44,90,158,.40);
+  color: var(--info, #2C5A9E);
+  border-radius: var(--r-md, 10px);
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-weight: 600;
+  transition: background .15s, border-color .15s;
+}
+.pod-foto-add:hover {
+  background: rgba(44,90,158,.18);
+  border-color: var(--info, #2C5A9E);
+}
+[data-theme="dark"] .pod-foto-add {
+  background: rgba(56,189,248,.12);
+  border-color: rgba(56,189,248,.40);
+  color: var(--blue, #38bdf8);
+}
+.pod-foto-thumb {
+  border-radius: var(--r-md, 10px);
+  border: 1px solid var(--border, rgba(255,255,255,.09));
+}
+
+/* Onay butonu */
+.pod-onay-btn {
+  background: linear-gradient(135deg, var(--success, #16A974), #15a346);
+  border-radius: var(--r-md, 10px);
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-weight: 700;
+  letter-spacing: .03em;
+  box-shadow: 0 4px 14px rgba(22,169,116,.35);
+  transition: box-shadow .15s, transform .12s;
+}
+.pod-onay-btn:hover { box-shadow: 0 6px 20px rgba(22,169,116,.45); transform: translateY(-1px); }
+.pod-onay-btn:active { transform: translateY(0); }
+.pod-onay-btn:disabled {
+  background: var(--bg-sunk, rgba(255,255,255,.06));
+  color: var(--text-subtle, #8997AC);
+  box-shadow: none;
+}
+
+/* POD badge'leri — handoff status-pill stiline yakın */
+.pod-badge {
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-weight: 600;
+  border-radius: 99px;
+  padding: 2px 9px;
+}
+.pod-badge.taslak {
+  background: var(--warning-bg, #FFF5D6);
+  color: var(--warning, #E5A100);
+  border-color: rgba(229,161,0,.30);
+}
+.pod-badge.onayli {
+  background: var(--success-bg, #DCF5E9);
+  color: var(--success, #16A974);
+  border-color: rgba(22,169,116,.30);
+}
+.pod-badge.red {
+  background: var(--danger-bg, #FBE0E0);
+  color: var(--danger, #DC3838);
+  border-color: rgba(220,56,56,.30);
+}
+[data-theme="dark"] .pod-badge.taslak { background: rgba(229,161,0,.18); color: #fcd34d; }
+[data-theme="dark"] .pod-badge.onayli { background: rgba(22,169,116,.18); color: #4ade80; }
+[data-theme="dark"] .pod-badge.red    { background: rgba(220,56,56,.18); color: #fca5a5; }
+
+/* Backdrop */
+.pod-sheet-bg {
+  background: rgba(0, 10, 30, .60);
+  backdrop-filter: blur(6px);
+}
+
