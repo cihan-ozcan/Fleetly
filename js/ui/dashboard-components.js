@@ -416,7 +416,7 @@
     try {
       let q = sb
         .from('is_emirleri')
-        .select('id, durum, konum_lat, konum_lng, konum_zaman, surucu_id, sofor_user_id, sofor, sofor_tel, arac_id, arac_plaka, musteri_adi, yukle_yeri, teslim_yeri, firma_id')
+        .select('id, durum, konum_lat, konum_lng, konum_zaman, surucu_id, sofor_user_id, sofor, sofor_tel, arac_plaka, musteri_adi, yukle_yeri, teslim_yeri, firma_id')
         .in('durum', ['Yolda', 'Fabrikada'])
         .not('konum_lat', 'is', null)
         .not('konum_lng', 'is', null)
@@ -437,8 +437,11 @@
     const snap = (window._fleetly && window._fleetly.snapshot) || {};
     const driverById = {};
     (snap.driverData || []).forEach(function (d) { if (d) driverById[d.id] = d; });
-    const vehById = {};
-    (snap.vehicles || []).forEach(function (v) { if (v) vehById[v.id] = v; });
+    // is_emirleri'nde arac_id yok; plakaya göre eşle
+    const vehByPlate = {};
+    (snap.vehicles || []).forEach(function (v) {
+      if (v && (v.plaka || v.plate)) vehByPlate[(v.plaka || v.plate)] = v;
+    });
 
     const seen = {};
     const bounds = [];
@@ -452,8 +455,7 @@
       const drv  = e.surucu_id ? driverById[e.surucu_id] : null;
       const drvName = (drv ? ((drv.ad || '') + ' ' + (drv.soyad || '')).trim() : null)
                   || e.sofor || '—';
-      const veh  = e.arac_id ? vehById[e.arac_id] : null;
-      const plaka = e.arac_plaka || (veh ? (veh.plaka || veh.plate || veh.kod) : '') || '—';
+      const plaka = e.arac_plaka || '—';
       const ageMin = _ageMinutes(e.konum_zaman);
       const color  = _liveColor(e.durum, ageMin);
 
