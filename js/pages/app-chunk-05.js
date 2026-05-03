@@ -2093,7 +2093,11 @@ function _opsDrawerRender(e) {
 
   // ⛽ Yakıt / Maliyet kartı
   const yakitCardEl = document.getElementById('ops-drawer-yakit-card');
-  if (yakitCardEl) yakitCardEl.innerHTML = _opsYakitCardHtml(e);
+  if (yakitCardEl) {
+    yakitCardEl.innerHTML = _opsYakitCardHtml(e);
+    // GPS güzergah verisi async geldikten sonra "📡 GPS X km / sapma" satırını ekle
+    _opsYakitGpsKarsilastirmaYukle(e).catch(()=>{});
+  }
 
   // ── Zaman çizelgesi (km bilgisiyle zenginleştirilmiş) ──
   const milestones = [
@@ -2346,19 +2350,32 @@ function _opsYakitCardHtml(e) {
   const katedilenKm = hasKm ? (e.bitis_km - e.baslangic_km) : (bagliSefer?.km || 0);
 
   let litre = 0, tl = 0, count = 0, note = '';
+  // Aracın geçmiş ortalama tüketimi — fişlerden tank-to-tank
+  const avgLper100 = veh ? calcAvgConsumption(veh.id) : 0;
+  const avgTLperKm = veh ? calcAvgTLPerKm(veh.id) : 0;
+
   if (veh && hasKm) {
     const r = calcFuelForKmRange(veh.id, e.baslangic_km, e.bitis_km);
     litre = r.litre; tl = r.tl; count = r.count;
+    // Bu aralıkta dolum yoksa tüketim ortalamasından tahmin et
+    if (count === 0 && avgLper100 > 0) {
+      litre = +((avgLper100 * katedilenKm) / 100).toFixed(2);
+      tl    = +(avgTLperKm * katedilenKm).toFixed(0);
+      note  = `Tahmini (ort ${avgLper100} L/100km)`;
+    }
   } else if (e.yakit_tutar != null) {
     litre = +(e.yakit_litre || 0);
     tl    = +e.yakit_tutar;
     count = 0;
     note  = 'Önceden kaydedilmiş cache';
   } else if (veh && katedilenKm > 0) {
-    // Fallback: ortalama TL/km × mesafe
-    const tlkm = calcAvgTLPerKm(veh.id);
-    if (tlkm > 0) {
-      tl = +(tlkm * katedilenKm).toFixed(0);
+    // Fallback: km bilgisi yok ama sefer.km var
+    if (avgLper100 > 0) {
+      litre = +((avgLper100 * katedilenKm) / 100).toFixed(2);
+      tl    = +(avgTLperKm * katedilenKm).toFixed(0);
+      note  = `Tahmini (ort ${avgLper100} L/100km)`;
+    } else if (avgTLperKm > 0) {
+      tl = +(avgTLperKm * katedilenKm).toFixed(0);
       note = 'Tahmini (TL/km × mesafe)';
     }
   }
@@ -2388,7 +2405,7 @@ function _opsYakitCardHtml(e) {
 
   return `<div style="background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(16,185,129,.06));border:1px solid var(--border2);border-radius:10px;padding:12px;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-      ${kpi('Mesafe', katedilenKm > 0 ? katedilenKm.toFixed(0) + ' km' : '—')}
+      ${kpi('Mesafe', katedilenKm > 0 ? katedilenKm.toFixed(0) + ' km' : '—', hasKm ? 'sürücü beyanı' : '')}
       ${kpi('Yakıt', litre > 0 ? litre.toLocaleString('tr-TR') + ' L' : '—')}
       ${kpi('Yakıt TL', tl > 0 ? '₺' + tl.toLocaleString('tr-TR') : '—', '', 'var(--accent)')}
       ${kpi('TL/km', tlPerKm !== '—' ? '₺' + tlPerKm : '—')}
@@ -2397,10 +2414,88 @@ function _opsYakitCardHtml(e) {
       ${kpi('Net Kâr', (netKar != null) ? '₺' + netKar.toLocaleString('tr-TR') : '—',
             (karPct != null) ? ('%' + karPct + ' marj') : '', karRenk)}
     </div>
+    <!-- GPS karşılaştırma satırı, async olarak _opsYakitGpsKarsilastirmaYukle ile dolar -->
+    <div id="ops-yakit-gps-row" style="margin-bottom:8px;"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);">
       <span>${count > 0 ? `🔎 Bu aralıkta ${count} dolum eşleşti` : (note || 'Sefer bazlı hesap')}</span>
       ${hasKm ? `<span style="font-family:var(--font-mono);">Km: ${e.baslangic_km} → ${e.bitis_km}</span>` : ''}
     </div>
+  </div>`;
+}
+
+/* ── GPS Güzergah Özeti ile Yakıt/Mesafe Karşılaştırma ───────────
+   `is_emri_guzergah_ozet` view'inden bu işin GPS toplam km'sini, süresini
+   ve nokta sayısını çeker; yakıt kartının altına ek bir satır olarak basar.
+   Sürücünün beyanı (bitis-baslangic) ile GPS arasındaki sapmayı vurgular —
+   "aynı işi yapan farklı sürücüler arasında km kıyaslama" ihtiyacının
+   ilk temelidir. */
+const _opsGuzergahOzetCache = {};
+
+async function _opsGuzergahOzetGetir(dbId) {
+  if (!dbId) return null;
+  if (_opsGuzergahOzetCache[dbId]) return _opsGuzergahOzetCache[dbId];
+  try {
+    const sb = getSB();
+    if (!sb) return null;
+    const { data, error } = await sb
+      .from('is_emri_guzergah_ozet')
+      .select('toplam_km, basla_ts, bitir_ts, ort_hiz_kmh, nokta_sayisi')
+      .eq('is_emri_id', dbId)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) _opsGuzergahOzetCache[dbId] = data;
+    return data;
+  } catch (err) {
+    console.warn('[ops] guzergah ozet:', err);
+    return null;
+  }
+}
+
+async function _opsYakitGpsKarsilastirmaYukle(e) {
+  const row = document.getElementById('ops-yakit-gps-row');
+  if (!row) return;
+  const dbId = e._dbId || e.id;
+  const ozet = await _opsGuzergahOzetGetir(dbId);
+  if (!ozet || !ozet.toplam_km || ozet.toplam_km <= 0) {
+    row.innerHTML = '';
+    return;
+  }
+  const gpsKm = +ozet.toplam_km;
+  const veh = vehicles.find(v => v.plaka === e.arac_plaka);
+  const avgLper100 = veh ? calcAvgConsumption(veh.id) : 0;
+  const avgTLperKm = veh ? calcAvgTLPerKm(veh.id) : 0;
+
+  // Sürücü beyanı km (baslangic→bitis); yoksa null
+  const beyanKm = (e.baslangic_km != null && e.bitis_km != null && e.bitis_km > e.baslangic_km)
+    ? (e.bitis_km - e.baslangic_km) : null;
+
+  // Sapma — beyan vs GPS
+  let sapmaHtml = '';
+  if (beyanKm != null) {
+    const fark = gpsKm - beyanKm;
+    const farkPct = beyanKm > 0 ? (fark / beyanKm) * 100 : 0;
+    const farkRenk = Math.abs(farkPct) > 15 ? 'var(--red)' : (Math.abs(farkPct) > 7 ? 'var(--yellow)' : 'var(--green)');
+    const ok = Math.abs(farkPct) <= 7;
+    sapmaHtml = `<span style="background:var(--surface2);border:1px solid var(--border2);color:${farkRenk};padding:3px 10px;border-radius:5px;font-weight:700;font-family:var(--font-mono);">
+      Δ ${fark >= 0 ? '+' : ''}${fark.toFixed(1)} km (${fark >= 0 ? '+' : ''}${farkPct.toFixed(1)}%) ${ok ? '✓' : '⚠'}
+    </span>`;
+  }
+
+  // GPS bazlı yakıt tahmini
+  let gpsYakitHtml = '';
+  if (avgLper100 > 0) {
+    const tahminLitre = +((avgLper100 * gpsKm) / 100).toFixed(1);
+    const tahminTL    = avgTLperKm > 0 ? Math.round(avgTLperKm * gpsKm) : null;
+    gpsYakitHtml = `<span title="Aracın geçmiş ortalama tüketimine göre tahmin" style="background:rgba(99,102,241,.10);border:1px solid rgba(99,102,241,.25);color:var(--accent);padding:3px 10px;border-radius:5px;font-family:var(--font-mono);">
+      ⛽ tahmin ${tahminLitre} L${tahminTL != null ? ' • ₺' + tahminTL.toLocaleString('tr-TR') : ''}
+    </span>`;
+  }
+
+  row.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;">
+    <span style="background:rgba(56,189,248,.10);border:1px solid rgba(56,189,248,.25);color:var(--blue);padding:3px 10px;border-radius:5px;font-weight:700;font-family:var(--font-mono);">📡 GPS ${gpsKm.toFixed(1)} km</span>
+    ${sapmaHtml}
+    ${gpsYakitHtml}
+    <span style="color:var(--muted);font-size:10.5px;align-self:center;">${ozet.nokta_sayisi} nokta · ort ${ozet.ort_hiz_kmh ?? '—'} km/sa</span>
   </div>`;
 }
 
