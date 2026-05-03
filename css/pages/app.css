@@ -3460,6 +3460,22 @@
   [data-theme="dark"] .dash-map { background: #0c1830; }
   .dash-map.leaflet-container { font-family: var(--font-body) !important; }
 
+  /* Aktif (Yolda) sürücü pinleri için nabız efekti */
+  .dash-map-pin .live-pin-pulse {
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    animation: live-pin-pulse 1.8s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes live-pin-pulse {
+    0%   { transform: scale(0.6); opacity: 0.9; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dash-map-pin .live-pin-pulse { animation: none; }
+  }
+
   /* ── Chart wrapper ──────────────────────────────────────── */
   .chart-wrap {
     position: relative;
