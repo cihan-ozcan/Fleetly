@@ -305,7 +305,14 @@
     });
   };
 
-  // ── DASHBOARD MINI MAP ─────────────────────────────────────
+  // ── DASHBOARD CANLI KONUM HARİTASI ─────────────────────────
+  // Aktif iş emirlerinden (Yolda/Fabrikada) konum_lat/lng dolu olanları
+  // çeker, harita üzerine renk-kodlu pin koyar. 30sn'de bir + Supabase
+  // Realtime ile güncel kalır. Pin'e tıklayınca operasyon drawer'ı açılır.
+  UI._liveMarkers = UI._liveMarkers || {};   // jobId → marker
+  UI._liveRefreshTimer = UI._liveRefreshTimer || null;
+  UI._liveRealtimeChannel = UI._liveRealtimeChannel || null;
+
   UI.initDashMap = function () {
     const el = document.getElementById('dashboard-map');
     if (!el || typeof L === 'undefined') return;
@@ -313,6 +320,8 @@
     if (UI._dashMap) {
       try { UI._dashMap.remove(); } catch (e) {}
       UI._dashMap = null;
+      UI._liveMarkers = {};
+      UI._liveBoundsApplied = false;
     }
 
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -330,31 +339,187 @@
       : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
     L.tileLayer(tileUrl, { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
 
-    // Mock pin'ler — Faz 4'te canlı araç konumlarıyla değişecek
-    const pins = [
-      { lat: 41.01, lng: 28.97, color: '#16A974', label: 'İstanbul' },
-      { lat: 39.92, lng: 32.85, color: '#16A974', label: 'Ankara' },
-      { lat: 38.42, lng: 27.14, color: '#E5A100', label: 'İzmir' },
-      { lat: 37.00, lng: 35.32, color: '#FF6B1F', label: 'Adana' },
-      { lat: 41.29, lng: 36.33, color: '#16A974', label: 'Samsun' },
-      { lat: 36.89, lng: 30.71, color: '#7889A1', label: 'Antalya' },
-      { lat: 40.18, lng: 29.07, color: '#16A974', label: 'Bursa' },
-    ];
-    pins.forEach(function (p) {
-      const icon = L.divIcon({
-        className: 'dash-map-pin',
-        html: '<div style="width:14px;height:14px;border-radius:50%;background:' + p.color + ';border:2px solid #fff;box-shadow:0 0 0 4px ' + p.color + '33,0 2px 6px rgba(0,0,0,.25);"></div>',
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
-      });
-      L.marker([p.lat, p.lng], { icon: icon, title: p.label }).addTo(map);
+    // İlk fetch + periyodik yenileme + realtime
+    UI.refreshLiveDriverMap();
+    if (UI._liveRefreshTimer) clearInterval(UI._liveRefreshTimer);
+    UI._liveRefreshTimer = setInterval(UI.refreshLiveDriverMap, 30000);
+    UI._subscribeLiveDrivers();
+  };
+
+  // Renk paleti — durum + son sinyal yaşı
+  function _liveColor(durum, ageMinutes) {
+    if (ageMinutes != null && ageMinutes > 15) return '#7889A1'; // gri — sinyal eski
+    switch (durum) {
+      case 'Yolda':     return '#16A974'; // yeşil
+      case 'Fabrikada': return '#FF6B1F'; // turuncu
+      case 'Bekliyor':  return '#E5A100'; // sarı
+      default:          return '#7889A1';
+    }
+  }
+
+  function _ageMinutes(ts) {
+    if (!ts) return null;
+    const dt = new Date(ts);
+    if (isNaN(dt)) return null;
+    return Math.max(0, Math.floor((Date.now() - dt.getTime()) / 60000));
+  }
+
+  function _ageLabel(min) {
+    if (min == null) return 'bilinmiyor';
+    if (min < 1)  return 'şimdi';
+    if (min < 60) return min + ' dk önce';
+    const h = Math.floor(min / 60);
+    return h + ' sa önce';
+  }
+
+  function _esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
     });
+  }
+
+  UI.refreshLiveDriverMap = async function () {
+    const map = UI._dashMap;
+    if (!map) return;
+    const sb = (typeof getSB === 'function') ? getSB() : null;
+    const firmaId = (typeof currentFirmaId !== 'undefined') ? currentFirmaId : null;
+    if (!sb || !firmaId) return;
+
+    let rows = [];
+    try {
+      const { data, error } = await sb
+        .from('is_emirleri')
+        .select('id, durum, konum_lat, konum_lng, konum_zaman, surucu_id, sofor_user_id, sofor, sofor_tel, arac_id, arac_plaka, musteri_adi, yukle_yeri, teslim_yeri')
+        .eq('firma_id', firmaId)
+        .in('durum', ['Yolda', 'Fabrikada'])
+        .not('konum_lat', 'is', null)
+        .not('konum_lng', 'is', null)
+        .order('konum_zaman', { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      rows = data || [];
+    } catch (err) {
+      console.warn('[live-map] iş emri çekilemedi:', err);
+      return;
+    }
+
+    // Snapshot'tan sürücü/araç eşleşmesi (tooltip için)
+    const snap = (window._fleetly && window._fleetly.snapshot) || {};
+    const driverById = {};
+    (snap.driverData || []).forEach(function (d) { if (d) driverById[d.id] = d; });
+    const vehById = {};
+    (snap.vehicles || []).forEach(function (v) { if (v) vehById[v.id] = v; });
+
+    const seen = {};
+    const bounds = [];
+
+    rows.forEach(function (e) {
+      const lat = +e.konum_lat;
+      const lng = +e.konum_lng;
+      if (!isFinite(lat) || !isFinite(lng)) return;
+      seen[e.id] = true;
+
+      const drv  = e.surucu_id ? driverById[e.surucu_id] : null;
+      const drvName = (drv ? ((drv.ad || '') + ' ' + (drv.soyad || '')).trim() : null)
+                  || e.sofor || '—';
+      const veh  = e.arac_id ? vehById[e.arac_id] : null;
+      const plaka = e.arac_plaka || (veh ? (veh.plaka || veh.plate || veh.kod) : '') || '—';
+      const ageMin = _ageMinutes(e.konum_zaman);
+      const color  = _liveColor(e.durum, ageMin);
+
+      const tooltipHtml =
+        '<div style="font:600 12px/1.4 system-ui,sans-serif;min-width:160px">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
+            '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + color + '"></span>' +
+            '<b>' + _esc(drvName) + '</b>' +
+            '<span style="margin-left:auto;font-weight:500;color:#7889A1">#' + e.id + '</span>' +
+          '</div>' +
+          '<div style="color:#7889A1;font-weight:500">' + _esc(plaka) + ' • ' + _esc(e.durum) + '</div>' +
+          (e.musteri_adi ? '<div style="margin-top:2px">' + _esc(e.musteri_adi) + '</div>' : '') +
+          '<div style="margin-top:4px;color:#7889A1;font-size:11px">' + _ageLabel(ageMin) + '</div>' +
+          '<div style="margin-top:4px;color:#1f6feb;font-size:11px">▶ Detayı aç</div>' +
+        '</div>';
+
+      const existing = UI._liveMarkers[e.id];
+      if (existing) {
+        existing.setLatLng([lat, lng]);
+        existing.setIcon(_liveDivIcon(color, e.durum));
+        existing.bindTooltip(tooltipHtml, { direction: 'top', offset: [0, -8], opacity: 0.95 });
+      } else {
+        const marker = L.marker([lat, lng], {
+          icon: _liveDivIcon(color, e.durum),
+          riseOnHover: true,
+          title: drvName + ' — ' + plaka
+        });
+        marker.bindTooltip(tooltipHtml, { direction: 'top', offset: [0, -8], opacity: 0.95 });
+        marker.on('click', function () {
+          if (typeof openOperasyonPage === 'function') {
+            openOperasyonPage();
+            setTimeout(function () {
+              if (typeof openOpsDrawer === 'function') openOpsDrawer(e.id);
+            }, 600);
+          }
+        });
+        marker.addTo(map);
+        UI._liveMarkers[e.id] = marker;
+      }
+      bounds.push([lat, lng]);
+    });
+
+    // Artık aktif olmayan markerları kaldır
+    Object.keys(UI._liveMarkers).forEach(function (id) {
+      if (!seen[id]) {
+        try { map.removeLayer(UI._liveMarkers[id]); } catch (e) {}
+        delete UI._liveMarkers[id];
+      }
+    });
+
+    // Yalnız ilk fetch'te ve harita varsayılan görünümünde fitBounds yap
+    // (kullanıcı zoom yaptıysa ezme)
+    if (bounds.length && !UI._liveBoundsApplied) {
+      try { map.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 }); } catch (e) {}
+      UI._liveBoundsApplied = true;
+    }
+  };
+
+  function _liveDivIcon(color, durum) {
+    const pulse = (durum === 'Yolda');
+    return L.divIcon({
+      className: 'dash-map-pin' + (pulse ? ' dash-map-pin--pulse' : ''),
+      html: '<div style="position:relative;width:14px;height:14px">' +
+              (pulse ? '<div class="live-pin-pulse" style="background:' + color + '33"></div>' : '') +
+              '<div style="position:relative;width:14px;height:14px;border-radius:50%;background:' + color + ';border:2px solid #fff;box-shadow:0 0 0 4px ' + color + '33,0 2px 6px rgba(0,0,0,.25)"></div>' +
+            '</div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+  }
+
+  UI._subscribeLiveDrivers = function () {
+    const sb = (typeof getSB === 'function') ? getSB() : null;
+    if (!sb || UI._liveRealtimeChannel) return;
+    try {
+      UI._liveRealtimeChannel = sb
+        .channel('dash-live-locations')
+        .on('postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'is_emirleri' },
+            function () { UI.refreshLiveDriverMap(); })
+        .subscribe();
+    } catch (err) {
+      console.warn('[live-map] realtime kurulamadı, polling devam:', err);
+    }
   };
 
   // Tema değişiminde chart ve harita renklerini senkronla
   window.addEventListener('fleetly:theme-change', function () {
     UI.initRevenueChart();
+    UI._liveBoundsApplied = false;
     UI.initDashMap();
+  });
+
+  // Bridge hazır olduğunda (driver/vehicle snapshot) tooltip'leri tazele
+  window.addEventListener('fleetly:bridge-ready', function () {
+    if (UI._dashMap) UI.refreshLiveDriverMap();
   });
 
   // ── CANLI VERİ POPULATE (Faz 5) ───────────────────────────
