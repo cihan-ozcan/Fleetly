@@ -341,6 +341,14 @@
 
     // İlk fetch + periyodik yenileme + realtime
     UI.refreshLiveDriverMap();
+    // İlk yenilemede firmaId/auth henüz yüklenmemiş olabilir; ilk 60 sn'de
+    // 5 sn'lik "boost" polling, sonra normal 30 sn ritmine geç.
+    if (UI._liveBoostTimer) clearInterval(UI._liveBoostTimer);
+    let boostTicks = 0;
+    UI._liveBoostTimer = setInterval(function () {
+      UI.refreshLiveDriverMap();
+      if (++boostTicks >= 12) { clearInterval(UI._liveBoostTimer); UI._liveBoostTimer = null; }
+    }, 5000);
     if (UI._liveRefreshTimer) clearInterval(UI._liveRefreshTimer);
     UI._liveRefreshTimer = setInterval(UI.refreshLiveDriverMap, 30000);
     UI._subscribeLiveDrivers();
@@ -381,23 +389,45 @@
   UI.refreshLiveDriverMap = async function () {
     const map = UI._dashMap;
     if (!map) return;
-    const sb = (typeof getSB === 'function') ? getSB() : null;
-    const firmaId = (typeof currentFirmaId !== 'undefined') ? currentFirmaId : null;
-    if (!sb || !firmaId) return;
+    const sb = (typeof getSB === 'function') ? getSB()
+              : (window.getSB ? window.getSB() : null);
+    if (!sb) { console.warn('[live-map] Supabase client yok'); return; }
+
+    // currentFirmaId'ye birkaç yoldan eriş (let global IIFE'den okunamayabiliyor)
+    let firmaId = null;
+    try { if (typeof currentFirmaId !== 'undefined') firmaId = currentFirmaId; } catch (e) {}
+    if (!firmaId && window.currentFirmaId) firmaId = window.currentFirmaId;
+    if (!firmaId) {
+      // Auth'tan tazeliyebiliyorsak çek
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+          const { data: fk } = await sb.from('firma_kullanicilar')
+            .select('firma_id').eq('user_id', user.id).limit(1).maybeSingle();
+          if (fk && fk.firma_id) {
+            firmaId = fk.firma_id;
+            window.currentFirmaId = firmaId;
+          }
+        }
+      } catch (e) { /* yutuyoruz */ }
+    }
 
     let rows = [];
     try {
-      const { data, error } = await sb
+      let q = sb
         .from('is_emirleri')
-        .select('id, durum, konum_lat, konum_lng, konum_zaman, surucu_id, sofor_user_id, sofor, sofor_tel, arac_id, arac_plaka, musteri_adi, yukle_yeri, teslim_yeri')
-        .eq('firma_id', firmaId)
+        .select('id, durum, konum_lat, konum_lng, konum_zaman, surucu_id, sofor_user_id, sofor, sofor_tel, arac_id, arac_plaka, musteri_adi, yukle_yeri, teslim_yeri, firma_id')
         .in('durum', ['Yolda', 'Fabrikada'])
         .not('konum_lat', 'is', null)
         .not('konum_lng', 'is', null)
         .order('konum_zaman', { ascending: false })
         .limit(200);
+      // Firma filtresi: ops modülü gibi firma_id eşleşen VEYA NULL olanları al
+      if (firmaId) q = q.or('firma_id.eq.' + firmaId + ',firma_id.is.null');
+      const { data, error } = await q;
       if (error) throw error;
       rows = data || [];
+      console.log('[live-map] aktif sürücü/iş emri:', rows.length, '(firmaId=' + firmaId + ')');
     } catch (err) {
       console.warn('[live-map] iş emri çekilemedi:', err);
       return;
