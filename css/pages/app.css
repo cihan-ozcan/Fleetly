@@ -3663,3 +3663,1234 @@
      END DASHBOARD COMPONENTS
      ══════════════════════════════════════════════════════════════════ */
 
+
+  /* ══════════════════════════════════════════════════════════════════
+     MODAL HANDOFF POLISH (Faz 4) — Sürücü modal başlangıç
+     Mevcut .driver-* CSS'in üzerine handoff token'larına uyumlu
+     iyileştirmeler ekler. JS ve markup ID'leri korunur.
+     ══════════════════════════════════════════════════════════════════ */
+
+  /* ── Genel modal başlık tipografisi ────────────────────── */
+  .driver-modal-title,
+  .fuel-modal-title,
+  .maint-modal-title,
+  .srm-title {
+    font-family: var(--font-body) !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    letter-spacing: -.005em !important;
+    text-transform: none !important;
+    color: var(--text) !important;
+  }
+  .driver-modal-title svg,
+  .fuel-modal-title svg,
+  .maint-modal-title svg { color: var(--accent-500); }
+
+  /* ── Sürücü modal — body & form ────────────────────────── */
+  .driver-modal-body { padding: 20px 22px; }
+
+  .driver-form {
+    background: var(--bg-sunk);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  [data-theme="dark"] .driver-form {
+    background: var(--surface);
+    border-color: var(--border);
+  }
+  .driver-form-title {
+    color: var(--success) !important;
+    font-family: var(--font-body) !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: .07em !important;
+  }
+  .driver-form-group label {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .05em !important;
+  }
+  .driver-inp {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    font-family: var(--font-body) !important;
+    border-radius: var(--r-md) !important;
+    transition: border-color .15s, box-shadow .15s !important;
+  }
+  .driver-inp:focus {
+    border-color: var(--success) !important;
+    box-shadow: 0 0 0 3px rgba(22, 169, 116, .15) !important;
+  }
+  .driver-add-btn {
+    background: linear-gradient(135deg, var(--success), #15a346) !important;
+    border-radius: var(--r-md) !important;
+    font-family: var(--font-body) !important;
+    font-weight: 700 !important;
+    letter-spacing: .03em !important;
+    box-shadow: 0 4px 14px rgba(22, 169, 116, .35) !important;
+  }
+  .driver-add-btn:hover {
+    box-shadow: 0 6px 20px rgba(22, 169, 116, .45) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  /* ── Sürücü kartları — handoff-style ───────────────────── */
+  .driver-list { gap: 12px !important; }
+  .driver-card {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+    padding: 16px 18px !important;
+    transition: transform .15s var(--ease-out), box-shadow .15s, border-color .15s !important;
+  }
+  .driver-card:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong) !important;
+  }
+  .driver-card.has-overdue {
+    border-left: 3px solid var(--danger) !important;
+    border-color: var(--border) !important;
+    background: var(--bg-elev) !important;
+  }
+  .driver-card.has-warn {
+    border-left: 3px solid var(--warning) !important;
+    border-color: var(--border) !important;
+    background: var(--bg-elev) !important;
+  }
+  [data-theme="dark"] .driver-card.has-overdue { background: rgba(220, 56, 56, .04) !important; }
+  [data-theme="dark"] .driver-card.has-warn    { background: rgba(229, 161, 0, .04) !important; }
+
+  /* Avatar — handoff list-row__avatar pattern */
+  .driver-avatar {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, var(--navy-400), var(--navy-600)) !important;
+    color: #fff !important;
+    font-family: var(--font-body) !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    letter-spacing: .02em !important;
+  }
+
+  /* Sürücü ismi & plaka badge */
+  .driver-name {
+    font-family: var(--font-body) !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--text) !important;
+  }
+  .driver-plate-badge {
+    font-family: var(--font-mono) !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    color: var(--accent-500) !important;
+    background: var(--accent-100) !important;
+    padding: 2px 8px !important;
+    border-radius: var(--r-sm) !important;
+    letter-spacing: .03em !important;
+  }
+  [data-theme="dark"] .driver-plate-badge {
+    background: rgba(255, 107, 31, .14) !important;
+    color: var(--accent-400) !important;
+  }
+  .driver-phone {
+    font-family: var(--font-mono) !important;
+    font-size: 12px !important;
+    color: var(--text-muted) !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  /* Belge chip'leri — status-pill benzeri */
+  .driver-doc {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 99px !important;
+    padding: 3px 10px 3px 8px !important;
+    font-family: var(--font-body) !important;
+    transition: background .15s, border-color .15s;
+  }
+  .driver-doc.ok {
+    border-color: rgba(22, 169, 116, .35) !important;
+    background: var(--success-bg) !important;
+  }
+  .driver-doc.ok .driver-doc-val,
+  .driver-doc.ok .driver-doc-days { color: var(--success) !important; }
+  .driver-doc.warn {
+    border-color: rgba(229, 161, 0, .4) !important;
+    background: var(--warning-bg) !important;
+  }
+  .driver-doc.warn .driver-doc-val,
+  .driver-doc.warn .driver-doc-days { color: var(--warning) !important; }
+  .driver-doc.overdue {
+    border-color: rgba(220, 56, 56, .4) !important;
+    background: var(--danger-bg) !important;
+  }
+  .driver-doc.overdue .driver-doc-val,
+  .driver-doc.overdue .driver-doc-days { color: var(--danger) !important; }
+  [data-theme="dark"] .driver-doc.ok       { background: rgba(22, 169, 116, .12) !important; }
+  [data-theme="dark"] .driver-doc.warn     { background: rgba(229, 161, 0, .12) !important; }
+  [data-theme="dark"] .driver-doc.overdue  { background: rgba(220, 56, 56, .12) !important; }
+  .driver-doc-label {
+    font-family: var(--font-body) !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: var(--text-subtle) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .04em !important;
+  }
+  .driver-doc-val {
+    font-family: var(--font-mono) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  /* Edit / Delete butonları — kompakt icon-btn */
+  .driver-edit-btn,
+  .driver-del-btn {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: var(--r-md) !important;
+    display: grid !important;
+    place-items: center !important;
+    background: transparent !important;
+    border: 1px solid var(--border) !important;
+    transition: background .15s, color .15s, border-color .15s !important;
+  }
+  .driver-edit-btn { color: var(--info) !important; }
+  .driver-edit-btn:hover {
+    background: var(--navy-50) !important;
+    border-color: var(--info) !important;
+  }
+  [data-theme="dark"] .driver-edit-btn:hover { background: rgba(74, 127, 196, .18) !important; }
+  .driver-del-btn { color: var(--danger) !important; }
+  .driver-del-btn:hover {
+    background: var(--danger-bg) !important;
+    border-color: var(--danger) !important;
+  }
+  [data-theme="dark"] .driver-del-btn:hover { background: rgba(220, 56, 56, .18) !important; }
+
+  /* Empty state */
+  .driver-empty {
+    background: var(--bg-sunk);
+    border: 1px dashed var(--border);
+    border-radius: var(--r-lg);
+    padding: 48px 20px !important;
+    color: var(--text-subtle) !important;
+  }
+  .driver-empty .icon { opacity: .5; }
+  /* ── BAKIM MODAL — handoff polish ──────────────────────── */
+  .maint-modal-body { padding: 20px 22px; }
+
+  .maint-stats {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .maint-stat {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+    padding: 14px 16px !important;
+    text-align: left !important;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .maint-stat:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .maint-stat-val {
+    font-family: var(--font-mono) !important;
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    letter-spacing: -.02em !important;
+    color: var(--text) !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .maint-stat-lbl {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .06em !important;
+    margin-top: 4px !important;
+  }
+
+  .maint-next-service {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+  }
+  .maint-next-title {
+    font-family: var(--font-body) !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .06em !important;
+  }
+  .maint-next-value {
+    font-family: var(--font-mono) !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .maint-bar-track { background: var(--bg-sunk) !important; }
+  [data-theme="dark"] .maint-bar-track { background: var(--navy-900) !important; }
+
+  .maint-form {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+  }
+  [data-theme="dark"] .maint-form {
+    background: var(--surface) !important;
+  }
+  .maint-form-title {
+    color: var(--info) !important;
+    font-family: var(--font-body) !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: .07em !important;
+  }
+  .maint-form-group label {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .05em !important;
+  }
+  .maint-inp {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-radius: var(--r-md) !important;
+    transition: border-color .15s, box-shadow .15s !important;
+  }
+  .maint-inp:focus {
+    border-color: var(--info) !important;
+    box-shadow: 0 0 0 3px rgba(44, 90, 158, .15) !important;
+  }
+  .maint-add-btn {
+    background: linear-gradient(135deg, var(--info), var(--navy-400)) !important;
+    color: #fff !important;
+    border-radius: var(--r-md) !important;
+    font-family: var(--font-body) !important;
+    font-weight: 700 !important;
+    letter-spacing: .03em !important;
+    box-shadow: 0 4px 14px rgba(44, 90, 158, .35) !important;
+  }
+  .maint-add-btn:hover {
+    box-shadow: 0 6px 20px rgba(44, 90, 158, .45) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  .maint-table-wrap {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+  }
+  .maint-table thead { background: var(--bg-sunk); }
+  .maint-table th {
+    background: var(--bg-sunk) !important;
+    color: var(--text-muted) !important;
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+    border-bottom-color: var(--border) !important;
+  }
+  .maint-table td {
+    border-bottom-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+  .maint-table tr:hover td { background: var(--bg-sunk) !important; }
+  .maint-table th.col-islem,
+  .maint-table td.col-islem { background: var(--bg-elev) !important; }
+  .maint-table tr:hover td.col-islem { background: var(--bg-sunk) !important; }
+
+  /* maint-type-badge → handoff status-pill stiline */
+  .maint-type-badge {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .02em !important;
+    padding: 2px 9px !important;
+    border-radius: 99px !important;
+    border: 1px solid transparent;
+  }
+  .maint-type-badge.bakim   { background: var(--navy-50) !important;    color: var(--info) !important;    border-color: rgba(44,90,158,.25); }
+  .maint-type-badge.ariza   { background: var(--danger-bg) !important;  color: var(--danger) !important;  border-color: rgba(220,56,56,.3); }
+  .maint-type-badge.parca   { background: rgba(167,139,250,.14) !important; color: var(--purple) !important; border-color: rgba(167,139,250,.3); }
+  .maint-type-badge.muayene { background: var(--warning-bg) !important; color: var(--warning) !important; border-color: rgba(229,161,0,.3); }
+  .maint-type-badge.diger   { background: var(--bg-sunk) !important;    color: var(--text-muted) !important; border-color: var(--border); }
+  [data-theme="dark"] .maint-type-badge.bakim   { background: rgba(44,90,158,.18) !important; color: var(--navy-300) !important; }
+  [data-theme="dark"] .maint-type-badge.ariza   { background: rgba(220,56,56,.18) !important; color: #fca5a5 !important; }
+  [data-theme="dark"] .maint-type-badge.muayene { background: rgba(229,161,0,.18) !important; color: #fcd34d !important; }
+  [data-theme="dark"] .maint-type-badge.diger   { background: rgba(255,255,255,.04) !important; color: var(--text-subtle) !important; }
+
+  .maint-del-btn { border-radius: var(--r-md) !important; }
+  .maint-del-btn:hover { background: var(--danger-bg) !important; color: var(--danger) !important; }
+  [data-theme="dark"] .maint-del-btn:hover { background: rgba(220,56,56,.18) !important; }
+
+  /* Bakım planı kartları (gelecek bakımlar) — handoff list-row hissi */
+  .maint-plan-section {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+  }
+  .maint-plan-title {
+    color: var(--warning) !important;
+    font-family: var(--font-body) !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: .07em !important;
+  }
+  .maint-plan-card {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+    transition: transform .15s, box-shadow .15s, border-color .15s;
+  }
+  .maint-plan-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border-strong) !important;
+  }
+  .maint-plan-card.overdue {
+    border-left: 3px solid var(--danger) !important;
+    background: var(--danger-bg) !important;
+  }
+  .maint-plan-card.warn {
+    border-left: 3px solid var(--warning) !important;
+    background: var(--warning-bg) !important;
+  }
+  .maint-plan-card.ok {
+    border-left: 3px solid var(--success) !important;
+    background: var(--success-bg) !important;
+  }
+  [data-theme="dark"] .maint-plan-card.overdue { background: rgba(220,56,56,.10) !important; }
+  [data-theme="dark"] .maint-plan-card.warn    { background: rgba(229,161,0,.10) !important; }
+  [data-theme="dark"] .maint-plan-card.ok      { background: rgba(22,169,116,.10) !important; }
+  .maint-plan-card-name {
+    font-family: var(--font-body) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--text) !important;
+  }
+  .maint-plan-card-due {
+    font-family: var(--font-mono) !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .maint-empty {
+    color: var(--text-subtle) !important;
+  }
+
+  /* ── SEFER / SRM MODAL — handoff polish ────────────────── */
+  .srm-body { padding: 20px 22px; }
+
+  /* Sekme bar — handoff segmented control hissi */
+  .srm-tabs {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+    padding: 4px !important;
+    gap: 2px !important;
+  }
+  .srm-tab {
+    font-family: var(--font-body) !important;
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+    color: var(--text-muted) !important;
+    border-radius: calc(var(--r-md) - 2px) !important;
+    transition: background .15s, color .15s, box-shadow .15s !important;
+  }
+  .srm-tab:hover { color: var(--text) !important; }
+  .srm-tab.active {
+    background: var(--bg-elev) !important;
+    color: var(--text) !important;
+    font-weight: 600 !important;
+    box-shadow: var(--shadow-xs) !important;
+  }
+
+  /* Stat satırı */
+  .srm-stats {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .srm-stat {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+    padding: 14px 16px !important;
+    text-align: left !important;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .srm-stat:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .srm-stat-val {
+    font-family: var(--font-mono) !important;
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    letter-spacing: -.02em !important;
+    color: var(--text) !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .srm-stat-lbl {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .06em !important;
+    margin-top: 4px !important;
+  }
+
+  /* Form */
+  .srm-form {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+  }
+  [data-theme="dark"] .srm-form { background: var(--surface) !important; }
+  .srm-form-title {
+    font-family: var(--font-body) !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: .07em !important;
+    color: var(--purple);
+  }
+  .srm-group label {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .05em !important;
+  }
+  .srm-inp {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-radius: var(--r-md) !important;
+    transition: border-color .15s, box-shadow .15s !important;
+  }
+  .srm-inp:focus {
+    border-color: var(--purple) !important;
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, .15) !important;
+  }
+  .srm-inp.yellow:focus {
+    border-color: var(--warning) !important;
+    box-shadow: 0 0 0 3px rgba(229, 161, 0, .15) !important;
+  }
+
+  /* Tablo */
+  .srm-table-wrap {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+  }
+  .srm-table thead { background: var(--bg-sunk); }
+  .srm-table th {
+    background: var(--bg-sunk) !important;
+    color: var(--text-muted) !important;
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+    border-bottom-color: var(--border) !important;
+  }
+  .srm-table td {
+    border-bottom-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+  .srm-table tr:hover td { background: var(--bg-sunk) !important; }
+
+  .srm-del-btn { border-radius: var(--r-md) !important; }
+  .srm-del-btn:hover {
+    background: var(--danger-bg) !important;
+    color: var(--danger) !important;
+  }
+  [data-theme="dark"] .srm-del-btn:hover { background: rgba(220,56,56,.18) !important; }
+
+  /* Rapor kartları */
+  .rapor-card {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow .15s, border-color .15s;
+  }
+  .rapor-card:hover { box-shadow: var(--shadow-sm); border-color: var(--border-strong) !important; }
+  .rapor-card-title {
+    font-family: var(--font-body) !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: .06em !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+  }
+  .rapor-row { border-bottom-color: var(--border) !important; }
+  .rapor-row-label { color: var(--text-muted) !important; }
+  .rapor-row-val {
+    font-family: var(--font-mono) !important;
+    font-variant-numeric: tabular-nums;
+    color: var(--text) !important;
+  }
+  .rapor-bar-track { background: var(--bg-sunk) !important; }
+  [data-theme="dark"] .rapor-bar-track { background: var(--navy-900) !important; }
+
+  /* ── YAKIT MODAL — handoff polish ──────────────────────── */
+  .fuel-modal-body { padding: 20px 22px; }
+
+  .fuel-modal-plate {
+    font-family: var(--font-mono) !important;
+    font-size: 13.5px !important;
+    color: var(--accent-500) !important;
+    background: var(--accent-100) !important;
+    padding: 3px 10px !important;
+    border-radius: var(--r-sm) !important;
+    letter-spacing: .03em !important;
+  }
+  [data-theme="dark"] .fuel-modal-plate {
+    background: rgba(255, 107, 31, .14) !important;
+    color: var(--accent-400) !important;
+  }
+
+  .fuel-stats {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .fuel-stat {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+    padding: 14px 16px !important;
+    text-align: left !important;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .fuel-stat:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .fuel-stat-val {
+    font-family: var(--font-mono) !important;
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    letter-spacing: -.02em !important;
+    color: var(--text) !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .fuel-stat-lbl {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .06em !important;
+    margin-top: 4px !important;
+  }
+
+  /* Verim çubuğu */
+  .fuel-efficiency-bar {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+  }
+  .fuel-eff-title {
+    font-family: var(--font-body) !important;
+    font-size: 12px !important;
+    color: var(--text-muted) !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .06em !important;
+  }
+  .fuel-eff-value {
+    font-family: var(--font-mono) !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: var(--text) !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .fuel-bar-track { background: var(--bg-sunk) !important; }
+  [data-theme="dark"] .fuel-bar-track { background: var(--navy-900) !important; }
+
+  /* Yakıt formu */
+  .fuel-form {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+  }
+  [data-theme="dark"] .fuel-form { background: var(--surface) !important; }
+  .fuel-form-title {
+    font-family: var(--font-body) !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: .07em !important;
+    color: var(--accent-500) !important;
+  }
+  .fuel-form-group label {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .05em !important;
+  }
+  .fuel-inp {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-radius: var(--r-md) !important;
+    transition: border-color .15s, box-shadow .15s !important;
+  }
+  .fuel-inp:focus {
+    border-color: var(--accent-500) !important;
+    box-shadow: 0 0 0 3px rgba(255, 107, 31, .15) !important;
+  }
+  .fuel-add-btn {
+    background: linear-gradient(135deg, var(--accent-500), var(--accent-400)) !important;
+    border-radius: var(--r-md) !important;
+    font-family: var(--font-body) !important;
+    font-weight: 700 !important;
+    letter-spacing: .03em !important;
+    box-shadow: 0 4px 14px rgba(255, 107, 31, .35) !important;
+  }
+  .fuel-add-btn:hover {
+    box-shadow: 0 6px 20px rgba(255, 107, 31, .45) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  /* Yakıt tablosu */
+  .fuel-history-title {
+    font-family: var(--font-body) !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: .07em !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+  }
+  .fuel-history-count {
+    font-family: var(--font-mono) !important;
+    background: var(--bg-sunk) !important;
+    color: var(--text-muted) !important;
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-variant-numeric: tabular-nums;
+  }
+  .fuel-table-wrap {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+  }
+  .fuel-table thead { background: var(--bg-sunk); }
+  .fuel-table th {
+    background: var(--bg-sunk) !important;
+    color: var(--text-muted) !important;
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+    border-bottom-color: var(--border) !important;
+  }
+  .fuel-table td {
+    border-bottom-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+  .fuel-table tr:hover td { background: var(--bg-sunk) !important; }
+  .fuel-table th.col-islem,
+  .fuel-table td.col-islem { background: var(--bg-elev) !important; }
+  .fuel-table tr:hover td.col-islem { background: var(--bg-sunk) !important; }
+
+  /* Tüketim badge'i — handoff status-pill stiline */
+  .fuel-consumption-badge {
+    font-family: var(--font-mono) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 2px 9px !important;
+    border-radius: 99px !important;
+    border: 1px solid transparent;
+  }
+  .fuel-consumption-badge.good   { background: var(--success-bg) !important; color: var(--success) !important; border-color: rgba(22,169,116,.3); }
+  .fuel-consumption-badge.medium { background: var(--warning-bg) !important; color: var(--warning) !important; border-color: rgba(229,161,0,.3); }
+  .fuel-consumption-badge.bad    { background: var(--danger-bg) !important;  color: var(--danger) !important;  border-color: rgba(220,56,56,.3); }
+  [data-theme="dark"] .fuel-consumption-badge.good   { background: rgba(22,169,116,.18) !important; color: #4ade80 !important; }
+  [data-theme="dark"] .fuel-consumption-badge.medium { background: rgba(229,161,0,.18) !important;  color: #fcd34d !important; }
+  [data-theme="dark"] .fuel-consumption-badge.bad    { background: rgba(220,56,56,.18) !important;  color: #fca5a5 !important; }
+
+  .fuel-del-btn { border-radius: var(--r-md) !important; }
+  .fuel-del-btn:hover {
+    background: var(--danger-bg) !important;
+    color: var(--danger) !important;
+  }
+  [data-theme="dark"] .fuel-del-btn:hover { background: rgba(220,56,56,.18) !important; }
+
+  /* Vehicle select modal — yakıt summary aracı seçimi */
+  .vs-summary-panel,
+  .vs-tabs {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+  }
+  .vs-summary-stat {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+  }
+  .vs-summary-val {
+    font-family: var(--font-mono) !important;
+    color: var(--text) !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .vs-vehicle-item {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+    transition: transform .15s, box-shadow .15s, border-color .15s;
+  }
+  .vs-vehicle-item:hover {
+    background: var(--bg-elev) !important;
+    border-color: var(--accent-500) !important;
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+  .vs-vehicle-plaka {
+    font-family: var(--font-mono) !important;
+    color: var(--accent-500) !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .vs-month-tab.active {
+    background: var(--accent-100) !important;
+    border-color: rgba(255, 107, 31, .35) !important;
+    color: var(--accent-500) !important;
+  }
+  [data-theme="dark"] .vs-month-tab.active {
+    background: rgba(255, 107, 31, .15) !important;
+  }
+
+  /* ── MÜŞTERİ (CRM) SAYFASI — handoff polish ────────────── */
+  /* Topbar & geri butonu */
+  .crm-topbar {
+    background: var(--bg-elev) !important;
+    border-bottom: 1px solid var(--border) !important;
+    box-shadow: inset 3px 0 0 var(--teal), 0 1px 0 var(--border) !important;
+    padding: 12px 24px !important;
+  }
+  .crm-back-btn {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+    border-radius: var(--r-md) !important;
+    padding: 7px 14px !important;
+    font-family: var(--font-body) !important;
+    font-weight: 600 !important;
+  }
+  .crm-back-btn:hover {
+    border-color: var(--teal) !important;
+    color: var(--teal) !important;
+    background: rgba(45, 212, 191, .08) !important;
+  }
+
+  /* CRM stat kartları */
+  #crm-page .stat-card {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs) !important;
+  }
+  #crm-page .stat-card:hover {
+    box-shadow: var(--shadow-md) !important;
+    border-color: var(--border-strong) !important;
+    transform: translateY(-1px);
+  }
+  #crm-page .stat-val {
+    font-family: var(--font-mono) !important;
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    letter-spacing: -.02em !important;
+    color: var(--text) !important;
+    font-variant-numeric: tabular-nums;
+  }
+  #crm-page .stat-lbl {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .05em !important;
+  }
+  #crm-page .stat-sub { color: var(--text-muted) !important; }
+
+  /* Tab bar — segmented control */
+  #crm-page .tab-bar {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+    padding: 4px !important;
+  }
+  #crm-page .tab-btn {
+    color: var(--text-muted) !important;
+    font-family: var(--font-body) !important;
+    border-radius: calc(var(--r-md) - 2px) !important;
+  }
+  #crm-page .tab-btn:hover { color: var(--text) !important; }
+  #crm-page .tab-btn.active {
+    background: var(--teal) !important;
+    color: #051a18 !important;
+    box-shadow: var(--shadow-xs) !important;
+  }
+
+  /* Search input */
+  #crm-page .search-input {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-radius: var(--r-md) !important;
+    transition: border-color .15s, box-shadow .15s !important;
+  }
+  #crm-page .search-input:focus {
+    border-color: var(--teal) !important;
+    box-shadow: 0 0 0 3px rgba(45, 212, 191, .15) !important;
+    background: var(--bg-elev) !important;
+  }
+  #crm-page .select-input {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-radius: var(--r-md) !important;
+  }
+  #crm-page .select-input:focus {
+    border-color: var(--teal) !important;
+    box-shadow: 0 0 0 3px rgba(45, 212, 191, .15) !important;
+  }
+
+  /* Buton'lar */
+  #crm-page .btn-accent {
+    background: var(--teal) !important;
+    color: #051a18 !important;
+    border-radius: var(--r-md) !important;
+    font-family: var(--font-body) !important;
+    box-shadow: 0 4px 14px rgba(45, 212, 191, .35) !important;
+  }
+  #crm-page .btn-accent:hover {
+    box-shadow: 0 6px 20px rgba(45, 212, 191, .45) !important;
+    transform: translateY(-1px);
+  }
+  #crm-page .btn-ghost {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+    border-radius: var(--r-md) !important;
+  }
+  #crm-page .btn-ghost:hover {
+    color: var(--text) !important;
+    border-color: var(--border-strong) !important;
+  }
+
+  /* CRM tablo */
+  #crm-page .table-wrap {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+  }
+  #crm-page thead { background: var(--bg-sunk); }
+  #crm-page th {
+    background: var(--bg-sunk) !important;
+    color: var(--text-muted) !important;
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+    border-bottom-color: var(--border) !important;
+  }
+  #crm-page td {
+    border-bottom-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+  #crm-page tr:hover td { background: var(--bg-sunk) !important; }
+  #crm-page .badge {
+    border-radius: 99px !important;
+    font-family: var(--font-body) !important;
+    font-weight: 600 !important;
+  }
+  #crm-page .badge-green  { background: var(--success-bg) !important; color: var(--success) !important; }
+  #crm-page .badge-yellow { background: var(--warning-bg) !important; color: var(--warning) !important; }
+  #crm-page .badge-red    { background: var(--danger-bg) !important;  color: var(--danger) !important; }
+  #crm-page .badge-blue   { background: var(--navy-50) !important;    color: var(--info) !important; }
+  #crm-page .badge-muted  { background: var(--bg-sunk) !important;    color: var(--text-muted) !important; }
+  [data-theme="dark"] #crm-page .badge-green  { background: rgba(22,169,116,.18) !important; color: #4ade80 !important; }
+  [data-theme="dark"] #crm-page .badge-yellow { background: rgba(229,161,0,.18) !important; color: #fcd34d !important; }
+  [data-theme="dark"] #crm-page .badge-red    { background: rgba(220,56,56,.18) !important; color: #fca5a5 !important; }
+  [data-theme="dark"] #crm-page .badge-blue   { background: rgba(74,127,196,.18) !important; color: var(--navy-300) !important; }
+
+  #crm-page .icon-btn {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+    border-radius: var(--r-md) !important;
+  }
+  #crm-page .icon-btn:hover {
+    background: rgba(45, 212, 191, .12) !important;
+    color: var(--teal) !important;
+    border-color: var(--teal) !important;
+  }
+
+  /* CRM modal & form */
+  #crm-page .modal {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-lg) !important;
+  }
+  #crm-page .modal-header {
+    background: var(--bg-sunk) !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+  #crm-page .form-input {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-radius: var(--r-md) !important;
+  }
+  #crm-page .form-input:focus {
+    border-color: var(--teal) !important;
+    box-shadow: 0 0 0 3px rgba(45, 212, 191, .15) !important;
+    background: var(--bg-elev) !important;
+  }
+  #crm-page label { color: var(--text-muted) !important; }
+
+  /* CRM drawer (sağdan açılır) */
+  .crm-drawer {
+    background: var(--bg-elev) !important;
+    border-left: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-lg) !important;
+  }
+  .crm-drawer .drawer-header {
+    background: var(--bg-sunk) !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+  .crm-drawer .drawer-section-title {
+    color: var(--text-muted) !important;
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: .07em !important;
+  }
+  .crm-drawer .siparis-row {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+  }
+
+  /* ── OPERASYON (Kanban) SAYFASI — handoff polish ───────── */
+  #operasyon-page { background: var(--bg) !important; }
+
+  .ops-kanban-col {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs);
+  }
+  .ops-kanban-col-header {
+    color: var(--text-muted) !important;
+    font-family: var(--font-body) !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: .07em !important;
+    text-transform: uppercase !important;
+  }
+  .ops-kanban-count {
+    background: var(--bg-sunk) !important;
+    color: var(--text-muted) !important;
+    border: 1px solid var(--border);
+    font-family: var(--font-mono) !important;
+  }
+
+  .ops-kcard {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+    transition: transform .15s, box-shadow .15s, border-color .15s !important;
+  }
+  [data-theme="dark"] .ops-kcard { background: var(--surface-2) !important; }
+  .ops-kcard:hover {
+    border-color: var(--border-strong) !important;
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+  .ops-kcard-plaka {
+    font-family: var(--font-mono) !important;
+    color: var(--accent-500) !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .ops-kcard-cont { color: var(--text) !important; }
+  .ops-kcard-musteri,
+  .ops-kcard-time { color: var(--text-muted) !important; }
+
+  /* Ops badge'leri — status-pill stiline */
+  .ops-badge {
+    border-radius: 99px !important;
+    font-family: var(--font-body) !important;
+    font-weight: 600 !important;
+    border: 1px solid transparent;
+  }
+  .ops-badge.bekliyor  { background: var(--warning-bg) !important; color: var(--warning) !important; border-color: rgba(229,161,0,.3); }
+  .ops-badge.yolda     { background: var(--navy-50) !important;    color: var(--info) !important;    border-color: rgba(44,90,158,.3); }
+  .ops-badge.fabrikada { background: var(--accent-100) !important; color: var(--accent-500) !important; border-color: rgba(255,107,31,.3); }
+  .ops-badge.teslim    { background: var(--success-bg) !important; color: var(--success) !important; border-color: rgba(22,169,116,.3); }
+  .ops-badge.iptal     { background: var(--danger-bg) !important;  color: var(--danger) !important;  border-color: rgba(220,56,56,.3); }
+  [data-theme="dark"] .ops-badge.bekliyor  { background: rgba(229,161,0,.18) !important; color: #fcd34d !important; }
+  [data-theme="dark"] .ops-badge.yolda     { background: rgba(44,90,158,.18) !important; color: var(--navy-300) !important; }
+  [data-theme="dark"] .ops-badge.fabrikada { background: rgba(255,107,31,.18) !important; color: var(--accent-400) !important; }
+  [data-theme="dark"] .ops-badge.teslim    { background: rgba(22,169,116,.18) !important; color: #4ade80 !important; }
+  [data-theme="dark"] .ops-badge.iptal     { background: rgba(220,56,56,.18) !important; color: #fca5a5 !important; }
+
+  /* Timeline (zaman çizelgesi) */
+  .ops-tl-dot.done {
+    background: var(--success-bg) !important;
+    border-color: var(--success) !important;
+    color: var(--success) !important;
+  }
+  .ops-tl-dot.active {
+    background: var(--accent-100) !important;
+    border-color: var(--accent-500) !important;
+    color: var(--accent-500) !important;
+  }
+  [data-theme="dark"] .ops-tl-dot.done { background: rgba(22,169,116,.18) !important; }
+  [data-theme="dark"] .ops-tl-dot.active { background: rgba(255,107,31,.18) !important; }
+  .ops-tl-label { color: var(--text) !important; }
+  .ops-tl-time { color: var(--text-muted) !important; }
+
+  /* Filo haritası alanı (operasyon page) */
+  .fleet-map-legend {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+    color: var(--text-muted) !important;
+  }
+  .fleet-map-refresh-btn {
+    background: var(--bg-sunk) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+    border-radius: var(--r-md) !important;
+  }
+  .fleet-map-refresh-btn:hover {
+    border-color: var(--accent-500) !important;
+    color: var(--accent-500) !important;
+  }
+
+  /* ── GENEL MODAL & FORM POLISH ─────────────────────────── */
+  /* Login overlay dışındaki tüm input'lar tema-uyumlu olmalı */
+  .modal .inp,
+  .modal-body .inp,
+  .modal-body input[type="text"],
+  .modal-body input[type="number"],
+  .modal-body input[type="date"],
+  .modal-body input[type="email"],
+  .modal-body input[type="tel"],
+  .modal-body select,
+  .modal-body textarea {
+    background: var(--bg-sunk);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--r-md);
+  }
+  .modal .inp:focus,
+  .modal-body .inp:focus,
+  .modal-body input:focus,
+  .modal-body select:focus,
+  .modal-body textarea:focus {
+    border-color: var(--accent-500);
+    box-shadow: 0 0 0 3px rgba(255, 107, 31, .12);
+    background: var(--bg-elev);
+    outline: none;
+  }
+  .modal label {
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  /* Modal close X — handoff icon-btn benzeri */
+  .modal-close {
+    background: transparent !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+    border-radius: var(--r-md) !important;
+    transition: background .15s, color .15s, border-color .15s !important;
+  }
+  .modal-close:hover {
+    background: var(--danger-bg) !important;
+    border-color: var(--danger) !important;
+    color: var(--danger) !important;
+  }
+  [data-theme="dark"] .modal-close:hover { background: rgba(220, 56, 56, .18) !important; }
+
+  /* Modal footer butonları */
+  .modal-footer .btn-sm {
+    border-radius: var(--r-md) !important;
+    font-family: var(--font-body) !important;
+    font-weight: 600 !important;
+    padding: 8px 16px !important;
+  }
+  .modal-footer .btn-sm.accent {
+    background: linear-gradient(135deg, var(--accent-500), var(--accent-400)) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    box-shadow: 0 4px 14px rgba(255, 107, 31, .35) !important;
+  }
+  .modal-footer .btn-sm.accent:hover {
+    box-shadow: 0 6px 20px rgba(255, 107, 31, .45) !important;
+    transform: translateY(-1px);
+  }
+
+  /* Tablo'daki action butonları (icon-btn .edit/.del) — handoff topbar__icon-btn benzeri */
+  .icon-btn {
+    border-radius: var(--r-md) !important;
+    transition: background .15s, color .15s, border-color .15s !important;
+  }
+  .icon-btn.edit:hover {
+    background: var(--navy-50) !important;
+    color: var(--info) !important;
+    border-color: var(--info) !important;
+  }
+  [data-theme="dark"] .icon-btn.edit:hover { background: rgba(74, 127, 196, .18) !important; }
+  .icon-btn.del:hover {
+    background: var(--danger-bg) !important;
+    color: var(--danger) !important;
+    border-color: var(--danger) !important;
+  }
+  [data-theme="dark"] .icon-btn.del:hover { background: rgba(220, 56, 56, .18) !important; }
+
+  /* Sayfa baş tablosu (filo listesi) — başlık tipografisi */
+  .table-section .table-wrap th {
+    font-family: var(--font-body) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+    color: var(--text-muted) !important;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     END MODAL HANDOFF POLISH
+     ══════════════════════════════════════════════════════════════════ */
+
