@@ -3,6 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- FOUC önleme: tema kararı CSS yüklenmeden önce verilir -->
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('fleetly:theme');
+        var manual = localStorage.getItem('fleetly:theme-manual') === '1';
+        var theme;
+        if (manual && (stored === 'light' || stored === 'dark')) {
+          theme = stored;
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          theme = 'dark';
+        } else {
+          theme = 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
   <title>Fleetly — Araç & Bilgi Yönetim Sistemi</title>
   <link rel="icon" type="image/png" href="assets/img/favicon.png" />
   <link rel="shortcut icon" type="image/png" href="assets/img/favicon.png" />
@@ -46,6 +67,8 @@
   <link rel="stylesheet" href="css/pages/kpi-rapor.css" />
   <link rel="stylesheet" href="css/pages/pod.css" />
   <script src="js/core/include.js" defer></script>
+  <script src="js/core/theme.js" defer></script>
+  <script src="js/core/app-shell.js" defer></script>
 </head>
 <body>
 
@@ -237,102 +260,148 @@
 </div>
 
 <!-- =========================================================
-     BÖLÜM 3: HEADER
+     BÖLÜM 3: APP SHELL — Sidebar + Topbar (Faz 1)
      ========================================================= -->
-<header>
-  <div class="header-left">
-    <div class="header-logo" onclick="window.scrollTo(0,0)" style="cursor:pointer">
-      <img src="assets/img/logo2.png" alt="Fleetly" style="height:32px;width:auto;" />
-    </div>
-    <div class="header-divider"></div>
-    <span class="header-subtitle" id="header-subtitle">LOJİSTİK YÖNETİM</span>
-  </div>
-  <div class="header-actions">
+<div class="app-shell">
 
-    <!-- ── NAV GROUP 1: CRM & İŞ ── -->
-    <div class="nav-group">
-      <button class="nav-btn nav-orange" onclick="openOperasyonPage()" title="Konteyner Operasyonu">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M5 7V5a3 3 0 016 0v2M9 11v2m-3-1h6" stroke-linecap="round"/></svg>
-        <span>Operasyon</span>
-      </button>
-      <button class="nav-btn nav-teal" onclick="openMusteriPage()" title="Müşteri & Sipariş">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M16 17a6 6 0 10-12 0"/><path d="M18 12h-4m2-2v4" stroke-linecap="round"/></svg>
-        <span>Müşteri</span>
-      </button>
-      <button class="nav-btn nav-purple" onclick="openSeferModal()" title="Sefer Takibi">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10h14M10 3l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>Seferler</span>
-      </button>
-      <button class="nav-btn nav-yellow" onclick="openTeklifModal()" title="Fiyat Teklifi">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h10l3 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v3h3M7 10h6M7 13h6M7 7h3" stroke-linecap="round"/></svg>
-        <span>Teklifler</span>
-      </button>
-      <button class="nav-btn nav-yellow" onclick="openMasrafModal()" title="Masraf Takibi">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="16" height="11" rx="2"/><path d="M2 9h16M6 14h2m3 0h3" stroke-linecap="round"/></svg>
-        <span>Masraflar</span>
-      </button>
-      <button class="nav-btn nav-pink" onclick="openRaporModal()" title="Raporlar">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7" stroke-linecap="round"/></svg>
-        <span>Raporlar</span>
-      </button>
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar" id="app-sidebar" role="navigation" aria-label="Ana menü">
+    <div class="sidebar__brand" onclick="window.scrollTo(0,0)">
+      <div class="sidebar__brand-mark">
+        <img src="assets/img/logo2.png" alt="Fleetly" />
+      </div>
+      <div class="sidebar__brand-name">Fleetly<span>.fit</span></div>
     </div>
 
-    <div class="nav-separator"></div>
+    <nav class="sidebar__nav">
 
-    <!-- ── NAV GROUP 2: ARAÇ OPS ── -->
-    <div class="nav-group">
-      <button class="nav-btn nav-orange" onclick="openFuelSummary()" title="Yakıt Yönetimi">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h6l3 3v2h1a1 1 0 011 1v7a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 13v-3m0 3h4m-4 0v-3a2 2 0 014 0v3" stroke-linecap="round"/></svg>
-        <span>Yakıt</span>
+      <!-- GENEL -->
+      <div class="sidebar__group">Genel</div>
+      <button class="sidebar__item is-active" onclick="window.scrollTo({top:0,behavior:'smooth'});closeSidebar&&closeSidebar()" title="Dashboard">
+        <svg viewBox="0 0 24 24"><path d="M3 12 12 3l9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-7h4v7h4a1 1 0 0 0 1-1V10"/></svg>
+        <span class="sidebar__item-label">Dashboard</span>
       </button>
-      <button class="nav-btn nav-blue" onclick="openMaintSummaryModal()" title="Bakım & Arıza">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l.3-.3a3 3 0 00-4.2-4.2l-.3.3a1 1 0 000 1.4l1.6 1.6M2.3 17.7l8-8" stroke-linecap="round"/></svg>
-        <span>Bakım</span>
+      <button class="sidebar__item" onclick="openOperasyonPage();closeSidebar&&closeSidebar()" title="Konteyner Operasyonu">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></svg>
+        <span class="sidebar__item-label">Operasyon</span>
       </button>
-      <button class="nav-btn nav-green" onclick="openDriverModal()" title="Sürücü Belgeleri">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="16" height="12" rx="2"/><circle cx="7" cy="10" r="2"/><path d="M11 9h4m-4 2.5h3" stroke-linecap="round"/></svg>
-        <span>Sürücü</span>
+      <button class="sidebar__item" onclick="openMusteriPage();closeSidebar&&closeSidebar()" title="Müşteri & Sipariş">
+        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="sidebar__item-label">Müşteriler</span>
       </button>
-    </div>
 
-    <div class="nav-separator"></div>
-
-    <!-- ── AYARLAR & PWA ── -->
-    <button id="pwa-desktop-btn" class="nav-btn nav-muted" onclick="pwaShowInfo()" style="display:none" title="Uygulamayı Yükle">
-      <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2v10m-4-4l4 4 4-4M4 16h12" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Yükle</span>
-    </button>
-
-    <div class="settings-wrap" id="settings-wrap">
-      <button class="nav-btn nav-muted" id="settings-btn" onclick="toggleSettings()" title="Ayarlar" aria-haspopup="true" aria-expanded="false" aria-controls="settings-dropdown">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="3"/><path d="M10 2v2m0 12v2M2 10h2m12 0h2m-3.17-4.83 1.42-1.42M4.75 15.25l1.42-1.42M4.75 4.75l1.42 1.42M14.83 14.83l1.42 1.42" stroke-linecap="round"/></svg>
-        <span>Ayarlar</span>
+      <!-- OPERASYON -->
+      <div class="sidebar__group">Operasyon</div>
+      <button class="sidebar__item" onclick="openSeferModal();closeSidebar&&closeSidebar()" title="Sefer Takibi">
+        <svg viewBox="0 0 24 24"><path d="M3 12h18M14 5l7 7-7 7"/></svg>
+        <span class="sidebar__item-label">Seferler</span>
       </button>
-      <div class="settings-dropdown hidden" id="settings-dropdown">
-        <div class="settings-item" id="settings-pwa-item" onclick="pwaInstall();closeSettings()" style="display:none">📲 Ana Ekrana Ekle</div>
-        <div class="settings-sep" id="settings-pwa-sep" style="display:none"></div>
-        <div class="settings-item" onclick="openDashEdit();closeSettings()">🎛 Dashboard Düzenle</div>
-        <div class="settings-item" onclick="openBrandingModal();closeSettings()">🎨 Marka &amp; Portal Ayarları</div>
-        <div class="settings-sep"></div>
-        <div class="settings-item" onclick="exportJSON();closeSettings()">⬇ Dışa Aktar</div>
-        <label class="settings-item" style="cursor:pointer">⬆ İçe Aktar<input type="file" accept=".json" style="display:none" onchange="importJSON(this);closeSettings()" /></label>
-        <div class="settings-sep"></div>
-        <div class="settings-item danger" onclick="confirmReset();closeSettings()">⊘ Tüm Verileri Sıfırla</div>
-        <div class="settings-sep"></div>
-        <div class="settings-item danger" onclick="closeSettings();doLogout()">⏻ Çıkış Yap</div>
+      <button class="sidebar__item" onclick="openTeklifModal();closeSidebar&&closeSidebar()" title="Fiyat Teklifi">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span class="sidebar__item-label">Teklifler</span>
+      </button>
+      <button class="sidebar__item" onclick="openMasrafModal();closeSidebar&&closeSidebar()" title="Masraf Takibi">
+        <svg viewBox="0 0 24 24"><path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 3 2V2l-3 2-3-2-3 2-3-2-3 2L4 2z"/><path d="M8 7h8M8 12h8M8 17h5"/></svg>
+        <span class="sidebar__item-label">Masraflar</span>
+      </button>
+      <button class="sidebar__item" onclick="openMaintSummaryModal();closeSidebar&&closeSidebar()" title="Bakım & Arıza">
+        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        <span class="sidebar__item-label">Bakım</span>
+      </button>
+      <button class="sidebar__item" onclick="openDriverModal();closeSidebar&&closeSidebar()" title="Sürücü Belgeleri">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M14 8h4M14 12h4M7 16h10"/></svg>
+        <span class="sidebar__item-label">Sürücüler</span>
+      </button>
+
+      <!-- ANALİZ -->
+      <div class="sidebar__group">Analiz</div>
+      <button class="sidebar__item" onclick="openFuelSummary();closeSidebar&&closeSidebar()" title="Yakıt Yönetimi">
+        <svg viewBox="0 0 24 24"><path d="M3 22h12M3 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18M14 7h2a3 3 0 0 1 3 3v6a1.5 1.5 0 0 1-3 0V12h-1"/></svg>
+        <span class="sidebar__item-label">Yakıt</span>
+      </button>
+      <button class="sidebar__item" onclick="openRaporModal();closeSidebar&&closeSidebar()" title="Raporlar">
+        <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="13" width="3" height="6"/><rect x="12" y="9" width="3" height="10"/><rect x="17" y="5" width="3" height="14"/></svg>
+        <span class="sidebar__item-label">Raporlar</span>
+      </button>
+
+    </nav>
+
+    <div class="sidebar__footer">
+      <div class="sidebar__avatar" id="sidebar-avatar">F</div>
+      <div class="sidebar__user-info">
+        <div class="sidebar__user-name" id="sidebar-user-name">Yönetici</div>
+        <div class="sidebar__user-role" id="header-subtitle">LOJİSTİK YÖNETİM</div>
       </div>
     </div>
+  </aside>
 
-    <!-- ── PRIMARY CTA ── -->
-    <button class="nav-cta" onclick="openModal()">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg>
-      ARAÇ EKLE
+  <!-- ── TOPBAR ── -->
+  <div class="topbar" role="banner">
+    <button class="topbar__menu" onclick="toggleSidebar()" aria-label="Menü" aria-controls="app-sidebar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
 
-    <!-- Mobil hamburger -->
-    <button id="mob-menu-btn" onclick="toggleMobMenu()" title="Menü" aria-expanded="false" aria-controls="mob-menu">☰</button>
+    <div class="topbar__left">
+      <div class="topbar__breadcrumb" id="topbar-breadcrumb">Anasayfa</div>
+      <h1 class="topbar__title" id="topbar-title">Dashboard</h1>
+    </div>
+
+    <div class="topbar__search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" id="topbar-search" placeholder="Ara: araç, sefer, müşteri…" autocomplete="off" />
+    </div>
+
+    <div class="topbar__actions">
+      <!-- Tema toggle -->
+      <button class="topbar__icon-btn" id="theme-toggle" onclick="toggleTheme()" title="Temayı değiştir" aria-label="Temayı değiştir">
+        <svg id="theme-icon-light" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg id="theme-icon-dark" viewBox="0 0 24 24" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+
+      <!-- Bildirim -->
+      <button class="topbar__icon-btn" id="topbar-notif" title="Bildirimler" aria-label="Bildirimler">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="dot" id="topbar-notif-dot"></span>
+      </button>
+
+      <!-- PWA Yükle (yalnızca destekleniyorsa görünür) -->
+      <button class="topbar__icon-btn" id="pwa-desktop-btn" onclick="pwaShowInfo()" style="display:none" title="Uygulamayı yükle" aria-label="Uygulamayı yükle">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+
+      <!-- Ayarlar -->
+      <div class="settings-wrap" id="settings-wrap">
+        <button class="topbar__icon-btn" id="settings-btn" onclick="toggleSettings()" title="Ayarlar" aria-haspopup="true" aria-expanded="false" aria-controls="settings-dropdown">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <div class="settings-dropdown hidden" id="settings-dropdown">
+          <div class="settings-item" id="settings-pwa-item" onclick="pwaInstall();closeSettings()" style="display:none">📲 Ana Ekrana Ekle</div>
+          <div class="settings-sep" id="settings-pwa-sep" style="display:none"></div>
+          <div class="settings-item" onclick="openDashEdit();closeSettings()">🎛 Dashboard Düzenle</div>
+          <div class="settings-item" onclick="openBrandingModal();closeSettings()">🎨 Marka &amp; Portal Ayarları</div>
+          <div class="settings-sep"></div>
+          <div class="settings-item" onclick="exportJSON();closeSettings()">⬇ Dışa Aktar</div>
+          <label class="settings-item" style="cursor:pointer">⬆ İçe Aktar<input type="file" accept=".json" style="display:none" onchange="importJSON(this);closeSettings()" /></label>
+          <div class="settings-sep"></div>
+          <div class="settings-item danger" onclick="confirmReset();closeSettings()">⊘ Tüm Verileri Sıfırla</div>
+          <div class="settings-sep"></div>
+          <div class="settings-item danger" onclick="closeSettings();doLogout()">⏻ Çıkış Yap</div>
+        </div>
+      </div>
+
+      <!-- Primary CTA: ARAÇ EKLE -->
+      <button class="topbar__cta" onclick="openModal()" title="Yeni araç ekle">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg>
+        <span>ARAÇ EKLE</span>
+      </button>
+    </div>
   </div>
-</header>
+
+  <!-- Sidebar mobile backdrop (yalnızca mobilde görünür) -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
+
+  <!-- Eski mobil hamburger ID — JS uyumluluğu için hidden stub -->
+  <button id="mob-menu-btn" style="display:none" aria-hidden="true" tabindex="-1"></button>
 <!-- Mobil dropdown menü -->
 <div id="mob-menu" role="menu" aria-hidden="true">
   <button class="btn-sm accent" onclick="openModal();closeMobMenu()">+ Araç Ekle</button>
@@ -807,6 +876,8 @@
   </div>
 
 </main>
+
+</div><!-- /.app-shell -->
 
 <!-- =========================================================
      MÜŞTERİ & SİPARİŞ MODÜLÜ

@@ -3,7 +3,404 @@
    Orijinal <style> bloğundan taşındı. tokens.css + reset.css'ten
    SONRA yüklenmelidir (cascade sırası korunmalı).
    =================================================================== */
-  
+
+  /* ══════════════════════════════════════════════════════════════════
+     APP SHELL (Faz 1) — Sidebar + Topbar grid layout
+     Handoff: design_handoff_fleet_management/styles.css ile uyumlu
+     ══════════════════════════════════════════════════════════════════ */
+  .app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    grid-template-rows: var(--header-h) 1fr;
+    grid-template-areas:
+      "sidebar header"
+      "sidebar main";
+    min-height: 100vh;
+    transition: grid-template-columns .3s var(--ease-out);
+  }
+  .app-shell.is-collapsed {
+    grid-template-columns: var(--sidebar-w-collapsed) 1fr;
+  }
+
+  /* ── SIDEBAR (daima koyu — komuta merkezi) ────────────────── */
+  .sidebar {
+    grid-area: sidebar;
+    background: var(--nav-bg);
+    border-right: 1px solid var(--nav-border);
+    color: var(--nav-text);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    z-index: 50;
+  }
+
+  .sidebar__brand {
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--nav-border);
+    flex-shrink: 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .sidebar__brand-mark {
+    width: 32px; height: 32px;
+    flex-shrink: 0;
+    display: grid; place-items: center;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent-500), var(--accent-400));
+    color: #fff;
+    font-weight: 800;
+    box-shadow: 0 4px 14px rgba(255, 107, 31, .35);
+  }
+  .sidebar__brand-mark img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; }
+  .sidebar__brand-name {
+    font-family: var(--font-body);
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--nav-active);
+    letter-spacing: -.01em;
+    white-space: nowrap;
+    transition: opacity .2s;
+  }
+  .sidebar__brand-name span { color: var(--accent-500); }
+  .app-shell.is-collapsed .sidebar__brand-name { opacity: 0; }
+
+  .sidebar__nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 10px;
+    scrollbar-width: thin;
+  }
+  .sidebar__nav::-webkit-scrollbar { width: 4px; }
+  .sidebar__nav::-webkit-scrollbar-thumb { background: var(--nav-border); border-radius: 99px; }
+
+  .sidebar__group {
+    padding: 14px 10px 6px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--nav-text-muted);
+    white-space: nowrap;
+    transition: opacity .2s;
+  }
+  .app-shell.is-collapsed .sidebar__group { opacity: 0; height: 6px; padding: 0 10px; overflow: hidden; }
+
+  .sidebar__item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border-radius: var(--r-md);
+    color: var(--nav-text);
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    white-space: nowrap;
+    background: transparent;
+    border: none;
+    text-align: left;
+    transition: background .15s, color .15s;
+  }
+  .sidebar__item:hover {
+    background: var(--nav-bg-elev);
+    color: var(--nav-active);
+  }
+  .sidebar__item.is-active {
+    background: var(--nav-active-bg);
+    color: var(--nav-active);
+  }
+  .sidebar__item.is-active::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 8px; bottom: 8px;
+    width: 3px;
+    background: var(--accent-500);
+    border-radius: 0 3px 3px 0;
+  }
+  .sidebar__item svg {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    stroke-width: 1.8;
+    stroke: currentColor;
+    fill: none;
+  }
+  .sidebar__item-label { flex: 1; transition: opacity .2s; }
+  .app-shell.is-collapsed .sidebar__item-label { opacity: 0; pointer-events: none; }
+  .sidebar__item-badge {
+    background: var(--accent-500);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+  }
+  .app-shell.is-collapsed .sidebar__item-badge { display: none; }
+
+  .sidebar__footer {
+    border-top: 1px solid var(--nav-border);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .sidebar__avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--navy-400), var(--navy-600));
+    color: #fff;
+    font-weight: 600;
+    font-size: 12px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .sidebar__user-info { min-width: 0; flex: 1; transition: opacity .2s; }
+  .sidebar__user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--nav-active);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sidebar__user-role {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--nav-text-muted);
+    letter-spacing: .04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .app-shell.is-collapsed .sidebar__user-info { opacity: 0; pointer-events: none; }
+
+  /* ── TOPBAR ───────────────────────────────────────────────── */
+  .topbar {
+    grid-area: header;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    height: var(--header-h);
+    padding: 0 24px;
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-right: max(24px, env(safe-area-inset-right));
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+  .topbar__menu {
+    display: none;
+    width: 36px; height: 36px;
+    border-radius: var(--r-md);
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    place-items: center;
+    cursor: pointer;
+  }
+  .topbar__left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+  }
+  .topbar__breadcrumb {
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-subtle);
+    line-height: 1;
+  }
+  .topbar__title {
+    font-family: var(--font-body);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -.01em;
+    line-height: 1.2;
+    margin: 0;
+  }
+  .topbar__search {
+    flex: 1;
+    max-width: 420px;
+    margin-left: auto;
+    position: relative;
+  }
+  .topbar__search input {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    background: var(--bg-sunk);
+    border: 1px solid transparent;
+    border-radius: var(--r-md);
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+  }
+  .topbar__search input::placeholder { color: var(--text-subtle); }
+  .topbar__search input:focus {
+    border-color: var(--navy-500);
+    background: var(--bg-elev);
+    box-shadow: var(--shadow-glow);
+  }
+  .topbar__search svg {
+    position: absolute;
+    left: 11px; top: 50%;
+    transform: translateY(-50%);
+    width: 16px; height: 16px;
+    color: var(--text-subtle);
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+  }
+  .topbar__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .topbar__icon-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--r-md);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    position: relative;
+    transition: background .15s, color .15s;
+  }
+  .topbar__icon-btn:hover {
+    background: var(--bg-sunk);
+    color: var(--text);
+  }
+  .topbar__icon-btn svg {
+    width: 18px; height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+  }
+  .topbar__icon-btn .dot {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent-500);
+    border: 2px solid var(--bg-elev);
+  }
+
+  /* Topbar primary CTA (ARAÇ EKLE) */
+  .topbar__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: var(--r-md);
+    border: none;
+    background: linear-gradient(135deg, var(--accent-500), var(--accent-400));
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(255, 107, 31, .35);
+    transition: box-shadow .15s, transform .12s;
+    white-space: nowrap;
+    margin-left: 4px;
+  }
+  .topbar__cta:hover {
+    box-shadow: 0 6px 20px rgba(255, 107, 31, .50);
+    transform: translateY(-1px);
+  }
+  .topbar__cta:active { transform: translateY(0); }
+  .topbar__cta svg { width: 14px; height: 14px; stroke-width: 2.2; }
+
+  /* Sidebar mobil backdrop (sadece mobilde aktif) */
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 17, 31, .55);
+    backdrop-filter: blur(2px);
+    z-index: 49;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+  }
+  body.sidebar-open .sidebar-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ── Main: grid main alanı ────────────────────────────────── */
+  .app-shell > main {
+    grid-area: main;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  /* Settings dropdown — topbar'daki ayar butonuna anchor olur */
+  .topbar .settings-wrap { position: relative; }
+  .topbar .settings-dropdown { right: 0; top: calc(100% + 8px); }
+
+  /* ══════════════════════════════════════════════════════════════════
+     APP SHELL — RESPONSIVE
+     ══════════════════════════════════════════════════════════════════ */
+  @media (max-width: 1024px) {
+    .app-shell {
+      grid-template-columns: 1fr;
+      grid-template-areas: "header" "main";
+    }
+    .sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      width: var(--sidebar-w);
+      transform: translateX(-100%);
+      transition: transform .3s var(--ease-out);
+      z-index: 60;
+    }
+    .sidebar.is-open { transform: translateX(0); }
+    .topbar__menu { display: grid; }
+    .topbar__search { max-width: none; }
+  }
+
+  @media (max-width: 640px) {
+    .topbar { padding: 0 14px; gap: 10px; }
+    .topbar__cta {
+      padding: 7px 12px;
+      font-size: 12px;
+      letter-spacing: .02em;
+    }
+    .topbar__cta span { display: none; }
+    .topbar__search { display: none; }
+    .topbar__title { font-size: 15px; }
+    .topbar__breadcrumb { display: none; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     END APP SHELL
+     ══════════════════════════════════════════════════════════════════ */
+
 
   
 
@@ -43,6 +440,12 @@
     width: 900px; height: 280px; z-index: 0;
     background: radial-gradient(ellipse at center, rgba(255,107,31,.10) 0%, transparent 70%);
     pointer-events: none;
+  }
+
+  /* Light tema: dark-only arka plan desenlerini gizle (Faz 2) */
+  [data-theme="light"] body::before,
+  [data-theme="light"] body::after {
+    display: none;
   }
 
   #login-overlay, header, main { position: relative; z-index: 1; }
@@ -1762,27 +2165,13 @@
      ══════════════════════════════════════════════════════════ */
   @media (max-width: 768px) {
 
-    /* ── Header ── */
-    header {
-      padding: 0 14px;
-      height: 56px;
-    }
-    .header-subtitle { display: none; }
-    .header-divider  { display: none; }
-
-    /* Nav gruplarını ve tüm nav butonlarını gizle — mobilde hamburger */
-    .nav-group, .nav-separator, .settings-wrap, #pwa-desktop-btn { display: none !important; }
-
-    /* Hamburger butonu — mobilde göster */
-    #mob-menu-btn {
-      display: flex !important;
-    }
-
-    /* NAV CTA — mobilde küçük göster */
-    .nav-cta {
-      padding: 6px 10px;
-      font-size: 11px; letter-spacing: 1px;
-    }
+    /* ── Eski yatay header / nav (DEPRECATED — Faz 1 sonrası dead) ── */
+    /* header, .header-subtitle, .header-divider artık DOM'da yok.
+       .nav-group / .nav-separator / .nav-cta / #mob-menu-btn da dead.
+       .settings-wrap ARTIK topbar içinde aktif olarak kullanılıyor — gizlenmemeli. */
+    .nav-group, .nav-separator { display: none !important; }
+    /* #mob-menu-btn hidden stub olarak DOM'da kalıyor — görünmemeli */
+    #mob-menu-btn { display: none !important; }
 
     /* Mobil dropdown menü */
     #mob-menu {

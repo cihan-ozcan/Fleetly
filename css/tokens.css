@@ -1,48 +1,180 @@
 /* ===================================================================
-   tokens.css — Design tokens (CSS Custom Properties)
-   Tüm sayfaların ortak renk/typography token'ları burada.
+   tokens.css — Fleetly Design Tokens
+   Handoff (design_handoff_fleet_management) ile uyumlu tek doğru kaynak.
+
+   Yapı:
+   1) Raw scale       — :root içinde tema-bağımsız renk paleti (--navy-*, --accent-*)
+   2) Theme tokens    — :root = light (varsayılan), [data-theme="dark"] = dark override
+   3) Sidebar tokens  — daima koyu (komuta merkezi hissi)
+   4) Layout/motion   — radius, shadow, header/sidebar yükseklik, easing
+   5) Typography      — Inter + JetBrains Mono + (geçici) Big Shoulders Display
+   6) Legacy aliases  — eski isimler (--bg, --surface, --surface2/3, --accent,
+                        --text2, --muted, --border2, --green/yellow/red/-dim …)
+                        yeni token'lara map edilir; mevcut CSS dosyaları aynen
+                        çalışmaya devam eder.
+
+   NOT: Faz 0 sırasında app.html ve musteri_takip.html üzerinde
+        <html data-theme="dark"> bayrağı set edilir → mevcut görünüm bozulmaz.
+        Faz 2'de tema toggle + localStorage persist eklenecek.
    =================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap');
 
+/* =====================================================================
+   1) RAW SCALE — tema-bağımsız palet
+   ===================================================================== */
 :root {
-  /* Backgrounds — derin deniz mavisi */
-  --bg:        #0B1A2F;
-  --bg2:       #0D1E36;
-  --surface:   #0F2440;
-  --surface2:  #132950;
-  --surface3:  #1A3460;
+  /* Brand — disciplined navy */
+  --navy-950: #06111F;
+  --navy-900: #0B1A2F;
+  --navy-800: #0F2440;
+  --navy-700: #15355C;
+  --navy-600: #1E4A82;
+  --navy-500: #2C5A9E;   /* primary */
+  --navy-400: #4A7FC4;
+  --navy-300: #7FA7DC;
+  --navy-200: #A3C4F0;
+  --navy-100: #D4E4F7;
+  --navy-50:  #EEF4FB;
 
-  /* Borders */
-  --border:    rgba(255,255,255,.09);
-  --border2:   rgba(255,255,255,.18);
+  /* Accent — sadece kritik aksiyon / alarm */
+  --accent-600: #E55A0F;
+  --accent-500: #FF6B1F;   /* primary accent */
+  --accent-400: #FF8C4A;
+  --accent-100: #FFE4D1;
 
-  /* Accent — canlı turuncu */
-  --accent:    #FF6B1F;
-  --accent2:   #FF8C47;
-  --accent-dim:#5C2200;
+  /* Semantic (handoff exact) */
+  --success:    #16A974;
+  --success-bg: #DCF5E9;
+  --warning:    #E5A100;
+  --warning-bg: #FFF5D6;
+  --danger:     #DC3838;
+  --danger-bg:  #FBE0E0;
+  --info:       #2C5A9E;
 
-  /* Text */
-  --text:      #E8F0FF;
-  --text2:     #8BACD0;
-  --muted:     #4A6A8A;
+  /* İkincil semantic — mevcut UI'da kullanılıyor */
+  --blue:   #38bdf8;
+  --purple: #a78bfa;
+  --teal:   #2dd4bf;
 
-  /* Semantics — değişmez */
-  --green:     #22c55e;
-  --green-dim: #0f3d20;
-  --yellow:    #d4a847;
-  --yellow-dim:#4a3510;
-  --red:       #ef4444;
-  --red-dim:   #7f1d1d;
-  --blue:      #38bdf8;
-  --blue-dim:  #0c3a56;
-  --purple:    #a78bfa;
-  --teal:      #2dd4bf;
+  /* =====================================================================
+     2) THEME TOKENS — :root = LIGHT (varsayılan)
+     ===================================================================== */
+  --bg:         #F4F6FA;
+  --bg-elev:    #FFFFFF;   /* card resting bg */
+  --bg-sunk:    #EEF2F8;   /* input / recessed */
+  --surface:    #FFFFFF;
+  --surface-2:  #F8FAFD;
+  --border:     #E1E7F0;
+  --border-strong: #C8D3E2;
+  --text:         #0B1A2F;
+  --text-muted:   #5B6B82;
+  --text-subtle:  #8997AC;
+  --text-inverse: #FFFFFF;
 
-  /* Radius & typography — değişmez */
-  --radius:    10px;
-  --radius-lg: 14px;
-  --font-display: 'Big Shoulders Display', sans-serif;
-  --font-body:    'Instrument Sans', sans-serif;
-  --font-mono:    'IBM Plex Mono', monospace;
+  /* =====================================================================
+     3) SIDEBAR — daima koyu (her iki temada da)
+     ===================================================================== */
+  --nav-bg:         #0B1A2F;
+  --nav-bg-elev:    #0F2440;
+  --nav-text:       #C8D3E2;
+  --nav-text-muted: #7889A1;
+  --nav-active:     #FFFFFF;
+  --nav-active-bg:  #15355C;
+  --nav-border:     #15355C;
+
+  /* =====================================================================
+     4) LAYOUT / MOTION
+     ===================================================================== */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+
+  --shadow-xs:   0 1px 2px rgba(11, 26, 47, 0.06);
+  --shadow-sm:   0 2px 6px rgba(11, 26, 47, 0.08);
+  --shadow-md:   0 8px 20px rgba(11, 26, 47, 0.10);
+  --shadow-lg:   0 20px 40px rgba(11, 26, 47, 0.14);
+  --shadow-glow: 0 0 0 4px rgba(44, 90, 158, 0.12);
+
+  --header-h: 64px;
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 72px;
+
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+
+  /* =====================================================================
+     5) TYPOGRAPHY
+     ===================================================================== */
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+  --font-display: 'Big Shoulders Display', 'Inter', sans-serif;  /* geçici — tipografi kararı sonrası kaldırılabilir */
+
+  /* =====================================================================
+     6) LEGACY ALIASES — eski isimler yeni token'lara köprü
+        Mevcut css/pages/*.css dosyaları aynen çalışmaya devam etsin diye.
+     ===================================================================== */
+  --bg2:         var(--bg-elev);
+  --surface2:    var(--surface-2);
+  --surface3:    var(--navy-50);          /* light: en açık navy; dark: aşağıda override */
+  --border2:     var(--border-strong);
+  --text2:       var(--text-muted);
+  --muted:       var(--text-subtle);
+
+  --accent:      var(--accent-500);
+  --accent2:     var(--accent-400);
+  --accent-dim:  var(--accent-100);       /* light counterpart; dark: aşağıda override */
+
+  --green:       var(--success);
+  --green-dim:   var(--success-bg);
+  --yellow:      var(--warning);
+  --yellow-dim:  var(--warning-bg);
+  --red:         var(--danger);
+  --red-dim:     var(--danger-bg);
+  --blue-dim:    rgba(56, 189, 248, 0.10);
+
+  --radius:      var(--r-md);
+  --radius-lg:   var(--r-lg);
 }
+
+/* =====================================================================
+   DARK THEME OVERRIDE
+   ===================================================================== */
+[data-theme="dark"] {
+  --bg:         #06111F;
+  --bg-elev:    #0B1A2F;
+  --bg-sunk:    #050D18;
+  --surface:    #0F2440;
+  --surface-2:  #15355C;
+  --border:     #1A3A66;
+  --border-strong: #25527F;
+  --text:         #EEF4FB;
+  --text-muted:   #93A6C2;
+  --text-subtle:  #6A7C95;
+  --text-inverse: #0B1A2F;
+
+  --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm:   0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-md:   0 8px 20px rgba(0, 0, 0, 0.5);
+  --shadow-lg:   0 20px 40px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 0 4px rgba(74, 127, 196, 0.20);
+
+  --nav-bg:         #050D18;
+  --nav-bg-elev:    #0B1A2F;
+  --nav-active-bg:  #15355C;
+  --nav-border:     #122B4F;
+
+  /* Legacy alias dark counterparts */
+  --surface3:    #1A3460;
+  --accent-dim:  #5C2200;
+  --green-dim:   #0F3D20;
+  --yellow-dim:  #4A3510;
+  --red-dim:     #7F1D1D;
+  --blue-dim:    #0C3A56;
+}
+
+/* =====================================================================
+   TYPOGRAPHY HELPERS
+   ===================================================================== */
+.mono { font-family: var(--font-mono); font-feature-settings: 'tnum'; }
+.tnum { font-variant-numeric: tabular-nums; }
