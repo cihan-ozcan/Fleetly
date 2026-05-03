@@ -4955,7 +4955,7 @@ function editDriverEntry(id) {
 
 // ── Sekme geçişi ──
 function switchDsTab(name) {
-  ['suruculer','takip','ozet','kpi','davet','onay','ayarlar'].forEach(t => {
+  ['suruculer','takip','ozet','kpi','davet','onay','ariza','ayarlar'].forEach(t => {
     document.getElementById('ds-tab-' + t)?.classList.toggle('active', t === name);
     document.getElementById('dspanel-' + t)?.classList.toggle('active', t === name);
   });
@@ -4966,6 +4966,7 @@ function switchDsTab(name) {
     soforDavetlerYukle();
   }
   if (name === 'onay') onayKuyruguYukle();
+  if (name === 'ariza' && typeof arizaListYukle === 'function') arizaListYukle();
   // YENİ: Sürücü Takibi
   if (name === 'takip' && typeof surucuTakipAc === 'function') surucuTakipAc();
   else if (name !== 'takip' && typeof surucuTakipKapat === 'function') surucuTakipKapat();
@@ -5601,6 +5602,292 @@ async function soforDavetIptal(davetId) {
   } catch (err) {
     console.error('Davet iptal hatası:', err);
     showToast('İptal edilemedi: ' + (err?.message || 'hata'), 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// ARIZA TALEPLERİ (mobil uygulamadan gelen arac_arizalari)
+// ════════════════════════════════════════════════════════════════
+
+let _arizaFilter = 'acik';
+const _arizaTipLabels = {
+  lastik:'🛞 Lastik', motor:'⚙️ Motor', fren:'🛑 Fren', elektrik:'⚡ Elektrik',
+  kaporta:'🚙 Kaporta', klima:'❄️ Klima', sanziman:'🔧 Şanzıman', diger:'🔩 Diğer'
+};
+const _arizaOncelikColors = {
+  acil:  { bg:'rgba(239,68,68,.15)',  border:'rgba(239,68,68,.4)',  text:'#ef4444', emoji:'🔴' },
+  orta:  { bg:'rgba(245,158,11,.15)', border:'rgba(245,158,11,.4)', text:'#f59e0b', emoji:'🟡' },
+  dusuk: { bg:'rgba(34,197,94,.15)',  border:'rgba(34,197,94,.4)',  text:'#22c55e', emoji:'🟢' }
+};
+const _arizaDurumLabels = {
+  acik: '🆕 Açık', inceleniyor: '🔍 İnceleniyor', cozuldu: '✅ Çözüldü', iptal: '🚫 İptal'
+};
+
+function arizaFilterSet(durum) {
+  _arizaFilter = durum;
+  document.querySelectorAll('.ariza-filter').forEach(b => {
+    const active = b.getAttribute('data-durum') === durum;
+    b.style.background = active ? 'rgba(99,102,241,.12)' : 'transparent';
+    b.style.borderColor = active ? 'rgba(99,102,241,.35)' : 'var(--border2)';
+    b.style.color = active ? '#818cf8' : 'var(--muted)';
+  });
+  arizaListYukle();
+}
+
+async function arizaListYukle() {
+  const host = document.getElementById('ariza-liste');
+  if (!host) return;
+
+  if (isLocalMode() || !_authToken) {
+    host.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Buluta bağlı değil.</div>';
+    return;
+  }
+
+  host.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Yükleniyor…</div>';
+
+  try {
+    const sb = getSB();
+    let q = sb.from('arac_arizalari')
+      .select('id, firma_id, arac_id, surucu_id, is_emri_id, tip, oncelik, baslik, aciklama, foto_urls, konum_lat, konum_lng, durum, yonetici_cevap, cozum_aciklama, created_at, updated_at, cozum_at, maliyet, servis, sonraki_tarih, sonraki_km, km_anlik, bakim_kaydi_id, suruculer:surucu_id(ad, soyad, telefon_e164)')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (_arizaFilter !== 'hepsi') {
+      q = q.eq('durum', _arizaFilter);
+    }
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    const acikSayi = (await sb.from('arac_arizalari')
+      .select('id', { count: 'exact', head: true })
+      .eq('durum', 'acik')).count || 0;
+    const badge = document.getElementById('ds-ariza-badge');
+    if (badge) {
+      badge.textContent = acikSayi;
+      badge.style.display = acikSayi > 0 ? 'inline-block' : 'none';
+    }
+
+    if (!data || data.length === 0) {
+      host.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px;font-size:12px">Bu filtrede arıza bildirimi yok.</div>';
+      return;
+    }
+
+    host.innerHTML = data.map(_arizaKartiHtml).join('');
+  } catch (err) {
+    console.error('Arıza listesi yüklenemedi:', err);
+    host.innerHTML = `<div style="text-align:center;color:var(--red);padding:18px;font-size:12px">Yüklenemedi: ${err?.message || 'hata'}</div>`;
+  }
+}
+
+function _arizaKartiHtml(a) {
+  const onc = _arizaOncelikColors[a.oncelik] || _arizaOncelikColors.orta;
+  const tipLabel = _arizaTipLabels[a.tip] || '🔩 Diğer';
+  const durumLabel = _arizaDurumLabels[a.durum] || a.durum;
+  const tarih = a.created_at ? new Date(a.created_at).toLocaleString('tr-TR') : '';
+  const surucu = a.suruculer
+    ? `${a.suruculer.ad || ''} ${a.suruculer.soyad || ''}`.trim()
+    : '—';
+  const tel = a.suruculer?.telefon_e164 || '';
+
+  // Foto urls JSON parse
+  let fotos = [];
+  try {
+    fotos = JSON.parse(a.foto_urls || '[]');
+  } catch(_) {}
+  const fotoHtml = fotos.length
+    ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        ${fotos.slice(0,4).map(f => `<a href="${f.url}" target="_blank" style="display:block;width:60px;height:60px;border-radius:8px;overflow:hidden;border:1px solid var(--border2)"><img src="${f.url}" style="width:100%;height:100%;object-fit:cover" alt="foto"/></a>`).join('')}
+      </div>`
+    : '';
+
+  const konumHtml = (Number.isFinite(a.konum_lat) && Number.isFinite(a.konum_lng))
+    ? `<a href="https://www.google.com/maps?q=${a.konum_lat},${a.konum_lng}" target="_blank" style="font-size:11px;color:#38bdf8;text-decoration:none">📍 Haritada gör</a>`
+    : '';
+
+  const cevapHtml = a.yonetici_cevap
+    ? `<div style="margin-top:8px;padding:8px 10px;background:rgba(99,102,241,.08);border-left:3px solid #818cf8;border-radius:6px;font-size:12px"><b style="color:#818cf8">Yönetici cevabı:</b><br>${_escapeHtml(a.yonetici_cevap)}</div>`
+    : '';
+
+  const cozumHtml = a.cozum_aciklama && a.durum === 'cozuldu'
+    ? `<div style="margin-top:6px;font-size:12px;color:#22c55e"><b>Çözüm:</b> ${_escapeHtml(a.cozum_aciklama)}</div>`
+    : '';
+
+  // Bakım/maliyet özeti (Çözüldü kayıtları için)
+  let bakimHtml = '';
+  if (a.durum === 'cozuldu' && (a.maliyet != null || a.servis || a.sonraki_tarih || a.sonraki_km)) {
+    const parcalar = [];
+    if (Number(a.maliyet) > 0) parcalar.push(`💰 <b>${Number(a.maliyet).toLocaleString('tr-TR')} ₺</b>`);
+    if (a.servis) parcalar.push(`🔧 ${_escapeHtml(a.servis)}`);
+    if (a.km_anlik) parcalar.push(`📊 ${Number(a.km_anlik).toLocaleString('tr-TR')} KM`);
+
+    let sonraki = '';
+    if (a.sonraki_tarih || a.sonraki_km) {
+      const t = a.sonraki_tarih ? new Date(a.sonraki_tarih).toLocaleDateString('tr-TR') : null;
+      const k = a.sonraki_km ? Number(a.sonraki_km).toLocaleString('tr-TR') + ' KM' : null;
+      sonraki = `<div style="margin-top:4px;font-size:11px;color:#f59e0b">⏰ Sonraki bakım: ${[t,k].filter(Boolean).join(' / ')}</div>`;
+    }
+
+    const bakimRozeti = a.bakim_kaydi_id
+      ? `<span style="font-size:10px;background:rgba(34,197,94,.15);color:#22c55e;padding:2px 8px;border-radius:99px;font-weight:600;margin-left:6px">🔗 Bakım kaydı</span>`
+      : '';
+
+    bakimHtml = `
+      <div style="margin-top:8px;padding:8px 10px;background:rgba(34,197,94,.06);border-radius:6px;font-size:12px;color:var(--text2)">
+        ${parcalar.join(' · ')}${bakimRozeti}
+        ${sonraki}
+      </div>`;
+  }
+
+  // Aksiyon butonları durumua göre
+  let aksiyonHtml = '';
+  if (a.durum === 'acik' || a.durum === 'inceleniyor') {
+    aksiyonHtml = `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+        ${a.durum === 'acik' ? `<button onclick="arizaDurumDegistir(${a.id}, 'inceleniyor')" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);color:#818cf8;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">🔍 İnceleme'ye Al</button>` : ''}
+        <button onclick="arizaCevapDialog(${a.id})" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);color:#818cf8;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">💬 Cevap Yaz</button>
+        <button onclick="arizaCozulduDialog(${a.id})" style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">✅ Çözüldü</button>
+        <button onclick="arizaDurumDegistir(${a.id}, 'iptal')" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">🚫 İptal</button>
+      </div>`;
+  }
+
+  return `
+    <div style="border:1px solid ${onc.border};border-radius:10px;padding:12px;background:var(--card)">
+      <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+            <span style="background:${onc.bg};color:${onc.text};padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700">${onc.emoji} ${a.oncelik?.toUpperCase()}</span>
+            <span style="font-size:11px;background:rgba(56,189,248,.12);color:#38bdf8;padding:3px 10px;border-radius:99px;font-weight:600">${tipLabel}</span>
+            <span style="font-size:11px;color:var(--muted);font-weight:600">${durumLabel}</span>
+          </div>
+          <div style="font-weight:700;color:var(--text);font-size:14px;margin-bottom:4px">${_escapeHtml(a.baslik)}</div>
+          ${a.aciklama ? `<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:4px">${_escapeHtml(a.aciklama)}</div>` : ''}
+          <div style="font-size:10.5px;color:var(--muted)">
+            <b>${_escapeHtml(surucu)}</b>${tel ? ` · ${tel}` : ''} · ${tarih}
+            ${konumHtml ? ' · ' + konumHtml : ''}
+          </div>
+          ${fotoHtml}
+          ${cevapHtml}
+          ${cozumHtml}
+          ${bakimHtml}
+          ${aksiyonHtml}
+        </div>
+      </div>
+    </div>`;
+}
+
+function _escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+async function arizaDurumDegistir(id, yeniDurum) {
+  if (yeniDurum === 'iptal' && !confirm('Bu arıza talebini iptal etmek istediğinize emin misiniz?')) return;
+  try {
+    const sb = getSB();
+    const patch = { durum: yeniDurum };
+    if (yeniDurum === 'cozuldu') patch.cozum_at = new Date().toISOString();
+    const { error } = await sb.from('arac_arizalari').update(patch).eq('id', id);
+    if (error) throw error;
+    showToast('Durum güncellendi ✓', 'success');
+    arizaListYukle();
+  } catch (err) {
+    console.error(err);
+    showToast('Güncellenemedi: ' + (err?.message || 'hata'), 'error');
+  }
+}
+
+async function arizaCevapDialog(id) {
+  const cevap = prompt('Sürücüye iletilecek cevabı yazın:');
+  if (cevap == null) return;
+  if (cevap.trim() === '') { showToast('Cevap boş olamaz.', 'error'); return; }
+  try {
+    const sb = getSB();
+    const { error } = await sb.from('arac_arizalari')
+      .update({ yonetici_cevap: cevap.trim(), durum: 'inceleniyor' })
+      .eq('id', id);
+    if (error) throw error;
+    showToast('Cevap gönderildi ✓ (sürücüye bildirim düştü)', 'success');
+    arizaListYukle();
+  } catch (err) {
+    console.error(err);
+    showToast('Cevap gönderilemedi: ' + (err?.message || 'hata'), 'error');
+  }
+}
+
+// ── Çözüldü modal — bakım kaydı oluşturma formu ──
+let _arizaCozumId = null;
+
+function arizaCozulduDialog(id) {
+  _arizaCozumId = id;
+  // Form alanlarını sıfırla
+  document.getElementById('ariza-cozum-aciklama').value = '';
+  document.getElementById('ariza-cozum-maliyet').value = '';
+  document.getElementById('ariza-cozum-km').value = '';
+  document.getElementById('ariza-cozum-servis').value = '';
+  document.getElementById('ariza-cozum-sonraki-tarih').value = '';
+  document.getElementById('ariza-cozum-sonraki-km').value = '';
+
+  const modal = document.getElementById('ariza-cozum-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('ariza-cozum-aciklama')?.focus(), 50);
+  }
+}
+
+function arizaCozumModalKapat() {
+  const modal = document.getElementById('ariza-cozum-modal');
+  if (modal) modal.style.display = 'none';
+  _arizaCozumId = null;
+}
+
+async function arizaCozumKaydet() {
+  if (!_arizaCozumId) return;
+  const id = _arizaCozumId;
+
+  const aciklama = document.getElementById('ariza-cozum-aciklama').value.trim();
+  const maliyet  = document.getElementById('ariza-cozum-maliyet').value;
+  const km       = document.getElementById('ariza-cozum-km').value;
+  const servis   = document.getElementById('ariza-cozum-servis').value.trim();
+  const sonTar   = document.getElementById('ariza-cozum-sonraki-tarih').value;
+  const sonKm    = document.getElementById('ariza-cozum-sonraki-km').value;
+
+  const btn = document.getElementById('ariza-cozum-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Kaydediliyor…'; }
+
+  try {
+    const sb = getSB();
+    const { data, error } = await sb.rpc('arac_ariza_cozuldu', {
+      p_id: id,
+      p_cozum_aciklama: aciklama || null,
+      p_maliyet:        maliyet ? Number(maliyet) : null,
+      p_servis:         servis || null,
+      p_km_anlik:       km ? Number(km) : null,
+      p_sonraki_tarih:  sonTar || null,
+      p_sonraki_km:     sonKm ? Number(sonKm) : null,
+    });
+    if (error) throw error;
+
+    if (data && data.hata) {
+      const msg = data.hata === 'YETKI_YOK' ? 'Bu işlem için yetkiniz yok'
+                : data.hata === 'BULUNAMADI' ? 'Arıza kaydı bulunamadı'
+                : 'İşlem başarısız: ' + data.hata;
+      showToast(msg, 'error');
+      return;
+    }
+
+    showToast('Çözüldü ✓ Bakım kaydı oluşturuldu, sürücüye bildirim gönderildi', 'success');
+    arizaCozumModalKapat();
+    arizaListYukle();
+    // Bakım sekmesi açıksa o da yenilensin
+    if (typeof renderBakimList === 'function') { try { renderBakimList(); } catch(_){} }
+  } catch (err) {
+    console.error('arac_ariza_cozuldu RPC hatası:', err);
+    showToast('Güncellenemedi: ' + (err?.message || 'hata'), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✅ Çözüldü olarak kaydet'; }
   }
 }
 
