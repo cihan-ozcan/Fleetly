@@ -5285,8 +5285,23 @@ async function soforDavetOlustur() {
       showToast('Mevcut sürücü kaydı kullanıldı ✓', 'info');
     }
 
+    // PIN: RPC sonucunda yoksa ek SELECT ile çek (DB trigger insert sırasında üretiyor)
+    let pin = rec.pin || null;
+    if (!pin) {
+      try {
+        const { data: pinRow } = await sb
+          .from('surucu_davetleri')
+          .select('pin')
+          .eq('davet_kodu', rec.davet_kodu)
+          .limit(1)
+          .maybeSingle();
+        pin = pinRow?.pin || null;
+      } catch (_) { /* sessiz */ }
+    }
+
     _sonDavet = {
       kod      : rec.davet_kodu,
+      pin      : pin,
       ad       : rec.ad || ad,
       telefon  : rec.telefon || tel,
       expires  : rec.expires_at || null,
@@ -5296,6 +5311,8 @@ async function soforDavetOlustur() {
     // Sonuç kartını göster
     document.getElementById('davet-sonuc-kart').style.display  = '';
     document.getElementById('davet-sonuc-kod').textContent     = rec.davet_kodu;
+    const pinEl = document.getElementById('davet-sonuc-pin');
+    if (pinEl) pinEl.textContent = pin || '— (oluşturulamadı)';
     const expTxt = rec.expires_at ? new Date(rec.expires_at).toLocaleString('tr-TR') : '—';
     document.getElementById('davet-sonuc-bilgi').innerHTML =
       `<b>${rec.ad || ad}</b> · ${rec.telefon || tel}<br>Geçerlilik bitişi: <b>${expTxt}</b>`;
@@ -5340,40 +5357,83 @@ async function soforDavetKoduKopyala() {
   }
 }
 
-// WhatsApp üzerinden davet mesajı gönder
-function soforDavetWhatsApp() {
-  if (!_sonDavet) return;
-  const kod = _sonDavet.kod;
-  const ad  = _sonDavet.ad;
-  const tel = _sonDavet.telefon;
+// PIN'i panoya kopyala
+async function soforDavetPinKopyala() {
+  if (!_sonDavet?.pin) { showToast('PIN bulunamadı.', 'error'); return; }
+  try {
+    await navigator.clipboard.writeText(_sonDavet.pin);
+    showToast('PIN panoya kopyalandı ✓', 'success');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = _sonDavet.pin;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('PIN kopyalandı ✓', 'success');
+  }
+}
 
-  // Davet linki — şoför portalı app.html#/sofor olarak açacak
-  const portalUrl = location.origin + location.pathname + '#/sofor?kod=' + encodeURIComponent(kod);
+// Telefonu Türkiye E.164 formatına normalize
+function _normalizeTrPhone(tel) {
+  let n = (tel || '').replace(/\D/g, '');
+  if (n.startsWith('0'))        n = '90' + n.slice(1);
+  else if (!n.startsWith('90')) n = '90' + n;
+  return n;
+}
+
+// 1) DAVET LİNKİ paylaş — sadece link, PIN AYRI mesajda gider
+function soforDavetLinkPaylas() {
+  if (!_sonDavet) return;
+  const { kod, ad, telefon } = _sonDavet;
+
+  // Mobil deep link (öncelik) + web tarayıcı yedeği
+  const mobilLink = `fleetly://davet/${kod}`;
+  const webPortalUrl = location.origin + location.pathname + '#/sofor?kod=' + encodeURIComponent(kod);
 
   const mesaj = [
     `Merhaba ${ad},`,
     ``,
-    `Fleetly Şoför Portalı'na davet edildiniz 🚛`,
+    `Fleetly Sürücü uygulamasına davet edildiniz 🚛`,
     ``,
-    `📱 Davet Kodunuz: *${kod}*`,
-    `📞 Kayıtlı Telefon: ${tel}`,
+    `📱 Mobil uygulama yüklüyse: ${mobilLink}`,
+    `🌐 Web tarayıcısı (yedek): ${webPortalUrl}`,
     ``,
-    `Aşağıdaki bağlantıya tıklayın ve kodu girin:`,
-    portalUrl,
-    ``,
+    `Davet kodunuz: *${kod}*`,
     `Bu kod 48 saat içinde kullanılmalıdır.`,
+    ``,
+    `🔐 Giriş PIN'iniz ayrı bir mesajda gönderilecektir.`,
     ``,
     `_Fleetly - Filo Yönetim Sistemi_`
   ].join('\n');
 
-  // Türkiye normalize
-  let waNum = tel.replace(/\D/g, '');
-  if (waNum.startsWith('0'))        waNum = '90' + waNum.slice(1);
-  else if (!waNum.startsWith('90')) waNum = '90' + waNum;
-
-  const waUrl = `https://wa.me/${waNum}?text=${encodeURIComponent(mesaj)}`;
+  const waUrl = `https://wa.me/${_normalizeTrPhone(telefon)}?text=${encodeURIComponent(mesaj)}`;
   window.open(waUrl, '_blank');
-  showToast('WhatsApp açılıyor…');
+  showToast('1/2: WhatsApp açıldı (link). Şimdi PIN\'i ayrı gönderin.');
+}
+
+// 2) PIN paylaş — sadece PIN, ayrı mesaj
+function soforDavetPinPaylas() {
+  if (!_sonDavet) return;
+  if (!_sonDavet.pin) { showToast('PIN bulunamadı, daveti yeniden oluşturun.', 'error'); return; }
+  const { pin, telefon } = _sonDavet;
+
+  const mesaj = [
+    `🔐 Fleetly giriş PIN'iniz: *${pin}*`,
+    ``,
+    `Bu PIN'i kimseyle paylaşmayın.`,
+    `5 yanlış denemeden sonra davetiniz kilitlenir.`,
+  ].join('\n');
+
+  const waUrl = `https://wa.me/${_normalizeTrPhone(telefon)}?text=${encodeURIComponent(mesaj)}`;
+  window.open(waUrl, '_blank');
+  showToast('2/2: PIN mesajı açıldı.');
+}
+
+// Geriye uyumluluk: eski "soforDavetWhatsApp" çağrılarını link paylaşımına yönlendir
+function soforDavetWhatsApp() {
+  showToast('PIN sistemine geçildi: önce linki, sonra PIN\'i ayrı mesajda gönderin.', 'info');
+  soforDavetLinkPaylas();
 }
 
 // Davet listesini Supabase'ten yükle
@@ -5392,7 +5452,7 @@ async function soforDavetlerYukle() {
     const sb = getSB();
     const { data, error } = await sb
       .from('surucu_davetleri')
-      .select('id, ad, telefon, davet_kodu, arac_id, expires_at, kullanildi_at, kullanan_user_id, iptal_mi, notlar, created_at')
+      .select('id, ad, telefon, davet_kodu, pin, arac_id, expires_at, kullanildi_at, kullanan_user_id, iptal_mi, kilitli_mi, yanlis_pin_sayisi, notlar, created_at')
       .order('created_at', { ascending: false })
       .limit(50);
     if (error) throw error;
@@ -5407,11 +5467,12 @@ async function soforDavetlerYukle() {
       const expMs = d.expires_at ? new Date(d.expires_at).getTime() : 0;
       let durumTxt, durumColor;
       if (d.iptal_mi) { durumTxt = '🚫 İptal Edildi'; durumColor = 'var(--muted)'; }
+      else if (d.kilitli_mi) { durumTxt = '🔒 Kilitli (5 yanlış PIN)'; durumColor = '#ef4444'; }
       else if (d.kullanildi_at) { durumTxt = '✅ Kullanıldı'; durumColor = '#22c55e'; }
       else if (expMs && expMs < now) { durumTxt = '⏰ Süresi Doldu'; durumColor = 'var(--muted)'; }
       else { durumTxt = '🕐 Bekliyor'; durumColor = '#f59e0b'; }
 
-      const aktif = !d.iptal_mi && !d.kullanildi_at && expMs > now;
+      const aktif = !d.iptal_mi && !d.kilitli_mi && !d.kullanildi_at && expMs > now;
       const plaka = d.arac_id ? (vehicles.find(v => v.id === d.arac_id)?.plaka || d.arac_id) : null;
       const createdTxt = d.created_at ? new Date(d.created_at).toLocaleString('tr-TR') : '';
       const expTxt     = d.expires_at ? new Date(d.expires_at).toLocaleString('tr-TR') : '—';
@@ -5419,6 +5480,16 @@ async function soforDavetlerYukle() {
       // Telefon maskele: son 4 hane görünür
       const tel = d.telefon || '';
       const telMask = tel.length >= 4 ? '****' + tel.slice(-4) : tel;
+
+      // PIN gizli toggle (panel kullanıcısı PIN'i unutursa görebilsin)
+      const pinId = `davet-pin-${d.id}`;
+      const pinHtml = d.pin
+        ? `<span id="${pinId}" data-pin="${d.pin}" style="font-family:monospace;font-size:11px;background:rgba(245,158,11,.12);color:#f59e0b;padding:2px 6px;border-radius:4px;font-weight:600;cursor:pointer;letter-spacing:1.5px" onclick="soforDavetPinToggle('${pinId}')" title="PIN'i göster/gizle">🔐 ••••</span>`
+        : '';
+
+      const yanlisHtml = (d.yanlis_pin_sayisi > 0 && !d.kilitli_mi)
+        ? ` · <span style="color:#f59e0b;font-weight:700">${d.yanlis_pin_sayisi} yanlış PIN</span>`
+        : '';
 
       return `
         <div style="border:1px solid var(--border2);border-radius:10px;padding:10px 12px;background:var(--card);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -5430,19 +5501,26 @@ async function soforDavetlerYukle() {
             </div>
             <div style="display:flex;gap:10px;align-items:center;margin-top:4px;flex-wrap:wrap">
               <span style="font-family:monospace;font-size:13px;font-weight:700;letter-spacing:1.5px;color:#818cf8">${d.davet_kodu}</span>
+              ${pinHtml}
               <span style="font-size:10.5px;color:${durumColor};font-weight:700">${durumTxt}</span>
             </div>
             <div style="font-size:10px;color:var(--muted);margin-top:3px">
               Oluşturuldu: ${createdTxt}${aktif ? ' · Bitiş: ' + expTxt : ''}
+              ${yanlisHtml}
               ${d.notlar ? ' · <i>' + d.notlar + '</i>' : ''}
             </div>
           </div>
           ${aktif ? `
             <div style="display:flex;gap:6px">
-              <button onclick="soforDavetTekrarPaylas(${d.id})" title="Tekrar paylaş" style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">💬</button>
+              <button onclick="soforDavetTekrarPaylas(${d.id})" title="Tekrar paylaş (link + PIN)" style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">💬</button>
               <button onclick="soforDavetIptal(${d.id})" title="Daveti iptal et" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">🚫</button>
             </div>
-          ` : ''}
+          ` : (d.kilitli_mi ? `
+            <div style="display:flex;gap:6px">
+              <button onclick="soforDavetKilitAc(${d.id})" title="Daveti yeniden aç (PIN sayacı sıfırlanır)" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);color:#818cf8;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">🔓 Kilit Aç</button>
+              <button onclick="soforDavetIptal(${d.id})" title="Daveti iptal et" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">🚫</button>
+            </div>
+          ` : '')}
         </div>`;
     }).join('');
   } catch (err) {
@@ -5451,26 +5529,60 @@ async function soforDavetlerYukle() {
   }
 }
 
-// Tekrar WhatsApp paylaş (listeden)
+// Tekrar WhatsApp paylaş (listeden) — link + PIN ayrı mesajlar
 async function soforDavetTekrarPaylas(davetId) {
   try {
     const sb = getSB();
     const { data, error } = await sb
       .from('surucu_davetleri')
-      .select('ad, telefon, davet_kodu, expires_at, arac_id')
+      .select('ad, telefon, davet_kodu, pin, expires_at, arac_id')
       .eq('id', davetId)
       .single();
     if (error) throw error;
     _sonDavet = {
       kod     : data.davet_kodu,
+      pin     : data.pin,
       ad      : data.ad,
       telefon : data.telefon,
       expires : data.expires_at,
       arac_id : data.arac_id
     };
-    soforDavetWhatsApp();
+    // Önce link, sonra (kullanıcı tetiklerse) PIN
+    soforDavetLinkPaylas();
+    showToast('Link gönderildi. PIN için "PIN\'i ayrı gönder" butonunu kullanın.', 'info');
   } catch (err) {
     showToast('Davet bilgisi alınamadı.', 'error');
+  }
+}
+
+// Listede PIN'i göster/gizle (panel kullanıcısı için)
+function soforDavetPinToggle(spanId) {
+  const el = document.getElementById(spanId);
+  if (!el) return;
+  const pin = el.getAttribute('data-pin');
+  if (!pin) return;
+  if (el.textContent.includes('•')) {
+    el.textContent = '🔐 ' + pin;
+  } else {
+    el.textContent = '🔐 ••••';
+  }
+}
+
+// Kilitlenmiş daveti yeniden aç (PIN sayacını sıfırla, kilidi kaldır)
+async function soforDavetKilitAc(davetId) {
+  if (!confirm('Daveti yeniden aktif etmek ve PIN sayacını sıfırlamak istiyor musunuz?\n\nÖnemli: Eski PIN değişmez. Şüphe varsa bunun yerine daveti iptal edip yeni davet oluşturun.')) return;
+  try {
+    const sb = getSB();
+    const { error } = await sb
+      .from('surucu_davetleri')
+      .update({ kilitli_mi: false, yanlis_pin_sayisi: 0 })
+      .eq('id', davetId);
+    if (error) throw error;
+    showToast('Davet yeniden aktif edildi.', 'success');
+    soforDavetlerYukle();
+  } catch (err) {
+    console.error('Kilit açma hatası:', err);
+    showToast('Kilit açılamadı: ' + (err?.message || 'hata'), 'error');
   }
 }
 

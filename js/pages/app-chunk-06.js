@@ -91,7 +91,8 @@ function soforScreenGoster(name) {
 }
 
 function soforStepGoster(name) {
-  ['kod','tel','otp'].forEach(s => {
+  // PIN'li akışa geçildi: 'tel' ve 'otp' adımları kaldırıldı, yerine 'pin' geldi.
+  ['kod','pin'].forEach(s => {
     document.getElementById('sofor-step-' + s)?.classList.toggle('active', s === name);
   });
   // Hata/başarı kutularını temizle
@@ -105,13 +106,22 @@ function soforHata(elId, msg) {
   el.classList.add('show');
 }
 
-/* ---- ADIM 1: Davet kodu kontrol ---- */
+/* ---- ADIM 1: Davet kodu kontrol (henüz PIN istemeden ad/firma'yı önizle) ----
+   PIN'li akışa geçildi (REFACTOR 2026-05-03). Twilio/SMS yok.
+   Bu adımda sadece kodun kayıtlı olduğunu doğrulamak için RPC v3'ü dummy bir
+   PIN ile çağırırız ve "PIN_HATALI" ya da "ok" cevabını bekleriz; kod yoksa
+   "BULUNAMADI" döner. Bu sayede 1 yanlış PIN denemesi kaydedilir, ama kullanıcı
+   gerçek PIN'i bir sonraki adımda girer ve sayaç sıfırlanır.
+   Daha temiz: backend tarafında "sadece doğrula, sayaç arttırma" modu eklenebilir;
+   şimdilik basit yaklaşım. */
 async function soforDavetKontrol() {
   const kod = (document.getElementById('sofor-kod').value || '').trim().toUpperCase();
   if (kod.length < 6) { soforHata('sofor-err-kod', 'Geçerli bir davet kodu girin.'); return; }
 
   try {
     const sb = getSB();
+    // Eski v1/v2 RPC'si PIN'siz çalışıyor; bilgi önizlemesi için onu kullan.
+    // Burada sadece kodun varlığını doğruluyoruz (henüz oturum açmadan).
     const { data, error } = await sb.rpc('sofor_davet_dogrula', { p_kod: kod });
     if (error) throw error;
     const rec = Array.isArray(data) ? data[0] : data;
@@ -120,83 +130,82 @@ async function soforDavetKontrol() {
     soforState.davet = { ...rec, davet_kodu: kod };
     document.getElementById('sofor-davet-ad').textContent    = rec.ad || '—';
     document.getElementById('sofor-davet-firma').textContent = rec.firma_adi || '';
-    document.getElementById('sofor-davet-tel').textContent   = rec.telefon_son4 || '';
-    soforStepGoster('tel');
+    document.getElementById('sofor-davet-tel').textContent   = rec.telefon_son4 || '—';
+    soforStepGoster('pin');
+    setTimeout(() => document.getElementById('sofor-pin')?.focus(), 50);
   } catch (err) {
     console.error(err);
     soforHata('sofor-err-kod', 'Kod geçersiz veya süresi dolmuş.');
   }
 }
 
-/* ---- ADIM 2: Telefon OTP gönder ---- */
-async function soforOtpGonder() {
-  const telRaw = (document.getElementById('sofor-tel').value || '').trim();
-  let tel = telRaw.replace(/[^\d+]/g, '');
-  if (!tel.startsWith('+')) {
-    tel = tel.replace(/\D/g, '');
-    if (tel.length === 10) tel = '+90' + tel;
-    else if (tel.length === 11 && tel.startsWith('0')) tel = '+9' + tel;
-    else if (tel.length === 12 && tel.startsWith('90')) tel = '+' + tel;
-    else { soforHata('sofor-err-tel', 'Geçerli bir telefon numarası girin.'); return; }
+/* ---- ADIM 2: PIN ile davet kabul (Twilio/SMS yok) ---- */
+async function soforPinKabul() {
+  const pin = (document.getElementById('sofor-pin').value || '').trim();
+  if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+    soforHata('sofor-err-pin', '4 haneli PIN girin.');
+    return;
   }
+  const kod = soforState.davet?.davet_kodu;
+  if (!kod) { soforHata('sofor-err-pin', 'Davet bilgisi kayıp, baştan başlayın.'); return; }
 
   try {
     const sb = getSB();
-    const { error } = await sb.auth.signInWithOtp({
-      phone: tel,
-      options: { shouldCreateUser: true }
-    });
-    if (error) throw error;
-    soforState.telefon = tel;
-    document.getElementById('sofor-otp-hedef').textContent = tel;
-    soforStepGoster('otp');
-  } catch (err) {
-    console.error(err);
-    const msg = (err?.message || '').toLowerCase();
-    if (msg.includes('sms') || msg.includes('provider')) {
-      soforHata('sofor-err-tel', 'SMS servisi yapılandırılmamış. Yöneticinize bildirin.');
-    } else {
-      soforHata('sofor-err-tel', 'Kod gönderilemedi: ' + (err?.message || 'hata'));
-    }
-  }
-}
 
-/* ---- ADIM 3: OTP kodu doğrula + davet kabul ---- */
-async function soforOtpDogrula() {
-  const otp = (document.getElementById('sofor-otp').value || '').trim();
-  if (otp.length < 4) { soforHata('sofor-err-otp', 'Geçerli bir kod girin.'); return; }
-  const tel = soforState.telefon;
-  if (!tel) { soforHata('sofor-err-otp', 'Telefon bilgisi kayıp. Baştan başlayın.'); return; }
-
-  try {
-    const sb = getSB();
-    const { data, error } = await sb.auth.verifyOtp({ phone: tel, token: otp, type: 'sms' });
-    if (error) throw error;
-    soforState.session = data.session;
-
-    // Davet kabul RPC — REFACTOR 2026-04-22: önce _v2, yoksa v1
-    const kod = soforState.davet?.davet_kodu;
-    if (kod) {
-      let kabulErr;
-      ({ error: kabulErr } = await sb.rpc('sofor_davet_kabul_v2', { p_kod: kod }));
-      if (kabulErr && /function.*does not exist|42883/i.test(kabulErr.message || kabulErr.code || '')) {
-        ({ error: kabulErr } = await sb.rpc('sofor_davet_kabul', { p_kod: kod }));
-      }
-      if (kabulErr) {
-        console.warn('Davet kabul hatası:', kabulErr);
-        // telefon uyuşmazlığı en tipik hata
-        soforHata('sofor-err-otp', kabulErr.message || 'Davet kabul edilemedi.');
+    // 1) Anonymous oturum aç (varsa atla)
+    const { data: { user: existingUser } } = await sb.auth.getUser();
+    if (!existingUser) {
+      const { error: anonErr } = await sb.auth.signInAnonymously();
+      if (anonErr) {
+        const msg = (anonErr.message || '').toLowerCase();
+        if (msg.includes('anonymous')) {
+          soforHata('sofor-err-pin', 'Anonim giriş kapalı. Yöneticinize: Supabase → Authentication → Anonymous Sign-Ins.');
+        } else {
+          soforHata('sofor-err-pin', 'Oturum açılamadı: ' + (anonErr.message || 'hata'));
+        }
         return;
       }
     }
 
-    const el = document.getElementById('sofor-suc-otp');
-    el.textContent = '✓ Giriş başarılı, yönlendiriliyorsunuz…';
-    el.classList.add('show');
-    setTimeout(() => soforDashboardAc(), 600);
+    // 2) RPC v3 ile davet kabul
+    const { data, error } = await sb.rpc('sofor_davet_kabul_v3', {
+      p_kod: kod,
+      p_pin: pin
+    });
+    if (error) throw error;
+
+    const result = (typeof data === 'object' && data !== null) ? data : {};
+    if (result.ok === true) {
+      const el = document.getElementById('sofor-suc-pin');
+      el.textContent = '✓ Giriş başarılı, yönlendiriliyorsunuz…';
+      el.classList.add('show');
+      setTimeout(() => soforDashboardAc(), 600);
+      return;
+    }
+
+    // RPC tanımlı hata kodları
+    const hata = result.hata;
+    let msg;
+    switch (hata) {
+      case 'PIN_HATALI':
+        const kalan = result.kalan_deneme;
+        msg = (typeof kalan === 'number' && kalan > 0)
+          ? `PIN hatalı. ${kalan} hakkınız kaldı.`
+          : 'PIN hatalı. Davet kilitlendi.';
+        break;
+      case 'KILITLI':           msg = 'Davet kilitlendi (5 yanlış PIN). Şirketinizden yeni davet isteyin.'; break;
+      case 'KULLANILMIS':       msg = 'Bu davet daha önce kullanılmış.'; break;
+      case 'SURESI_DOLDU':      msg = 'Davetin süresi dolmuş.'; break;
+      case 'BULUNAMADI':        msg = 'Davet kodu bulunamadı.'; break;
+      case 'OTURUM_YOK':        msg = 'Oturum açılamadı, sayfayı yenileyin.'; break;
+      case 'BASKA_CIHAZA_BAGLI':msg = 'Bu sürücü başka bir cihazda kayıtlı. Şirketinizden cihaz değişikliği talep edin.'; break;
+      default:                  msg = 'Davet kabul edilemedi: ' + (hata || 'bilinmeyen hata');
+    }
+    soforHata('sofor-err-pin', msg);
+
   } catch (err) {
-    console.error(err);
-    soforHata('sofor-err-otp', 'Kod hatalı veya süresi dolmuş.');
+    console.error('PIN kabul hatası:', err);
+    soforHata('sofor-err-pin', err?.message || 'Davet kabul edilemedi.');
   }
 }
 
