@@ -1361,51 +1361,8 @@
     user-select: none; opacity: .5;
   }
 
-  /* ── HEADER ──────────────────────────────────────────────── */
-  header {
-    background: linear-gradient(180deg, #0F2440 0%, #0B1A2F 100%);
-    border-bottom: 1px solid rgba(255,107,31,.20);
-    padding: 0 28px;
-    padding-left: max(28px, env(safe-area-inset-left));
-    padding-right: max(28px, env(safe-area-inset-right));
-    height: 62px;
-    display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 1px 0 rgba(255,107,31,.08), 0 4px 24px rgba(0,0,0,.4);
-  }
-
-  .header-left { display: flex; align-items: center; gap: 20px; }
-
-  .header-logo {
-    display: flex; align-items: center; gap: 12px;
-    font-family: var(--font-display);
-    font-size: 20px; font-weight: 800; letter-spacing: 2px;
-    color: var(--text); text-transform: uppercase;
-  }
-  /* Logo — iki amber bar */
-  .header-logo-icon {
-    display: flex; align-items: center; gap: 3px; height: 32px;
-  }
-  .header-logo-bar {
-    border-radius: 3px;
-    transition: transform .2s;
-  }
-  .header-logo-bar1 { width: 14px; height: 32px; background: var(--accent); }
-  .header-logo-bar2 { width: 6px;  height: 32px; background: var(--accent2); opacity: .7; }
-  .header-logo-bar3 { width: 3px;  height: 32px; background: var(--accent); opacity: .3; }
-  .header-logo:hover .header-logo-bar { transform: scaleY(.92); }
-
-  .header-divider {
-    width: 1px; height: 24px; background: var(--border2);
-  }
-
-  .header-subtitle {
-    font-family: var(--font-mono);
-    font-size: 10px; font-weight: 400; color: var(--muted);
-    letter-spacing: .1em; text-transform: uppercase;
-  }
-
-  .header-actions { display: flex; gap: 8px; align-items: center; }
+  /* (Faz 5 cleanup) Eski yatay <header> ve .header-* CSS kuralları
+     kaldırıldı — Faz 1'den itibaren shell sidebar + topbar yapısında. */
 
   .btn-sm {
     display: inline-flex; align-items: center; gap: 5px;
@@ -1427,128 +1384,10 @@
   }
   .btn-sm.accent:hover { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 4px 14px rgba(255,107,31,.4); }
 
-  /* ══════════════════════════════════════════════════════════
-     NAV BUTTON SİSTEMİ — Demir Yolu
-     ══════════════════════════════════════════════════════════ */
-
-  /* Grup kapsayıcı */
-  .nav-group {
-    display: flex; align-items: center;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 3px;
-    gap: 2px;
-  }
-
-  /* Grup ayırıcı */
-  .nav-separator {
-    width: 1px; height: 28px;
-    background: var(--border2);
-    flex-shrink: 0;
-  }
-
-  /* Temel nav butonu */
-  .nav-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 5px 11px; border-radius: 6px;
-    border: none; cursor: pointer;
-    font-family: var(--font-body); font-size: 12px; font-weight: 600;
-    letter-spacing: .02em; white-space: nowrap;
-    background: transparent;
-    color: var(--muted);
-    transition: all .18s ease;
-    position: relative;
-  }
-
-  /* SVG ikon */
-  .nav-icon {
-    width: 14px; height: 14px; flex-shrink: 0;
-    stroke: currentColor;
-    transition: transform .18s ease;
-  }
-
-  /* Alt çizgi animasyonu */
-  .nav-btn::after {
-    content: '';
-    position: absolute; bottom: 0; left: 50%; right: 50%;
-    height: 2px; border-radius: 2px;
-    transition: left .18s ease, right .18s ease;
-  }
-  .nav-btn:hover::after { left: 8px; right: 8px; }
-  .nav-btn:hover .nav-icon { transform: translateY(-1px); }
-
-  /* Renk varyantları */
-  .nav-teal  { --nav-c: var(--teal);   --nav-bg: rgba(45,212,191,.08);  --nav-border: rgba(45,212,191,.25); }
-  .nav-purple{ --nav-c: var(--purple); --nav-bg: rgba(167,139,250,.08); --nav-border: rgba(167,139,250,.25); }
-  .nav-yellow{ --nav-c: var(--yellow); --nav-bg: rgba(212,168,71,.08);  --nav-border: rgba(212,168,71,.25); }
-  .nav-pink  { --nav-c: #e879f9;       --nav-bg: rgba(232,121,249,.08); --nav-border: rgba(232,121,249,.25); }
-  .nav-orange{ --nav-c: var(--accent); --nav-bg: rgba(255,107,31,.10);  --nav-border: rgba(255,107,31,.25); }
-  .nav-blue  { --nav-c: var(--blue);   --nav-bg: rgba(56,189,248,.08);  --nav-border: rgba(56,189,248,.25); }
-  .nav-green { --nav-c: var(--green);  --nav-bg: rgba(34,197,94,.08);   --nav-border: rgba(34,197,94,.25); }
-  .nav-muted { --nav-c: var(--text2);  --nav-bg: rgba(255,255,255,.04); --nav-border: rgba(255,255,255,.12); }
-
-  /* Temel nav butonu border */
-  .nav-btn { border: 1px solid transparent; }
-
-  .nav-btn:hover {
-    color: var(--nav-c);
-    background: var(--nav-bg);
-    border-color: var(--nav-border, transparent);
-  }
-  .nav-btn::after { background: var(--nav-c); }
-
-  /* Aktif state — JS ile .nav-active class eklenebilir */
-  .nav-btn.nav-active {
-    color: var(--nav-c);
-    background: var(--nav-bg);
-    border-color: var(--nav-border, transparent);
-  }
-  .nav-btn.nav-active::after { left: 8px; right: 8px; }
-
-  /* Ayarlar butonu grup dışında, ayrı durur */
-  .settings-wrap .nav-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 6px 12px;
-    color: var(--text2);
-  }
-  .settings-wrap .nav-btn:hover {
-    border-color: var(--border2);
-    color: var(--text);
-    background: var(--surface3);
-  }
-  .settings-wrap .nav-btn::after { display: none; }
-
-  /* Primary CTA — ARAÇ EKLE */
-  .nav-cta {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 8px 16px; border-radius: 8px;
-    border: none; cursor: pointer;
-    background: linear-gradient(135deg, #FF6B1F, #FF8C47);
-    color: #fff;
-    font-family: var(--font-display);
-    font-size: 13px; font-weight: 700;
-    letter-spacing: .06em; text-transform: uppercase;
-    white-space: nowrap;
-    box-shadow: 0 4px 16px rgba(255,107,31,.40);
-    transition: background .15s, box-shadow .15s, transform .12s;
-    position: relative; overflow: hidden;
-  }
-  /* Shimmer efekti */
-  .nav-cta::before {
-    content: '';
-    position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
-    transition: left .4s ease;
-  }
-  .nav-cta:hover::before { left: 150%; }
-  .nav-cta:hover {
-    box-shadow: 0 6px 24px rgba(255,107,31,.55);
-    transform: translateY(-1px);
-  }
-  .nav-cta:active { transform: translateY(0); }
+  /* (Faz 5 cleanup) Eski .nav-group / .nav-separator / .nav-btn /
+     .nav-icon / .nav-teal/purple/yellow/pink/orange/blue/green/muted /
+     .nav-cta CSS kuralları kaldırıldı — Faz 1'den itibaren sidebar
+     ve topbar component'ler kullanılıyor. */
 
   /* Mobil hamburger — sadece mobilde görünür */
   #mob-menu-btn {
@@ -2165,12 +2004,8 @@
      ══════════════════════════════════════════════════════════ */
   @media (max-width: 768px) {
 
-    /* ── Eski yatay header / nav (DEPRECATED — Faz 1 sonrası dead) ── */
-    /* header, .header-subtitle, .header-divider artık DOM'da yok.
-       .nav-group / .nav-separator / .nav-cta / #mob-menu-btn da dead.
-       .settings-wrap ARTIK topbar içinde aktif olarak kullanılıyor — gizlenmemeli. */
-    .nav-group, .nav-separator { display: none !important; }
-    /* #mob-menu-btn hidden stub olarak DOM'da kalıyor — görünmemeli */
+    /* #mob-menu-btn hidden stub olarak DOM'da — JS uyumluluğu için
+       her ekran boyutunda görünmemeli */
     #mob-menu-btn { display: none !important; }
 
     /* Mobil dropdown menü */
@@ -2999,12 +2834,6 @@
 
     /* ── Header yükseklik küçült ── */
     header { height: 52px !important; padding: 0 10px !important; }
-
-    /* ── mob menu butonu erişilebilir ── */
-    #mob-menu-btn { padding: 6px; }
-
-    /* ── Nav CTA küçük ── */
-    .nav-cta { padding: 5px 8px !important; font-size: 10px !important; }
 
     /* ── Tablo araç bar ── */
     .table-toolbar { padding: 10px 12px !important; }
@@ -5097,6 +4926,207 @@
 
   /* ══════════════════════════════════════════════════════════════════
      END A11Y / MOTION / PRINT POLISH
+     ══════════════════════════════════════════════════════════════════ */
+
+
+  /* ══════════════════════════════════════════════════════════════════
+     MOBILE UX REFINEMENT (Faz 5 — son adım)
+     ══════════════════════════════════════════════════════════════════ */
+
+  /* Body scroll lock (sidebar/modal açıkken) — iOS friendly */
+  body.sidebar-open {
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
+  /* iOS safe-area: notch + bottom home bar için padding */
+  .sidebar { padding-top: env(safe-area-inset-top); }
+  .topbar  { padding-top: env(safe-area-inset-top); height: calc(var(--header-h) + env(safe-area-inset-top)); }
+
+  /* Sidebar mobile drawer — daha geniş hit area + safe-area */
+  @media (max-width: 1024px) {
+    .sidebar {
+      padding-bottom: env(safe-area-inset-bottom);
+      box-shadow: 4px 0 32px rgba(0,0,0,.4);
+    }
+    .sidebar__item {
+      padding: 11px 12px;            /* min 44px touch hit */
+      font-size: 14px;
+    }
+    .sidebar__brand { padding-left: 18px; padding-right: 12px; }
+  }
+
+  /* Topbar — daha küçük cihazlarda actions kompakt */
+  @media (max-width: 640px) {
+    .topbar { gap: 8px; padding: 0 10px; }
+    .topbar__title { font-size: 14px; line-height: 1.1; }
+    .topbar__breadcrumb { display: none; }
+    .topbar__icon-btn { width: 34px; height: 34px; }
+    .topbar__icon-btn svg { width: 16px; height: 16px; }
+    .topbar__cta {
+      padding: 7px 11px;
+      font-size: 11.5px;
+      letter-spacing: .02em;
+      box-shadow: 0 3px 10px rgba(255, 107, 31, .35);
+    }
+    .topbar__menu { width: 36px; height: 36px; min-width: 36px; }
+  }
+
+  /* Çok küçük cihazlarda CTA metnini gizle (sadece + ikonu kalır) */
+  @media (max-width: 420px) {
+    .topbar__cta span { display: none; }
+    .topbar__cta { padding: 7px 10px; }
+  }
+
+  /* Sinematik banner mobile — actions tam genişlik */
+  @media (max-width: 700px) {
+    .cine-banner__head { gap: 14px; }
+    .cine-banner__actions {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+    .cine-banner__actions .btn--accent,
+    .cine-banner__actions .btn--ghost-on-dark {
+      flex: 1 1 calc(50% - 4px);
+      justify-content: center;
+    }
+  }
+
+  /* KPI satırı çok küçük cihazda spacing daralt */
+  @media (max-width: 520px) {
+    .kpi-row { gap: 8px; margin-bottom: 14px; }
+    .kpi { padding: 12px 14px; }
+    .kpi__value { font-size: 22px; }
+    .kpi__label { font-size: 10.5px; }
+    .kpi__spark { display: none; }
+  }
+
+  /* Tablo araç satırı (table-section) — mobile'da tablo otomatik gizli, kart açık */
+  @media (max-width: 768px) {
+    .card.table-section .card__head {
+      padding: 12px 14px;
+      gap: 10px !important;
+    }
+    .card.table-section .card__head .row {
+      width: 100%;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .card.table-section .card__head .filter-tabs { flex-wrap: wrap; }
+    .card.table-section .card__head .search-wrap { min-width: 0 !important; }
+    .card.table-section .card__head select { width: 100%; }
+  }
+
+  /* Modal'lar — mobile'da bottom-sheet, drag handle benzeri görünüm */
+  @media (max-width: 768px) {
+    .modal-backdrop,
+    .fuel-modal-backdrop,
+    .maint-modal-backdrop,
+    .driver-modal-backdrop,
+    .srm-backdrop,
+    .vehicle-select-backdrop {
+      padding: 0 !important;
+      align-items: flex-end !important;
+    }
+    .modal,
+    .fuel-modal,
+    .maint-modal,
+    .driver-modal,
+    .srm-modal,
+    .vehicle-select-modal {
+      max-width: 100% !important;
+      width: 100% !important;
+      max-height: 92vh !important;
+      max-height: 92dvh !important;
+      border-radius: 18px 18px 0 0 !important;
+      animation: modalSlideUp .3s var(--ease-out);
+    }
+    .modal-header,
+    .fuel-modal-header,
+    .maint-modal-header,
+    .driver-modal-header,
+    .srm-header,
+    .vehicle-select-header {
+      border-radius: 18px 18px 0 0 !important;
+      position: relative;
+    }
+    /* Drag handle */
+    .modal-header::before,
+    .fuel-modal-header::before,
+    .maint-modal-header::before,
+    .driver-modal-header::before,
+    .srm-header::before,
+    .vehicle-select-header::before {
+      content: '';
+      position: absolute;
+      top: 6px; left: 50%;
+      transform: translateX(-50%);
+      width: 38px; height: 4px;
+      background: var(--border-strong);
+      border-radius: 99px;
+      opacity: .6;
+    }
+  }
+  @keyframes modalSlideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .modal, .fuel-modal, .maint-modal, .driver-modal, .srm-modal, .vehicle-select-modal {
+      animation: none !important;
+    }
+  }
+
+  /* iOS zoom önleme — input font 16px+ */
+  @media (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="search"],
+    input[type="date"],
+    input[type="password"],
+    select,
+    textarea,
+    .inp,
+    .driver-inp,
+    .maint-inp,
+    .fuel-inp,
+    .srm-inp {
+      font-size: 16px !important;
+    }
+    /* Topbar arama mobile'da farklı hissi yok — gizli zaten */
+  }
+
+  /* Sidebar backdrop mobile'da daha belirgin */
+  @media (max-width: 1024px) {
+    .sidebar-backdrop {
+      background: rgba(6, 17, 31, .65);
+    }
+  }
+
+  /* Settings dropdown mobile — sağa hizalı, ekran kenarına yapışmaz */
+  @media (max-width: 640px) {
+    .settings-dropdown {
+      right: 8px !important;
+      left: auto !important;
+      min-width: 220px;
+      max-width: calc(100vw - 16px);
+    }
+  }
+
+  /* Sürücü kartı, sefer kartı vs. mobile'da daha sıkı */
+  @media (max-width: 480px) {
+    .list-row { padding: 10px 14px; gap: 10px; }
+    .list-row__avatar { width: 32px; height: 32px; font-size: 11px; }
+    .list-row__title { font-size: 13px; }
+    .list-row__sub { font-size: 11.5px; }
+    .notif { padding: 10px 12px; gap: 10px; }
+    .notif__icon { width: 32px; height: 32px; font-size: 14px; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     END MOBILE UX REFINEMENT
      ══════════════════════════════════════════════════════════════════ */
 
   /* ══════════════════════════════════════════════════════════════════

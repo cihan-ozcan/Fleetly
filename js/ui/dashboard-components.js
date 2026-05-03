@@ -357,6 +357,239 @@
     UI.initDashMap();
   });
 
+  // ── CANLI VERİ POPULATE (Faz 5) ───────────────────────────
+  // Mevcut JS verilerine window._fleetly.snapshot üzerinden okuma
+  // ile erişir; Top Sürücüler, Yaklaşan Bakımlar, Son Seferler
+  // dashboard satırlarını günceller.
+
+  function getSnapshot() {
+    try { return (window._fleetly && window._fleetly.snapshot) || null; }
+    catch (e) { return null; }
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
+    });
+  }
+
+  function initialsOf(name) {
+    if (!name) return '–';
+    const parts = String(name).trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '–';
+    const a = parts[0][0] || '';
+    const b = parts.length > 1 ? (parts[parts.length - 1][0] || '') : '';
+    return (a + b).toUpperCase();
+  }
+
+  function plateOf(vehicleId, vehicles) {
+    if (!vehicles || !Array.isArray(vehicles)) return '';
+    const v = vehicles.find(function (x) { return x && (x.id === vehicleId || x.id == vehicleId); });
+    return v ? (v.plaka || v.plate || v.kod || '') : '';
+  }
+
+  // Top Sürücüler — sefer sayısına göre sırala
+  UI.populateTopDrivers = function (snapshot) {
+    const root = document.getElementById('top-drivers-list');
+    if (!root) return;
+    const drivers = snapshot && snapshot.driverData;
+    const seferler = snapshot && snapshot.seferData;
+    if (!Array.isArray(drivers) || drivers.length === 0) return; // mock kalır
+
+    // Her sürücüye sefer sayısı / km hesapla
+    const stats = drivers.map(function (d) {
+      const driverSeferleri = Array.isArray(seferler)
+        ? seferler.filter(function (s) {
+            return s && (
+              s.surucu_id === d.id ||
+              s.driver_id === d.id ||
+              s.surucu === d.ad ||
+              s.surucuAdi === d.ad
+            );
+          })
+        : [];
+      const totalKm = driverSeferleri.reduce(function (sum, s) {
+        return sum + (parseFloat(s.km) || 0);
+      }, 0);
+      return {
+        name: d.ad || '–',
+        initials: initialsOf(d.ad),
+        trips: driverSeferleri.length,
+        km: totalKm,
+        score: Math.min(100, Math.round(60 + (driverSeferleri.length * 4) + (totalKm > 0 ? 10 : 0))),
+      };
+    });
+    stats.sort(function (a, b) { return b.trips - a.trips || b.km - a.km; });
+    const top = stats.slice(0, 5);
+    if (!top.length) return;
+
+    let html = '';
+    top.forEach(function (d, i) {
+      const goldStyle = (i === 0)
+        ? 'background:linear-gradient(135deg,#FFD93D,#F4A300)'
+        : '';
+      const star = (i === 0) ? ' ⭐' : '';
+      const scoreClass = d.score >= 85 ? 'list-row__metric--success'
+                       : d.score >= 70 ? 'list-row__metric--warning'
+                       : '';
+      html += '<div class="list-row">' +
+        '<div class="list-row__rank">#' + (i + 1) + '</div>' +
+        '<div class="list-row__avatar"' + (goldStyle ? ' style="' + goldStyle + '"' : '') + '>' + escapeHtml(d.initials) + '</div>' +
+        '<div class="list-row__main">' +
+          '<div class="list-row__title">' + escapeHtml(d.name) + star + '</div>' +
+          '<div class="list-row__sub">' + d.trips + ' sefer · ' + (d.km ? d.km.toLocaleString('tr-TR') + ' km' : '–') + '</div>' +
+        '</div>' +
+        '<div class="list-row__right">' +
+          '<div class="list-row__metric ' + scoreClass + '">' + d.score + '</div>' +
+          '<div class="list-row__lbl">SKOR</div>' +
+        '</div>' +
+      '</div>';
+    });
+    root.innerHTML = html;
+  };
+
+  // Yaklaşan Bakımlar — maintData içindeki sonraki_tarih'lere göre
+  UI.populateUpcomingMaint = function (snapshot) {
+    const root = document.getElementById('upcoming-maint-list');
+    if (!root) return;
+    const maint = snapshot && snapshot.maintData;
+    const vehicles = snapshot && snapshot.vehicles;
+    if (!maint || typeof maint !== 'object') return;
+
+    const items = [];
+    const today = new Date();
+    Object.keys(maint).forEach(function (vehId) {
+      const records = maint[vehId];
+      if (!Array.isArray(records)) return;
+      records.forEach(function (r) {
+        if (!r) return;
+        const sonraki = r.sonraki_tarih || r.sonrakiTarih;
+        if (!sonraki) return;
+        const due = new Date(sonraki);
+        if (isNaN(due.getTime())) return;
+        const daysLeft = Math.round((due - today) / (1000 * 60 * 60 * 24));
+        if (daysLeft > 60) return; // önümüzdeki 60 gün
+        items.push({
+          plate: plateOf(vehId, vehicles),
+          type: r.tur || r.aciklama || 'Bakım',
+          dueDate: due.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' }),
+          daysLeft: daysLeft,
+          cost: parseFloat(r.maliyet) || 0,
+        });
+      });
+    });
+    items.sort(function (a, b) { return a.daysLeft - b.daysLeft; });
+    if (!items.length) return;
+
+    let html = '';
+    items.slice(0, 6).forEach(function (m) {
+      const tone = m.daysLeft < 0 ? 'danger' : m.daysLeft < 7 ? 'warning' : 'info';
+      const metricClass = m.daysLeft < 0 ? 'list-row__metric--danger'
+                       : m.daysLeft < 7 ? 'list-row__metric--warning'
+                       : '';
+      const dayText = m.daysLeft < 0 ? Math.abs(m.daysLeft) + ' gün gecikti' : m.daysLeft + ' gün';
+      html += '<div class="list-row">' +
+        '<div class="list-row__icon-box list-row__icon-box--' + tone + '">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>' +
+        '</div>' +
+        '<div class="list-row__main">' +
+          '<div class="list-row__title">' + escapeHtml(m.plate || '—') + ' <span class="muted" style="font-weight:400">· ' + escapeHtml(m.type) + '</span></div>' +
+          '<div class="list-row__sub">' + escapeHtml(m.dueDate) + '</div>' +
+        '</div>' +
+        '<div class="list-row__right">' +
+          '<div class="list-row__metric ' + metricClass + '">' + dayText + '</div>' +
+          (m.cost ? '<div class="list-row__lbl mono">~₺' + m.cost.toLocaleString('tr-TR') + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    });
+    if (!html) return;
+    root.innerHTML = html;
+  };
+
+  // Son Seferler — seferData üzerinden 5 satırlık tablo
+  UI.populateRecentTrips = function (snapshot) {
+    const table = document.getElementById('recent-trips-table');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    const seferler = snapshot && snapshot.seferData;
+    if (!Array.isArray(seferler) || seferler.length === 0) return;
+
+    function statusPill(s) {
+      const map = {
+        yolda:    ['success', 'Yolda'],
+        teslim:   ['success', 'Teslim'],
+        gecikme:  ['warning', 'Gecikme'],
+        gecikti:  ['danger',  'Gecikti'],
+        bekliyor: ['warning', 'Bekliyor'],
+        yukleme:  ['info',    'Yükleme'],
+        iptal:    ['danger',  'İptal'],
+      };
+      const key = String(s || '').toLowerCase();
+      const v = map[key] || ['info', s || '—'];
+      return '<span class="status-pill status-pill--' + v[0] + '"><span class="dot"></span>' + escapeHtml(v[1]) + '</span>';
+    }
+
+    function progressBar(percent, status) {
+      const cls = String(status).toLowerCase() === 'gecikti' ? 'bar__fill--danger'
+                : String(status).toLowerCase() === 'teslim' ? 'bar__fill--success'
+                : 'bar__fill--success';
+      return '<div class="row" style="gap:8px">' +
+        '<div class="bar" style="flex:1"><div class="bar__fill ' + cls + '" style="width:' + percent + '%"></div></div>' +
+        '<span class="mono muted" style="font-size:11px;width:32px">' + percent + '%</span>' +
+      '</div>';
+    }
+
+    // Yeniden eskiye sırala (id veya tarih bazlı)
+    const sorted = [].concat(seferler).sort(function (a, b) {
+      const ad = new Date(a.tarih || a.created_at || 0).getTime();
+      const bd = new Date(b.tarih || b.created_at || 0).getTime();
+      return bd - ad;
+    });
+
+    let html = '';
+    sorted.slice(0, 5).forEach(function (s) {
+      const ref = s.sefer_no || s.no || ('SF-' + (s.id || ''));
+      const plaka = s.plaka || s.plate || '—';
+      const from = s.kalkis || s.from || '';
+      const to   = s.varis || s.to || '';
+      const progress = (function () {
+        const st = String(s.durum || s.status || '').toLowerCase();
+        if (st === 'teslim') return 100;
+        if (st === 'iptal')  return 100;
+        const p = parseFloat(s.ilerleme || s.progress);
+        if (!isNaN(p)) return Math.max(0, Math.min(100, Math.round(p)));
+        return 50;
+      })();
+      html += '<tr>' +
+        '<td class="tbl__num fw-6">' + escapeHtml(ref) + '</td>' +
+        '<td class="tbl__num">' + escapeHtml(plaka) + '</td>' +
+        '<td><span class="muted">' + escapeHtml(from) + '</span> → <b>' + escapeHtml(to) + '</b></td>' +
+        '<td>' + progressBar(progress, s.durum || s.status) + '</td>' +
+        '<td>' + statusPill(s.durum || s.status) + '</td>' +
+      '</tr>';
+    });
+    if (!html) return;
+    tbody.innerHTML = html;
+  };
+
+  UI.refreshDashboardData = function () {
+    const snap = getSnapshot();
+    if (!snap) return;
+    UI.populateTopDrivers(snap);
+    UI.populateUpcomingMaint(snap);
+    UI.populateRecentTrips(snap);
+  };
+
+  // Bridge hazır olduğunda + periyodik refresh
+  window.addEventListener('fleetly:bridge-ready', function () {
+    UI.refreshDashboardData();
+    // Veriler async yüklendiği için 2-3 sn aralıkla 3 deneme
+    setTimeout(UI.refreshDashboardData, 1500);
+    setTimeout(UI.refreshDashboardData, 4000);
+    setTimeout(UI.refreshDashboardData, 8000);
+  });
+
   // ── INIT ──────────────────────────────────────────────────
   function init() {
     UI.refreshBannerTime();
@@ -384,6 +617,9 @@
     // Faz 3 genişletme: harita + chart
     UI.initDashMap();
     UI.initRevenueChart();
+
+    // Faz 5: Eğer bridge zaten hazırsa hemen veri yükle
+    UI.refreshDashboardData();
 
     // Sayfa girişi animasyonu
     const main = document.querySelector('.app-shell main');
