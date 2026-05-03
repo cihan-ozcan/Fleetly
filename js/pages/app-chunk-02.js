@@ -9541,3 +9541,26 @@ loadMaintData().then(() => { updateMaintStat(); });
 loadDriverData().then(() => { updateDriverStat(); });
 loadSeferData();
 loadMasrafData();
+
+/* ─────────────────────────────────────────────────────────
+   Faz 5: Dashboard bridge için global state expose
+   Closure ile let-scoped değişkenleri window._fleetly üzerinde
+   read-only snapshot olarak sağlar. Hiçbir mevcut tanım
+   değiştirilmedi — yalnızca okuma erişimi eklendi.
+   ───────────────────────────────────────────────────────── */
+window._fleetly = window._fleetly || {};
+Object.defineProperty(window._fleetly, 'snapshot', {
+  configurable: true,
+  get: function () {
+    return {
+      vehicles:   typeof vehicles   !== 'undefined' ? vehicles   : null,
+      driverData: typeof driverData !== 'undefined' ? driverData : null,
+      maintData:  typeof maintData  !== 'undefined' ? maintData  : null,
+      seferData:  typeof seferData  !== 'undefined' ? seferData  : null,
+      teklifData: typeof teklifData !== 'undefined' ? teklifData : null,
+      masrafData: typeof masrafData !== 'undefined' ? masrafData : null,
+      fuelData:   typeof fuelData   !== 'undefined' ? fuelData   : null,
+    };
+  }
+});
+try { window.dispatchEvent(new CustomEvent('fleetly:bridge-ready')); } catch (e) {}

@@ -12,6 +12,15 @@
     return window.matchMedia(MOBILE_QUERY).matches;
   }
 
+  function lockScroll() {
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+  }
+  function unlockScroll() {
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+  }
+
   window.toggleSidebar = function () {
     const shell = document.querySelector('.app-shell');
     const sidebar = document.getElementById('app-sidebar');
@@ -20,6 +29,7 @@
     if (isMobile()) {
       const open = sidebar.classList.toggle('is-open');
       document.body.classList.toggle('sidebar-open', open);
+      if (open) lockScroll(); else unlockScroll();
     } else {
       shell.classList.toggle('is-collapsed');
       // Tercihi hatırla
@@ -37,6 +47,7 @@
     if (!sidebar) return;
     sidebar.classList.remove('is-open');
     document.body.classList.remove('sidebar-open');
+    unlockScroll();
   };
 
   function init() {
@@ -65,6 +76,7 @@
         document.body.classList.remove('sidebar-open');
         const sb = document.getElementById('app-sidebar');
         if (sb) sb.classList.remove('is-open');
+        unlockScroll();
       }
     });
   }
