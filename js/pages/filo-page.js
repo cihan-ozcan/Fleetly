@@ -21,6 +21,7 @@
     cekiciler: [],
     dorseler: [],
     eslesmeler: [],
+    bakimlar: [],
     loaded: false
   };
 
@@ -69,6 +70,17 @@
         bakim:      'Yeni Bakım Kaydı'
       })[name] || 'Yeni';
     }
+    // Üst sağdaki "+ Yeni" butonun davranışı sekmeye göre değişsin
+    const addBtn = document.getElementById('filo-add-btn');
+    if (addBtn) {
+      const handlers = {
+        cekiciler:  () => openFiloAddModal('cekici'),
+        dorseler:   () => openFiloAddModal('dorse'),
+        eslesmeler: () => openFiloEslesmeModal(),
+        bakim:      () => openFiloBakimModal()
+      };
+      addBtn.onclick = handlers[name] || (() => openFiloAddModal());
+    }
   }
 
   // -----------------------------------------------------------------
@@ -84,23 +96,27 @@
       try { return await fn(); }
       catch (err) { console.warn('[filo-page]', err.message || err); return fallback; }
     };
-    const [tipler, cekiciler, dorseler, eslesmeler] = await Promise.all([
+    const [tipler, cekiciler, dorseler, eslesmeler, bakimlar] = await Promise.all([
       safe(() => window.FiloAPI.dorseTipleri(),    []),
       safe(() => window.FiloAPI.cekiciList(),      []),
       safe(() => window.FiloAPI.dorseList(),       []),
-      safe(() => window.FiloAPI.aktifEslesmeler(), [])
+      safe(() => window.FiloAPI.aktifEslesmeler(), []),
+      safe(() => window.FiloAPI.bakimList(),       [])
     ]);
     state.dorseTipleri = tipler || [];
     state.cekiciler    = cekiciler || [];
     state.dorseler     = dorseler || [];
     state.eslesmeler   = eslesmeler || [];
+    state.bakimlar     = bakimlar || [];
     state.loaded = true;
     _populateDorseTipFilter();
+    _populateBakimAracFilter();
     _updateCounts();
     _updateMigrationBanner();
     filoRenderCekiciler();
     filoRenderDorseler();
     filoRenderEslesmeler();
+    filoRenderBakim();
   }
 
   // Migration eksikse sayfanın tepesinde uyarı göster
@@ -632,6 +648,263 @@
       if (btn) { btn.disabled = false; btn.style.opacity = ''; }
     }
   }
+  // -----------------------------------------------------------------
+  // Bakım sekmesi
+  // -----------------------------------------------------------------
+  function _populateBakimAracFilter() {
+    const sel = document.getElementById('filo-bakim-arac');
+    if (!sel) return;
+    const cur = sel.value;
+    const tumAraclar = [...state.cekiciler, ...state.dorseler]
+      .sort((a, b) => (a.plaka || '').localeCompare(b.plaka || ''));
+    sel.innerHTML = '<option value="">Tüm Araçlar</option>' +
+      tumAraclar.map(v => {
+        const tip = v.kind === 'dorse' ? '📦' : (v.kind === 'tek_parca' ? '🚐' : '🚛');
+        return `<option value="${v.id}">${tip} ${v.plaka}</option>`;
+      }).join('');
+    if (cur) sel.value = cur;
+  }
+
+  function _bakimDays(d) {
+    if (!d) return null;
+    const t = new Date(d).getTime();
+    if (!isFinite(t)) return null;
+    return Math.round((t - Date.now()) / 86400000);
+  }
+
+  function _bakimAracInfo(aracId) {
+    const v = state.cekiciler.find(x => x.id === aracId)
+           || state.dorseler.find(x => x.id === aracId);
+    if (!v) return { plaka: '—', kind: 'cekici' };
+    return v;
+  }
+
+  function filoRenderBakim() {
+    const tbody = document.getElementById('filo-bakim-tbody');
+    if (!tbody) return;
+    const q = (document.getElementById('filo-bakim-search')?.value || '').toLowerCase();
+    const aracF = document.getElementById('filo-bakim-arac')?.value || '';
+    const turF  = document.getElementById('filo-bakim-tur')?.value || '';
+    const filt = state.bakimlar.filter(b => {
+      const arac = _bakimAracInfo(b.arac_id);
+      const m = !q || [arac.plaka, b.tur, b.servis, b.aciklama].join(' ').toLowerCase().includes(q);
+      const a = !aracF || b.arac_id === aracF;
+      const t = !turF  || b.tur === turF;
+      return m && a && t;
+    });
+    document.getElementById('filo-bakim-count').textContent = filt.length + ' kayıt';
+
+    // Özet rozetleri (tüm kayıtlar üzerinden, filtre uygulanmadan)
+    _renderBakimOzet();
+
+    if (!filt.length) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:var(--muted);">
+        ${state.loaded ? 'Henüz bakım kaydı yok.' : 'Yükleniyor…'}
+        <button onclick="openFiloBakimModal()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;margin-left:6px;">+ Yeni bakım kaydı</button>
+      </td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filt.map(b => {
+      const arac = _bakimAracInfo(b.arac_id);
+      const tipIco = arac.kind === 'dorse' ? '📦' : (arac.kind === 'tek_parca' ? '🚐' : '🚛');
+      const tarih = b.tarih ? new Date(b.tarih).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
+      const km = b.km != null ? `<span class="mono">${Number(b.km).toLocaleString('tr-TR')}</span>` : '<span style="color:var(--muted);">—</span>';
+      const maliyet = b.maliyet != null && b.maliyet > 0
+        ? `<span class="mono" style="font-weight:700;">${Number(b.maliyet).toLocaleString('tr-TR')} ₺</span>`
+        : '<span style="color:var(--muted);">—</span>';
+      // Sonraki bakım — yaklaşma rozeti
+      let sonraki = '<span style="color:var(--muted);">—</span>';
+      if (b.sonraki_tarih) {
+        const days = _bakimDays(b.sonraki_tarih);
+        const sonTar = new Date(b.sonraki_tarih).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        let color = 'var(--text2)', icon = '📅', sub = '';
+        if (days != null) {
+          if (days < 0) { color = 'var(--red)'; icon = '⚠'; sub = `${Math.abs(days)} gün gecikti`; }
+          else if (days <= 7)  { color = 'var(--red)';    icon = '⚠'; sub = `${days} gün`; }
+          else if (days <= 30) { color = 'var(--yellow)'; icon = '⏳'; sub = `${days} gün`; }
+          else { sub = `${days} gün`; }
+        }
+        const kmPart = b.sonraki_km != null ? `<div class="mono" style="font-size:10px;color:var(--muted);">${Number(b.sonraki_km).toLocaleString('tr-TR')} km</div>` : '';
+        sonraki = `<div style="font-size:11.5px;color:${color};font-weight:600;">${icon} ${sonTar}</div>${sub ? `<div style="font-size:10px;color:${color};">${sub}</div>` : ''}${kmPart}`;
+      }
+      return `
+      <tr>
+        <td><span class="mono" style="font-size:11.5px;">${tarih}</span></td>
+        <td>${tipIco} <span class="plate-cell" style="color:${arac.kind === 'dorse' ? 'var(--blue)' : 'var(--accent)'};font-weight:700;">${arac.plaka}</span></td>
+        <td><span style="font-size:11px;background:var(--surface3);padding:2px 8px;border-radius:99px;">${b.tur || '—'}</span></td>
+        <td style="font-size:12px;color:var(--text2);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(b.aciklama || '').replace(/"/g, '&quot;')}">${b.aciklama || '—'}</td>
+        <td>${km}</td>
+        <td>${maliyet}</td>
+        <td>${sonraki}</td>
+        <td style="font-size:12px;color:var(--text2);">${b.servis || '—'}</td>
+        <td class="col-islem">
+          <div style="display:flex;gap:4px;">
+            <button onclick="openFiloBakimEditModal('${b.id}')" class="icon-btn" title="Düzenle" style="color:var(--accent);">✎</button>
+            <button onclick="filoBakimDelete('${b.id}')" class="icon-btn del" title="Sil">🗑</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function _renderBakimOzet() {
+    const host = document.getElementById('filo-bakim-ozet');
+    if (!host) return;
+    const sonrakiOlanlar = state.bakimlar.filter(b => b.sonraki_tarih);
+    const gecikti = sonrakiOlanlar.filter(b => _bakimDays(b.sonraki_tarih) < 0).length;
+    const yaklasan = sonrakiOlanlar.filter(b => {
+      const d = _bakimDays(b.sonraki_tarih);
+      return d != null && d >= 0 && d <= 30;
+    }).length;
+    const buAyMaliyet = state.bakimlar
+      .filter(b => {
+        if (!b.tarih) return false;
+        const d = new Date(b.tarih);
+        const now = new Date();
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      })
+      .reduce((sum, b) => sum + (Number(b.maliyet) || 0), 0);
+
+    const cell = (label, val, color, sub) => `
+      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;min-width:140px;flex:0 0 auto;">
+        <div style="font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);">${label}</div>
+        <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:${color};line-height:1.1;">${val}</div>
+        ${sub ? `<div style="font-size:10.5px;color:var(--text2);">${sub}</div>` : ''}
+      </div>`;
+
+    host.innerHTML = [
+      cell('Toplam Kayıt', state.bakimlar.length,                'var(--accent)',  'tüm araçlar'),
+      cell('Yaklaşan',     yaklasan,                              yaklasan ? 'var(--yellow)' : 'var(--muted)', '30 gün içinde'),
+      cell('Geciken',      gecikti,                               gecikti  ? 'var(--red)'    : 'var(--muted)', 'tarihi geçti'),
+      cell('Bu Ay Toplam', buAyMaliyet.toLocaleString('tr-TR') + ' ₺', 'var(--blue)', 'maliyet')
+    ].join('');
+  }
+
+  // ── Bakım modal'ı ──────────────────────────────────────────
+  function _populateBakimModalArac(preselect) {
+    const sel = document.getElementById('filo-bakim-m-arac');
+    if (!sel) return;
+    const tumAraclar = [...state.cekiciler, ...state.dorseler]
+      .sort((a, b) => (a.plaka || '').localeCompare(b.plaka || ''));
+    sel.innerHTML = '<option value="">Seçin…</option>' +
+      tumAraclar.map(v => {
+        const tip = v.kind === 'dorse' ? '📦 Dorse' : (v.kind === 'tek_parca' ? '🚐 Tek' : '🚛 Çekici');
+        return `<option value="${v.id}">${v.plaka} — ${tip}${v.marka ? ' · ' + v.marka : ''}</option>`;
+      }).join('');
+    if (preselect) sel.value = preselect;
+  }
+
+  const bakimModalState = { mode: 'create', editingId: null };
+
+  function _resetBakimForm() {
+    ['filo-bakim-m-arac','filo-bakim-m-tarih','filo-bakim-m-km','filo-bakim-m-maliyet',
+     'filo-bakim-m-servis','filo-bakim-m-aciklama','filo-bakim-m-sonraki-tarih','filo-bakim-m-sonraki-km'
+    ].forEach(id => _setVal(id, ''));
+    _setVal('filo-bakim-m-tur', 'Periyodik');
+    _setVal('filo-bakim-m-tarih', new Date().toISOString().slice(0, 10));
+    const err = document.getElementById('filo-bakim-m-error');
+    if (err) { err.style.display = 'none'; err.textContent = ''; }
+  }
+
+  function openFiloBakimModal(aracIdHint) {
+    _populateBakimModalArac(aracIdHint);
+    _resetBakimForm();
+    bakimModalState.mode = 'create';
+    bakimModalState.editingId = null;
+    document.getElementById('filo-bakim-modal-title').textContent = 'Yeni Bakım Kaydı';
+    document.getElementById('filo-bakim-modal-bg')?.classList.remove('hidden');
+    setTimeout(() => document.getElementById('filo-bakim-m-arac')?.focus(), 50);
+  }
+
+  function openFiloBakimEditModal(id) {
+    const b = state.bakimlar.find(x => x.id === id);
+    if (!b) {
+      if (typeof toast === 'function') toast('Bakım kaydı bulunamadı', 'error');
+      return;
+    }
+    _populateBakimModalArac(b.arac_id);
+    _resetBakimForm();
+    bakimModalState.mode = 'edit';
+    bakimModalState.editingId = id;
+    document.getElementById('filo-bakim-modal-title').textContent = 'Bakım Kaydını Düzenle';
+    _setVal('filo-bakim-m-arac',          b.arac_id);
+    _setVal('filo-bakim-m-tarih',         b.tarih ? String(b.tarih).slice(0, 10) : '');
+    _setVal('filo-bakim-m-tur',           b.tur || 'Periyodik');
+    _setVal('filo-bakim-m-km',            b.km != null ? b.km : '');
+    _setVal('filo-bakim-m-maliyet',       b.maliyet != null ? b.maliyet : '');
+    _setVal('filo-bakim-m-servis',        b.servis || '');
+    _setVal('filo-bakim-m-aciklama',      b.aciklama || '');
+    _setVal('filo-bakim-m-sonraki-tarih', b.sonraki_tarih ? String(b.sonraki_tarih).slice(0, 10) : '');
+    _setVal('filo-bakim-m-sonraki-km',    b.sonraki_km != null ? b.sonraki_km : '');
+    document.getElementById('filo-bakim-modal-bg')?.classList.remove('hidden');
+  }
+
+  function closeFiloBakimModal() {
+    document.getElementById('filo-bakim-modal-bg')?.classList.add('hidden');
+  }
+
+  function _bakimShowErr(msg) {
+    const el = document.getElementById('filo-bakim-m-error');
+    if (!el) return;
+    el.style.display = msg ? 'block' : 'none';
+    el.textContent = msg || '';
+  }
+
+  async function filoBakimSubmit() {
+    _bakimShowErr('');
+    const aracId = _getVal('filo-bakim-m-arac');
+    const tarih  = _getVal('filo-bakim-m-tarih');
+    const tur    = _getVal('filo-bakim-m-tur');
+    if (!aracId) { _bakimShowErr('Araç seçin.'); return; }
+    if (!tarih)  { _bakimShowErr('Tarih girin.'); return; }
+    if (!tur)    { _bakimShowErr('Tür seçin.'); return; }
+
+    const payload = {
+      arac_id:       aracId,
+      tarih,
+      tur,
+      aciklama:      _getVal('filo-bakim-m-aciklama') || null,
+      km:            _getVal('filo-bakim-m-km') || null,
+      maliyet:       _getVal('filo-bakim-m-maliyet') || 0,
+      servis:        _getVal('filo-bakim-m-servis') || null,
+      sonraki_tarih: _getVal('filo-bakim-m-sonraki-tarih') || null,
+      sonraki_km:    _getVal('filo-bakim-m-sonraki-km') || null
+    };
+
+    const btn = document.getElementById('filo-bakim-m-submit-btn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
+    try {
+      if (bakimModalState.mode === 'edit') {
+        await window.FiloAPI.bakimUpdate(bakimModalState.editingId, payload);
+        if (typeof toast === 'function') toast('Bakım kaydı güncellendi', 'success');
+      } else {
+        await window.FiloAPI.bakimCreate(payload);
+        if (typeof toast === 'function') toast('Bakım kaydı eklendi', 'success');
+      }
+      closeFiloBakimModal();
+      await refreshAll();
+      if (state.activeTab !== 'bakim') switchFiloTab('bakim');
+    } catch (err) {
+      console.error(err);
+      _bakimShowErr('Kaydedilemedi: ' + (err.message || 'bilinmeyen hata'));
+    } finally {
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    }
+  }
+
+  async function filoBakimDelete(id) {
+    if (!id) return;
+    if (!confirm('Bu bakım kaydını silmek istiyor musunuz?')) return;
+    try {
+      await window.FiloAPI.bakimDelete(id);
+      if (typeof toast === 'function') toast('Silindi', 'success');
+      await refreshAll();
+    } catch (err) {
+      console.error(err);
+      if (typeof toast === 'function') toast('Silinemedi: ' + err.message, 'error');
+    }
+  }
+
   async function filoSonlandirAtama(atamaId) {
     if (!atamaId) return;
     if (!confirm('Bu eşleştirmeyi sonlandırmak istiyor musunuz?')) return;
@@ -679,4 +952,11 @@
   window.filoEsSubmit          = filoEsSubmit;
   window.filoSonlandirAtama    = filoSonlandirAtama;
   window.filoDeleteAract       = filoDeleteAract;
+  // Bakım
+  window.filoRenderBakim         = filoRenderBakim;
+  window.openFiloBakimModal      = openFiloBakimModal;
+  window.openFiloBakimEditModal  = openFiloBakimEditModal;
+  window.closeFiloBakimModal     = closeFiloBakimModal;
+  window.filoBakimSubmit         = filoBakimSubmit;
+  window.filoBakimDelete         = filoBakimDelete;
 })();

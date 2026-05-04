@@ -1420,12 +1420,40 @@
         </div>
       </div>
 
-      <!-- Sekme 4: Bakım (Paket 4'te detaylanır — şimdilik placeholder) -->
+      <!-- Sekme 4: Bakım Kayıtları -->
       <div id="filo-panel-bakim" class="srm-panel">
-        <div style="text-align:center;padding:48px 12px;color:var(--muted);">
-          <div style="font-size:32px;opacity:.5;margin-bottom:8px;">🔧</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px;">Bakım takibi</div>
-          <div style="font-size:12px;">Bu sekme sonraki pakette aktive edilecek (mevcut <code>bakim_kayitlari</code> tablosu kullanılarak).</div>
+        <!-- Özet rozetleri (yaklaşan / geçmiş bakımlar) -->
+        <div id="filo-bakim-ozet" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;"></div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="position:relative;flex:1;min-width:220px;">
+            <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;">🔍</span>
+            <input id="filo-bakim-search" class="srm-inp" style="padding-left:34px;width:100%;" placeholder="Plaka, tür, servis, açıklama…" oninput="filoRenderBakim()">
+          </div>
+          <select id="filo-bakim-arac" class="srm-inp" style="width:auto;min-width:160px;" onchange="filoRenderBakim()">
+            <option value="">Tüm Araçlar</option>
+          </select>
+          <select id="filo-bakim-tur" class="srm-inp" style="width:auto;min-width:140px;" onchange="filoRenderBakim()">
+            <option value="">Tüm Türler</option>
+            <option value="Periyodik">Periyodik</option>
+            <option value="Yağ">Yağ</option>
+            <option value="Filtre">Filtre</option>
+            <option value="Lastik">Lastik</option>
+            <option value="Akü">Akü</option>
+            <option value="Fren">Fren</option>
+            <option value="Egzoz">Egzoz</option>
+            <option value="Arıza">Arıza</option>
+            <option value="Diğer">Diğer</option>
+          </select>
+          <span id="filo-bakim-count" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);"></span>
+        </div>
+        <div class="srm-table-wrap">
+          <table class="srm-table" id="filo-bakim-table">
+            <thead><tr>
+              <th>Tarih</th><th>Araç</th><th>Tür</th><th>Açıklama</th><th>Km</th><th>Maliyet</th><th>Sonraki</th><th>Servis</th><th class="col-islem">İşlem</th>
+            </tr></thead>
+            <tbody id="filo-bakim-tbody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -1632,6 +1660,105 @@
       <button onclick="closeFiloEslesmeModal()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;">İptal</button>
       <button id="filo-es-submit-btn" onclick="filoEsSubmit()" style="background:var(--accent);border:none;color:#fff;border-radius:6px;padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;">
         Eşleştir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     FİLO — Bakım Kaydı Modalı (Yeni / Düzenle)
+     openFiloBakimModal(aracIdHint?) → yeni
+     openFiloBakimEditModal(bakimId)  → düzenle
+     ========================================================= -->
+<div id="filo-bakim-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)closeFiloBakimModal()">
+  <div class="srm-modal" style="max-width:600px;">
+    <div class="srm-modal-header" style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);">
+      <div style="width:32px;height:32px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">🔧</div>
+      <div style="flex:1;">
+        <div id="filo-bakim-modal-title" style="font-size:14px;font-weight:700;color:var(--text);">Yeni Bakım Kaydı</div>
+        <div style="font-size:11px;color:var(--muted);">Bakım/arıza kaydı + maliyet + bir sonraki bakım hatırlatması.</div>
+      </div>
+      <button onclick="closeFiloBakimModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;">×</button>
+    </div>
+
+    <div class="srm-modal-body" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;max-height:70vh;overflow-y:auto;">
+      <!-- Satır 1: Araç + Tarih -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
+        <div class="srm-group">
+          <label>Araç <span style="color:var(--red);">*</span></label>
+          <select id="filo-bakim-m-arac" class="srm-inp">
+            <option value="">Seçin…</option>
+          </select>
+        </div>
+        <div class="srm-group">
+          <label>Tarih <span style="color:var(--red);">*</span></label>
+          <input id="filo-bakim-m-tarih" class="srm-inp" type="date" />
+        </div>
+      </div>
+
+      <!-- Satır 2: Tür + Km -->
+      <div style="display:grid;grid-template-columns:1fr 120px;gap:12px;">
+        <div class="srm-group">
+          <label>Tür <span style="color:var(--red);">*</span></label>
+          <select id="filo-bakim-m-tur" class="srm-inp">
+            <option value="Periyodik">Periyodik Bakım</option>
+            <option value="Yağ">Yağ Değişimi</option>
+            <option value="Filtre">Filtre Değişimi</option>
+            <option value="Lastik">Lastik</option>
+            <option value="Akü">Akü</option>
+            <option value="Fren">Fren</option>
+            <option value="Egzoz">Egzoz / Adblue</option>
+            <option value="Arıza">Arıza Tamiri</option>
+            <option value="Diğer">Diğer</option>
+          </select>
+        </div>
+        <div class="srm-group">
+          <label>Km</label>
+          <input id="filo-bakim-m-km" class="srm-inp" type="number" min="0" step="1" placeholder="154230" />
+        </div>
+      </div>
+
+      <!-- Satır 3: Maliyet + Servis -->
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:12px;">
+        <div class="srm-group">
+          <label>Maliyet (₺)</label>
+          <input id="filo-bakim-m-maliyet" class="srm-inp" type="number" min="0" step="0.01" placeholder="2500" />
+        </div>
+        <div class="srm-group">
+          <label>Servis / Yetkili</label>
+          <input id="filo-bakim-m-servis" class="srm-inp" placeholder="Mercedes Yetkili / Yedek Tamir Hızır vs." />
+        </div>
+      </div>
+
+      <!-- Satır 4: Açıklama -->
+      <div class="srm-group">
+        <label>Açıklama</label>
+        <textarea id="filo-bakim-m-aciklama" class="srm-inp" rows="2" placeholder="Yapılan işin detayı, parça listesi vb." style="resize:vertical;"></textarea>
+      </div>
+
+      <!-- Satır 5: Sonraki bakım (opsiyonel) -->
+      <div style="background:var(--bg-sunk);border:1px solid var(--border);border-radius:8px;padding:12px;">
+        <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">📅 Sonraki Bakım Hatırlatması (Opsiyonel)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="srm-group">
+            <label>Tarih</label>
+            <input id="filo-bakim-m-sonraki-tarih" class="srm-inp" type="date" />
+          </div>
+          <div class="srm-group">
+            <label>Km</label>
+            <input id="filo-bakim-m-sonraki-km" class="srm-inp" type="number" min="0" step="1" placeholder="174230" />
+          </div>
+        </div>
+      </div>
+
+      <div id="filo-bakim-m-error" style="display:none;padding:10px 12px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.30);border-radius:6px;color:var(--red);font-size:12.5px;font-weight:600;"></div>
+    </div>
+
+    <div class="srm-modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface2);">
+      <button onclick="closeFiloBakimModal()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;">İptal</button>
+      <button id="filo-bakim-m-submit-btn" onclick="filoBakimSubmit()" style="background:var(--accent);border:none;color:#fff;border-radius:6px;padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Kaydet
       </button>
     </div>
   </div>

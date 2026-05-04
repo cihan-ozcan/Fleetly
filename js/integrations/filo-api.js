@@ -385,6 +385,79 @@
   function cekicininDorseleri(cekiciId) { return aktifEslesmeler({ cekiciId }); }
 
   // -----------------------------------------------------------------
+  // Bakım kayıtları (bakim_kayitlari tablosu)
+  // -----------------------------------------------------------------
+  const LS_KEY_BAKIM = 'filo_bakim_kayitlari';
+
+  async function bakimList(opts = {}) {
+    if (window.isLocalMode && window.isLocalMode()) {
+      let list = _lsLoad(LS_KEY_BAKIM);
+      if (opts.aracId) list = list.filter(b => b.arac_id === opts.aracId);
+      return list.sort((a, b) => (b.tarih || '').localeCompare(a.tarih || ''));
+    }
+    let q = 'bakim_kayitlari?select=*&order=tarih.desc';
+    if (opts.aracId) q += `&arac_id=eq.${encodeURIComponent(opts.aracId)}`;
+    return (await _sbGet(q, { fallbackOn404: [] })) || [];
+  }
+
+  function _validateBakim(payload) {
+    if (!payload || !payload.arac_id) throw new Error('Araç zorunlu.');
+    if (!payload.tarih) throw new Error('Tarih zorunlu.');
+    if (!payload.tur) throw new Error('Tür zorunlu.');
+  }
+
+  async function bakimCreate(payload) {
+    _validateBakim(payload);
+    const firmaId = _firmaId();
+    const row = {
+      id:            payload.id || _newId('bakim'),
+      arac_id:       payload.arac_id,
+      tarih:         payload.tarih,
+      tur:           payload.tur,
+      aciklama:      payload.aciklama || null,
+      km:            payload.km != null && payload.km !== '' ? Number(payload.km) : null,
+      maliyet:       payload.maliyet != null && payload.maliyet !== '' ? Number(payload.maliyet) : 0,
+      sonraki_tarih: payload.sonraki_tarih || null,
+      sonraki_km:    payload.sonraki_km != null && payload.sonraki_km !== '' ? Number(payload.sonraki_km) : null,
+      servis:        payload.servis || null,
+      firma_id:      firmaId,
+      user_id:       payload.user_id || (window._authUserId || null)
+    };
+    if (window.isLocalMode && window.isLocalMode()) {
+      const list = _lsLoad(LS_KEY_BAKIM);
+      list.push(row);
+      _lsSave(LS_KEY_BAKIM, list);
+      return row;
+    }
+    const created = await _sbPost('bakim_kayitlari', row);
+    return Array.isArray(created) ? created[0] : created;
+  }
+
+  async function bakimUpdate(id, patch) {
+    if (!id) throw new Error('id zorunlu.');
+    if (window.isLocalMode && window.isLocalMode()) {
+      const list = _lsLoad(LS_KEY_BAKIM);
+      const i = list.findIndex(b => b.id === id);
+      if (i < 0) throw new Error('Bakım kaydı bulunamadı: ' + id);
+      list[i] = { ...list[i], ...patch };
+      _lsSave(LS_KEY_BAKIM, list);
+      return list[i];
+    }
+    const out = await _sbPatch(`bakim_kayitlari?id=eq.${encodeURIComponent(id)}`, patch);
+    return Array.isArray(out) ? out[0] : out;
+  }
+
+  async function bakimDelete(id) {
+    if (!id) throw new Error('id zorunlu.');
+    if (window.isLocalMode && window.isLocalMode()) {
+      const list = _lsLoad(LS_KEY_BAKIM).filter(b => b.id !== id);
+      _lsSave(LS_KEY_BAKIM, list);
+      return true;
+    }
+    return _sbDelete(`bakim_kayitlari?id=eq.${encodeURIComponent(id)}`);
+  }
+
+  // -----------------------------------------------------------------
   // Dışa aç
   // -----------------------------------------------------------------
   window.FiloAPI = {
@@ -397,6 +470,8 @@
     // Atama
     dorseyiAta, atamayiSonlandir,
     aktifEslesmeler, cekicininDorseleri,
+    // Bakım
+    bakimList, bakimCreate, bakimUpdate, bakimDelete,
     // Schema durumu
     isMigrationMissing
   };
