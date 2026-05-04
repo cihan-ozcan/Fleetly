@@ -1147,6 +1147,336 @@
 }
 
 /* ===================================================================
+   İş Emri Stepper Modal (#ops-modal-bg) — 4 adımlı, 720px
+   Mevcut srm-backdrop / srm-modal markup'ı korunur, dark rebrand.
+   =================================================================== */
+#ops-modal-bg.srm-backdrop {
+  background: rgba(4, 8, 16, 0.65);
+  backdrop-filter: blur(6px);
+}
+#ops-modal-bg .srm-modal {
+  max-width: 720px !important;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--ops-rad-panel);
+  box-shadow: var(--ops-sh-modal);
+  color: var(--text-primary);
+  font-family: var(--ops-font-sans);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+/* Header — turuncu rozet + başlık + alt başlık + ✕ */
+#ops-modal-bg .srm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+}
+#ops-modal-bg .srm-header .srm-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+#ops-modal-bg .srm-header .srm-title > span:first-child {
+  width: 32px !important;
+  height: 32px !important;
+  background: linear-gradient(135deg, var(--ops-brand) 0%, #C84F1F 100%) !important;
+  border-radius: 8px !important;
+  color: #fff;
+  font-size: 16px !important;
+  box-shadow: 0 0 0 1px rgba(255,122,69,0.18), 0 4px 10px rgba(0,0,0,.35);
+}
+#ops-modal-bg .ops-stepper-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+#ops-modal-bg .ops-stepper-header__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+#ops-modal-bg .ops-stepper-header__sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+#ops-modal-bg .modal-close {
+  background: transparent !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--ops-rad-ctrl) !important;
+  font-size: 14px !important;
+  cursor: pointer;
+}
+#ops-modal-bg .modal-close:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Stepper rail */
+#ops-modal-bg .ops-stepper-rail {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 14px 18px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border-subtle);
+}
+#ops-modal-bg .ops-stepper-rail__step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+#ops-modal-bg .ops-stepper-rail__bullet {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-family: var(--ops-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: all var(--ops-dur-base) var(--ops-ease);
+}
+#ops-modal-bg .ops-stepper-rail__step.is-active .ops-stepper-rail__bullet {
+  background: var(--bg-elevated);
+  border: 2px solid var(--ops-brand);
+  color: var(--ops-brand);
+  box-shadow: 0 0 0 4px var(--ops-brand-glow);
+}
+#ops-modal-bg .ops-stepper-rail__step.is-done .ops-stepper-rail__bullet {
+  background: var(--ops-success);
+  border-color: var(--ops-success);
+  color: #08200F;
+}
+#ops-modal-bg .ops-stepper-rail__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+  transition: color var(--ops-dur-fast) var(--ops-ease);
+}
+#ops-modal-bg .ops-stepper-rail__step.is-active .ops-stepper-rail__label {
+  color: var(--text-primary);
+}
+#ops-modal-bg .ops-stepper-rail__step.is-done .ops-stepper-rail__label {
+  color: var(--text-secondary);
+}
+#ops-modal-bg .ops-stepper-rail__sep {
+  flex: 0 0 24px;
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 0 6px;
+}
+#ops-modal-bg .ops-stepper-rail__step.is-done + .ops-stepper-rail__sep {
+  background: var(--ops-success);
+  opacity: 0.4;
+}
+
+/* Body */
+#ops-modal-bg .srm-body {
+  padding: 20px 22px;
+  background: var(--bg-elevated);
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Step paneli — sadece aktif step görünür */
+#ops-modal-bg .ops-step { display: none; }
+#ops-modal-bg .ops-step.is-active { display: block; }
+
+#ops-modal-bg .ops-step__intro {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+/* Form alanları — dark theme override */
+#ops-modal-bg .srm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+#ops-modal-bg .srm-group { display: flex; flex-direction: column; gap: 6px; }
+#ops-modal-bg .srm-group.full { grid-column: 1 / -1; }
+#ops-modal-bg .srm-group label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+#ops-modal-bg .srm-inp {
+  background: var(--bg-base) !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  border-radius: var(--ops-rad-ctrl) !important;
+  font-family: var(--ops-font-sans);
+  height: 36px;
+  padding: 0 12px;
+}
+#ops-modal-bg textarea.srm-inp {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+}
+#ops-modal-bg .srm-inp:focus {
+  border-color: var(--ops-brand) !important;
+  box-shadow: 0 0 0 3px var(--ops-brand-glow) !important;
+  outline: none;
+}
+#ops-modal-bg .srm-inp::placeholder { color: var(--text-dim); }
+
+/* Konteyner tipi segmented (Adım 2) */
+#ops-modal-bg .ops-step__kont-tip {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--ops-rad-ctrl);
+  gap: 2px;
+  flex-wrap: wrap;
+}
+#ops-modal-bg .ops-step__kont-tip button {
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--ops-font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--ops-dur-fast) var(--ops-ease);
+}
+#ops-modal-bg .ops-step__kont-tip button:hover { color: var(--text-primary); }
+#ops-modal-bg .ops-step__kont-tip button.is-active {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+/* Adım 4 özet kartı */
+#ops-modal-bg .ops-summary {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--ops-rad-card);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+#ops-modal-bg .ops-summary__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+#ops-modal-bg .ops-summary__group:last-child { padding-bottom: 0; border-bottom: none; }
+#ops-modal-bg .ops-summary__title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+#ops-modal-bg .ops-summary__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+}
+#ops-modal-bg .ops-summary__row .key { color: var(--text-muted); }
+#ops-modal-bg .ops-summary__row .val { color: var(--text-primary); font-weight: 600; text-align: right; }
+#ops-modal-bg .ops-summary__row .val.mono {
+  font-family: var(--ops-font-mono);
+  letter-spacing: 0.3px;
+}
+#ops-modal-bg .ops-summary__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Footer */
+#ops-modal-bg .modal-footer,
+#ops-modal-bg .ops-stepper-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: var(--bg-raised);
+  border-top: 1px solid var(--border-subtle);
+}
+#ops-modal-bg .ops-stepper-footer__hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--ops-font-mono);
+  margin-right: auto;
+}
+#ops-modal-bg .ops-stepper-footer__hint kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+/* Validation hatası */
+#ops-modal-bg .ops-step__error {
+  display: none;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  background: rgba(242,107,94,0.10);
+  border: 1px solid rgba(242,107,94,0.30);
+  border-radius: var(--ops-rad-ctrl);
+  color: var(--ops-danger);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Mevcut .ops-arac-dropdown / .ops-dorse-dropdown dark uyumu */
+#ops-modal-bg #ops-arac-dropdown,
+#ops-modal-bg #ops-dorse-dropdown {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-strong) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+#ops-modal-bg #ops-arac-dropdown > div,
+#ops-modal-bg #ops-dorse-dropdown > div {
+  border-bottom: 1px solid var(--border-subtle) !important;
+  color: var(--text-primary);
+}
+
+/* ===================================================================
    Detay Drawer — operasyon iş emri çekmecesi (sağdan slide-in)
    Mevcut #ops-drawer.crm-drawer markup'ı korunur, üzerine override.
    =================================================================== */
