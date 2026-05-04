@@ -1147,6 +1147,181 @@
 }
 
 /* ===================================================================
+   Detay Drawer — operasyon iş emri çekmecesi (sağdan slide-in)
+   Mevcut #ops-drawer.crm-drawer markup'ı korunur, üzerine override.
+   =================================================================== */
+#ops-drawer.crm-drawer {
+  width: 440px;
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: var(--ops-sh-drawer);
+  color: var(--text-primary);
+  font-family: var(--ops-font-sans);
+}
+@media (max-width: 720px) {
+  #ops-drawer.crm-drawer { width: 100%; }
+}
+
+#ops-drawer-bg { background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(4px); }
+
+/* Header — sticky üst kısım: durum + aksiyonlar + başlık + 3 ana CTA */
+#ops-drawer .drawer-header {
+  display: block;
+  padding: 14px 18px 16px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+}
+#ops-drawer .drawer-header .modal-close {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--ops-rad-ctrl);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--ops-dur-fast) var(--ops-ease);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#ops-drawer .drawer-header .modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* Title alanı — büyük plaka/konteyner no */
+#ops-drawer #ops-drawer-title {
+  font-family: var(--ops-font-mono);
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px !important;
+}
+#ops-drawer #ops-drawer-sub {
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
+  line-height: 1.5;
+}
+
+/* 3 birincil aksiyon — header altında */
+#ops-drawer .ops-drawer__primary-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+#ops-drawer .ops-drawer__primary-actions .ops-btn { flex: 1; }
+
+/* Body */
+#ops-drawer .drawer-body {
+  padding: 16px 18px 24px;
+  background: var(--bg-elevated);
+}
+
+/* Section title rebrand (caps muted, dim border) */
+#ops-drawer .drawer-section { margin-bottom: 18px; }
+#ops-drawer .drawer-section-title {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  text-transform: uppercase;
+  letter-spacing: 1.4px !important;
+  margin-bottom: 10px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+/* Detail key/value satırları */
+#ops-drawer .detail-row {
+  border-bottom: 1px solid var(--border-subtle) !important;
+  padding: 8px 0 !important;
+}
+#ops-drawer .detail-key {
+  color: var(--text-muted) !important;
+  font-size: 11.5px !important;
+}
+#ops-drawer .detail-val {
+  color: var(--text-primary) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+#ops-drawer .detail-val.mono,
+#ops-drawer .detail-val[data-mono] {
+  font-family: var(--ops-font-mono);
+  letter-spacing: 0.3px;
+}
+
+/* Drawer içindeki srm-inp input'lar */
+#ops-drawer .srm-inp {
+  background: var(--bg-base) !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  border-radius: var(--ops-rad-ctrl) !important;
+  font-family: var(--ops-font-sans);
+}
+#ops-drawer .srm-inp:focus {
+  border-color: var(--ops-brand) !important;
+  box-shadow: 0 0 0 3px var(--ops-brand-glow) !important;
+  outline: none;
+}
+#ops-drawer .srm-inp::placeholder { color: var(--text-dim); }
+
+/* Drawer içi mini ↻ refresh + + Ekle / Gönder butonları */
+#ops-drawer button[onclick*="opsGuzergahYukle"],
+#ops-drawer button[onclick*="opsBenzerSeferleriYukle"],
+#ops-drawer button[onclick*="opsDrawerYenile"] {
+  background: transparent !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+}
+#ops-drawer button[onclick*="opsGuzergahYukle"]:hover,
+#ops-drawer button[onclick*="opsBenzerSeferleriYukle"]:hover,
+#ops-drawer button[onclick*="opsDrawerYenile"]:hover {
+  border-color: var(--border-strong) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Sayım rozetleri (foto sayısı, mesaj sayısı, güzergah sayısı) — drawer içi */
+#ops-drawer-foto-count,
+#ops-drawer-mesaj-count,
+#ops-drawer-guzergah-count,
+#ops-drawer-karsilastirma-count {
+  background: var(--bg-hover) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-subtle);
+  font-family: var(--ops-font-mono);
+}
+
+/* Güzergah haritası (Leaflet) wrapper */
+#ops-drawer #ops-drawer-guzergah-map {
+  border: 1px solid var(--border-subtle) !important;
+  background: var(--bg-base) !important;
+  border-radius: var(--ops-rad-card) !important;
+}
+
+/* Drawer-içi ops-timeline (Zaman Çizelgesi bölümü) — vertikal noktalar */
+#ops-drawer .ops-timeline {
+  position: relative;
+  padding-left: 20px;
+}
+#ops-drawer .ops-timeline::before {
+  content: "";
+  position: absolute;
+  left: 6px; top: 4px; bottom: 4px;
+  width: 2px;
+  background: var(--border-subtle);
+  border-radius: 1px;
+}
+
+/* İç not / duyuru sarıcıları drawer scope'unda */
+#ops-drawer [style*="rgba(245,158,11"] {
+  background: rgba(229, 162, 75, 0.08) !important;
+  border-color: rgba(229, 162, 75, 0.20) !important;
+}
+
+/* ===================================================================
    Responsive — < 1024px
    =================================================================== */
 @media (max-width: 1023px) {
