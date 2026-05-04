@@ -319,7 +319,7 @@
         <svg viewBox="0 0 24 24"><path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 3 2V2l-3 2-3-2-3 2-3-2-3 2L4 2z"/><path d="M8 7h8M8 12h8M8 17h5"/></svg>
         <span class="sidebar__item-label">Masraflar</span>
       </button>
-      <button class="sidebar__item" onclick="openMaintSummaryModal();closeSidebar&&closeSidebar()" title="Bakım & Arıza">
+      <button class="sidebar__item" onclick="openFiloPage();setTimeout(()=>{ try { switchFiloTab('bakim'); } catch(e){} }, 200);closeSidebar&&closeSidebar()" title="Bakım &amp; Arıza (Filo > Bakım)">
         <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
         <span class="sidebar__item-label">Bakım</span>
       </button>
@@ -1373,7 +1373,7 @@
 
       <!-- Sekme barı (mevcut srm-tab kalıbı; tabs.js veya manuel toggle) -->
       <div style="display:flex;gap:0;background:var(--surface3);border-radius:10px;padding:3px;margin-bottom:20px;width:fit-content;">
-        <button class="srm-tab active" id="filo-tab-cekiciler"  onclick="switchFiloTab('cekiciler',this)">🚛 Çekiciler <span id="filo-cnt-cekiciler" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
+        <button class="srm-tab active" id="filo-tab-cekiciler"  onclick="switchFiloTab('cekiciler',this)">🚛 Çekiciler &amp; Tek Parça <span id="filo-cnt-cekiciler" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
         <button class="srm-tab"        id="filo-tab-dorseler"   onclick="switchFiloTab('dorseler',this)">📦 Dorseler <span id="filo-cnt-dorseler" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
         <button class="srm-tab"        id="filo-tab-eslesmeler" onclick="switchFiloTab('eslesmeler',this)">🔗 Eşleşmeler <span id="filo-cnt-eslesmeler" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
         <button class="srm-tab"        id="filo-tab-bakim"      onclick="switchFiloTab('bakim',this)">🔧 Bakım</button>
@@ -1554,6 +1554,21 @@
 
       <!-- ÇEKİCİ / TEK PARÇA bölümü -->
       <div id="filo-m-cekici-section" style="display:flex;flex-direction:column;gap:14px;">
+        <!-- Tek Parça alt-tip (yalnızca kind='tek_parca' iken görünür) -->
+        <div class="srm-group" id="filo-m-tek-parca-row" style="display:none;">
+          <label>Araç Alt Tipi</label>
+          <select id="filo-m-alt-tip" class="srm-inp">
+            <option value="">Seçin…</option>
+            <option value="Kamyon">🚚 Kamyon</option>
+            <option value="Kamyonet">🛻 Kamyonet</option>
+            <option value="Pickup">🛻 Pickup</option>
+            <option value="Panelvan">🚐 Panelvan</option>
+            <option value="Minibüs">🚐 Minibüs</option>
+            <option value="Binek Araç">🚗 Binek Araç</option>
+            <option value="Otobüs">🚌 Otobüs</option>
+            <option value="Diğer">📦 Diğer</option>
+          </select>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="srm-group">
             <label>Birincil Sürücü (ad)</label>
@@ -1988,20 +2003,32 @@
   </div>
   <div class="drawer-body">
 
+    <!-- TABS BARI -->
+    <div class="ops-drawer-tabs" role="tablist">
+      <button class="ops-drawer-tab is-active" role="tab" data-tab="detaylar"
+              onclick="opsDrawerSwitchTab('detaylar', this)">Detaylar</button>
+      <button class="ops-drawer-tab" role="tab" data-tab="olaylar"
+              onclick="opsDrawerSwitchTab('olaylar', this)">Olay Akışı</button>
+      <button class="ops-drawer-tab" role="tab" data-tab="belgeler"
+              onclick="opsDrawerSwitchTab('belgeler', this)">Belgeler<span class="ops-drawer-tab__count" id="ops-drawer-belgeler-count" style="display:none;"></span></button>
+      <button class="ops-drawer-tab" role="tab" data-tab="yakit"
+              onclick="opsDrawerSwitchTab('yakit', this)">Yakıt</button>
+    </div>
+
     <!-- Durum & özet (durum pill'leri header'a taşındı; burada sadece detay key/value) -->
-    <div class="drawer-section">
+    <div class="drawer-section" data-drawer-tab="detaylar">
       <div class="drawer-section-title">Durum & Konteyner</div>
       <div id="ops-drawer-detaylar"></div>
     </div>
 
     <!-- Şoför Anlık Durum (GPS + KM) -->
-    <div class="drawer-section" id="ops-drawer-sofor-durum-section">
+    <div class="drawer-section" id="ops-drawer-sofor-durum-section" data-drawer-tab="detaylar">
       <div class="drawer-section-title">Şoför Anlık Durum</div>
       <div id="ops-drawer-sofor-durum"></div>
     </div>
 
     <!-- Güzergah (rota geçmişi) -->
-    <div class="drawer-section" id="ops-drawer-guzergah-section">
+    <div class="drawer-section" id="ops-drawer-guzergah-section" data-drawer-tab="detaylar">
       <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between;">
         <span>🛣 Güzergah <span id="ops-drawer-guzergah-count" style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:99px;margin-left:4px;display:none;"></span></span>
         <button id="ops-drawer-guzergah-refresh" onclick="opsGuzergahYukle()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:2px 8px;font-size:10.5px;cursor:pointer;">↻ Yenile</button>
@@ -2012,19 +2039,19 @@
     </div>
 
     <!-- Teslim Belgesi (POD) — şoför teslim ettikten sonra görünür -->
-    <div class="drawer-section" id="ops-drawer-pod-section" style="display:none">
+    <div class="drawer-section" id="ops-drawer-pod-section" style="display:none" data-drawer-tab="belgeler">
       <div class="drawer-section-title">📋 Teslim Makbuzu (POD)</div>
       <div id="ops-drawer-pod"></div>
     </div>
 
     <!-- Yakıt & Maliyet -->
-    <div class="drawer-section">
+    <div class="drawer-section" data-drawer-tab="yakit">
       <div class="drawer-section-title">Yakıt & Maliyet</div>
       <div id="ops-drawer-yakit-card"></div>
     </div>
 
     <!-- Sürücü Karşılaştırma — aynı yükle/teslim çiftine yapılmış geçmiş seferler -->
-    <div class="drawer-section" id="ops-drawer-karsilastirma-section">
+    <div class="drawer-section" id="ops-drawer-karsilastirma-section" data-drawer-tab="detaylar">
       <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between;">
         <span>📊 Bu Güzergahta Geçmiş Seferler <span id="ops-drawer-karsilastirma-count" style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:99px;margin-left:4px;display:none;"></span></span>
         <button id="ops-drawer-karsilastirma-refresh" onclick="opsBenzerSeferleriYukle()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:2px 8px;font-size:10.5px;cursor:pointer;">↻ Yenile</button>
@@ -2033,13 +2060,13 @@
     </div>
 
     <!-- Zaman çizelgesi -->
-    <div class="drawer-section">
+    <div class="drawer-section" data-drawer-tab="olaylar">
       <div class="drawer-section-title">Zaman Çizelgesi</div>
       <div class="ops-timeline" id="ops-drawer-timeline"></div>
     </div>
 
     <!-- Fotoğraflar (şoförden otomatik gelir) -->
-    <div class="drawer-section">
+    <div class="drawer-section" data-drawer-tab="belgeler">
       <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between;">
         <span>Fotoğraflar <span id="ops-drawer-foto-count" style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></span>
       </div>
@@ -2047,13 +2074,13 @@
     </div>
 
     <!-- Manuel durum güncelle -->
-    <div class="drawer-section">
+    <div class="drawer-section" data-drawer-tab="detaylar">
       <div class="drawer-section-title">Durum Güncelle</div>
       <div style="display:flex;flex-direction:column;gap:6px;" id="ops-drawer-actions"></div>
     </div>
 
     <!-- İletişim: ops → şoför çift yönlü mesajlaşma -->
-    <div class="drawer-section">
+    <div class="drawer-section" data-drawer-tab="olaylar">
       <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between;">
         <span>İletişim <span id="ops-drawer-mesaj-count" style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:99px;margin-left:4px;display:none"></span></span>
       </div>
@@ -2078,13 +2105,13 @@
     </div>
 
     <!-- Şoför ile ilk temas (yeni şoförse WhatsApp'tan bildir) -->
-    <div class="drawer-section" id="ops-drawer-sofor-erisim-section">
+    <div class="drawer-section" id="ops-drawer-sofor-erisim-section" data-drawer-tab="detaylar">
       <div class="drawer-section-title">Şoför Daveti</div>
       <div id="ops-drawer-sofor-erisim"></div>
     </div>
 
     <!-- Müşteri Portalı + Tekil Takip linkleri -->
-    <div class="drawer-section">
+    <div class="drawer-section" data-drawer-tab="detaylar">
       <div class="drawer-section-title">Müşteri Takip</div>
       <button onclick="opsTekliTakipLink()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#22c55e,#16a34a);border:none;color:#fff;border-radius:9px;padding:11px;font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;letter-spacing:.01em;">
         📍 Bu Sevkiyat İçin Takip Linki

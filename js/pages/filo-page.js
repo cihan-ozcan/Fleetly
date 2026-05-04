@@ -97,11 +97,11 @@
       catch (err) { console.warn('[filo-page]', err.message || err); return fallback; }
     };
     const [tipler, cekiciler, dorseler, eslesmeler, bakimlar] = await Promise.all([
-      safe(() => window.FiloAPI.dorseTipleri(),    []),
-      safe(() => window.FiloAPI.cekiciList(),      []),
-      safe(() => window.FiloAPI.dorseList(),       []),
-      safe(() => window.FiloAPI.aktifEslesmeler(), []),
-      safe(() => window.FiloAPI.bakimList(),       [])
+      safe(() => window.FiloAPI.dorseTipleri(),                        []),
+      safe(() => (window.FiloAPI.motorluList || window.FiloAPI.cekiciList)(), []),
+      safe(() => window.FiloAPI.dorseList(),                           []),
+      safe(() => window.FiloAPI.aktifEslesmeler(),                     []),
+      safe(() => window.FiloAPI.bakimList(),                           [])
     ]);
     state.dorseTipleri = tipler || [];
     state.cekiciler    = cekiciler || [];
@@ -189,16 +189,27 @@
     }
     // Paket 1 minimal satır (Paket 2'de drawer + ikonlar genişler)
     tbody.innerHTML = filt.map(v => {
-      const aktifDorse = state.eslesmeler.find(e => e.cekici_id === v.id && e.birincil_mi)
-                      || state.eslesmeler.find(e => e.cekici_id === v.id);
-      const dorseHtml = aktifDorse
-        ? `<span style="font-family:var(--font-mono);color:var(--blue);font-weight:600;">${aktifDorse.dorse_plaka || '—'}</span>${aktifDorse.dorse_tipi_ad ? `<div style="font-size:10.5px;color:var(--muted);margin-top:1px;">${aktifDorse.dorse_tipi_ad}</div>` : ''}`
-        : `<span style="color:var(--muted);">—</span>`;
+      const isCekici = (v.kind || 'cekici') === 'cekici';
+      const aktifDorse = isCekici
+        ? (state.eslesmeler.find(e => e.cekici_id === v.id && e.birincil_mi)
+           || state.eslesmeler.find(e => e.cekici_id === v.id))
+        : null;
+      const dorseHtml = !isCekici
+        ? `<span style="font-size:10.5px;color:var(--muted);font-style:italic;">tek parça (dorse takılmaz)</span>`
+        : aktifDorse
+          ? `<span style="font-family:var(--font-mono);color:var(--blue);font-weight:600;">${aktifDorse.dorse_plaka || '—'}</span>${aktifDorse.dorse_tipi_ad ? `<div style="font-size:10.5px;color:var(--muted);margin-top:1px;">${aktifDorse.dorse_tipi_ad}</div>` : ''}`
+          : `<span style="color:var(--muted);">—</span>`;
       const muayeneHtml = v.muayene ? `<span style="font-family:var(--font-mono);font-size:11.5px;">${v.muayene}</span>` : '<span style="color:var(--muted);">—</span>';
       const sigortaHtml = v.sigorta ? `<span style="font-family:var(--font-mono);font-size:11.5px;">${v.sigorta}</span>` : '<span style="color:var(--muted);">—</span>';
+      const kindPill = isCekici
+        ? `<span style="font-size:9.5px;background:rgba(255,107,31,.12);color:var(--accent);padding:1px 6px;border-radius:99px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;margin-left:6px;">Çekici</span>`
+        : `<span style="font-size:9.5px;background:rgba(56,189,248,.12);color:var(--blue);padding:1px 6px;border-radius:99px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;margin-left:6px;">${v.tip || 'Tek Parça'}</span>`;
+      const eslesmeBtn = isCekici
+        ? `<button onclick="openFiloEslesmeModal('${v.id}')" class="icon-btn" title="Dorse Ata" style="color:var(--blue);">🔗</button>`
+        : '';
       return `
       <tr>
-        <td><span class="plate-cell" style="color:var(--accent);font-weight:700;">${v.plaka}</span></td>
+        <td><span class="plate-cell" style="color:var(--accent);font-weight:700;">${v.plaka}</span>${kindPill}</td>
         <td>${[v.marka, v.model].filter(Boolean).join(' ') || '—'}</td>
         <td><span class="mono">${v.yil || '—'}</span></td>
         <td>${v.sofor || '<span style="color:var(--muted);">—</span>'}</td>
@@ -208,7 +219,7 @@
         <td>${sigortaHtml}</td>
         <td class="col-islem">
           <div style="display:flex;gap:4px;">
-            <button onclick="openFiloEslesmeModal('${v.id}')" class="icon-btn" title="Dorse Ata" style="color:var(--blue);">🔗</button>
+            ${eslesmeBtn}
             <button onclick="openFiloEditModal('${v.id}')" class="icon-btn" title="Düzenle" style="color:var(--accent);">✎</button>
             <button onclick="filoDeleteAract('${v.id}')" class="icon-btn del" title="Sil">🗑</button>
           </div>
@@ -327,7 +338,7 @@
   function _resetForm() {
     ['filo-m-plaka','filo-m-marka','filo-m-model','filo-m-yil','filo-m-sofor','filo-m-telefon',
      'filo-m-muayene','filo-m-sigorta','filo-m-takograf','filo-m-dorse-tipi','filo-m-aks',
-     'filo-m-m3','filo-m-ton','filo-m-notlar'].forEach(id => _setVal(id, ''));
+     'filo-m-m3','filo-m-ton','filo-m-notlar','filo-m-alt-tip'].forEach(id => _setVal(id, ''));
     const fr = _$('filo-m-frigorifik'); if (fr) fr.checked = false;
     _setVal('filo-m-durum', 'Aktif');
     _showErr('');
@@ -344,6 +355,9 @@
     const dorseSec  = _$('filo-m-dorse-section');
     if (cekiciSec) cekiciSec.style.display = (kind === 'dorse') ? 'none' : 'flex';
     if (dorseSec)  dorseSec.style.display  = (kind === 'dorse') ? 'flex' : 'none';
+    // Tek parça alt-tip alanı
+    const altRow = _$('filo-m-tek-parca-row');
+    if (altRow) altRow.style.display = (kind === 'tek_parca') ? 'flex' : 'none';
     // Header
     const titleEl = _$('filo-modal-title');
     const subEl   = _$('filo-modal-sub');
@@ -436,6 +450,8 @@
       _setVal('filo-m-muayene',  v.muayene);
       _setVal('filo-m-sigorta',  v.sigorta);
       _setVal('filo-m-takograf', v.takograf);
+      // Tek parça için alt-tip (mevcut araclar.tip kolonundan)
+      if (kind === 'tek_parca') _setVal('filo-m-alt-tip', v.tip || '');
     }
     _$('filo-modal-bg').classList.remove('hidden');
     setTimeout(() => _$('filo-m-plaka')?.focus(), 50);
@@ -461,9 +477,16 @@
     }
 
     const yil = _getVal('filo-m-yil');
+    // tip kolonu: kind'e göre otomatik veya alt-tip seçiminden
+    let tipVal = null;
+    if (kind === 'cekici')         tipVal = 'Çekici';
+    else if (kind === 'dorse')     tipVal = 'Dorse';
+    else if (kind === 'tek_parca') tipVal = _getVal('filo-m-alt-tip') || 'Kamyon';
+
     const payload = {
       plaka,
       kind,
+      tip:    tipVal,
       durum:  _getVal('filo-m-durum') || 'Aktif',
       marka:  _getVal('filo-m-marka') || null,
       model:  _getVal('filo-m-model') || null,
