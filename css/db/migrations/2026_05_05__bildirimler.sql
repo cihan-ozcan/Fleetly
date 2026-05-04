@@ -119,12 +119,27 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_id uuid;
+  v_id        uuid;
+  v_firma_id  uuid := p_firma_id;
 BEGIN
+  -- p_firma_id NULL ise auth.uid() üzerinden bul (kullanıcı oturumu varsa)
+  IF v_firma_id IS NULL THEN
+    SELECT fk.firma_id INTO v_firma_id
+      FROM public.firma_kullanicilar fk
+     WHERE fk.user_id = auth.uid()
+     LIMIT 1;
+  END IF;
+
+  IF v_firma_id IS NULL THEN
+    RAISE EXCEPTION
+      'notify_create: firma_id NULL. SQL Editor üzerinden çağırıyorsanız auth.uid() boştur — firma_id''yi parametreyle elle verin.'
+      USING ERRCODE = '23502';
+  END IF;
+
   INSERT INTO public.bildirimler
     (firma_id, tip, baslik, mesaj, ilgili_tur, ilgili_id, kaynak_user_id, kaynak_ad, oncelik)
   VALUES
-    (p_firma_id, p_tip, p_baslik, p_mesaj, p_ilgili_tur, p_ilgili_id, p_kaynak_user_id, p_kaynak_ad, p_oncelik)
+    (v_firma_id, p_tip, p_baslik, p_mesaj, p_ilgili_tur, p_ilgili_id, p_kaynak_user_id, p_kaynak_ad, p_oncelik)
   RETURNING id INTO v_id;
   RETURN v_id;
 END $$;
@@ -238,8 +253,13 @@ COMMIT;
 --                      WHERE user_id = auth.uid() LIMIT 1)
 --    ORDER BY created_at DESC LIMIT 10;
 --
--- 3. RPC ile manuel bildirim:
---    SELECT public.notify_create(
---      (SELECT firma_id FROM public.firma_kullanicilar WHERE user_id = auth.uid() LIMIT 1),
---      'genel', 'Test bildirimi', 'Bu bir testtir', NULL, NULL, NULL, 'Sistem', 'normal');
+-- 3. RPC ile manuel bildirim (SQL Editor):
+--    auth.uid() SQL Editor'de NULL döner — firma_id'yi elle ver:
+--      SELECT id, ad FROM public.firmalar LIMIT 5;
+--      SELECT public.notify_create(
+--        '<firma_uuid>'::uuid,
+--        'genel', 'Test bildirimi', 'Bu bir testtir', NULL, NULL, NULL, 'Sistem', 'normal');
+--
+--    Tarayıcıdan (gerçek auth context) çağırırken firma_id NULL geçilebilir;
+--    RPC otomatik auth.uid() üzerinden çözer.
 -- =============================================================================
