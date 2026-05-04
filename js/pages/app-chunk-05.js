@@ -2265,11 +2265,29 @@ function _opsDrawerRender(e) {
   document.getElementById('ops-drawer-sub').textContent =
     [e.arac_plaka, e.kont_tip, e.kont_durum, e.musteri_adi, e.sofor].filter(Boolean).join(' · ');
 
-  // Durum + mühür + başlangıç km rozeti
+  // Durum + mühür + başlangıç km rozeti (header'da, durum pill'i + ek rozetler)
   document.getElementById('ops-drawer-durum-row').innerHTML =
     opsDurumBadge(e.durum) +
-    (e.muhur_no ? `<span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);border:1px solid var(--border);padding:2px 8px;border-radius:5px;">Mühür: ${e.muhur_no}</span>` : '') +
-    (e.baslangic_km != null ? `<span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);border:1px solid var(--border);padding:2px 8px;border-radius:5px;">🛣 ${e.baslangic_km.toLocaleString('tr-TR')} km</span>` : '');
+    (e.muhur_no ? `<span class="ops-pill ops-pill--neutral ops-pill--mono" title="Mühür">Mühür: ${e.muhur_no}</span>` : '') +
+    (e.baslangic_km != null ? `<span class="ops-pill ops-pill--neutral ops-pill--mono" title="Başlangıç km">🛣 ${e.baslangic_km.toLocaleString('tr-TR')}</span>` : '');
+
+  // 3 birincil aksiyon — etkinlik durumu
+  const callBtn = document.getElementById('ops-drawer-call-btn');
+  if (callBtn) {
+    if (e.sofor_tel) { callBtn.disabled = false; callBtn.style.opacity = ''; callBtn.dataset.tel = e.sofor_tel; }
+    else             { callBtn.disabled = true;  callBtn.style.opacity = '.5';  delete callBtn.dataset.tel; }
+  }
+  const locBtn = document.getElementById('ops-drawer-loc-btn');
+  if (locBtn) {
+    const hasLoc = isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng));
+    if (hasLoc) {
+      locBtn.disabled = false; locBtn.style.opacity = '';
+      locBtn.dataset.lat = e.konum_lat; locBtn.dataset.lng = e.konum_lng;
+    } else {
+      locBtn.disabled = true; locBtn.style.opacity = '.5';
+      delete locBtn.dataset.lat; delete locBtn.dataset.lng;
+    }
+  }
 
   // Bağlantılı sefer kaydını bul
   const bagliSefer = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
@@ -2423,6 +2441,33 @@ function closeOpsDrawer() {
     _opsGuzergahMap = null;
     _opsGuzergahLayers = [];
   }
+}
+
+/* ── DRAWER birincil aksiyonlar (Sürücüyü Ara · Konum) ────── */
+function opsDrawerSoforAra() {
+  const btn = document.getElementById('ops-drawer-call-btn');
+  const tel = btn?.dataset?.tel;
+  if (!tel) {
+    if (typeof showToast === 'function') showToast('Sürücü telefonu kayıtlı değil', 'warn');
+    return;
+  }
+  // Telefonu temizle (boşluk, tire, parantez kaldır)
+  const clean = String(tel).replace(/[\s\-\(\)]/g, '');
+  // tel: link masaüstünde de işletim sistemine yönlendirir (Skype/FaceTime/WhatsApp Beam)
+  window.location.href = 'tel:' + clean;
+}
+
+function opsDrawerKonumAc() {
+  const btn = document.getElementById('ops-drawer-loc-btn');
+  const lat = btn?.dataset?.lat;
+  const lng = btn?.dataset?.lng;
+  if (!lat || !lng) {
+    if (typeof showToast === 'function') showToast('Son bilinen konum yok', 'warn');
+    return;
+  }
+  // Google Maps'te yeni sekmede aç
+  const url = 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lng);
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 /* ── Şoför anlık GPS + KM durumu ── */

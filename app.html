@@ -1802,24 +1802,37 @@
 <div id="ops-drawer-bg" class="hidden" style="position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);" onclick="closeOpsDrawer()"></div>
 <div id="ops-drawer" class="crm-drawer hidden">
   <div class="drawer-header">
-    <div>
-      <div id="ops-drawer-title" style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:2px;"></div>
-      <div id="ops-drawer-sub" style="font-size:11px;color:var(--muted);"></div>
+    <!-- Üst satır: durum pill'leri (sol) + ikon butonları (sağ) -->
+    <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
+      <div id="ops-drawer-durum-row" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;min-width:0;"></div>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <button class="modal-close" onclick="closeOpsDrawer()" aria-label="Kapat" title="Kapat (Esc)">✕</button>
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="opsDrawerYenile()" title="Şoförden gelen verileri yenile" style="background:var(--surface2);border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    <!-- Başlık + alt başlık -->
+    <div id="ops-drawer-title"></div>
+    <div id="ops-drawer-sub"></div>
+    <!-- 3 birincil aksiyon: Sürücüyü Ara · Konum · Yenile -->
+    <div class="ops-drawer__primary-actions">
+      <button id="ops-drawer-call-btn" class="ops-btn ops-btn--primary ops-btn--sm" onclick="opsDrawerSoforAra()" title="Sürücüyü ara" disabled style="opacity:.5;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Sürücüyü Ara
+      </button>
+      <button id="ops-drawer-loc-btn" class="ops-btn ops-btn--quiet ops-btn--sm" onclick="opsDrawerKonumAc()" title="Son bilinen konumu haritada aç" disabled style="opacity:.5;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Konum
+      </button>
+      <button class="ops-btn ops-btn--quiet ops-btn--sm" onclick="opsDrawerYenile()" title="Şoför verilerini yenile">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Yenile
       </button>
-      <button class="modal-close" onclick="closeOpsDrawer()" aria-label="Kapat">✕</button>
     </div>
   </div>
   <div class="drawer-body">
 
-    <!-- Durum & özet -->
+    <!-- Durum & özet (durum pill'leri header'a taşındı; burada sadece detay key/value) -->
     <div class="drawer-section">
       <div class="drawer-section-title">Durum & Konteyner</div>
-      <div id="ops-drawer-durum-row" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;"></div>
       <div id="ops-drawer-detaylar"></div>
     </div>
 
