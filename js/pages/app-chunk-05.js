@@ -955,6 +955,7 @@ async function openOperasyonPage() {
   document.getElementById('operasyon-page').classList.add('open');
   document.body.style.overflow = 'hidden';
   opsRenderAll();
+  opsStartClock();
   await opsLoadCloud();
   // sofor_user_id eksik iş emirleri varsa geriye dönük eşleştir
   opsSoforUserIdEslestiir().then(n => { if (n > 0) console.log(`${n} iş emrine sofor_user_id atandı`); }).catch(()=>{});
@@ -965,6 +966,24 @@ function closeOperasyonPage() {
   document.getElementById('operasyon-page').classList.remove('open');
   document.body.style.overflow = '';
   opsStopRealtime();
+  opsStopClock();
+}
+
+/* ── CANLI saat (AppBar) ─────────────────────────────────── */
+let _opsClockTimer = null;
+function opsStartClock() {
+  const tick = () => {
+    const el = document.getElementById('ops-clock');
+    if (!el) return;
+    const d = new Date();
+    el.textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  };
+  tick();
+  if (_opsClockTimer) clearInterval(_opsClockTimer);
+  _opsClockTimer = setInterval(tick, 30000);
+}
+function opsStopClock() {
+  if (_opsClockTimer) { clearInterval(_opsClockTimer); _opsClockTimer = null; }
 }
 
 /* ── SEKME ───────────────────────────────────────────────── */
@@ -985,17 +1004,30 @@ function opsRenderStats() {
   const yolda     = isEmirleri.filter(e => e.durum === 'Yolda').length;
   const fabrikada = isEmirleri.filter(e => e.durum === 'Fabrikada').length;
   const teslim    = isEmirleri.filter(e => e.durum === 'Teslim Edildi').length;
-  const stats = [
-    { val: toplam,    lbl: 'Toplam',     color: 'var(--text2)' },
-    { val: bekliyor,  lbl: 'Bekliyor',   color: 'var(--yellow)' },
-    { val: yolda,     lbl: 'Yolda',      color: 'var(--blue)' },
-    { val: fabrikada, lbl: 'Fabrikada',  color: 'var(--accent)' },
-    { val: teslim,    lbl: 'Teslim',     color: 'var(--green)' },
+  const aktifAcil = isEmirleri.filter(e =>
+    e.durum !== 'İptal' && e.durum !== 'Teslim Edildi' &&
+    typeof opsAlertInfo === 'function' && opsAlertInfo(e).level === 'alert'
+  ).length;
+
+  const cells = [
+    { val: toplam,    lbl: 'Toplam İş Emri', sub: 'tüm aktif', active: false },
+    { val: bekliyor,  lbl: 'Bekliyor',       sub: 'atanmadı',  active: false,
+      trend: bekliyor ? `<span class="ops-kpi__trend ops-kpi__trend--warn">${bekliyor} aday</span>` : '' },
+    { val: yolda,     lbl: 'Yolda',          sub: 'aktif sevkiyat', active: true,
+      trend: aktifAcil ? `<span class="ops-kpi__trend ops-kpi__trend--down">▼ ${aktifAcil} acil</span>` : '' },
+    { val: fabrikada, lbl: 'Fabrikada',      sub: 'boşaltma',  active: false },
+    { val: teslim,    lbl: 'Teslim',         sub: 'tamamlandı', active: false,
+      trend: teslim ? `<span class="ops-kpi__trend ops-kpi__trend--up">▲ +${teslim} bugün</span>` : '' },
   ];
-  document.getElementById('ops-stat-bar').innerHTML = stats.map(s => `
-    <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;">
-      <span style="font-family:var(--font-display);font-size:26px;font-weight:900;color:${s.color};line-height:1;">${s.val}</span>
-      <span style="font-family:var(--font-mono);font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;">${s.lbl}</span>
+
+  document.getElementById('ops-stat-bar').innerHTML = cells.map(c => `
+    <div class="ops-kpi__cell${c.active ? ' is-active' : ''}">
+      <div class="ops-kpi__label">${c.lbl}</div>
+      <div class="ops-kpi__row">
+        <span class="ops-kpi__value">${c.val}</span>
+        ${c.trend || ''}
+      </div>
+      <div class="ops-kpi__sub">${c.sub}</div>
     </div>`).join('');
 }
 
@@ -1003,36 +1035,59 @@ function opsRenderStats() {
 function opsRenderAlertBar() {
   const bar = document.getElementById('ops-alert-bar');
   if (!bar) return;
+  // Dismiss penceresi (4 saat) içindeyse gösterme
+  try {
+    const until = parseInt(sessionStorage.getItem('ops_alert_dismiss_until') || '0', 10);
+    if (until && Date.now() < until) {
+      bar.style.cssText = 'display:none;';
+      bar.innerHTML = '';
+      return;
+    }
+  } catch {}
   const aktif = isEmirleri.filter(e => e.durum !== 'İptal' && e.durum !== 'Teslim Edildi');
   const dikkat = aktif
     .map(e => ({ e, info: opsAlertInfo(e) }))
     .filter(x => x.info.level !== 'normal');
   if (!dikkat.length) {
-    bar.style.display = 'none';
+    bar.style.cssText = 'display:none;';
     bar.innerHTML = '';
     return;
   }
-  bar.style.display = 'flex';
+  // En kritik kaydı öne çıkar (alert > warn). Çoklu vakada CTA "Detay" en kritik kaydı açar.
+  dikkat.sort((a, b) => (a.info.level === 'alert' ? -1 : 1) - (b.info.level === 'alert' ? -1 : 1));
+  const top = dikkat[0];
   const alerts = dikkat.filter(x => x.info.level === 'alert').length;
   const warns  = dikkat.filter(x => x.info.level === 'warn').length;
-  const headColor = alerts ? 'var(--red)' : 'var(--yellow)';
-  const headBg    = alerts ? 'rgba(239,68,68,.10)' : 'rgba(234,179,8,.10)';
-  const headBorder= alerts ? 'rgba(239,68,68,.30)' : 'rgba(234,179,8,.30)';
-  const chips = dikkat.slice(0, 6).map(({ e, info }) => {
-    const c = info.level === 'alert' ? 'var(--red)' : 'var(--yellow)';
-    const bg= info.level === 'alert' ? 'rgba(239,68,68,.12)' : 'rgba(234,179,8,.12)';
-    const label = e.arac_plaka || (e.konteyner_no || '').split('\n')[0] || `#${e.id}`;
-    return `<button onclick="openOpsDrawer(${e.id})" title="${info.reasons.join(' • ').replace(/"/g,'&quot;')}" style="background:${bg};border:1px solid ${c};color:${c};border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">⚠ ${label}<span style="font-weight:500;opacity:.85;font-size:10px;">${info.reasons[0]}</span></button>`;
-  }).join('');
-  const more = dikkat.length > 6 ? `<span style="font-size:11px;color:var(--muted);">+${dikkat.length - 6} daha</span>` : '';
-  bar.style.cssText = `display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;margin-bottom:12px;background:${headBg};border:1px solid ${headBorder};border-radius:10px;`;
+  const labelTxt = alerts ? `${alerts} ACİL` : `${warns} UYARI`;
+  const plate = top.e.arac_plaka || (top.e.konteyner_no || '').split('\n')[0] || `#${top.e.id}`;
+  const reason = top.info.reasons[0] || '';
+  const escAttr = s => String(s).replace(/"/g,'&quot;');
+
+  bar.style.cssText = '';
   bar.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;font-weight:800;color:${headColor};font-size:13px;">
-      <span>⚠ Dikkat</span>
-      ${alerts ? `<span style="background:rgba(239,68,68,.18);color:var(--red);padding:1px 7px;border-radius:99px;font-size:11px;">${alerts} acil</span>` : ''}
-      ${warns  ? `<span style="background:rgba(234,179,8,.18);color:var(--yellow);padding:1px 7px;border-radius:99px;font-size:11px;">${warns} uyarı</span>` : ''}
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${chips}${more}</div>`;
+    <div class="ops-alert" onclick="openOpsDrawer(${top.e.id})" role="button" tabindex="0">
+      <span class="ops-alert__bang" aria-hidden="true">!</span>
+      <span class="ops-alert__label">${labelTxt}</span>
+      <span class="ops-alert__plate">${plate}</span>
+      <span class="ops-alert__msg" title="${escAttr(top.info.reasons.join(' • '))}">${reason}${dikkat.length > 1 ? ` <span style="color:var(--text-dim);">· +${dikkat.length - 1} daha</span>` : ''}</span>
+      <span class="ops-alert__actions">
+        ${top.e.sofor_tel ? `<a class="ops-btn ops-btn--ghost ops-btn--sm" href="tel:${escAttr(top.e.sofor_tel)}" onclick="event.stopPropagation()">📞 Sürücüyü Ara</a>` : ''}
+        <button class="ops-btn ops-btn--danger ops-btn--sm" onclick="event.stopPropagation();openOpsDrawer(${top.e.id})">Detay</button>
+        <button class="ops-icon-btn ops-icon-btn--sm" title="Bandı kapat" onclick="event.stopPropagation();opsAlertDismiss()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </span>
+    </div>`;
+}
+
+/* Acil bandı kapatma — 4 saat sessize alır */
+function opsAlertDismiss() {
+  try {
+    const until = Date.now() + 4 * 60 * 60 * 1000;
+    sessionStorage.setItem('ops_alert_dismiss_until', String(until));
+  } catch {}
+  const bar = document.getElementById('ops-alert-bar');
+  if (bar) { bar.style.cssText = 'display:none;'; bar.innerHTML = ''; }
 }
 
 /* ── KANBAN SÜRÜKLE-BIRAK ─────────────────────────────────── */
@@ -1041,23 +1096,23 @@ let _opsDragId = null;
 function opsKanbanDragStart(ev, id) {
   _opsDragId = id;
   try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(id)); } catch {}
-  ev.currentTarget.style.opacity = '.55';
+  ev.currentTarget.classList.add('is-dragging');
 }
 function opsKanbanDragEnd(ev) {
-  ev.currentTarget.style.opacity = '';
-  document.querySelectorAll('.ops-kanban-col').forEach(c => c.style.outline = '');
+  ev.currentTarget.classList.remove('is-dragging');
+  document.querySelectorAll('#operasyon-page .ops-kanban__col').forEach(c => c.classList.remove('is-droptarget'));
 }
 function opsKanbanDragOver(ev) {
   ev.preventDefault();
   try { ev.dataTransfer.dropEffect = 'move'; } catch {}
-  ev.currentTarget.style.outline = '2px dashed var(--accent)';
+  ev.currentTarget.classList.add('is-droptarget');
 }
 function opsKanbanDragLeave(ev) {
-  ev.currentTarget.style.outline = '';
+  ev.currentTarget.classList.remove('is-droptarget');
 }
 async function opsKanbanDrop(ev, hedefDurum) {
   ev.preventDefault();
-  ev.currentTarget.style.outline = '';
+  ev.currentTarget.classList.remove('is-droptarget');
   const id = _opsDragId || parseInt(ev.dataTransfer.getData('text/plain'), 10);
   _opsDragId = null;
   if (!id) return;
@@ -1293,9 +1348,16 @@ function opsRenderAll() {
 }
 
 /* ── DURUM BADGE HTML ────────────────────────────────────── */
-function opsDurumBadge(durum) {
-  const map = { 'Bekliyor':'bekliyor','Yolda':'yolda','Fabrikada':'fabrikada','Teslim Edildi':'teslim','İptal':'iptal' };
-  return `<span class="ops-badge ${map[durum]||'bekliyor'}">${durum}</span>`;
+function opsDurumBadge(durum, opts) {
+  const tone = ({
+    'Bekliyor':      'neutral',
+    'Yolda':         'info',
+    'Fabrikada':     'purple',
+    'Teslim Edildi': 'success',
+    'İptal':         'danger',
+  })[durum] || 'neutral';
+  const suffix = opts && opts.suffix ? `<span style="opacity:.75;font-weight:500;">· ${opts.suffix}</span>` : '';
+  return `<span class="ops-pill ops-pill--${tone}"><span class="ops-pill__dot"></span>${durum}${suffix}</span>`;
 }
 
 /* ── BEKLEME SÜRESİ HESAPLA ─────────────────────────────── */
@@ -1381,46 +1443,81 @@ function opsRenderTable() {
   document.getElementById('ops-table-count').textContent = sorted.length + ' kayıt';
   const tbody = document.getElementById('ops-table-body');
   if (!sorted.length) {
-    tbody.innerHTML = `<tr><td colspan="17" class="srm-empty"><div style="text-align:center;padding:32px;color:var(--muted);">Henüz aktif iş emri yok. <button onclick="openOpsIsEmriModal()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-family:var(--font-body);font-size:13px;font-weight:600;">+ Yeni oluştur</button></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="17"><div class="ops-empty" style="padding:36px 12px;">
+      <div class="ops-empty__icon">+</div>
+      <div class="ops-empty__title">Aktif iş emri yok</div>
+      <div class="ops-empty__msg">Yeni bir konteyner sevkiyatı için iş emri oluştur.</div>
+      <button class="ops-btn ops-btn--primary ops-btn--sm" style="margin-top:8px;" onclick="openOpsIsEmriModal()">+ Yeni İş Emri</button>
+    </div></td></tr>`;
     return;
   }
   tbody.innerHTML = sorted.map(e => {
+    const alert     = (typeof opsAlertInfo === 'function') ? opsAlertInfo(e) : { level: 'normal' };
+    const rowCls    = alert.level === 'alert' ? 'is-urgent' : alert.level === 'warn' ? 'is-warn' : '';
     const kontNolar = (e.konteyner_no || '—').split('\n').filter(Boolean);
-    const kontHtml = kontNolar.map(k => `<div style="font-family:var(--font-mono);font-weight:600;letter-spacing:.04em;font-size:11.5px;">${k}</div>`).join('');
-    const doluBosRenk = e.kont_durum === 'Boş' ? 'var(--muted)' : 'var(--accent)';
-    const doluBosIcon = e.kont_durum === 'Boş' ? '🔲 Boş' : '📦 Dolu';
+    const kontHtml  = kontNolar.map(k => `<div class="col-container">${k}</div>`).join('') || '<span style="color:var(--text-dim);">—</span>';
+    const dbTone    = e.kont_durum === 'Boş' ? 'neutral' : 'brand';
+    const dbLabel   = e.kont_durum === 'Boş' ? 'Boş' : 'Dolu';
+
     const syncBadge = (e._syncPending === true || (e._dbId == null && !isLocalMode()))
-      ? `<span title="${(e._syncError || 'Buluta kaydedilmedi — yeniden denenecek').replace(/"/g,'&quot;')}" style="display:inline-block;margin-left:4px;width:8px;height:8px;border-radius:50%;background:var(--yellow);box-shadow:0 0 0 2px rgba(234,179,8,.2);vertical-align:middle;cursor:help;"></span>`
+      ? `<span title="${(e._syncError || 'Buluta kaydedilmedi — yeniden denenecek').replace(/"/g,'&quot;')}" style="display:inline-block;margin-left:4px;width:7px;height:7px;border-radius:50%;background:var(--ops-warning);box-shadow:0 0 0 2px rgba(229,162,75,.2);vertical-align:middle;cursor:help;"></span>`
       : '';
+
+    /* Durum suffix — ACİL / +Xdk */
+    let durumSuffix = '';
+    if (alert.level === 'alert')      durumSuffix = 'ACİL';
+    else if (alert.level === 'warn')  durumSuffix = `+${alert.delayMin || 15}dk`;
+
+    /* Yola çıkış sütunu — ana saat + alt rel time */
+    let yolaSubCls = '';
+    if (e.yola_zaman) {
+      const dk = Math.round((Date.now() - new Date(e.yola_zaman)) / 60000);
+      if (dk > 60) yolaSubCls = 'is-warn';
+      if (dk > 180 && e.durum === 'Yolda') yolaSubCls = 'is-urgent';
+    }
+
+    /* Bekleme süresi — > 30dk warn */
+    let beklemeColor = 'var(--text-muted)';
+    if (e.fabrika_giris && e.fabrika_cikis) {
+      const dk = Math.round((new Date(e.fabrika_cikis) - new Date(e.fabrika_giris)) / 60000);
+      beklemeColor = dk > 30 ? 'var(--ops-warning)' : 'var(--text-primary)';
+    }
+
+    /* Km bloğu */
+    const km = (e.baslangic_km != null && e.bitis_km != null) ? (e.bitis_km - e.baslangic_km) : null;
+    const kmHtml = e.baslangic_km != null
+      ? `<div class="col-mono" style="font-size:11.5px;color:var(--text-primary);">${e.baslangic_km.toLocaleString('tr-TR')}${e.bitis_km!=null?` → ${e.bitis_km.toLocaleString('tr-TR')}`:''}</div>${km!=null?`<div class="col-mono" style="font-size:10px;color:var(--ops-info);font-weight:600;">${km.toLocaleString('tr-TR')} km</div>`:''}`
+      : '<span style="color:var(--text-dim);font-size:11px;">—</span>';
+
     return `
-    <tr>
-      <td><span class="mono" style="color:var(--accent);">#${e.id}</span>${syncBadge}</td>
+    <tr class="${rowCls}">
+      <td><span class="col-mono col-plate">#${e.id}</span>${syncBadge}</td>
       <td>${e.musteri_adi || '—'}</td>
-      <td><span class="plate-cell">${e.arac_plaka || '—'}</span></td>
+      <td><span class="col-plate">${e.arac_plaka || '—'}</span></td>
       <td>${kontHtml}</td>
-      <td><span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);padding:2px 7px;border-radius:4px;">${e.kont_tip || '—'}</span></td>
-      <td><span style="font-size:11px;color:${doluBosRenk};font-weight:600;">${doluBosIcon}</span></td>
-      <td style="font-size:12px;color:var(--text2);">${e.yukle_yeri || '—'}</td>
-      <td style="font-size:12px;color:var(--text2);">${e.teslim_yeri || '—'}</td>
-      <td style="font-size:11.5px;color:var(--teal);">${e.bos_donus || '—'}</td>
-      <td>${opsDurumBadge(e.durum)}</td>
-      <td><span style="font-family:var(--font-mono);font-size:11.5px;color:${e.yola_zaman?'var(--text)':'var(--muted)'};">${opsFmtZaman(e.yola_zaman)}</span>${e.yola_zaman&&e.durum==='Yolda'?`<div style="font-family:var(--font-mono);font-size:10px;color:var(--blue);margin-top:1px;">${opsRelTime(e.yola_zaman)}</div>`:''}</td>
-      <td>${(() => {
-        const km = (e.baslangic_km != null && e.bitis_km != null) ? (e.bitis_km - e.baslangic_km) : null;
-        const kmHtml = e.baslangic_km != null
-          ? `<div style="font-family:var(--font-mono);font-size:11.5px;color:var(--text);">${e.baslangic_km.toLocaleString('tr-TR')}${e.bitis_km!=null?` → ${e.bitis_km.toLocaleString('tr-TR')}`:''}</div>${km!=null?`<div style="font-family:var(--font-mono);font-size:10px;color:var(--blue);font-weight:700;">${km.toLocaleString('tr-TR')} km</div>`:''}`
-          : '<span style="color:var(--muted);font-size:11px;">—</span>';
-        return kmHtml;
-      })()}</td>
-      <td><span style="font-family:var(--font-mono);font-size:11.5px;">${opsFmtZaman(e.fabrika_giris)}</span></td>
-      <td><span style="font-family:var(--font-mono);font-size:11.5px;">${opsFmtZaman(e.fabrika_cikis)}</span></td>
-      <td><span style="font-family:var(--font-mono);font-size:11.5px;color:${e.fabrika_giris&&e.fabrika_cikis?'var(--yellow)':'var(--muted)'};">${opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)}</span></td>
-      <td><span style="font-family:var(--font-mono);font-size:11px;background:var(--surface3);padding:2px 7px;border-radius:99px;">${opsFotoArray(e).length} foto</span></td>
-      <td class="col-islem">
-        <div style="display:flex;gap:4px;">
-          <button onclick="openOpsDrawer(${e.id})" class="icon-btn" title="Detay" style="color:var(--accent);border-color:rgba(232,82,26,.25);">⊙</button>
-          <button onclick="openOpsIsEmriDuzenle(${e.id})" class="icon-btn" title="Düzenle" style="color:var(--blue);border-color:rgba(56,189,248,.25);">✎</button>
-          <button onclick="deleteOpsIsEmri(${e.id})" class="icon-btn del" title="Sil">🗑</button>
+      <td><span class="ops-pill ops-pill--neutral ops-pill--mono">${e.kont_tip || '—'}</span></td>
+      <td><span class="ops-pill ops-pill--${dbTone}">${dbLabel}</span></td>
+      <td style="font-size:12px;">${e.yukle_yeri || '<span style="color:var(--text-dim);">—</span>'}</td>
+      <td style="font-size:12px;">${e.teslim_yeri || '<span style="color:var(--text-dim);">—</span>'}</td>
+      <td style="font-size:11.5px;color:var(--ops-success);">${e.bos_donus || '<span style="color:var(--text-dim);">—</span>'}</td>
+      <td>${opsDurumBadge(e.durum, durumSuffix ? { suffix: durumSuffix } : null)}</td>
+      <td><span class="col-time">${opsFmtZaman(e.yola_zaman)}</span>${e.yola_zaman&&e.durum==='Yolda'?`<span class="col-time__sub ${yolaSubCls}">${opsRelTime(e.yola_zaman)} önce</span>`:''}</td>
+      <td>${kmHtml}</td>
+      <td><span class="col-mono" style="font-size:11.5px;color:var(--text-primary);">${opsFmtZaman(e.fabrika_giris)}</span></td>
+      <td><span class="col-mono" style="font-size:11.5px;color:var(--text-primary);">${opsFmtZaman(e.fabrika_cikis)}</span></td>
+      <td><span class="col-mono" style="font-size:11.5px;color:${beklemeColor};">${opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)}</span></td>
+      <td><span class="ops-pill ops-pill--neutral ops-pill--mono">${opsFotoArray(e).length}</span></td>
+      <td class="col-actions col-islem">
+        <div style="display:inline-flex;gap:2px;">
+          <button class="ops-icon-btn ops-icon-btn--sm" onclick="event.stopPropagation();openOpsDrawer(${e.id})" title="Detay">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7"/><polyline points="7 7 17 7 17 17"/></svg>
+          </button>
+          <button class="ops-icon-btn ops-icon-btn--sm" onclick="event.stopPropagation();openOpsIsEmriDuzenle(${e.id})" title="Düzenle">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="ops-icon-btn ops-icon-btn--sm ops-icon-btn--danger" onclick="event.stopPropagation();deleteOpsIsEmri(${e.id})" title="Sil">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
         </div>
       </td>
     </tr>`; }).join('');
@@ -1429,78 +1526,158 @@ function opsRenderTable() {
 /* ── KANBAN ──────────────────────────────────────────────── */
 function opsRenderKanban() {
   const kolonlar = [
-    { key: 'Bekliyor',  label: 'Bekliyor',   color: 'var(--yellow)' },
-    { key: 'Yolda',     label: 'Yolda',      color: 'var(--blue)' },
-    { key: 'Fabrikada', label: 'Fabrikada',  color: 'var(--accent)' },
-    { key: 'Teslim Edildi', label: 'Teslim', color: 'var(--green)' },
+    { key: 'Bekliyor',     label: 'Bekliyor',  status: 'bekliyor',  hint: 'sürücü/araç ata',     emptyMsg: 'Yeni iş emri açıldığında burada belirir.', emptyCta: '+ İş emri ekle' },
+    { key: 'Yolda',        label: 'Yolda',     status: 'yolda',     hint: 'sahada · canlı',      emptyMsg: 'Atanmış araç henüz yola çıkmadı.',          emptyCta: null },
+    { key: 'Fabrikada',    label: 'Fabrikada', status: 'fabrikada', hint: 'boşaltma sırası',     emptyMsg: 'Fabrikaya giren araç bulunmuyor.',          emptyCta: null },
+    { key: 'Teslim Edildi',label: 'Teslim',    status: 'teslim',    hint: 'POD bekleyen / OK',   emptyMsg: 'Bugün teslim edilen sevkiyat yok.',         emptyCta: null },
   ];
   const aktif = isEmirleri.filter(e => e.durum !== 'İptal');
+
   document.getElementById('ops-kanban').innerHTML = kolonlar.map(kol => {
     const kartlar = aktif.filter(e => e.durum === kol.key);
+    const cards = kartlar.map(e => opsBuildContainerCard(e, kol.status)).join('');
+    const empty = kartlar.length ? '' : `
+      <div class="ops-empty">
+        <div class="ops-empty__icon">${kol.status === 'bekliyor' ? '+' : '·'}</div>
+        <div class="ops-empty__title">${kol.label} kolonu boş</div>
+        <div class="ops-empty__msg">${kol.emptyMsg}</div>
+      </div>`;
+    const addBtn = kol.key === 'Bekliyor'
+      ? `<button class="ops-kanban__add" onclick="openOpsIsEmriModal()">+ İş emri ekle</button>`
+      : '';
     return `
-      <div class="ops-kanban-col" data-durum="${kol.key}"
+      <div class="ops-kanban__col" data-status="${kol.status}" data-durum="${kol.key}"
            ondragover="opsKanbanDragOver(event)"
            ondragleave="opsKanbanDragLeave(event)"
            ondrop="opsKanbanDrop(event,'${kol.key}')">
-        <div class="ops-kanban-col-header">
-          <span style="color:${kol.color};">${kol.label}</span>
-          <span class="ops-kanban-count" style="color:${kol.color};">${kartlar.length}</span>
+        <div class="ops-kanban__head">
+          <span class="ops-kanban__dot"></span>
+          <span class="ops-kanban__title">${kol.label}</span>
+          <span class="ops-kanban__count">${kartlar.length}</span>
+          <span class="ops-kanban__hint">${kol.hint}</span>
+          <button class="ops-icon-btn ops-icon-btn--sm ops-kanban__menu" title="Kolon ayarları" onclick="event.stopPropagation()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+          </button>
         </div>
-        ${kartlar.length ? kartlar.map(e => {
-          const kontNolar = (e.konteyner_no || '').split('\n').filter(Boolean);
-          const kontLabel = kontNolar.length > 1 ? kontNolar[0] + ` +${kontNolar.length-1}` : (kontNolar[0] || '—');
-          const doluBosBadge = e.kont_durum === 'Boş' ? '<span style="font-size:10px;color:var(--muted);">🔲 Boş</span>' : '<span style="font-size:10px;color:var(--accent);">📦 Dolu</span>';
-
-          const alert = opsAlertInfo(e);
-          const ringStyle = alert.level === 'alert' ? 'box-shadow:0 0 0 2px rgba(239,68,68,.45);'
-                          : alert.level === 'warn'  ? 'box-shadow:0 0 0 2px rgba(234,179,8,.4);' : '';
-
-          // Canlı bilgi satırı (km, süre, konum)
-          const liveBits = [];
-          if (e.baslangic_km != null) liveBits.push(`<span title="Yola çıkış km">🛣 ${e.baslangic_km.toLocaleString('tr-TR')}</span>`);
-          if (e.bitis_km != null && e.baslangic_km != null) {
-            liveBits.push(`<span style="color:var(--blue);" title="Katedilen km">+${(e.bitis_km - e.baslangic_km).toLocaleString('tr-TR')} km</span>`);
-          }
-          if (kol.key === 'Yolda' && e.yola_zaman) {
-            liveBits.push(`<span title="Yola çıkış: ${opsFmtZaman(e.yola_zaman)}">⏱ ${opsRelTime(e.yola_zaman)}</span>`);
-          }
-          if (kol.key === 'Fabrikada' && e.fabrika_giris && !e.fabrika_cikis) {
-            liveBits.push(`<span title="Fabrika giriş: ${opsFmtZaman(e.fabrika_giris)}" style="color:var(--accent);">🏭 ${opsRelTime(e.fabrika_giris)}</span>`);
-          }
-          if ((kol.key === 'Yolda' || kol.key === 'Fabrikada') && e.konum_zaman) {
-            const dk = Math.round((Date.now() - new Date(e.konum_zaman)) / 60000);
-            const renk = dk > 30 ? 'var(--red)' : dk > 15 ? 'var(--yellow)' : 'var(--green)';
-            liveBits.push(`<span style="color:${renk};" title="Son konum güncellemesi">📍 ${opsRelTime(e.konum_zaman)}</span>`);
-          }
-          const liveHtml = liveBits.length
-            ? `<div class="ops-kcard-live" style="display:flex;flex-wrap:wrap;gap:6px 10px;font-family:var(--font-mono);font-size:10.5px;color:var(--text2);margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">${liveBits.join('')}</div>`
-            : '';
-
-          const alertBadge = alert.level !== 'normal'
-            ? `<div title="${alert.reasons.join(' • ').replace(/"/g,'&quot;')}" style="display:inline-flex;align-items:center;gap:3px;background:${alert.level==='alert'?'rgba(239,68,68,.12)':'rgba(234,179,8,.12)'};color:${alert.color};border-radius:4px;padding:1px 6px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-left:auto;">${alert.level==='alert'?'⚠ Acil':'⚠ Dikkat'}</div>`
-            : '';
-
-          return `
-          <div class="ops-kcard" draggable="true"
-               ondragstart="opsKanbanDragStart(event,${e.id})"
-               ondragend="opsKanbanDragEnd(event)"
-               onclick="openOpsDrawer(${e.id})"
-               style="${ringStyle}cursor:grab;">
-            <div class="ops-kcard-plaka" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <span>${e.arac_plaka || '—'}</span>
-              ${e.kont_tip ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">${e.kont_tip}</span>` : ''}
-              ${typeof podKanbanBadgeHtml === 'function' ? podKanbanBadgeHtml(e) : ''}
-              ${alertBadge}
-            </div>
-            <div class="ops-kcard-cont">📦 ${kontLabel} ${doluBosBadge}</div>
-            <div class="ops-kcard-musteri">${e.musteri_adi || '—'}</div>
-            ${e.bos_donus ? `<div style="font-size:10.5px;color:var(--teal);margin-top:3px;">↩ ${e.bos_donus}</div>` : ''}
-            <div class="ops-kcard-time">${opsFmtZaman(e.atama_zamani)}</div>
-            ${liveHtml}
-          </div>`;}).join('') :
-          `<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Boş</div>`}
+        <div class="ops-kanban__list">${cards || empty}</div>
+        ${addBtn}
       </div>`;
   }).join('');
+}
+
+/* ── ContainerCard — handoff anatomi (head / container / driver / route / metrics) */
+function opsBuildContainerCard(e, status) {
+  const alert = (typeof opsAlertInfo === 'function') ? opsAlertInfo(e) : { level: 'normal', reasons: [] };
+  const isDelayed = alert.level === 'warn';
+  const isUrgent  = alert.level === 'alert';
+
+  const variantClass = (
+    status === 'bekliyor'  ? 'is-waiting'    :
+    status === 'yolda'     ? (isUrgent ? 'is-urgent' : isDelayed ? 'is-delayed' : 'is-enroute') :
+    status === 'fabrikada' ? 'is-at-factory' :
+    status === 'teslim'    ? 'is-delivered'  : ''
+  );
+
+  const escAttr = s => String(s == null ? '' : s).replace(/"/g, '&quot;');
+  const kontNolar = (e.konteyner_no || '').split('\n').filter(Boolean);
+  const kontLabel = kontNolar.length > 1 ? `${kontNolar[0]} +${kontNolar.length - 1}` : (kontNolar[0] || '—');
+
+  /* head: plaka · tip pill · dolu/boş pill · sağda durum-bazlı pill */
+  const tipPill = e.kont_tip ? `<span class="ops-pill ops-pill--neutral ops-pill--mono">${e.kont_tip}</span>` : '';
+  const dbPill = e.kont_durum === 'Boş'
+    ? `<span class="ops-pill ops-pill--neutral">Boş</span>`
+    : `<span class="ops-pill ops-pill--brand">Dolu</span>`;
+  let statusPill = '';
+  if (isUrgent)        statusPill = `<span class="ops-pill ops-pill--solid-danger">ACİL</span>`;
+  else if (isDelayed)  statusPill = `<span class="ops-pill ops-pill--warning">+${(alert.delayMin || 15)}dk</span>`;
+  else if (status === 'teslim') statusPill = `<span class="ops-pill ops-pill--solid-success">✓ POD</span>`;
+  else if (status === 'fabrikada') statusPill = `<span class="ops-pill ops-pill--purple">Fabrikada</span>`;
+
+  const podBadge = (typeof podKanbanBadgeHtml === 'function') ? podKanbanBadgeHtml(e) : '';
+
+  /* driver satırı (avatar + isim + telefon + canlı dot) */
+  const sofor = e.sofor || e.sofor_adi || '';
+  const initials = sofor ? sofor.split(/\s+/).map(s => s[0] || '').slice(0, 2).join('').toUpperCase() : '—';
+  const onlineMin = e.konum_zaman ? Math.round((Date.now() - new Date(e.konum_zaman)) / 60000) : null;
+  const isOnline = onlineMin != null && onlineMin <= 5;
+  const driverRow = (sofor || e.sofor_tel) ? `
+    <div class="ops-card__driver">
+      <span class="ops-card__avatar" aria-hidden="true">${initials}</span>
+      <div class="ops-card__driver-info">
+        <span class="ops-card__driver-name">${sofor || 'Atanmadı'}</span>
+        ${e.sofor_tel ? `<span class="ops-card__driver-phone">${e.sofor_tel}</span>` : ''}
+      </div>
+      <span class="ops-card__online-dot${isOnline ? '' : ' is-offline'}" title="${isOnline ? 'Canlı' : (onlineMin != null ? onlineMin + ' dk önce' : 'çevrimdışı')}"></span>
+    </div>` : '';
+
+  /* route satırı (Yolda + Fabrikada) */
+  const showRoute = (status === 'yolda' || status === 'fabrikada') && (e.yukle_yeri || e.teslim_yeri);
+  const progress = status === 'yolda' ? 0.55 : status === 'fabrikada' ? 0.85 : status === 'teslim' ? 1 : 0;
+  const routeRow = showRoute ? `
+    <div class="ops-card__route">
+      <div class="ops-card__route-line">
+        <span class="ops-card__route-origin" title="${escAttr(e.yukle_yeri)}">${e.yukle_yeri || '—'}</span>
+        <span class="ops-card__route-arrow">→</span>
+        <span class="ops-card__route-dest" title="${escAttr(e.teslim_yeri)}">${e.teslim_yeri || '—'}</span>
+      </div>
+      <div class="ops-card__progress"><div class="ops-card__progress-fill" style="width:${Math.round(progress * 100)}%"></div></div>
+    </div>` : '';
+
+  /* metric şeridi — Bekliyor: atama zamanı, Yolda: ETA/süre/son ping, Fabrikada: giriş, Teslim: km/dönüş km */
+  let metrics = '';
+  if (status === 'bekliyor') {
+    metrics = `
+      <div class="ops-card__metrics">
+        <div class="ops-card__metric"><div class="ops-card__metric-label">Atama</div><div class="ops-card__metric-value">${e.atama_zamani ? opsFmtZaman(e.atama_zamani) : '—'}</div></div>
+        ${e.referans_no ? `<div class="ops-card__metric"><div class="ops-card__metric-label">Ref</div><div class="ops-card__metric-value">${e.referans_no}</div></div>` : ''}
+      </div>`;
+  } else if (status === 'yolda') {
+    const etaCls   = isUrgent ? 'ops-card__metric--danger' : isDelayed ? 'ops-card__metric--warn' : '';
+    const pingMin  = onlineMin;
+    const pingCls  = pingMin == null ? '' : pingMin > 20 ? 'ops-card__metric--danger' : pingMin > 10 ? 'ops-card__metric--warn' : '';
+    metrics = `
+      <div class="ops-card__metrics">
+        <div class="ops-card__metric ${etaCls}"><div class="ops-card__metric-label">ETA</div><div class="ops-card__metric-value">${e.eta || '—'}</div></div>
+        <div class="ops-card__metric"><div class="ops-card__metric-label">Süre</div><div class="ops-card__metric-value">${e.yola_zaman ? opsRelTime(e.yola_zaman) : '—'}</div></div>
+        <div class="ops-card__metric ${pingCls}"><div class="ops-card__metric-label">Son Ping</div><div class="ops-card__metric-value">${pingMin != null ? pingMin + ' dk' : '—'}</div></div>
+      </div>`;
+  } else if (status === 'fabrikada') {
+    metrics = `
+      <div class="ops-card__metrics">
+        <div class="ops-card__metric"><div class="ops-card__metric-label">Giriş</div><div class="ops-card__metric-value">${e.fabrika_giris ? opsRelTime(e.fabrika_giris) : '—'}</div></div>
+        <div class="ops-card__metric"><div class="ops-card__metric-label">Kapı</div><div class="ops-card__metric-value">${e.fabrika_kapi || '—'}</div></div>
+      </div>`;
+  } else if (status === 'teslim') {
+    const km = (e.bitis_km != null && e.baslangic_km != null) ? (e.bitis_km - e.baslangic_km) : null;
+    metrics = `
+      <div class="ops-card__metrics">
+        <div class="ops-card__metric"><div class="ops-card__metric-label">Mesafe</div><div class="ops-card__metric-value">${km != null ? km.toLocaleString('tr-TR') + ' km' : '—'}</div></div>
+        ${e.bos_donus ? `<div class="ops-card__metric"><div class="ops-card__metric-label">Dönüş</div><div class="ops-card__metric-value">${e.bos_donus}</div></div>` : ''}
+      </div>`;
+  }
+
+  return `
+    <div class="ops-card ${variantClass}" draggable="true" data-id="${e.id}"
+         ondragstart="opsKanbanDragStart(event,${e.id})"
+         ondragend="opsKanbanDragEnd(event)"
+         onclick="openOpsDrawer(${e.id})">
+      <div class="ops-card__head">
+        <span class="ops-card__plate">${e.arac_plaka || '—'}</span>
+        ${tipPill}
+        ${dbPill}
+        ${podBadge}
+        <span class="ops-card__head-spacer"></span>
+        ${statusPill}
+      </div>
+      <div class="ops-card__container">
+        <svg class="ops-card__container-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="1"/><line x1="7" y1="6" x2="7" y2="18"/><line x1="12" y1="6" x2="12" y2="18"/><line x1="17" y1="6" x2="17" y2="18"/></svg>
+        <span class="ops-card__container-no">${kontLabel}</span>
+        <span class="ops-card__customer" title="${escAttr(e.musteri_adi)}">${e.musteri_adi || '—'}</span>
+      </div>
+      ${driverRow}
+      ${routeRow}
+      ${metrics}
+    </div>`;
 }
 
 /* ── FİLO HARİTASI ──────────────────────────────────────── */

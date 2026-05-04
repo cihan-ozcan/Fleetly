@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<title>Konteyner Operasyonu — Yeniden Tasarım</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #07090F; color: #E8ECF5; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #0A0E1A; }
+  ::-webkit-scrollbar-thumb { background: #1E2740; border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2A3553; }
+  button:focus-visible, [tabindex]:focus-visible { outline: 2px solid #FF7A45; outline-offset: 2px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tokens.jsx"></script>
+<script type="text/babel" src="card.jsx"></script>
+<script type="text/babel" src="kanban.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+function App() {
+  return (
+    <window.DesignCanvas
+      title="Konteyner Operasyonu — Yeniden Tasarım"
+      subtitle="Linear/Cron tarzı sofistike koyu B2B · Bloomberg yoğunluğu · semantik renk · Türkçe"
+    >
+      <window.DCSection id="system" title="00 — Tasarım Sistemi">
+        <window.DCArtboard id="tokens" label="Renk · Tipografi · Spacing" width={1080} height={1500}>
+          <window.TokensArtboard />
+        </window.DCArtboard>
+      </window.DCSection>
+
+      <window.DCSection id="cards" title="01 — Konteyner Kartı (6 varyant)">
+        <window.DCArtboard id="card-variants" label="Tüm durumlar tek anatomi" width={1060} height={760}>
+          <window.CardVariantsArtboard />
+        </window.DCArtboard>
+      </window.DCSection>
+
+      <window.DCSection id="kanban" title="02 — Canlı Takip · Kanban">
+        <window.DCArtboard id="kanban-board" label="Yeniden tasarlanmış kanban" width={1440} height={1040}>
+          <window.KanbanBoard />
+        </window.DCArtboard>
+      </window.DCSection>
+
+      <window.DCSection id="table" title="03 — İş Emirleri Tablosu">
+        <window.DCArtboard id="table" label="Yoğun + okunabilir" width={1440} height={760}>
+          <window.TableArtboard />
+        </window.DCArtboard>
+      </window.DCSection>
+
+      <window.DCSection id="modal" title="04 — Yeni İş Emri (Stepper)">
+        <window.DCArtboard id="modal" label="4 adımlı, taslak otomatik kayıt" width={900} height={760}>
+          <window.ModalArtboard />
+        </window.DCArtboard>
+      </window.DCSection>
+
+      <window.DCSection id="drawer" title="05 — Konteyner Detay Drawer'ı">
+        <window.DCArtboard id="drawer" label="Canlı rota timeline + sekmeler" width={1280} height={820}>
+          <window.DrawerArtboard />
+        </window.DCArtboard>
+      </window.DCSection>
+
+      <window.DCSection id="ba" title="06 — Önce / Sonra Karşılaştırması">
+        <window.DCArtboard id="ba" label="9 büyük değişiklik · gerekçeleriyle" width={1200} height={720}>
+          <window.BeforeAfterArtboard />
+        </window.DCArtboard>
+      </window.DCSection>
+    </window.DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
