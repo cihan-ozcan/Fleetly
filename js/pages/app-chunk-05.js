@@ -1925,8 +1925,200 @@ function openOpsIsEmriModal(duzenlemeObj) {
   });
 
   document.getElementById('ops-modal-bg').classList.remove('hidden');
+  // Adım 1'e dön ve kaydedilmiş alanlardan kontTip segmented'i senkronize et
+  opsStepperGoto(1);
+  _opsKontTipSyncSegmented();
   setTimeout(() => { try { _opsKmAutoHint(); } catch(e) {} }, 50);
 }
+
+/* =========================================================================
+ * STEPPER (4 adımlı) — kontrol fonksiyonları
+ * ========================================================================= */
+let _opsCurrentStep = 1;
+const _OPS_STEP_LABELS = [
+  null,
+  'Müşteri ve konteyner bilgileri',
+  'Çekici, dorse ve sürücü',
+  'Alım, teslim ve dönüş rotası',
+  'Kontrol et ve kaydet'
+];
+
+function opsStepperGoto(n) {
+  n = Math.max(1, Math.min(4, n | 0));
+  _opsCurrentStep = n;
+  // Step paneller
+  document.querySelectorAll('#ops-modal-bg .ops-step').forEach(p => {
+    p.classList.toggle('is-active', String(n) === p.dataset.step);
+  });
+  // Rail bullets
+  document.querySelectorAll('#ops-modal-bg .ops-stepper-rail__step').forEach(s => {
+    const k = parseInt(s.dataset.step, 10);
+    s.classList.toggle('is-active', k === n);
+    s.classList.toggle('is-done', k < n);
+    const b = s.querySelector('.ops-stepper-rail__bullet');
+    if (b) b.textContent = (k < n) ? '✓' : String(k);
+  });
+  // Header alt başlık
+  const cur = document.getElementById('ops-stepper-current');
+  const sub = document.getElementById('ops-stepper-sub');
+  if (cur) cur.textContent = String(n);
+  if (sub) sub.innerHTML = `Adım <span id="ops-stepper-current">${n}</span>/4 · ${_OPS_STEP_LABELS[n] || ''}`;
+  // Footer butonları
+  const prevBtn = document.getElementById('ops-stepper-prev');
+  const nextBtn = document.getElementById('ops-stepper-next');
+  const saveBtn = document.getElementById('ops-stepper-save');
+  if (prevBtn) prevBtn.style.display = (n === 1) ? 'none' : 'inline-flex';
+  if (nextBtn) nextBtn.style.display = (n === 4) ? 'none' : 'inline-flex';
+  if (saveBtn) saveBtn.style.display = (n === 4) ? 'inline-flex' : 'none';
+  // Hata bandını temizle
+  document.querySelectorAll('#ops-modal-bg .ops-step__error').forEach(e => { e.style.display = 'none'; e.textContent = ''; });
+  // Adım 4 ise özet kart üret
+  if (n === 4) _opsBuildSummary();
+  // Body scroll'u en üste
+  const body = document.querySelector('#ops-modal-bg .srm-body');
+  if (body) body.scrollTop = 0;
+  // Aktif adımdaki ilk input'a fokus
+  setTimeout(() => {
+    const first = document.querySelector(`#ops-modal-bg .ops-step.is-active input:not([type=hidden]), #ops-modal-bg .ops-step.is-active select, #ops-modal-bg .ops-step.is-active textarea`);
+    if (first) try { first.focus(); } catch (_) {}
+  }, 50);
+}
+
+function opsStepperNext() {
+  if (!_opsStepperValidate(_opsCurrentStep)) return;
+  if (_opsCurrentStep < 4) opsStepperGoto(_opsCurrentStep + 1);
+}
+function opsStepperPrev() {
+  if (_opsCurrentStep > 1) opsStepperGoto(_opsCurrentStep - 1);
+}
+
+function _opsStepperShowErr(step, msg) {
+  const el = document.getElementById('ops-step' + step + '-err');
+  if (!el) return;
+  el.style.display = 'block';
+  el.textContent = msg;
+}
+
+function _opsStepperValidate(step) {
+  if (step === 1) {
+    const m = document.getElementById('ops-m-musteri')?.value;
+    const k = (document.getElementById('ops-m-konteyner')?.value || '').trim();
+    if (!m) { _opsStepperShowErr(1, 'Müşteri seçimi zorunlu.'); return false; }
+    if (!k) { _opsStepperShowErr(1, 'En az bir konteyner numarası girin.'); return false; }
+    return true;
+  }
+  if (step === 2) {
+    const arac = document.getElementById('ops-m-arac')?.value;
+    if (!arac) { _opsStepperShowErr(2, 'Çekici seçimi zorunlu.'); return false; }
+    return true;
+  }
+  // Adım 3 ve 4 zorunlu alan içermez
+  return true;
+}
+
+/* Konteyner tipi segmented seçici */
+function opsKontTipSec(btn) {
+  const val = btn?.dataset?.val || '';
+  const sel = document.getElementById('ops-m-kont-tip');
+  if (sel) sel.value = val;
+  document.querySelectorAll('#ops-m-kont-tip-segmented button').forEach(b => {
+    b.classList.toggle('is-active', b === btn);
+  });
+}
+function _opsKontTipSyncSegmented() {
+  const v = document.getElementById('ops-m-kont-tip')?.value || '';
+  document.querySelectorAll('#ops-m-kont-tip-segmented button').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.val === v);
+  });
+}
+// Mevcut opsDorseSec konteyner tipini select.value ile dolduruyor; segmented'ı senkronize et
+const _origOpsDorseSec = (typeof opsDorseSec === 'function') ? opsDorseSec : null;
+if (_origOpsDorseSec) {
+  opsDorseSec = function(...args) {
+    const r = _origOpsDorseSec.apply(this, args);
+    try { _opsKontTipSyncSegmented(); } catch(_) {}
+    return r;
+  };
+  window.opsDorseSec = opsDorseSec;
+}
+
+/* Adım 4 özet kartı */
+function _opsBuildSummary() {
+  const host = document.getElementById('ops-stepper-summary');
+  if (!host) return;
+  const v = (id) => (document.getElementById(id)?.value || '').trim();
+  const musteriSel = document.getElementById('ops-m-musteri');
+  const musteriAd = musteriSel?.options?.[musteriSel.selectedIndex]?.text || '—';
+  const kontNolar = v('ops-m-konteyner').split('\n').filter(Boolean);
+  const kontDurum = v('ops-m-kont-durum') || '—';
+  const kontTip   = v('ops-m-kont-tip')   || '—';
+  const aracPlaka = v('ops-m-arac')       || '—';
+  const cekiciId  = v('ops-m-cekici-id');
+  const dorseId   = v('ops-m-dorse-id');
+  const sofor     = v('ops-m-sofor')      || '—';
+  const soforTel  = v('ops-m-sofor-tel');
+  const yukle     = v('ops-m-yukle')      || '—';
+  const teslim    = v('ops-m-teslim')     || '—';
+  const ref       = v('ops-m-referans');
+  const muhur     = v('ops-m-muhur');
+  const bosDonus  = v('ops-m-bos-donus');
+
+  let dorseInfo = '—';
+  if (dorseId && typeof vehicles !== 'undefined') {
+    const d = vehicles.find(x => x.id === dorseId);
+    if (d) dorseInfo = d.plaka + (d.dorse_tipi ? ' · ' + d.dorse_tipi : '');
+  }
+
+  const row = (k, val, mono) => `<div class="ops-summary__row"><span class="key">${k}</span><span class="val${mono ? ' mono' : ''}">${val}</span></div>`;
+
+  host.innerHTML = `
+    <div class="ops-summary__group">
+      <div class="ops-summary__title">Müşteri &amp; Konteyner</div>
+      ${row('Müşteri', musteriAd)}
+      ${row('Konteyner Durumu', `<span class="ops-pill ops-pill--${kontDurum === 'Boş' ? 'neutral' : 'brand'}">${kontDurum}</span>`)}
+      ${row('Konteyner Tipi', kontTip === '—' ? '—' : `<span class="ops-pill ops-pill--neutral ops-pill--mono">${kontTip}</span>`)}
+      ${row('Konteyner No', kontNolar.length ? kontNolar.join(' · ') : '—', true)}
+    </div>
+    <div class="ops-summary__group">
+      <div class="ops-summary__title">Sürücü &amp; Araç</div>
+      ${row('Çekici', aracPlaka, true)}
+      ${row('Dorse', dorseInfo, true)}
+      ${row('Sürücü', sofor + (soforTel ? ` · <span class="mono">${soforTel}</span>` : ''))}
+    </div>
+    <div class="ops-summary__group">
+      <div class="ops-summary__title">Rota</div>
+      ${row('Alım', yukle)}
+      ${row('Teslim', teslim)}
+      ${bosDonus ? row('Boş Dönüş', bosDonus) : ''}
+      ${ref      ? row('Referans No', ref, true) : ''}
+      ${muhur    ? row('Mühür No', muhur, true) : ''}
+    </div>`;
+}
+
+/* Modal kapatma — taslak uyarısı (modify edilmiş alan varsa) */
+function opsModalDismiss() {
+  // Eğer kullanıcı bir şey yazmışsa onaylı kapat
+  const dirty = ['ops-m-konteyner','ops-m-arac','ops-m-yukle','ops-m-teslim','ops-m-notlar','ops-m-referans','ops-m-muhur'].some(id => {
+    const el = document.getElementById(id);
+    return el && (el.value || '').trim().length > 0;
+  });
+  if (dirty && !confirm('Yarım kalan iş emri kapatılsın mı? Bilgiler kaydedilmedi.')) return;
+  closeOpsIsEmriModal();
+}
+
+/* ⌘+Enter / Ctrl+Enter ile sonraki adım (modal açıkken) */
+document.addEventListener('keydown', function (ev) {
+  const bg = document.getElementById('ops-modal-bg');
+  if (!bg || bg.classList.contains('hidden')) return;
+  if ((ev.metaKey || ev.ctrlKey) && ev.key === 'Enter') {
+    ev.preventDefault();
+    if (_opsCurrentStep < 4) opsStepperNext();
+    else { try { saveOpsIsEmri(); } catch(_) {} }
+  } else if (ev.key === 'Escape') {
+    ev.preventDefault();
+    opsModalDismiss();
+  }
+});
 
 function openOpsIsEmriDuzenle(id) {
   const e = opsById(id);

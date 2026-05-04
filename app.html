@@ -1943,177 +1943,220 @@
 </div>
 
 <!-- ── OPS İŞ EMRİ MODAL ──────────────────────── -->
-<div id="ops-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)closeOpsIsEmriModal()">
-  <div class="srm-modal" style="max-width:680px;">
+<div id="ops-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)opsModalDismiss()">
+  <div class="srm-modal">
+    <!-- HEADER -->
     <div class="srm-header">
       <div class="srm-title">
-        <span style="width:30px;height:30px;background:var(--accent-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">📦</span>
-        <span class="maint-modal-title" style="color:var(--accent);">YENİ İŞ EMRİ</span>
+        <span>+</span>
+        <div class="ops-stepper-header">
+          <span class="ops-stepper-header__title maint-modal-title">Yeni İş Emri</span>
+          <span class="ops-stepper-header__sub" id="ops-stepper-sub">Adım <span id="ops-stepper-current">1</span>/4 · Müşteri ve konteyner bilgileri</span>
+        </div>
       </div>
-      <button class="modal-close" onclick="closeOpsIsEmriModal()" aria-label="Kapat">✕</button>
+      <button class="modal-close" onclick="opsModalDismiss()" aria-label="Kapat (Esc)" title="Kapat (Esc)">✕</button>
     </div>
+
+    <!-- STEPPER RAIL -->
+    <div class="ops-stepper-rail" id="ops-stepper-rail">
+      <div class="ops-stepper-rail__step is-active" data-step="1">
+        <span class="ops-stepper-rail__bullet">1</span>
+        <span class="ops-stepper-rail__label">Müşteri &amp; Konteyner</span>
+      </div>
+      <div class="ops-stepper-rail__sep"></div>
+      <div class="ops-stepper-rail__step" data-step="2">
+        <span class="ops-stepper-rail__bullet">2</span>
+        <span class="ops-stepper-rail__label">Sürücü &amp; Araç</span>
+      </div>
+      <div class="ops-stepper-rail__sep"></div>
+      <div class="ops-stepper-rail__step" data-step="3">
+        <span class="ops-stepper-rail__bullet">3</span>
+        <span class="ops-stepper-rail__label">Rota</span>
+      </div>
+      <div class="ops-stepper-rail__sep"></div>
+      <div class="ops-stepper-rail__step" data-step="4">
+        <span class="ops-stepper-rail__bullet">4</span>
+        <span class="ops-stepper-rail__label">Onay</span>
+      </div>
+    </div>
+
+    <!-- BODY — 4 adım paneli -->
     <div class="srm-body">
-      <div class="srm-grid">
 
-        <!-- ── SATIR 1: Müşteri + Çekici ── -->
-        <div class="srm-group">
-          <label>Müşteri</label>
-          <select id="ops-m-musteri" class="srm-inp"></select>
-        </div>
-        <div class="srm-group" style="position:relative;">
-          <label>Çekici Ara <span style="font-size:10px;color:var(--muted);font-weight:500;letter-spacing:.4px;">(plaka / sürücü)</span></label>
-          <input id="ops-m-arac-search" class="srm-inp" placeholder="34 EE 5314 / Mehmet…" autocomplete="off"
-            oninput="opsAracAra(this.value)"
-            onblur="setTimeout(()=>{ const d=document.getElementById('ops-arac-dropdown'); if(d) d.style.display='none'; }, 200)"
-            onfocus="opsAracAra(this.value)" />
-          <input type="hidden" id="ops-m-arac" />
-          <input type="hidden" id="ops-m-cekici-id" />
-          <div id="ops-arac-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:var(--surface);border:1px solid var(--border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);max-height:220px;overflow-y:auto;margin-top:2px;"></div>
-        </div>
-
-        <!-- ── SATIR 1B: Dorse (opsiyonel) ── -->
-        <div class="srm-group" style="position:relative;grid-column:span 2;">
-          <label>Dorse Ara <span style="font-size:10px;color:var(--muted);font-weight:500;letter-spacing:.4px;">(opsiyonel — çekici seçilince ona bağlı dorseler önce gelir)</span></label>
-          <input id="ops-m-dorse-search" class="srm-inp" placeholder="Dorse plakası, marka veya tip…" autocomplete="off"
-            oninput="opsDorseAra(this.value)"
-            onblur="setTimeout(()=>{ const d=document.getElementById('ops-dorse-dropdown'); if(d) d.style.display='none'; }, 200)"
-            onfocus="opsDorseAra(this.value)" />
-          <input type="hidden" id="ops-m-dorse-id" />
-          <button type="button" id="ops-m-dorse-clear" onclick="opsDorseTemizle()" style="display:none;position:absolute;right:8px;top:30px;background:transparent;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:4px 6px;" title="Dorse seçimini temizle">×</button>
-          <div id="ops-dorse-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:var(--surface);border:1px solid var(--border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);max-height:240px;overflow-y:auto;margin-top:2px;"></div>
-        </div>
-
-        <!-- ── SATIR 2: Sürücü ── -->
-        <div class="srm-group">
-          <label>Sürücü Adı</label>
-          <input id="ops-m-sofor" class="srm-inp" placeholder="Ad Soyad" />
-        </div>
-        <div class="srm-group">
-          <label>Sürücü Telefon</label>
-          <input id="ops-m-sofor-tel" class="srm-inp" placeholder="0500 000 00 00" type="tel" />
-        </div>
-
-        <!-- ── SATIR 3: Konteyner Tipi + Dolu/Boş ── -->
-        <div class="srm-group">
-          <label>Konteyner Tipi</label>
-          <select id="ops-m-kont-tip" class="srm-inp">
-            <option value="">Seçin...</option>
-            <option value="20 DC">20' DC</option>
-            <option value="40 DC">40' DC</option>
-            <option value="40 HC">40' HC</option>
-            <option value="45 HC">45' HC</option>
-          </select>
-        </div>
-        <div class="srm-group">
-          <label>Konteyner Durumu</label>
-          <select id="ops-m-kont-durum" class="srm-inp">
-            <option value="Dolu">📦 Dolu Alım</option>
-            <option value="Boş">🔲 Boş Alım</option>
-          </select>
-        </div>
-
-        <!-- ── SATIR 4: Konteyner No(lar) + Referans ── -->
-        <div class="srm-group full">
-          <label style="display:flex;align-items:center;justify-content:space-between;">
-            <span>Konteyner No(lar)</span>
-            <span style="font-size:10px;color:var(--muted);font-weight:400;">Birden fazlaysa her birini yeni satıra yazın</span>
-          </label>
-          <textarea id="ops-m-konteyner" class="srm-inp" rows="3" placeholder="ABCU1234567&#10;HLBU3981430&#10;SEKU1484480" style="font-family:var(--font-mono);font-weight:600;letter-spacing:.05em;resize:vertical;"></textarea>
-        </div>
-        <div class="srm-group">
-          <label>Referans No</label>
-          <input id="ops-m-referans" class="srm-inp" placeholder="BKG261558" style="font-family:var(--font-mono);font-weight:600;" />
-        </div>
-        <div class="srm-group">
-          <label>Mühür No</label>
-          <input id="ops-m-muhur" class="srm-inp" placeholder="M-12345" style="font-family:var(--font-mono);font-weight:600;" />
-        </div>
-
-        <!-- ── SATIR 5: Alım + Teslim + Boş Dönüş ── -->
-        <div class="srm-group">
-          <label>Alım Noktası (Liman / Depo)</label>
-          <input id="ops-m-yukle" class="srm-inp" placeholder="Kumport, Mardaş, Medkon Depo..." />
-        </div>
-        <div class="srm-group">
-          <label>Teslim Yeri (Fabrika / Adres)</label>
-          <input id="ops-m-teslim" class="srm-inp" placeholder="Mega Metal - Çatalca, Argon Kimya..." />
-        </div>
-
-        <!-- ── KONUM LİNKLERİ (harita + rota için) ── -->
-        <div class="srm-group" style="position:relative;">
-          <label style="display:flex;align-items:center;justify-content:space-between;">
-            <span>📍 Alım Konum Linki</span>
-            <span style="font-size:10px;color:var(--muted);font-weight:400;">Google Maps share linki yapıştırın</span>
-          </label>
-          <div style="position:relative;">
-            <input id="ops-m-yukle-konum" class="srm-inp"
-              placeholder="https://maps.app.goo.gl/... veya Google Maps'ten 'Konumu paylaş'"
-              style="padding-right:90px;"
-              oninput="opsKonumLinkPreview(this,'ops-m-yukle-konum-preview')" />
-            <span id="ops-m-yukle-konum-preview"
-              style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;display:none;"></span>
+      <!-- ============ ADIM 1: Müşteri & Konteyner ============ -->
+      <div class="ops-step is-active" data-step="1">
+        <p class="ops-step__intro">Hangi müşteri için sevkiyat yapılıyor ve konteyner numaraları neler?</p>
+        <div class="srm-grid">
+          <div class="srm-group">
+            <label>Müşteri *</label>
+            <select id="ops-m-musteri" class="srm-inp"></select>
           </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.6;">
-            Google Maps &rarr; konuma uzun bas &rarr; kopyala &nbsp;·&nbsp; veya pin koy &rarr; Paylaş &rarr; linki kopyala
+          <div class="srm-group">
+            <label>Konteyner Durumu</label>
+            <select id="ops-m-kont-durum" class="srm-inp">
+              <option value="Dolu">📦 Dolu Alım</option>
+              <option value="Boş">🔲 Boş Alım</option>
+            </select>
+          </div>
+          <div class="srm-group full">
+            <label style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Konteyner No(lar) *</span>
+              <span style="font-size:10px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">Birden fazlaysa her birini yeni satıra yazın</span>
+            </label>
+            <textarea id="ops-m-konteyner" class="srm-inp" rows="3" placeholder="ABCU1234567&#10;HLBU3981430&#10;SEKU1484480" style="font-family:var(--ops-font-mono);font-weight:600;letter-spacing:.05em;"></textarea>
           </div>
         </div>
-        <div class="srm-group" style="position:relative;">
-          <label style="display:flex;align-items:center;justify-content:space-between;">
-            <span>📍 Teslim Konum Linki</span>
-            <span style="font-size:10px;color:var(--muted);font-weight:400;">Google Maps share linki yapıştırın</span>
-          </label>
-          <div style="position:relative;">
-            <input id="ops-m-teslim-konum" class="srm-inp"
-              placeholder="https://maps.app.goo.gl/... veya Google Maps'ten 'Konumu paylaş'"
-              style="padding-right:90px;"
-              oninput="opsKonumLinkPreview(this,'ops-m-teslim-konum-preview')" />
-            <span id="ops-m-teslim-konum-preview"
-              style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;display:none;"></span>
-          </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.6;">
-            Google Maps &rarr; konuma uzun bas &rarr; kopyala &nbsp;·&nbsp; veya pin koy &rarr; Paylaş &rarr; linki kopyala
-          </div>
-        </div>
-        <div class="srm-group">
-          <label>Boş Dönüş Noktası</label>
-          <input id="ops-m-bos-donus" class="srm-inp" placeholder="Marport, Özmarmara, KLM Depo..." />
-        </div>
-        <div class="srm-group">
-          <label>Boşaltma Zamanı</label>
-          <input id="ops-m-boslama-zaman" class="srm-inp" type="datetime-local" />
-        </div>
-
-        <!-- ── KM SAYACI (yakıt-iş eşleştirme için) ── -->
-        <div class="srm-group">
-          <label style="display:flex;align-items:center;justify-content:space-between;">
-            <span>🧭 Başlangıç Km</span>
-            <span style="font-size:10px;color:var(--muted);font-weight:400;">Araç sayacı</span>
-          </label>
-          <input id="ops-m-bas-km" class="srm-inp" type="number" min="0" step="1" placeholder="154230" oninput="_opsKmAutoHint()" />
-        </div>
-        <div class="srm-group">
-          <label style="display:flex;align-items:center;justify-content:space-between;">
-            <span>🏁 Bitiş Km</span>
-            <span style="font-size:10px;color:var(--muted);font-weight:400;">Teslim sonrası sayaç</span>
-          </label>
-          <input id="ops-m-bit-km" class="srm-inp" type="number" min="0" step="1" placeholder="154312" oninput="_opsKmAutoHint()" />
-        </div>
-        <div class="srm-group full" id="ops-km-hint" style="display:none;font-size:11px;color:var(--blue);background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:8px;padding:8px 12px;">
-          <!-- canlı km / yakıt tahmini buraya yazılır -->
-        </div>
-
-        <!-- ── NOTLAR ── -->
-        <div class="srm-group full">
-          <label>Notlar / Özel Talimatlar</label>
-          <textarea id="ops-m-notlar" class="srm-inp" rows="2" placeholder="Gümrükçü iletişim, özel dikkat edilecekler..."></textarea>
-        </div>
-
+        <div class="ops-step__error" id="ops-step1-err"></div>
       </div>
+
+      <!-- ============ ADIM 2: Sürücü & Araç ============ -->
+      <div class="ops-step" data-step="2">
+        <p class="ops-step__intro">Çekici (zorunlu) ve dorse (opsiyonel) seçin. Çekici seçince sürücü adı/telefonu otomatik dolar.</p>
+        <div class="srm-grid">
+          <div class="srm-group" style="position:relative;">
+            <label>Çekici Ara *</label>
+            <input id="ops-m-arac-search" class="srm-inp" placeholder="34 EE 5314 / Mehmet…" autocomplete="off"
+              oninput="opsAracAra(this.value)"
+              onblur="setTimeout(()=>{ const d=document.getElementById('ops-arac-dropdown'); if(d) d.style.display='none'; }, 200)"
+              onfocus="opsAracAra(this.value)" />
+            <input type="hidden" id="ops-m-arac" />
+            <input type="hidden" id="ops-m-cekici-id" />
+            <div id="ops-arac-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;border-radius:8px;max-height:220px;overflow-y:auto;margin-top:2px;"></div>
+          </div>
+          <div class="srm-group" style="position:relative;">
+            <label>Dorse Ara <span style="font-size:9.5px;color:var(--text-muted);font-weight:500;letter-spacing:.4px;text-transform:none;">(opsiyonel)</span></label>
+            <input id="ops-m-dorse-search" class="srm-inp" placeholder="Dorse plakası, marka veya tip…" autocomplete="off"
+              oninput="opsDorseAra(this.value)"
+              onblur="setTimeout(()=>{ const d=document.getElementById('ops-dorse-dropdown'); if(d) d.style.display='none'; }, 200)"
+              onfocus="opsDorseAra(this.value)" />
+            <input type="hidden" id="ops-m-dorse-id" />
+            <button type="button" id="ops-m-dorse-clear" onclick="opsDorseTemizle()" style="display:none;position:absolute;right:8px;top:30px;background:transparent;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:4px 6px;" title="Dorse seçimini temizle">×</button>
+            <div id="ops-dorse-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;border-radius:8px;max-height:240px;overflow-y:auto;margin-top:2px;"></div>
+          </div>
+          <div class="srm-group">
+            <label>Sürücü Adı</label>
+            <input id="ops-m-sofor" class="srm-inp" placeholder="Ad Soyad" />
+          </div>
+          <div class="srm-group">
+            <label>Sürücü Telefon</label>
+            <input id="ops-m-sofor-tel" class="srm-inp" placeholder="0500 000 00 00" type="tel" />
+          </div>
+          <div class="srm-group full">
+            <label>Konteyner Tipi</label>
+            <div class="ops-step__kont-tip" id="ops-m-kont-tip-segmented">
+              <button type="button" data-val="20 DC"  onclick="opsKontTipSec(this)">20 DC</button>
+              <button type="button" data-val="40 DC"  onclick="opsKontTipSec(this)">40 DC</button>
+              <button type="button" data-val="40 HC"  onclick="opsKontTipSec(this)">40 HC</button>
+              <button type="button" data-val="45 HC"  onclick="opsKontTipSec(this)">45 HC</button>
+              <button type="button" data-val="Reefer" onclick="opsKontTipSec(this)">❄ Reefer</button>
+            </div>
+            <!-- Mevcut select korunur (saveOpsIsEmri okur), gizli senkron -->
+            <select id="ops-m-kont-tip" style="display:none;">
+              <option value=""></option>
+              <option value="20 DC">20 DC</option>
+              <option value="40 DC">40 DC</option>
+              <option value="40 HC">40 HC</option>
+              <option value="45 HC">45 HC</option>
+              <option value="Reefer">Reefer</option>
+            </select>
+          </div>
+        </div>
+        <div class="ops-step__error" id="ops-step2-err"></div>
+      </div>
+
+      <!-- ============ ADIM 3: Rota ============ -->
+      <div class="ops-step" data-step="3">
+        <p class="ops-step__intro">Alım, teslim ve dönüş noktaları. Google Maps paylaş linklerini yapıştırırsan rota haritası otomatik çizilir.</p>
+        <div class="srm-grid">
+          <div class="srm-group">
+            <label>Alım Noktası (Liman / Depo)</label>
+            <input id="ops-m-yukle" class="srm-inp" placeholder="Kumport, Mardaş, Medkon Depo..." />
+          </div>
+          <div class="srm-group">
+            <label>Teslim Yeri (Fabrika / Adres)</label>
+            <input id="ops-m-teslim" class="srm-inp" placeholder="Mega Metal - Çatalca, Argon Kimya..." />
+          </div>
+          <div class="srm-group" style="position:relative;">
+            <label>📍 Alım Konum Linki</label>
+            <div style="position:relative;">
+              <input id="ops-m-yukle-konum" class="srm-inp"
+                placeholder="https://maps.app.goo.gl/..."
+                style="padding-right:90px;"
+                oninput="opsKonumLinkPreview(this,'ops-m-yukle-konum-preview')" />
+              <span id="ops-m-yukle-konum-preview"
+                style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;display:none;"></span>
+            </div>
+          </div>
+          <div class="srm-group" style="position:relative;">
+            <label>📍 Teslim Konum Linki</label>
+            <div style="position:relative;">
+              <input id="ops-m-teslim-konum" class="srm-inp"
+                placeholder="https://maps.app.goo.gl/..."
+                style="padding-right:90px;"
+                oninput="opsKonumLinkPreview(this,'ops-m-teslim-konum-preview')" />
+              <span id="ops-m-teslim-konum-preview"
+                style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;display:none;"></span>
+            </div>
+          </div>
+          <div class="srm-group">
+            <label>Boş Dönüş Noktası</label>
+            <input id="ops-m-bos-donus" class="srm-inp" placeholder="Marport, Özmarmara, KLM Depo..." />
+          </div>
+          <div class="srm-group">
+            <label>Boşaltma Zamanı</label>
+            <input id="ops-m-boslama-zaman" class="srm-inp" type="datetime-local" />
+          </div>
+          <div class="srm-group">
+            <label>Referans No</label>
+            <input id="ops-m-referans" class="srm-inp" placeholder="BKG261558" style="font-family:var(--ops-font-mono);font-weight:600;" />
+          </div>
+          <div class="srm-group">
+            <label>Mühür No</label>
+            <input id="ops-m-muhur" class="srm-inp" placeholder="M-12345" style="font-family:var(--ops-font-mono);font-weight:600;" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ ADIM 4: Onay & Notlar ============ -->
+      <div class="ops-step" data-step="4">
+        <p class="ops-step__intro">Bilgileri kontrol et, gerekirse km sayacı ve notları gir, ardından kaydet.</p>
+        <div class="ops-summary" id="ops-stepper-summary">
+          <!-- _opsBuildSummary() doldurur -->
+        </div>
+        <div class="srm-grid">
+          <div class="srm-group">
+            <label style="display:flex;align-items:center;justify-content:space-between;">
+              <span>🧭 Başlangıç Km</span>
+              <span style="font-size:10px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">Araç sayacı</span>
+            </label>
+            <input id="ops-m-bas-km" class="srm-inp" type="number" min="0" step="1" placeholder="154230" oninput="_opsKmAutoHint()" />
+          </div>
+          <div class="srm-group">
+            <label style="display:flex;align-items:center;justify-content:space-between;">
+              <span>🏁 Bitiş Km</span>
+              <span style="font-size:10px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">Teslim sonrası</span>
+            </label>
+            <input id="ops-m-bit-km" class="srm-inp" type="number" min="0" step="1" placeholder="154312" oninput="_opsKmAutoHint()" />
+          </div>
+          <div class="srm-group full" id="ops-km-hint" style="display:none;font-size:11px;color:var(--ops-info);background:rgba(91,157,249,.08);border:1px solid rgba(91,157,249,.25);border-radius:6px;padding:8px 12px;"></div>
+          <div class="srm-group full">
+            <label>Notlar / Özel Talimatlar</label>
+            <textarea id="ops-m-notlar" class="srm-inp" rows="2" placeholder="Gümrükçü iletişim, özel dikkat edilecekler..."></textarea>
+          </div>
+        </div>
+      </div>
+
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeOpsIsEmriModal()">İptal</button>
-      <button onclick="saveOpsIsEmri()" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;cursor:pointer;border-radius:8px;padding:9px 20px;font-family:var(--font-body);font-size:13px;font-weight:700;box-shadow:0 2px 10px rgba(255,107,31,.3);transition:background .15s;" onmouseover="this.style.background='var(--accent2)'" onmouseout="this.style.background='var(--accent)'">
-        ✓ İş Emri Oluştur
+
+    <!-- FOOTER -->
+    <div class="ops-stepper-footer">
+      <span class="ops-stepper-footer__hint"><kbd>⌘</kbd>+<kbd>Enter</kbd> ile sonraki adım</span>
+      <button class="ops-btn ops-btn--ghost" onclick="opsModalDismiss()">İptal</button>
+      <button class="ops-btn ops-btn--quiet" id="ops-stepper-prev" onclick="opsStepperPrev()" style="display:none;">← Geri</button>
+      <button class="ops-btn ops-btn--primary" id="ops-stepper-next" onclick="opsStepperNext()">Sonraki →</button>
+      <button class="ops-btn ops-btn--primary" id="ops-stepper-save" onclick="saveOpsIsEmri()" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        İş Emri Oluştur
       </button>
     </div>
   </div>
