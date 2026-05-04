@@ -1605,43 +1605,66 @@ async function loadFuelData() {
   }
 }
 
-// ── Supabase: tek kayıt ekle / güncelle (upsert) ──
+// ── Supabase: tek kayıt ekle / güncelle (gerçek upsert) ──
+// Dönüş: { ok: true } veya { ok: false, error: string }
+// NOT: Çağıran async/await ile sonucu kontrol etmeli — bu fonksiyon throw etmez.
 async function saveFuelEntry(vehicleId, entry) {
   saveFuelDataLocal();
-  if (isLocalMode()) return;
+  if (isLocalMode()) return { ok: true, local: true };
+
+  // Auth token tazele — _authToken expired olabilir
+  if (!_authToken) {
+    try {
+      const { data: { session } } = await getSB().auth.getSession();
+      if (session?.access_token) _authToken = session.access_token;
+    } catch (_) {}
+  }
 
   const { data: { user } } = await getSB().auth.getUser();
-  if (!user) return;
+  if (!user) return { ok: false, error: 'Oturum bulunamadı — tekrar giriş yapın' };
+  if (!currentFirmaId) return { ok: false, error: 'Firma bilgisi yüklenmedi — sayfayı yenileyin' };
 
-  try {
-    const row = {
-      id         : entry.id,
-      user_id    : user.id,
-      firma_id   : currentFirmaId,       // ← firma bazlı paylaşım
-      arac_id    : vehicleId,
-      tarih      : entry.tarih,
-      km         : entry.km,
-      litre      : entry.litre,
-      fiyat      : entry.fiyat || 0,
-      aciklama   : entry.not   || null,
-      sofor      : entry.sofor || null,
-      yakit_turu : entry.yakitTuru || null,
-      istasyon   : entry.istasyon || null,
-      odeme_tipi : entry.odemeTipi || null,
-      fis_no     : entry.fisNo || null,
-      litre_fiyat: entry.litre > 0 ? +(((entry.fiyat||0)/entry.litre).toFixed(2)) : 0,
-      anomali_flag: entry.anomaliFlag || null
-    };
-    const res = await fetch(sbUrl('yakit_girisleri'), {
-      method : 'POST',
-      headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body   : JSON.stringify(row)
-    });
-    if (!res.ok) { const t = await res.text(); throw new Error(t); }
-  } catch (err) {
-    console.error('Yakıt Supabase kayıt hatası:', err);
-    showToast('Buluta kaydedilemedi — yerel yedek alındı.', 'error');
+  const row = {
+    id         : entry.id,
+    user_id    : user.id,
+    firma_id   : currentFirmaId,
+    arac_id    : vehicleId,
+    tarih      : entry.tarih,
+    km         : entry.km,
+    litre      : entry.litre,
+    fiyat      : entry.fiyat || 0,
+    aciklama   : entry.not   || null,
+    sofor      : entry.sofor || null,
+    yakit_turu : entry.yakitTuru || null,
+    istasyon   : entry.istasyon || null,
+    odeme_tipi : entry.odemeTipi || null,
+    fis_no     : entry.fisNo || null,
+    litre_fiyat: entry.litre > 0 ? +(((entry.fiyat||0)/entry.litre).toFixed(2)) : 0,
+    anomali_flag: entry.anomaliFlag || null
+  };
+
+  // 2 deneme — geçici ağ hatasında otomatik retry
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      // ?on_conflict=id zorunlu — yoksa "Prefer: merge-duplicates" çalışmaz, duplicate id'de 409 patlar
+      const res = await fetch(sbUrl('yakit_girisleri?on_conflict=id'), {
+        method : 'POST',
+        headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body   : JSON.stringify(row)
+      });
+      if (res.ok) return { ok: true };
+      const txt = await res.text();
+      lastErr = `HTTP ${res.status}: ${txt}`;
+      // 4xx → retry'a gerek yok, sunucu kabul etmiyor
+      if (res.status >= 400 && res.status < 500) break;
+    } catch (err) {
+      lastErr = err?.message || String(err);
+    }
+    if (attempt < 2) await new Promise(r => setTimeout(r, 800));
   }
+  console.error('Yakıt kayıt hatası:', lastErr);
+  return { ok: false, error: lastErr };
 }
 
 // ── Supabase: tek kayıt sil ──
@@ -1773,8 +1796,8 @@ function closeFuelModalBackdrop(e) {
   if (e.target === document.getElementById('fuel-modal-backdrop')) closeFuelModal();
 }
 
-// Yakıt girişi ekle
-function addFuelEntry() {
+// Yakıt girişi ekle — async, buluta gerçekten yazıldıktan sonra "eklendi" der
+async function addFuelEntry() {
   const km       = parseFloat(document.getElementById('f-fuel-km').value);
   const litre    = parseFloat(document.getElementById('f-fuel-litre').value);
   const fiyat    = parseFloat(document.getElementById('f-fuel-fiyat').value) || 0;
@@ -1814,31 +1837,52 @@ function addFuelEntry() {
     litreFiyat: litre > 0 ? +(fiyat/litre).toFixed(2) : 0,
     anomaliFlag: detectEntryAnomaly({km, litre, fiyat, tarih}, entries)
   };
-  fuelData[activeFuelVehicleId].push(entry);
-  fuelData[activeFuelVehicleId].sort((a, b) => new Date(a.tarih) - new Date(b.tarih) || a.km - b.km);
-  saveFuelDataLocal();
-  saveFuelEntry(activeFuelVehicleId, entry); // Supabase'e async kaydet
-  updateFuelStat();
-  updateStats(); // Filo Özeti panelini de güncelle
-  const _fuelV = vehicles.find(x => x.id === activeFuelVehicleId);
-  addActivity('yakıt_ekle', _fuelV?.plaka || '—', litre.toLocaleString('tr-TR',{maximumFractionDigits:1}) + ' L · ' + tarih + (sofor ? ' · '+sofor : ''));
-  renderFuelModal();
 
-  // Formu temizle (tarih dışında)
-  document.getElementById('f-fuel-km').value    = '';
-  document.getElementById('f-fuel-litre').value = '';
-  document.getElementById('f-fuel-fiyat').value = '';
-  document.getElementById('f-fuel-not').value   = '';
-  if (document.getElementById('f-fuel-sofor'))    document.getElementById('f-fuel-sofor').value    = '';
-  if (document.getElementById('f-fuel-istasyon')) document.getElementById('f-fuel-istasyon').value = '';
-  if (document.getElementById('f-fuel-odeme'))    document.getElementById('f-fuel-odeme').value    = '';
-  if (document.getElementById('f-fuel-fis'))      document.getElementById('f-fuel-fis').value      = '';
-  document.getElementById('fuel-preview').textContent = '';
+  // Submit butonu varsa lock — kullanıcı çift tıklayıp duplicate id basamasın
+  const submitBtn = document.getElementById('f-fuel-submit')
+                  || document.querySelector('[onclick="addFuelEntry()"]')
+                  || document.querySelector('[onclick*="addFuelEntry"]');
+  const oldBtnText = submitBtn?.textContent;
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Kaydediliyor…'; }
 
-  if (entry.anomaliFlag) {
-    showToast('Kayıt eklendi — ⚠ Anomali tespit edildi: ' + entry.anomaliFlag, 'error');
-  } else {
-    showToast('Yakıt kaydı eklendi ✓', 'success');
+  try {
+    // Önce bulut: gerçek başarı bekle, sonra UI'ye yansıt
+    const result = await saveFuelEntry(activeFuelVehicleId, entry);
+    if (!result.ok) {
+      showToast('Buluta kaydedilemedi: ' + (result.error || 'bilinmeyen hata'), 'error');
+      return;
+    }
+
+    // Bulut OK → şimdi local + UI
+    fuelData[activeFuelVehicleId].push(entry);
+    fuelData[activeFuelVehicleId].sort((a, b) => new Date(a.tarih) - new Date(b.tarih) || a.km - b.km);
+    saveFuelDataLocal();
+    updateFuelStat();
+    updateStats();
+    const _fuelV = vehicles.find(x => x.id === activeFuelVehicleId);
+    addActivity('yakıt_ekle', _fuelV?.plaka || '—',
+      litre.toLocaleString('tr-TR',{maximumFractionDigits:1}) + ' L · ' + tarih + (sofor ? ' · '+sofor : ''));
+    renderFuelModal();
+
+    // Formu temizle (tarih dışında)
+    document.getElementById('f-fuel-km').value    = '';
+    document.getElementById('f-fuel-litre').value = '';
+    document.getElementById('f-fuel-fiyat').value = '';
+    document.getElementById('f-fuel-not').value   = '';
+    if (document.getElementById('f-fuel-sofor'))    document.getElementById('f-fuel-sofor').value    = '';
+    if (document.getElementById('f-fuel-istasyon')) document.getElementById('f-fuel-istasyon').value = '';
+    if (document.getElementById('f-fuel-odeme'))    document.getElementById('f-fuel-odeme').value    = '';
+    if (document.getElementById('f-fuel-fis'))      document.getElementById('f-fuel-fis').value      = '';
+    const prev = document.getElementById('fuel-preview');
+    if (prev) prev.textContent = '';
+
+    if (entry.anomaliFlag) {
+      showToast('Kayıt eklendi — ⚠ Anomali: ' + entry.anomaliFlag, 'error');
+    } else {
+      showToast('Yakıt kaydı eklendi ✓', 'success');
+    }
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = oldBtnText || 'Ekle'; }
   }
 }
 
@@ -2846,11 +2890,26 @@ async function downloadSingleVehiclePDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const PW = 210, PH = 297, ML = 14, MR = 14, CW = PW - ML - MR;
+  // Site renk paleti (tokens.css ile birebir) — light tema, navy primary + accent orange
   const C = {
-    bg:[8,12,16], surface:[17,24,32], surface2:[24,32,44], border:[37,47,62],
-    accent:[249,115,22], text:[226,234,243], text2:[168,184,204],
-    muted:[82,96,112], green:[34,197,94], yellow:[245,158,11],
-    red:[239,68,68], blue:[56,189,248], white:[255,255,255],
+    bg:        [255,255,255],   // sayfa: beyaz
+    surface:   [248,250,253],   // soft surface
+    surface2:  [238,244,251],   // navy-50
+    surface3:  [228,236,247],   // bir tık koyu
+    border:    [225,231,240],   // ince border
+    borderS:   [200,211,226],   // güçlü border
+    navy:      [44,90,158],     // primary
+    navyDark:  [11,26,47],      // header bg / başlık metni
+    accent:    [255,107,31],    // accent orange
+    accentDark:[229,90,15],
+    text:      [11,26,47],      // ana metin
+    text2:     [91,107,130],
+    muted:     [137,151,172],
+    green:     [22,169,116],
+    yellow:    [229,161,0],
+    red:       [220,56,56],
+    blue:      [44,90,158],
+    white:     [255,255,255],
   };
   function _tr(s) {
     if (!s) return '';
@@ -2866,25 +2925,37 @@ async function downloadSingleVehiclePDF() {
   function rr(x,y,w,h,r,s='F') { doc.roundedRect(x,y,w,h,r,r,s); }
   let pg = 1;
   function footer() {
-    st(C.muted); doc.setFontSize(8);
-    doc.text(_tr('Filo Takip | ') + _tr(v.plaka||''), ML, PH-8);
-    doc.text(_tr('Sayfa ') + pg, PW-MR, PH-8, {align:'right'});
-    doc.text(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH-8, {align:'center'});
-    doc.setFontSize(6); doc.setTextColor(50,62,78);
-    doc.text('created by cihanozcan app.', PW/2, PH-3, {align:'center'});
+    // Üst hairline
+    sf(C.border); rc(ML, PH-12, CW, 0.3);
+    st(C.text2); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(_tr('Fleetly Filo Yonetim  •  ') + _tr(v.plaka||''), ML, PH-7);
+    doc.text(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH-7, {align:'center'});
+    st(C.navy); doc.setFont('helvetica','bold');
+    doc.text(_tr('Sayfa ') + pg, PW-MR, PH-7, {align:'right'});
   }
-  function newPage() { footer(); doc.addPage(); pg++; sf(C.bg); rc(0,0,PW,PH); }
-  sf(C.bg); rc(0,0,PW,PH);
-  sf(C.surface); rc(0,0,PW,42);
-  sf(C.accent); rc(0,0,4,42);
-  doc.addImage(_logo,'PNG',ML,7,28,28);
-  st(C.white); doc.setFontSize(18); doc.setFont('helvetica','bold');
-  doc.text(_tr(v.plaka||'—'), ML+32, 18);
-  doc.setFontSize(9); doc.setFont('helvetica','normal'); st(C.text2);
-  doc.text(_tr([v.tip,v.sofor].filter(Boolean).join('  |  ')||'Filo Takip'), ML+32, 26);
-  sf(C.surface2); rr(PW-ML-52,12,52,18,3);
-  st(C.accent); doc.setFontSize(8); doc.setFont('helvetica','bold');
-  doc.text(_tr(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})), PW-ML-26, 22, {align:'center'});
+  function newPage() { footer(); doc.addPage(); pg++; drawHeader(); }
+  function drawHeader() {
+    // Navy gradient bant — sabit dark, beyaz tipografi
+    sf(C.navyDark); rc(0,0,PW,42);
+    sf(C.navy); rc(0,38,PW,2);          // alt navy çizgisi
+    sf(C.accent); rc(0,40,PW,2);        // ince accent çizgisi
+    doc.addImage(_logo,'PNG',ML,7,28,28);
+    st(C.white); doc.setFontSize(20); doc.setFont('helvetica','bold');
+    doc.text(_tr(v.plaka||'—'), ML+32, 18);
+    doc.setFontSize(10); doc.setFont('helvetica','normal'); st([200,215,235]);
+    doc.text(_tr('Yakit Tuketim Raporu  •  ' + [v.tip,v.sofor].filter(Boolean).join(' • ')), ML+32, 26);
+    // Sağ üst tarih kapsülü
+    sf([255,255,255,0.10]); doc.setFillColor(255,255,255); rr(PW-ML-58,11,58,20,4);
+    sf(C.navyDark); rr(PW-ML-58,11,58,20,4,'S');
+    setStrokeIfPossible(doc, C.borderS);
+    st(C.navy); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text(_tr('RAPOR TARIHI'), PW-ML-29, 18, {align:'center'});
+    st(C.navyDark); doc.setFontSize(10);
+    doc.text(_tr(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})), PW-ML-29, 26, {align:'center'});
+  }
+  // Yardımcı: setDrawColor varsa stroke ayarla
+  function setStrokeIfPossible(d, c) { try { d.setDrawColor(c[0],c[1],c[2]); d.setLineWidth(0.3); } catch(_){} }
+  drawHeader();
   let y = 52;
   const totalL  = ve.reduce((s,e)=>s+(e.litre||0),0);
   const totalTL = ve.reduce((s,e)=>s+((e.litre||0)*(e.fiyat||0)),0);
@@ -2900,17 +2971,19 @@ async function downloadSingleVehiclePDF() {
     {l:_tr('Ort. L/100km'), v:avgC?avgC.toFixed(1)+' L/100km':'--', c:avgC?(avgC<25?C.green:avgC<35?C.yellow:C.red):C.muted},
     {l:_tr('Son Fiyat'), v:lastFiy>0?lastFiy.toFixed(2)+' TL':'--', c:[167,139,250]},
   ];
+  // KPI kartları — beyaz zemin + ince border + sol renk şeridi
   const cW = (CW-10)/6;
   cards.forEach((card,i) => {
     const cx = ML+i*(cW+2);
-    sf(C.surface); rr(cx,y,cW,22,2);
-    sf(card.c); rr(cx,y,3,22,1);
-    st(card.c); doc.setFontSize(9); doc.setFont('helvetica','bold');
-    doc.text(card.v, cx+cW/2, y+10, {align:'center'});
-    st(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
-    doc.text(card.l.toUpperCase(), cx+cW/2, y+17, {align:'center'});
+    sf(C.surface); rr(cx,y,cW,24,2);
+    setStrokeIfPossible(doc, C.border); rr(cx,y,cW,24,2,'S');
+    sf(card.c); rr(cx,y,2.4,24,1);
+    st(card.c); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text(card.v, cx+cW/2, y+12, {align:'center'});
+    st(C.muted); doc.setFontSize(6.8); doc.setFont('helvetica','normal');
+    doc.text(card.l.toUpperCase(), cx+cW/2, y+19, {align:'center'});
   });
-  y += 30;
+  y += 32;
   const now2 = new Date();
   const months12 = [];
   for (let i=11;i>=0;i--) {
@@ -2925,57 +2998,69 @@ async function downloadSingleVehiclePDF() {
     type:'bar',
     data:{labels:months12.map(m=>m.d.toLocaleDateString('tr-TR',{month:'short',year:'2-digit'})),
       datasets:[{label:'Litre (L)',data:months12.map(m=>+(mL[m.key]||0).toFixed(1)),
-        backgroundColor:'rgba(249,115,22,0.75)',borderColor:'rgba(249,115,22,1)',borderWidth:1.5,borderRadius:4}]},
+        backgroundColor:'rgba(255,107,31,0.85)',borderColor:'rgba(229,90,15,1)',borderWidth:1.5,borderRadius:4}]},
     options:{responsive:false,animation:false,
-      plugins:{legend:{labels:{color:'#a8b8cc',font:{size:10}}}},
-      scales:{x:{ticks:{color:'#a8b8cc',font:{size:9}},grid:{color:'rgba(255,255,255,0.06)'}},
-        y:{ticks:{color:'var(--accent)',font:{size:9}},grid:{color:'rgba(255,255,255,0.06)'},
-           title:{display:true,text:'Litre',color:'var(--accent)',font:{size:9}}}}}
+      plugins:{legend:{labels:{color:'#0B1A2F',font:{size:10,weight:'bold'}}}},
+      scales:{x:{ticks:{color:'#5B6B82',font:{size:9}},grid:{color:'rgba(11,26,47,0.06)'}},
+        y:{ticks:{color:'#5B6B82',font:{size:9}},grid:{color:'rgba(11,26,47,0.06)'},
+           title:{display:true,text:'Litre',color:'#0B1A2F',font:{size:9,weight:'bold'}}}}}
   });
   await new Promise(res=>setTimeout(res,200));
-  st(C.accent); doc.setFontSize(10); doc.setFont('helvetica','bold');
-  doc.text(_tr('Aylik Yakit Tuketimi (Son 12 Ay)'), ML, y); y+=4;
+  // Bölüm başlığı bandı
+  sf(C.surface2); rc(ML, y, CW, 8);
+  sf(C.accent); rc(ML, y, 3, 8);
+  st(C.navyDark); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(_tr('Aylik Yakit Tuketimi (Son 12 Ay)'), ML+6, y+5.5);
+  y += 12;
   const chartH = Math.min(60, PH-y-80);
   doc.addImage(chartCanvas.toDataURL('image/png'),'PNG',ML,y,CW,chartH);
   y += chartH+10; chartInst.destroy(); chartCanvas.remove();
-  if (y > PH-50) { newPage(); y=18; }
-  st(C.accent); doc.setFontSize(10); doc.setFont('helvetica','bold');
-  doc.text(_tr('Yakit Giris Gecmisi'), ML, y); y+=6;
+  if (y > PH-50) { newPage(); y=52; }
+
+  // Bölüm başlığı bandı
+  sf(C.surface2); rc(ML, y, CW, 8);
+  sf(C.accent); rc(ML, y, 3, 8);
+  st(C.navyDark); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(_tr('Yakit Giris Gecmisi'), ML+6, y+5.5);
+  y += 12;
+
   const dCols = [
     {l:_tr('Tarih'),w:24},{l:_tr('KM Sayaci'),w:28},{l:_tr('Litre'),w:20},
     {l:_tr('Birim Fiyat'),w:26},{l:_tr('Tutar (TL)'),w:26},
     {l:_tr('L/100km'),w:24},{l:_tr('KM Fark'),w:22},{l:_tr('Not'),w:CW-170},
   ];
   function drawHdr(yy) {
-    sf(C.surface2); rc(ML,yy,CW,7);
-    sf(C.accent); rc(ML,yy,CW,0.7); rc(ML,yy+6.3,CW,0.7);
-    st(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
-    let hx=ML+2; dCols.forEach(dc=>{doc.text(dc.l.toUpperCase(),hx,yy+4.8);hx+=dc.w;});
-    return yy+8;
+    sf(C.navyDark); rc(ML,yy,CW,7.5);
+    st(C.white); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    let hx=ML+2; dCols.forEach(dc=>{doc.text(dc.l.toUpperCase(),hx,yy+5);hx+=dc.w;});
+    return yy+8.5;
   }
   y = drawHdr(y);
   ve.forEach((e,ei) => {
-    if (y > PH-18) { newPage(); y=15; y=drawHdr(y); }
+    if (y > PH-18) { newPage(); y=52; y=drawHdr(y); }
     const prev = ei>0?ve[ei-1]:null;
     const kmFark = prev?e.km-prev.km:null;
     const cons = (kmFark&&kmFark>0)?(e.litre/kmFark)*100:null;
     const tutar = e.litre*(e.fiyat||0);
-    sf(ei%2===0?C.surface:C.bg); rc(ML,y,CW,6.5);
-    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    // Zebra: alternatif beyaz / soft surface
+    sf(ei%2===0?C.surface:C.white); rc(ML,y,CW,6.8);
+    setStrokeIfPossible(doc, C.border); rc(ML, y+6.8, CW, 0.2);
+    doc.setFontSize(7.2); doc.setFont('helvetica','normal');
     let rx=ML+2;
-    st(C.text2); doc.text(e.tarih?e.tarih.split('-').reverse().join('.'):'—',rx,y+4.5); rx+=dCols[0].w;
-    st(C.text);  doc.text(e.km?e.km.toLocaleString('tr-TR')+' km':'—',rx,y+4.5); rx+=dCols[1].w;
-    st(C.accent);doc.text(e.litre?e.litre.toLocaleString('tr-TR',{minimumFractionDigits:1})+' L':'—',rx,y+4.5); rx+=dCols[2].w;
-    st(C.text2); doc.text(e.fiyat?e.fiyat.toFixed(2)+' TL':'—',rx,y+4.5); rx+=dCols[3].w;
-    st(C.green); doc.text(tutar>0?tutar.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—',rx,y+4.5); rx+=dCols[4].w;
-    if (cons!==null) { st(cons<25?C.green:cons<35?C.yellow:C.red); doc.text(cons.toFixed(1)+' L',rx,y+4.5); }
-    else { st(C.muted); doc.text(ei===0?'Ref.':'—',rx,y+4.5); }
+    st(C.text2); doc.text(e.tarih?e.tarih.split('-').reverse().join('.'):'—',rx,y+4.7); rx+=dCols[0].w;
+    st(C.text);  doc.setFont('helvetica','bold'); doc.text(e.km?e.km.toLocaleString('tr-TR')+' km':'—',rx,y+4.7); doc.setFont('helvetica','normal'); rx+=dCols[1].w;
+    st(C.accent);doc.setFont('helvetica','bold'); doc.text(e.litre?e.litre.toLocaleString('tr-TR',{minimumFractionDigits:1})+' L':'—',rx,y+4.7); doc.setFont('helvetica','normal'); rx+=dCols[2].w;
+    st(C.text2); doc.text(e.fiyat?e.fiyat.toFixed(2)+' TL':'—',rx,y+4.7); rx+=dCols[3].w;
+    st(C.green); doc.setFont('helvetica','bold'); doc.text(tutar>0?tutar.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—',rx,y+4.7); doc.setFont('helvetica','normal'); rx+=dCols[4].w;
+    if (cons!==null) { st(cons<25?C.green:cons<35?C.yellow:C.red); doc.text(cons.toFixed(1)+' L',rx,y+4.7); }
+    else { st(C.muted); doc.text(ei===0?'Ref.':'—',rx,y+4.7); }
     rx+=dCols[5].w;
-    st(C.blue); doc.text(kmFark!==null?'+'+kmFark.toLocaleString('tr-TR')+' km':'—',rx,y+4.5); rx+=dCols[6].w;
-    st(C.muted); doc.text(_tr((e.not||'').slice(0,22)),rx,y+4.5);
-    y+=6.5;
+    st(C.navy); doc.text(kmFark!==null?'+'+kmFark.toLocaleString('tr-TR')+' km':'—',rx,y+4.7); rx+=dCols[6].w;
+    st(C.muted); doc.text(_tr((e.not||'').slice(0,22)),rx,y+4.7);
+    y+=6.8;
   });
-  sf(C.border); rc(ML,y,CW,0.5);
+  // Tablo alt çizgisi
+  sf(C.navy); rc(ML,y,CW,0.5);
   footer();
   _pdfSave(doc, 'yakit_' + (v.plaka||'arac').replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.pdf');
   showToast('PDF indirildi ✓', 'success');
@@ -3019,26 +3104,30 @@ async function downloadFuelPDF() {
   const MR = 14;  // margin right
   const CW = PW - ML - MR; // content width
 
-  // ── Renk paleti ──
+  // ── Renk paleti — site tokens.css ile birebir (light tema) ──
   const C = {
-    bg:       [8,  12, 16],
-    surface:  [17, 24, 32],
-    surface2: [24, 32, 44],
-    border:   [37, 47, 62],
-    accent:   [249,115,22],
-    accentD:  [124,56,16],
-    text:     [226,234,243],
-    text2:    [168,184,204],
-    muted:    [82, 96, 112],
-    green:    [34, 197,94],
-    greenD:   [20, 83, 45],
-    yellow:   [245,158,11],
-    yellowD:  [113,63,18],
-    red:      [239,68, 68],
-    redD:     [127,29,29],
-    blue:     [56, 189,248],
-    blueD:    [12, 74, 110],
-    white:    [255,255,255],
+    bg:        [255,255,255],   // beyaz sayfa
+    surface:   [248,250,253],
+    surface2:  [238,244,251],
+    surface3:  [228,236,247],
+    border:    [225,231,240],
+    borderS:   [200,211,226],
+    navy:      [44,90,158],
+    navyDark:  [11,26,47],
+    accent:    [255,107,31],
+    accentD:   [229,90,15],
+    text:      [11,26,47],
+    text2:     [91,107,130],
+    muted:     [137,151,172],
+    green:     [22,169,116],
+    greenD:    [11,109,75],
+    yellow:    [229,161,0],
+    yellowD:   [152,105,0],
+    red:       [220,56,56],
+    redD:      [140,30,30],
+    blue:      [44,90,158],
+    blueD:     [22,55,103],
+    white:     [255,255,255],
   };
 
   function setFill(c)   { doc.setFillColor(...c); }
@@ -3049,51 +3138,44 @@ async function downloadFuelPDF() {
 
   let pageNum = 1;
   function addPageNum() {
-    setTxt(C.muted);
-    doc.setFontSize(8);
-    doc.text(tr('Filo Takip Sistemi - Yakit Raporu'), ML, PH - 8);
-    doc.text(tr('Sayfa ') + pageNum, PW - MR, PH - 8, { align: 'right' });
-    doc.text(new Date().toLocaleDateString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH - 8, {align:'center'});
+    // Üst hairline
+    setFill(C.border); rect(ML, PH-12, CW, 0.3);
+    setTxt(C.text2); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(tr('Fleetly Filo Yonetim  •  Yakit Raporu'), ML, PH - 7);
+    doc.text(new Date().toLocaleDateString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH - 7, {align:'center'});
+    setTxt(C.navy); doc.setFont('helvetica','bold');
+    doc.text(tr('Sayfa ') + pageNum, PW - MR, PH - 7, { align: 'right' });
+  }
+
+  function drawHeaderBand() {
+    setFill(C.navyDark);
+    rect(0, 0, PW, 42);
+    setFill(C.navy);   rect(0, 38, PW, 2);
+    setFill(C.accent); rect(0, 40, PW, 2);
+    doc.addImage(LOGO_B64, 'PNG', ML, 7, 28, 28);
+    setTxt(C.white); doc.setFontSize(20); doc.setFont('helvetica','bold');
+    doc.text(tr('Yakit Tuketim Raporu'), ML+32, 18);
+    setTxt([200,215,235]); doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.text(tr('Tum Araclar  •  Filo Genel Ozeti'), ML+32, 26);
+    // Sağ tarih kapsülü
+    setFill(C.white);
+    roundRect(PW-ML-58, 11, 58, 20, 4);
+    try { doc.setDrawColor(...C.navyDark); doc.setLineWidth(0.3); roundRect(PW-ML-58, 11, 58, 20, 4, 'S'); } catch(_){}
+    setTxt(C.navy); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text(tr('RAPOR TARIHI'), PW-ML-29, 18, {align:'center'});
+    setTxt(C.navyDark); doc.setFontSize(10);
+    doc.text(tr(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})), PW-ML-29, 26, {align:'center'});
   }
 
   function newPage() {
     addPageNum();
     doc.addPage();
     pageNum++;
-    // Sayfa arka planı
-    setFill(C.bg);
-    rect(0, 0, PW, PH);
+    drawHeaderBand();
   }
 
-  // ── SAYFA 1 ARKA PLAN ──
-  setFill(C.bg);
-  rect(0, 0, PW, PH);
-
-  // ── HEADER BANDI ──
-  setFill(C.surface);
-  rect(0, 0, PW, 42);
-  // Accent şerit
-  setFill(C.accent);
-  rect(0, 0, 4, 42);
-  doc.addImage(LOGO_B64, 'PNG', ML, 7, 28, 28);
-  // Başlık
-  setTxt(C.white);
-  doc.setFontSize(18);
-  doc.setFont('helvetica','bold');
-  doc.text(tr('Yakit Tuketim Raporu'), ML+32, 18);
-  doc.setFontSize(9);
-  doc.setFont('helvetica','normal');
-  setTxt(C.text2);
-  doc.text(tr('Filo Takip Sistemi  |  Tum Araclar'), ML+32, 26);
-  // Tarih badge
-  const dateStr = new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'});
-  setFill(C.surface2);
-  roundRect(PW-ML-52, 12, 52, 18, 3);
-  setTxt(C.accent);
-  doc.setFontSize(8);
-  doc.setFont('helvetica','bold');
-  doc.text(dateStr, PW-ML-26, 22, {align:'center'});
-
+  // ── SAYFA 1 ──
+  drawHeaderBand();
   let y = 52;
 
   // ── ÖZET İSTATİSTİK KARTLARI ──
@@ -3128,36 +3210,39 @@ async function downloadFuelPDF() {
   cards.forEach((c, i) => {
     const cx = ML + i*(cardW+3);
     setFill(C.surface);
-    roundRect(cx, y, cardW, 26, 3);
-    // Sol şerit
+    roundRect(cx, y, cardW, 28, 3);
+    try { doc.setDrawColor(...C.border); doc.setLineWidth(0.3); roundRect(cx, y, cardW, 28, 3, 'S'); } catch(_){}
+    // Sol renk şeridi
     setFill(c.color);
-    roundRect(cx, y, 3, 26, 1);
-    // İkon dairesi
-    setFill(c.color.map(x=>Math.round(x*0.2)));
-    roundRect(cx+5, y+5, 14, 16, 2);
+    roundRect(cx, y, 2.6, 28, 1);
+    // İkon kapsülü — açık tonlu zemin
+    setFill([Math.min(255, c.color[0] + (255-c.color[0])*0.85),
+             Math.min(255, c.color[1] + (255-c.color[1])*0.85),
+             Math.min(255, c.color[2] + (255-c.color[2])*0.85)]);
+    roundRect(cx+5, y+5, 14, 18, 2);
     setTxt(c.color);
-    doc.setFontSize(8);
-    doc.setFont('helvetica','bold');
-    doc.text(c.icon, cx+12, y+15, {align:'center'});
-    // Değer
-    setTxt(C.white);
     doc.setFontSize(10);
     doc.setFont('helvetica','bold');
-    doc.text(c.value, cx+22, y+12);
+    doc.text(c.icon, cx+12, y+16, {align:'center'});
+    // Değer
+    setTxt(C.text);
+    doc.setFontSize(11);
+    doc.setFont('helvetica','bold');
+    doc.text(c.value, cx+22, y+13);
     // Etiket
     setTxt(C.muted);
-    doc.setFontSize(7.5);
+    doc.setFontSize(7.2);
     doc.setFont('helvetica','normal');
-    doc.text(c.label, cx+22, y+20);
+    doc.text(tr(c.label).toUpperCase(), cx+22, y+21);
   });
-  y += 34;
+  y += 36;
 
-  // ── ARAÇ BAZLI ÖZET TABLO ──
-  setTxt(C.accent);
-  doc.setFontSize(10);
-  doc.setFont('helvetica','bold');
-  doc.text(tr('Arac Bazli Ozet'), ML, y);
-  y += 6;
+  // ── ARAÇ BAZLI ÖZET — Bölüm başlığı bandı ──
+  setFill(C.surface2); rect(ML, y, CW, 8);
+  setFill(C.accent); rect(ML, y, 3, 8);
+  setTxt(C.navyDark); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(tr('Arac Bazli Ozet'), ML+6, y+5.5);
+  y += 12;
 
   // Tablo header
   const vCols = [
@@ -3169,23 +3254,21 @@ async function downloadFuelPDF() {
     { label:'Ort. L/100km', w:35 },
     { label:'Son Tarih', w:CW-168 },
   ];
-  setFill(C.surface2);
+  // Tablo başlığı — navy zemin, beyaz yazı
+  setFill(C.navyDark);
   rect(ML, y, CW, 8);
-  setFill(C.accent);
-  rect(ML, y, CW, 1);
-
-  setTxt(C.muted);
+  setTxt(C.white);
   doc.setFontSize(7);
   doc.setFont('helvetica','bold');
   let hx = ML + 2;
   vCols.forEach(col => {
-    doc.text(col.label.toUpperCase(), hx, y+5.5);
+    doc.text(tr(col.label).toUpperCase(), hx, y+5.5);
     hx += col.w;
   });
   y += 9;
 
   vehicles.forEach((v, vi) => {
-    if (y > PH - 30) { newPage(); y = 20; }
+    if (y > PH - 30) { newPage(); y = 52; }
     const ve = (fuelData[v.id]||[]).slice().sort((a,b)=>new Date(a.tarih)-new Date(b.tarih));
     if (ve.length === 0) return;
     const vL   = ve.reduce((s,e)=>s+(e.litre||0),0);
@@ -3193,19 +3276,22 @@ async function downloadFuelPDF() {
     const vc   = allByVehicle[v.id];
     const last = ve[ve.length-1];
 
-    setFill(vi%2===0 ? C.surface : C.bg);
+    // Zebra: alternatif beyaz / hafif gri
+    setFill(vi%2===0 ? C.surface : C.white);
     rect(ML, y, CW, 7.5);
+    try { doc.setDrawColor(...C.border); doc.setLineWidth(0.2); doc.line(ML, y+7.5, ML+CW, y+7.5); } catch(_){}
 
-    setTxt(C.accent);
-    doc.setFontSize(8);
+    setTxt(C.navy);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica','bold');
     let rx = ML+2;
     doc.text(tr(v.plaka||'—'), rx, y+5); rx += vCols[0].w;
     setTxt(C.text2);
+    doc.setFontSize(8);
     doc.setFont('helvetica','normal');
     doc.text(tr(v.tip||'—'), rx, y+5); rx += vCols[1].w;
     doc.text(ve.length.toString(), rx, y+5); rx += vCols[2].w;
-    setTxt(C.accent);
+    setTxt(C.accent); doc.setFont('helvetica','bold');
     doc.text(vL.toLocaleString('tr-TR',{maximumFractionDigits:1})+' L', rx, y+5); rx += vCols[3].w;
     setTxt(C.green);
     doc.text(vTL>0 ? vTL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—', rx, y+5); rx += vCols[4].w;
@@ -3213,19 +3299,19 @@ async function downloadFuelPDF() {
       setTxt(vc<25?C.green:vc<35?C.yellow:C.red);
       doc.text(vc.toFixed(1)+' L/100km', rx, y+5);
     } else {
-      setTxt(C.muted);
+      setTxt(C.muted); doc.setFont('helvetica','normal');
       doc.text('—', rx, y+5);
     }
     rx += vCols[5].w;
-    setTxt(C.text2);
+    setTxt(C.text2); doc.setFont('helvetica','normal');
     doc.text(last ? last.tarih.split('-').reverse().join('.') : '—', rx, y+5);
     y += 7.5;
   });
 
-  // Alt border
-  setFill(C.border);
+  // Alt navy şerit
+  setFill(C.navy);
   rect(ML, y, CW, 0.5);
-  y += 10;
+  y += 12;
 
   // ── AYLIK LİTRE GRAFİĞİ (Canvas ile çiz) ──
   // Ay bazlı veri topla (son 12 ay)
@@ -3255,7 +3341,7 @@ async function downloadFuelPDF() {
   const litreData  = months12.map(m => +(monthL[m.key]||0).toFixed(1));
   const tutarData  = months12.map(m => +(monthTL[m.key]||0).toFixed(0));
 
-  // Chart.js ile canvas grafiği oluştur
+  // Chart.js ile canvas grafiği oluştur (light tema)
   const chartInst = new Chart(chartCanvas, {
     type: 'bar',
     data: {
@@ -3264,8 +3350,8 @@ async function downloadFuelPDF() {
         {
           label: 'Litre (L)',
           data: litreData,
-          backgroundColor: 'rgba(249,115,22,0.75)',
-          borderColor: 'rgba(249,115,22,1)',
+          backgroundColor: 'rgba(255,107,31,0.85)',
+          borderColor: 'rgba(229,90,15,1)',
           borderWidth: 1.5,
           borderRadius: 4,
           yAxisID: 'y',
@@ -3274,10 +3360,10 @@ async function downloadFuelPDF() {
           label: 'Maliyet (TL)',
           data: tutarData,
           type: 'line',
-          borderColor: 'rgba(34,197,94,1)',
-          backgroundColor: 'rgba(34,197,94,0.1)',
+          borderColor: 'rgba(22,169,116,1)',
+          backgroundColor: 'rgba(22,169,116,0.10)',
           borderWidth: 2,
-          pointBackgroundColor: 'rgba(34,197,94,1)',
+          pointBackgroundColor: 'rgba(22,169,116,1)',
           pointRadius: 4,
           fill: true,
           tension: 0.35,
@@ -3289,7 +3375,7 @@ async function downloadFuelPDF() {
       responsive: false,
       animation: false,
       plugins: {
-        legend: { labels: { color: '#a8b8cc', font: { size: 11 } } },
+        legend: { labels: { color: '#0B1A2F', font: { size: 11, weight: 'bold' } } },
       },
       scales: {
         x: { ticks:{ color:'#a8b8cc', font:{size:9} }, grid:{ color:'rgba(255,255,255,0.06)' } },
@@ -3299,13 +3385,13 @@ async function downloadFuelPDF() {
     }
   });
 
-  // Grafik başlığı
-  if (y + 75 > PH - 25) { newPage(); y = 20; }
-  setTxt(C.accent);
-  doc.setFontSize(10);
-  doc.setFont('helvetica','bold');
-  doc.text(tr('Aylik Litre ve Maliyet Grafigi (Son 12 Ay)'), ML, y);
-  y += 5;
+  // Grafik başlığı bandı
+  if (y + 80 > PH - 25) { newPage(); y = 52; }
+  setFill(C.surface2); rect(ML, y, CW, 8);
+  setFill(C.accent); rect(ML, y, 3, 8);
+  setTxt(C.navyDark); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(tr('Aylik Litre ve Maliyet Grafigi (Son 12 Ay)'), ML+6, y+5.5);
+  y += 12;
 
   // Canvas'ı PNG'ye dönüştür, PDF'e ekle
   await new Promise(res => setTimeout(res, 200)); // Chart.js render bekle
@@ -3321,24 +3407,24 @@ async function downloadFuelPDF() {
     const ve = (fuelData[v.id]||[]).slice().sort((a,b)=>new Date(a.tarih)-new Date(b.tarih)||a.km-b.km);
     if (ve.length === 0) continue;
 
-    // Yeni sayfa başlangıcı
+    // Yeni sayfa başlangıcı (header'dan sonra)
     newPage();
-    y = 18;
+    y = 52;
 
-    // Araç başlık bandı
-    setFill(C.surface);
-    roundRect(ML, y, CW, 14, 3);
+    // Araç başlık bandı — navy dolgu, beyaz tipografi, accent şerit
+    setFill(C.navyDark);
+    roundRect(ML, y, CW, 16, 3);
     setFill(C.accent);
-    roundRect(ML, y, 3, 14, 1);
-    setTxt(C.accent);
-    doc.setFontSize(11);
+    roundRect(ML, y, 3, 16, 1);
+    setTxt(C.white);
+    doc.setFontSize(13);
     doc.setFont('helvetica','bold');
-    doc.text(tr(v.plaka||'—'), ML+7, y+9.5);
-    setTxt(C.text2);
-    doc.setFontSize(8);
+    doc.text(tr(v.plaka||'—'), ML+9, y+10.5);
+    setTxt([200,215,235]);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica','normal');
-    const vMeta = tr([v.tip, v.sofor].filter(Boolean).join('  ·  '));
-    doc.text(vMeta, ML+38, y+9.5);
+    const vMeta = tr([v.tip, v.sofor].filter(Boolean).join('  •  '));
+    doc.text(vMeta, ML+50, y+10.5);
 
     // Araç özet kartları (mini)
     const ve2 = ve;
@@ -3347,7 +3433,7 @@ async function downloadFuelPDF() {
     const vKmRange = ve2.length>=2 ? ve2[ve2.length-1].km-ve2[0].km : 0;
     const vCons    = allByVehicle[v.id];
     const vLastFiyat = ve2[ve2.length-1]?.fiyat||0;
-    y += 18;
+    y += 20;
 
     const mCards = [
       { l:'Dolum',   v:ve2.length+' kez',   c:C.blue },
@@ -3355,23 +3441,25 @@ async function downloadFuelPDF() {
       { l:'Maliyet', v:vTotalTL>0?vTotalTL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL':'—', c:C.green },
       { l:'Mesafe',  v:vKmRange>0?vKmRange.toLocaleString('tr-TR')+' km':'—', c:C.yellow },
       { l:'L/100km', v:vCons?vCons.toFixed(1):'—', c:vCons?(vCons<25?C.green:vCons<35?C.yellow:C.red):C.muted },
-      { l:'Son Fiyat', v:vLastFiyat>0?vLastFiyat.toFixed(2)+' TL':'—', c:C.purple||C.text2 },
+      { l:'Son Fiyat', v:vLastFiyat>0?vLastFiyat.toFixed(2)+' TL':'—', c:C.text },
     ];
     const mcW = (CW-5*2)/6;
     mCards.forEach((mc, mi) => {
       const mx = ML + mi*(mcW+2);
-      setFill(C.surface2);
-      roundRect(mx, y, mcW, 16, 2);
+      setFill(C.surface);
+      roundRect(mx, y, mcW, 18, 2);
+      try { doc.setDrawColor(...C.border); doc.setLineWidth(0.25); roundRect(mx, y, mcW, 18, 2, 'S'); } catch(_){}
+      setFill(mc.c); roundRect(mx, y, 2, 18, 1);
       setTxt(mc.c);
-      doc.setFontSize(9);
+      doc.setFontSize(9.5);
       doc.setFont('helvetica','bold');
-      doc.text(mc.v, mx+mcW/2, y+7.5, {align:'center'});
+      doc.text(mc.v, mx+mcW/2, y+8.5, {align:'center'});
       setTxt(C.muted);
       doc.setFontSize(6.5);
       doc.setFont('helvetica','normal');
-      doc.text(mc.l.toUpperCase(), mx+mcW/2, y+13, {align:'center'});
+      doc.text(mc.l.toUpperCase(), mx+mcW/2, y+14.5, {align:'center'});
     });
-    y += 22;
+    y += 24;
 
     // Araç için aylık grafik (canvas)
     const vMonthL = {};
@@ -3392,37 +3480,40 @@ async function downloadFuelPDF() {
         datasets:[{
           label:'Litre (L)',
           data:vLitreData,
-          backgroundColor:'rgba(249,115,22,0.7)',
-          borderColor:'rgba(249,115,22,1)',
+          backgroundColor:'rgba(255,107,31,0.85)',
+          borderColor:'rgba(229,90,15,1)',
           borderWidth:1.5, borderRadius:4,
         }]
       },
       options:{
         responsive:false, animation:false,
-        plugins:{legend:{labels:{color:'#a8b8cc',font:{size:10}}}},
+        plugins:{legend:{labels:{color:'#0B1A2F',font:{size:10,weight:'bold'}}}},
         scales:{
-          x:{ticks:{color:'#a8b8cc',font:{size:8}},grid:{color:'rgba(255,255,255,0.06)'}},
-          y:{ticks:{color:'var(--accent)',font:{size:8}},grid:{color:'rgba(255,255,255,0.06)'},
-             title:{display:true,text:'Litre',color:'var(--accent)',font:{size:8}}}
+          x:{ticks:{color:'#5B6B82',font:{size:8}},grid:{color:'rgba(11,26,47,0.06)'}},
+          y:{ticks:{color:'#5B6B82',font:{size:8}},grid:{color:'rgba(11,26,47,0.06)'},
+             title:{display:true,text:'Litre',color:'#0B1A2F',font:{size:8,weight:'bold'}}}
         }
       }
     });
     await new Promise(res=>setTimeout(res,150));
     const vImg = vCanvas.toDataURL('image/png');
     const vChH = Math.min(48, PH-y-80);
-    setTxt(C.text2);
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica','bold');
-    doc.text(tr('Aylik Yakit Tuketimi'), ML, y); y+=4;
+    // Bölüm başlığı bandı
+    setFill(C.surface2); rect(ML, y, CW, 8);
+    setFill(C.accent); rect(ML, y, 3, 8);
+    setTxt(C.navyDark); doc.setFontSize(9.5); doc.setFont('helvetica','bold');
+    doc.text(tr('Aylik Yakit Tuketimi'), ML+6, y+5.5);
+    y += 12;
     doc.addImage(vImg,'PNG',ML,y,CW,vChH);
     y += vChH+8;
     vChart.destroy(); vCanvas.remove();
 
-    // Detay tablo başlığı
-    setTxt(C.text2);
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica','bold');
-    doc.text(tr('Yakit Giris Gecmisi'), ML, y); y+=5;
+    // Detay tablo başlığı bandı
+    setFill(C.surface2); rect(ML, y, CW, 8);
+    setFill(C.accent); rect(ML, y, 3, 8);
+    setTxt(C.navyDark); doc.setFontSize(9.5); doc.setFont('helvetica','bold');
+    doc.text(tr('Yakit Giris Gecmisi'), ML+6, y+5.5);
+    y += 12;
 
     // Tablo header
     const dCols = [
@@ -3435,32 +3526,22 @@ async function downloadFuelPDF() {
       {l:'KM Fark', w:22},
       {l:'Not', w:CW-170},
     ];
-    setFill(C.surface2);
-    rect(ML, y, CW, 7);
-    setFill(C.accent);
-    rect(ML, y, CW, 0.7);
-    rect(ML, y+6.3, CW, 0.7);
-    setTxt(C.muted);
-    doc.setFontSize(6.5);
-    doc.setFont('helvetica','bold');
-    let dhx = ML+2;
-    dCols.forEach(dc => { doc.text(dc.l.toUpperCase(), dhx, y+4.8); dhx+=dc.w; });
-    y+=8;
+    function drawDetailHdr(yy) {
+      setFill(C.navyDark); rect(ML, yy, CW, 7.5);
+      setTxt(C.white); doc.setFontSize(7); doc.setFont('helvetica','bold');
+      let hx2 = ML+2; dCols.forEach(dc=>{doc.text(tr(dc.l).toUpperCase(),hx2,yy+5);hx2+=dc.w;});
+      return yy+8.5;
+    }
+    y = drawDetailHdr(y);
 
     // Satırlar
     ve2.forEach((e, ei) => {
       if (y > PH-18) {
         addPageNum();
         doc.addPage(); pageNum++;
-        setFill(C.bg); rect(0,0,PW,PH);
-        y=15;
-        // Header tekrar
-        setFill(C.surface2); rect(ML,y,CW,7);
-        setFill(C.accent); rect(ML,y,CW,0.7); rect(ML,y+6.3,CW,0.7);
-        setTxt(C.muted); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
-        let dhx2=ML+2;
-        dCols.forEach(dc=>{doc.text(dc.l.toUpperCase(),dhx2,y+4.8);dhx2+=dc.w;});
-        y+=8;
+        drawHeaderBand();
+        y = 52;
+        y = drawDetailHdr(y);
       }
 
       const prev = ei>0?ve2[ei-1]:null;
@@ -3468,8 +3549,9 @@ async function downloadFuelPDF() {
       const cons = (kmFark&&kmFark>0)?(e.litre/kmFark)*100:null;
       const tutar = e.litre*(e.fiyat||0);
 
-      setFill(ei%2===0?C.surface:C.bg);
-      rect(ML,y,CW,6.5);
+      setFill(ei%2===0?C.surface:C.white);
+      rect(ML,y,CW,6.8);
+      try { doc.setDrawColor(...C.border); doc.setLineWidth(0.2); doc.line(ML, y+6.8, ML+CW, y+6.8); } catch(_){}
 
       setTxt(C.text2);
       doc.setFontSize(7); doc.setFont('helvetica','normal');
