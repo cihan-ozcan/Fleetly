@@ -79,28 +79,52 @@
       console.warn('[filo-page] FiloAPI yüklü değil');
       return;
     }
-    try {
-      const [tipler, cekiciler, dorseler, eslesmeler] = await Promise.all([
-        window.FiloAPI.dorseTipleri(),
-        window.FiloAPI.cekiciList(),
-        window.FiloAPI.dorseList(),
-        window.FiloAPI.aktifEslesmeler()
-      ]);
-      state.dorseTipleri = tipler || [];
-      state.cekiciler    = cekiciler || [];
-      state.dorseler     = dorseler || [];
-      state.eslesmeler   = eslesmeler || [];
-      state.loaded = true;
-      _populateDorseTipFilter();
-      _updateCounts();
-      // Tablo render'ları Paket 2'de gelecek; placeholder göster
-      filoRenderCekiciler();
-      filoRenderDorseler();
-      filoRenderEslesmeler();
-    } catch (err) {
-      console.error('[filo-page] refresh hatası', err);
-      if (typeof toast === 'function') toast('Filo verisi yüklenemedi: ' + err.message, 'error');
+    // Her endpoint'i ayrı try'la — biri patlasa bile diğerleri çalışsın.
+    const safe = async (fn, fallback) => {
+      try { return await fn(); }
+      catch (err) { console.warn('[filo-page]', err.message || err); return fallback; }
+    };
+    const [tipler, cekiciler, dorseler, eslesmeler] = await Promise.all([
+      safe(() => window.FiloAPI.dorseTipleri(),    []),
+      safe(() => window.FiloAPI.cekiciList(),      []),
+      safe(() => window.FiloAPI.dorseList(),       []),
+      safe(() => window.FiloAPI.aktifEslesmeler(), [])
+    ]);
+    state.dorseTipleri = tipler || [];
+    state.cekiciler    = cekiciler || [];
+    state.dorseler     = dorseler || [];
+    state.eslesmeler   = eslesmeler || [];
+    state.loaded = true;
+    _populateDorseTipFilter();
+    _updateCounts();
+    _updateMigrationBanner();
+    filoRenderCekiciler();
+    filoRenderDorseler();
+    filoRenderEslesmeler();
+  }
+
+  // Migration eksikse sayfanın tepesinde uyarı göster
+  function _updateMigrationBanner() {
+    const host = document.getElementById('filo-migration-banner');
+    if (!host) return;
+    const missing = window.FiloAPI && window.FiloAPI.isMigrationMissing && window.FiloAPI.isMigrationMissing();
+    if (!missing) {
+      host.style.display = 'none';
+      host.innerHTML = '';
+      return;
     }
+    host.style.display = 'flex';
+    host.innerHTML = `
+      <span style="font-size:18px;flex-shrink:0;">⚠</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;color:var(--yellow);font-size:13px;margin-bottom:2px;">Veritabanı şeması güncel değil</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.5;">
+          Filo modülü için <code style="font-family:var(--font-mono);background:rgba(0,0,0,.15);padding:1px 5px;border-radius:3px;">2026_05_04__filo_cekici_dorse.sql</code> migration'ı henüz çalıştırılmadı.
+          Dorse, eşleşme ve iş emri dorse atama özellikleri kısıtlı çalışacak. Tipler hardcoded seed'den okunuyor.
+        </div>
+      </div>
+      <button onclick="this.parentElement.style.display='none'" style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;flex-shrink:0;">×</button>
+    `;
   }
 
   function _populateDorseTipFilter() {

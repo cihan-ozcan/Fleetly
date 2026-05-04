@@ -2548,16 +2548,20 @@
   }
   #crm-page.open { display: flex; }
 
-  /* ── OPERASYON SAYFASI ──────────────────────────────────── */
-  #operasyon-page {
+  /* ── OPERASYON & FİLO SAYFALARI (tam ekran modül) ──────── */
+  #operasyon-page,
+  #filo-page {
     position: fixed; inset: 0; z-index: 300;
     background: var(--bg);
     display: none; flex-direction: column;
     overflow: hidden;
   }
-  #operasyon-page.open { display: flex; }
-  #operasyon-page .ops-scroll { flex: 1; overflow-y: auto; }
-  #operasyon-page .ops-page { position: relative; z-index: 1; padding: 24px; max-width: 1400px; margin: 0 auto; }
+  #operasyon-page.open,
+  #filo-page.open { display: flex; }
+  #operasyon-page .ops-scroll,
+  #filo-page .ops-scroll { flex: 1; overflow-y: auto; }
+  #operasyon-page .ops-page,
+  #filo-page .ops-page { position: relative; z-index: 1; padding: 24px; max-width: 1400px; margin: 0 auto; }
 
   /* Durum badge'leri */
   .ops-badge { display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap; font-family:var(--font-mono); }
@@ -4542,8 +4546,9 @@
     border-radius: var(--r-md) !important;
   }
 
-  /* ── OPERASYON (Kanban) SAYFASI — handoff polish ───────── */
-  #operasyon-page { background: var(--bg) !important; }
+  /* ── OPERASYON (Kanban) & FİLO SAYFASI — handoff polish ─── */
+  #operasyon-page,
+  #filo-page { background: var(--bg) !important; }
 
   .ops-kanban-col {
     background: var(--bg-elev) !important;

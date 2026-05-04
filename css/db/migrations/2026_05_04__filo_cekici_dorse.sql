@@ -165,8 +165,7 @@ CREATE POLICY ada_delete ON public.arac_dorse_atamalari
   ));
 
 COMMENT ON TABLE public.arac_dorse_atamalari IS
-  'Çekici ↔ dorse zamansal eşleşmesi. Aktif kayıt = bitis IS NULL. ' ||
-  'Bir dorse aynı anda tek aktif çekiciye bağlı olabilir (uq_ada_dorse_aktif).';
+  'Çekici - dorse zamansal eşleşmesi. Aktif kayıt = bitis IS NULL. Bir dorse aynı anda tek aktif çekiciye bağlı olabilir (uq_ada_dorse_aktif).';
 
 -- -----------------------------------------------------------------------------
 -- 4) is_emirleri tablosuna cekici_id + dorse_id (FK)

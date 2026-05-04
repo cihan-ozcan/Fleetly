@@ -1337,6 +1337,9 @@
   <div class="ops-scroll">
     <div class="ops-page">
 
+      <!-- Migration eksik uyarı bandı (sadece şema güncel değilse görünür) -->
+      <div id="filo-migration-banner" style="display:none;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:16px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);border-left:3px solid var(--yellow);border-radius:8px;"></div>
+
       <!-- Sekme barı (mevcut srm-tab kalıbı; tabs.js veya manuel toggle) -->
       <div style="display:flex;gap:0;background:var(--surface3);border-radius:10px;padding:3px;margin-bottom:20px;width:fit-content;">
         <button class="srm-tab active" id="filo-tab-cekiciler"  onclick="switchFiloTab('cekiciler',this)">🚛 Çekiciler <span id="filo-cnt-cekiciler" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
