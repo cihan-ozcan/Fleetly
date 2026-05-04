@@ -177,6 +177,11 @@
   function dorseList()   { return _aractList('dorse'); }
   function tekParcaList(){ return _aractList('tek_parca'); }
   function aractListAll(){ return _aractList(null); }
+  // Motorlu araçlar = çekici + tek_parca (dorse hariç). Filo "Çekiciler" sekmesinde kullanılır.
+  async function motorluList() {
+    const all = await _aractList(null);
+    return all.filter(v => v.kind === 'cekici' || v.kind === 'tek_parca');
+  }
 
   // -----------------------------------------------------------------
   // CRUD — araç (çekici / dorse / tek_parca ortak path)
@@ -464,7 +469,7 @@
     // Lookup
     dorseTipleri,
     // Listeleme
-    cekiciList, dorseList, tekParcaList, aractListAll,
+    cekiciList, dorseList, tekParcaList, aractListAll, motorluList,
     // CRUD
     aractCreate, aractUpdate, aractDelete,
     // Atama

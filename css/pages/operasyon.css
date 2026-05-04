@@ -1546,9 +1546,67 @@
 
 /* Body */
 #ops-drawer .drawer-body {
-  padding: 16px 18px 24px;
+  padding: 0 18px 24px;
   background: var(--bg-elevated);
 }
+
+/* Tabs barı — sticky */
+#ops-drawer .ops-drawer-tabs {
+  display: flex;
+  gap: 0;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 -18px 14px;
+  padding: 0 18px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+}
+#ops-drawer .ops-drawer-tab {
+  position: relative;
+  background: transparent;
+  border: none;
+  padding: 12px 14px 11px;
+  font-family: var(--ops-font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--ops-dur-fast) var(--ops-ease);
+}
+#ops-drawer .ops-drawer-tab:hover { color: var(--text-secondary); }
+#ops-drawer .ops-drawer-tab.is-active { color: var(--text-primary); }
+#ops-drawer .ops-drawer-tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 10px; right: 10px; bottom: -1px;
+  height: 2px;
+  background: var(--ops-brand);
+  border-radius: 2px 2px 0 0;
+}
+#ops-drawer .ops-drawer-tab__count {
+  display: inline-block;
+  margin-left: 5px;
+  font-family: var(--ops-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  padding: 1px 6px;
+  border-radius: 99px;
+  min-width: 18px;
+  text-align: center;
+}
+#ops-drawer .ops-drawer-tab.is-active .ops-drawer-tab__count {
+  background: var(--ops-brand);
+  color: #fff;
+}
+
+/* Sekmeye göre section'ları göster/gizle */
+#ops-drawer[data-active-tab="detaylar"] .drawer-section[data-drawer-tab]:not([data-drawer-tab~="detaylar"]) { display: none; }
+#ops-drawer[data-active-tab="olaylar"]  .drawer-section[data-drawer-tab]:not([data-drawer-tab~="olaylar"])  { display: none; }
+#ops-drawer[data-active-tab="belgeler"] .drawer-section[data-drawer-tab]:not([data-drawer-tab~="belgeler"]) { display: none; }
+#ops-drawer[data-active-tab="yakit"]    .drawer-section[data-drawer-tab]:not([data-drawer-tab~="yakit"])    { display: none; }
 
 /* Section title rebrand (caps muted, dim border) */
 #ops-drawer .drawer-section { margin-bottom: 18px; }

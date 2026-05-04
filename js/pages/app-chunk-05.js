@@ -2442,8 +2442,39 @@ function openOpsDrawer(id) {
   _opsDrawerRender(e);
   document.getElementById('ops-drawer-bg').classList.remove('hidden');
   document.getElementById('ops-drawer').classList.remove('hidden');
+  // Sekme: varsayılan "Detaylar"a dön
+  opsDrawerSwitchTab('detaylar');
   // Güzergah verisini çek (drawer açıldığında bir kere)
   setTimeout(() => opsGuzergahYukle(), 80);
+}
+
+/* ── DRAWER tabs (Detaylar / Olay Akışı / Belgeler / Yakıt) ─── */
+function opsDrawerSwitchTab(name, btn) {
+  const drawer = document.getElementById('ops-drawer');
+  if (!drawer) return;
+  drawer.dataset.activeTab = name;
+  // Tab butonlarının aktif sınıfını güncelle
+  document.querySelectorAll('#ops-drawer .ops-drawer-tab').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.tab === name);
+  });
+  // Sticky scroll'u sıfırla
+  const body = document.querySelector('#ops-drawer .drawer-body');
+  if (body) body.scrollTop = 0;
+}
+
+/* Belgeler sekmesi sayım rozetini güncelle (foto sayısı) */
+function _opsDrawerUpdateBelgelerCount() {
+  const cntEl = document.getElementById('ops-drawer-belgeler-count');
+  if (!cntEl) return;
+  const fotoCntEl = document.getElementById('ops-drawer-foto-count');
+  const fotoTxt = (fotoCntEl?.textContent || '').trim();
+  const n = parseInt(fotoTxt, 10);
+  if (isFinite(n) && n > 0) {
+    cntEl.textContent = String(n);
+    cntEl.style.display = 'inline-block';
+  } else {
+    cntEl.style.display = 'none';
+  }
 }
 
 /** Tüm drawer içeriğini yeniden render eder */
@@ -2569,6 +2600,8 @@ function _opsDrawerRender(e) {
   // ── Fotoğraflar ──
   const fotos = opsFotoArray(e);
   document.getElementById('ops-drawer-foto-count').textContent = fotos.length || '';
+  // Belgeler sekmesi rozet sayım'ını güncelle
+  try { _opsDrawerUpdateBelgelerCount(); } catch (_) {}
   // Zorunlu fotoğraflar checklist'i — sürücü app'iyle aynı kurallar:
   //   • Konteyner Ön Yüzü — tüm işlerde
   //   • Dorse Plakası — tüm işlerde
