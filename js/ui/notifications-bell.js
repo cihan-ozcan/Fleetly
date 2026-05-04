@@ -135,29 +135,52 @@
   // -----------------------------------------------------------------
   // Panel toggle
   // -----------------------------------------------------------------
-  function notifTogglePanel() {
+  function _isPanelOpen() {
+    const p = $('notif-panel');
+    return !!p && p.style.display !== 'none' && p.style.display !== '';
+  }
+
+  function _openPanel() {
     const p = $('notif-panel');
     const btn = $('topbar-notif');
     if (!p) return;
-    const willOpen = p.classList.contains('hidden');
-    p.classList.toggle('hidden');
-    if (btn) btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-    if (willOpen && window.NotificationsAPI) {
-      // Açılınca taze listeyi çek
+    p.style.display = 'flex';
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    if (window.NotificationsAPI) {
       window.NotificationsAPI.list({ limit: 30 }).catch(() => {});
     }
   }
 
-  function _closePanelIfOutside(ev) {
+  function _closePanel() {
     const p = $('notif-panel');
-    const wrap = $('notif-wrap');
-    if (!p || p.classList.contains('hidden')) return;
-    if (wrap && !wrap.contains(ev.target)) {
-      p.classList.add('hidden');
-      const btn = $('topbar-notif');
-      if (btn) btn.setAttribute('aria-expanded', 'false');
-    }
+    const btn = $('topbar-notif');
+    if (!p) return;
+    p.style.display = 'none';
+    if (btn) btn.setAttribute('aria-expanded', 'false');
   }
+
+  function notifTogglePanel(ev) {
+    if (ev) {
+      // Document click handler bu butona kanal yapmasın diye dur
+      try { ev.stopPropagation(); } catch (_) {}
+    }
+    if (_isPanelOpen()) _closePanel();
+    else _openPanel();
+  }
+
+  function _closePanelIfOutside(ev) {
+    if (!_isPanelOpen()) return;
+    const wrap = $('notif-wrap');
+    if (wrap && !wrap.contains(ev.target)) _closePanel();
+  }
+
+  // ESC ile kapat
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && _isPanelOpen()) {
+      e.preventDefault();
+      _closePanel();
+    }
+  });
 
   // -----------------------------------------------------------------
   // Filtre
@@ -195,8 +218,7 @@
       try { if (typeof openFiloPage === 'function') openFiloPage(); } catch (e) {}
     }
     // Paneli kapat
-    const p = $('notif-panel');
-    if (p) p.classList.add('hidden');
+    _closePanel();
   }
 
   async function notifMarkAllRead() {

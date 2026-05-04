@@ -375,14 +375,14 @@
 
       <!-- Bildirim -->
       <div class="notif-wrap" id="notif-wrap" style="position:relative;">
-        <button class="topbar__icon-btn" id="topbar-notif" onclick="notifTogglePanel()" title="Bildirimler" aria-label="Bildirimler" aria-haspopup="true" aria-expanded="false" aria-controls="notif-panel">
+        <button class="topbar__icon-btn" id="topbar-notif" onclick="notifTogglePanel(event)" title="Bildirimler" aria-label="Bildirimler" aria-haspopup="true" aria-expanded="false" aria-controls="notif-panel">
           <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span class="dot" id="topbar-notif-dot"></span>
           <span id="topbar-notif-badge" style="display:none;position:absolute;top:2px;right:2px;background:var(--red);color:#fff;font-family:var(--font-mono);font-size:9px;font-weight:700;line-height:1;padding:2px 5px;border-radius:99px;border:2px solid var(--surface);min-width:14px;text-align:center;"></span>
         </button>
-        <!-- Bildirim paneli (dropdown) -->
-        <div id="notif-panel" class="hidden" role="menu" aria-labelledby="topbar-notif"
-             style="position:absolute;top:calc(100% + 8px);right:0;width:380px;max-width:calc(100vw - 24px);max-height:70vh;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(11,26,47,.18);z-index:500;display:flex;flex-direction:column;overflow:hidden;">
+        <!-- Bildirim paneli (dropdown) — display JS ile yönetilir -->
+        <div id="notif-panel" role="menu" aria-labelledby="topbar-notif"
+             style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:380px;max-width:calc(100vw - 24px);max-height:70vh;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(11,26,47,.18);z-index:500;flex-direction:column;overflow:hidden;">
           <!-- Header -->
           <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--surface2);">
             <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;">
