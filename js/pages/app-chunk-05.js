@@ -768,6 +768,15 @@ async function opsObjToRow(obj, isEdit) {
     yakit_litre   : (obj.yakit_litre  != null ? obj.yakit_litre  : null),
     yakit_tutar   : (obj.yakit_tutar  != null ? obj.yakit_tutar  : null),
   };
+
+  // Filo (Çekici/Dorse) FK'leri — yalnızca migration uygulanmışsa payload'a ekle.
+  // Aksi halde "column does not exist" 400 hatası tüm iş emri kaydını bozar.
+  // FiloAPI.isMigrationMissing() ilk dorseTipleri/aktifEslesmeler çağrısında doğru bayrağı koyar.
+  const _migMissing = window.FiloAPI && window.FiloAPI.isMigrationMissing && window.FiloAPI.isMigrationMissing();
+  if (!_migMissing) {
+    if (obj.cekici_id !== undefined) row.cekici_id = obj.cekici_id || null;
+    if (obj.dorse_id  !== undefined) row.dorse_id  = obj.dorse_id  || null;
+  }
   // GENERATED ALWAYS AS IDENTITY — yeni kayıtta id GÖNDERİLMEZ
   // Düzenleme modunda (isEdit=true) id URL parametresine gider, body'e değil
   return row;

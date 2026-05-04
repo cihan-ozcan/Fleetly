@@ -55,24 +55,61 @@
     try { localStorage.setItem(key, JSON.stringify(arr)); } catch {}
   }
 
-  async function _sbGet(path) {
+  // _migrationMissing: 404 (tablo yok) ya da 400 + "column does not exist" (kolon yok)
+  // tespit edildiğinde true olur. UI bunu izleyip banner gösterir.
+  let _migrationMissing = false;
+  function _markMigrationMissing(reason) {
+    if (_migrationMissing) return;
+    _migrationMissing = true;
+    console.warn('[FiloAPI] Veritabanı şeması güncel değil:', reason);
+    try {
+      window.dispatchEvent(new CustomEvent('filo:migration-missing', { detail: { reason } }));
+    } catch (_) {}
+  }
+  function isMigrationMissing() { return _migrationMissing; }
+
+  async function _sbGet(path, opts = {}) {
     if (!window.sbUrl || !window.sbHeaders) throw new Error('Supabase yardımcıları yüklenmedi');
     const res = await fetch(window.sbUrl(path), { headers: window.sbHeaders() });
-    if (!res.ok) throw new Error('GET ' + path + ' → ' + res.status);
+    if (res.status === 404) {
+      _markMigrationMissing('GET ' + path + ' → 404 (tablo/view yok)');
+      if (opts.fallbackOn404 !== undefined) return opts.fallbackOn404;
+    }
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      // PostgREST: 400 + "column ... does not exist"
+      if (res.status === 400 && /column .* does not exist/i.test(txt)) {
+        _markMigrationMissing('GET ' + path + ' → 400 ' + txt);
+        if (opts.fallbackOn404 !== undefined) return opts.fallbackOn404;
+      }
+      throw new Error('GET ' + path + ' → ' + res.status + (txt ? ' ' + txt : ''));
+    }
     return res.json();
   }
   async function _sbPost(path, body) {
     const res = await fetch(window.sbUrl(path), {
       method: 'POST', headers: window.sbHeaders(), body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error('POST ' + path + ' → ' + res.status + ' ' + (await res.text()));
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      if (res.status === 404 || (res.status === 400 && /column .* does not exist|relation .* does not exist/i.test(txt))) {
+        _markMigrationMissing('POST ' + path + ' → ' + res.status + ' ' + txt);
+      }
+      throw new Error('POST ' + path + ' → ' + res.status + ' ' + txt);
+    }
     return res.json();
   }
   async function _sbPatch(path, body) {
     const res = await fetch(window.sbUrl(path), {
       method: 'PATCH', headers: window.sbHeaders(), body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error('PATCH ' + path + ' → ' + res.status + ' ' + (await res.text()));
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      if (res.status === 404 || (res.status === 400 && /column .* does not exist|relation .* does not exist/i.test(txt))) {
+        _markMigrationMissing('PATCH ' + path + ' → ' + res.status + ' ' + txt);
+      }
+      throw new Error('PATCH ' + path + ' → ' + res.status + ' ' + txt);
+    }
     return res.json();
   }
   async function _sbDelete(path) {
@@ -86,27 +123,31 @@
   // -----------------------------------------------------------------
   let _dorseTipleriCache = null;
 
+  // Migration tablosu yoksa kullanılacak hardcoded seed (SQL ile aynı)
+  const _DORSE_TIPLERI_SEED = [
+    { kod: 'teleskopik', ad: 'Teleskopik',                varsayilan_kapasite_m3: null, varsayilan_kapasite_ton: null, has_temperatur: false, sira: 10 },
+    { kod: 'sabit_40',   ad: 'Sabit 40lık (40 DC)',         varsayilan_kapasite_m3: 67,   varsayilan_kapasite_ton: 28,   has_temperatur: false, sira: 20 },
+    { kod: 'sabit_20',   ad: 'Sabit 20lik (20 DC)',         varsayilan_kapasite_m3: 33,   varsayilan_kapasite_ton: 28,   has_temperatur: false, sira: 30 },
+    { kod: 'tenteli',    ad: 'Tenteli (Pillow / Curtain)',  varsayilan_kapasite_m3: 90,   varsayilan_kapasite_ton: 24,   has_temperatur: false, sira: 40 },
+    { kod: 'frigorifik', ad: 'Frigorifik / Reefer',         varsayilan_kapasite_m3: 80,   varsayilan_kapasite_ton: 22,   has_temperatur: true,  sira: 50 },
+    { kod: 'lowbed',     ad: 'Lowbed',                      varsayilan_kapasite_m3: null, varsayilan_kapasite_ton: 40,   has_temperatur: false, sira: 60 },
+    { kod: 'silobas',    ad: 'Silobas',                     varsayilan_kapasite_m3: 60,   varsayilan_kapasite_ton: 28,   has_temperatur: false, sira: 70 },
+    { kod: 'kuruyuk',    ad: 'Kuru Yük (Sabit Kasa)',       varsayilan_kapasite_m3: 80,   varsayilan_kapasite_ton: 28,   has_temperatur: false, sira: 80 }
+  ];
+
   async function dorseTipleri(force = false) {
     if (_dorseTipleriCache && !force) return _dorseTipleriCache;
     if (window.isLocalMode && window.isLocalMode()) {
-      // Local fallback seed (migration ile aynı)
       _dorseTipleriCache = _lsLoad(LS_KEYS.dorseTipleri);
       if (!_dorseTipleriCache.length) {
-        _dorseTipleriCache = [
-          { kod: 'teleskopik', ad: 'Teleskopik',                varsayilan_kapasite_m3: null, varsayilan_kapasite_ton: null, has_temperatur: false, sira: 10 },
-          { kod: 'sabit_40',   ad: 'Sabit 40lık (40 DC)',         varsayilan_kapasite_m3: 67,   varsayilan_kapasite_ton: 28,   has_temperatur: false, sira: 20 },
-          { kod: 'sabit_20',   ad: 'Sabit 20lik (20 DC)',         varsayilan_kapasite_m3: 33,   varsayilan_kapasite_ton: 28,   has_temperatur: false, sira: 30 },
-          { kod: 'tenteli',    ad: 'Tenteli (Pillow / Curtain)',  varsayilan_kapasite_m3: 90,   varsayilan_kapasite_ton: 24,   has_temperatur: false, sira: 40 },
-          { kod: 'frigorifik', ad: 'Frigorifik / Reefer',         varsayilan_kapasite_m3: 80,   varsayilan_kapasite_ton: 22,   has_temperatur: true,  sira: 50 },
-          { kod: 'lowbed',     ad: 'Lowbed',                      varsayilan_kapasite_m3: null, varsayilan_kapasite_ton: 40,   has_temperatur: false, sira: 60 },
-          { kod: 'silobas',    ad: 'Silobas',                     varsayilan_kapasite_m3: 60,   varsayilan_kapasite_ton: 28,   has_temperatur: false, sira: 70 },
-          { kod: 'kuruyuk',    ad: 'Kuru Yük (Sabit Kasa)',       varsayilan_kapasite_m3: 80,   varsayilan_kapasite_ton: 28,   has_temperatur: false, sira: 80 }
-        ];
+        _dorseTipleriCache = _DORSE_TIPLERI_SEED.slice();
         _lsSave(LS_KEYS.dorseTipleri, _dorseTipleriCache);
       }
       return _dorseTipleriCache;
     }
-    _dorseTipleriCache = await _sbGet('dorse_tipleri?select=*&order=sira.asc');
+    // Cloud — 404 ise seed'e düş
+    const data = await _sbGet('dorse_tipleri?select=*&order=sira.asc', { fallbackOn404: null });
+    _dorseTipleriCache = (data && data.length) ? data : _DORSE_TIPLERI_SEED.slice();
     return _dorseTipleriCache;
   }
 
@@ -116,12 +157,20 @@
   async function _aractList(kind) {
     if (window.isLocalMode && window.isLocalMode()) {
       const all = _lsLoad(LS_KEYS.araclar);
-      // Eski kayıtlarda kind yok → 'cekici' varsay (Karar 7)
       const norm = all.map(v => ({ kind: 'cekici', ...v }));
       return kind ? norm.filter(v => v.kind === kind) : norm;
     }
-    const q = kind ? `araclar?select=*&kind=eq.${kind}&order=plaka.asc` : 'araclar?select=*&order=plaka.asc';
-    return _sbGet(q);
+    // Migration eksikse `kind` kolonu yok → kind=eq filtresi 400 verir.
+    // Bu durumda tüm araclar'ı çekip JS'te filtrele.
+    const fullPath = kind ? `araclar?select=*&kind=eq.${kind}&order=plaka.asc` : 'araclar?select=*&order=plaka.asc';
+    let data = await _sbGet(fullPath, { fallbackOn404: null });
+    if (data == null) {
+      // kind kolonu yok → tümünü çek, kind eksiklerini 'cekici' say
+      data = await _sbGet('araclar?select=*&order=plaka.asc', { fallbackOn404: [] }) || [];
+      data = data.map(v => ({ kind: 'cekici', ...v }));
+      if (kind) data = data.filter(v => v.kind === kind);
+    }
+    return data || [];
   }
 
   function cekiciList()  { return _aractList('cekici'); }
@@ -330,7 +379,7 @@
     }
     let q = 'v_aktif_eslesmeler?select=*&order=cekici_plaka.asc,birincil_mi.desc';
     if (opts.cekiciId) q += `&cekici_id=eq.${encodeURIComponent(opts.cekiciId)}`;
-    return _sbGet(q);
+    return (await _sbGet(q, { fallbackOn404: [] })) || [];
   }
 
   function cekicininDorseleri(cekiciId) { return aktifEslesmeler({ cekiciId }); }
@@ -347,7 +396,9 @@
     aractCreate, aractUpdate, aractDelete,
     // Atama
     dorseyiAta, atamayiSonlandir,
-    aktifEslesmeler, cekicininDorseleri
+    aktifEslesmeler, cekicininDorseleri,
+    // Schema durumu
+    isMigrationMissing
   };
 
   // İsteğe bağlı debug log
