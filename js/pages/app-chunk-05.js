@@ -2099,6 +2099,9 @@ function _opsDrawerRender(e) {
     _opsYakitGpsKarsilastirmaYukle(e).catch(()=>{});
   }
 
+  // 📊 Aynı güzergahta geçmiş seferler (sürücü karşılaştırması)
+  opsBenzerSeferleriYukle().catch(()=>{});
+
   // ── Zaman çizelgesi (km bilgisiyle zenginleştirilmiş) ──
   const milestones = [
     { label: 'İş Emri Atandı',   zaman: e.atama_zamani,  km: null },
@@ -2127,7 +2130,13 @@ function _opsDrawerRender(e) {
   // ── Fotoğraflar ──
   const fotos = opsFotoArray(e);
   document.getElementById('ops-drawer-foto-count').textContent = fotos.length || '';
-  document.getElementById('ops-drawer-fotograflar').innerHTML = (fotos.length ?
+  // Zorunlu fotoğraflar checklist'i — sürücü app'iyle aynı kurallar:
+  //   • Konteyner Ön Yüzü — tüm işlerde
+  //   • Dorse Plakası — tüm işlerde
+  //   • Mühür — sadece kont_durum='Boş' işlerde
+  const checklistHtml = _opsZorunluFotoCheckHtml(e, fotos);
+
+  document.getElementById('ops-drawer-fotograflar').innerHTML = checklistHtml + (fotos.length ?
     `<div class="ops-foto-grid">${fotos.map((f, fi) => `
       <div class="ops-foto-card" style="position:relative;">
         <img src="${f.url}" alt="${f.tip||''}" onclick="window.open('${f.url}','_blank')" style="cursor:pointer;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
@@ -2501,6 +2510,297 @@ async function _opsYakitGpsKarsilastirmaYukle(e) {
     ${gpsYakitHtml}
     <span style="color:var(--muted);font-size:10.5px;align-self:center;">${ozet.nokta_sayisi} nokta · ort ${ozet.ort_hiz_kmh ?? '—'} km/sa</span>
   </div>`;
+}
+
+/* ── BU GÜZERGAHTA GEÇMİŞ SEFERLER (Sürücü Karşılaştırma) ───────
+   Aynı yukle_yeri + teslim_yeri çiftine yapılmış son N seferi listeler.
+   Her satır: tarih, sürücü, plaka, beyan km, GPS km, süre, yakıt(L).
+   GPS km'ye göre artan sıralama → en kestirme rotalı sürücü en üstte,
+   en uzun yol kullanan en altta. Aktif iş emri (e) hariç tutulur. */
+async function opsBenzerSeferleriYukle() {
+  const body  = document.getElementById('ops-drawer-karsilastirma-body');
+  const cnt   = document.getElementById('ops-drawer-karsilastirma-count');
+  const sec   = document.getElementById('ops-drawer-karsilastirma-section');
+  const btn   = document.getElementById('ops-drawer-karsilastirma-refresh');
+  if (!body || !sec) return;
+  if (!opsDrawerActiveId) return;
+  const e = opsById(opsDrawerActiveId);
+  if (!e) return;
+  if (!e.yukle_yeri || !e.teslim_yeri) {
+    sec.style.display = 'none';
+    return;
+  }
+  sec.style.display = '';
+  if (btn) { btn.disabled = true; btn.textContent = '↻ Yükleniyor…'; }
+  body.innerHTML = `<div style="font-size:11px;color:var(--muted);">Aynı güzergahtaki geçmiş seferler taranıyor…</div>`;
+
+  try {
+    const sb = getSB();
+    if (!sb) throw new Error('Supabase istemcisi yok');
+    const dbId = e._dbId || e.id;
+    // Aynı yukle/teslim çiftine yapılmış son seferler — kendi hariç
+    let q = sb.from('is_emirleri')
+      .select('id, durum, sofor, surucu_id, arac_plaka, baslangic_km, bitis_km, yola_zaman, teslim_zamani, atama_zamani')
+      .eq('yukle_yeri', e.yukle_yeri)
+      .eq('teslim_yeri', e.teslim_yeri)
+      .neq('id', dbId)
+      .order('teslim_zamani', { ascending: false, nullsFirst: false })
+      .limit(20);
+    if (currentFirmaId) q = q.or('firma_id.eq.' + currentFirmaId + ',firma_id.is.null');
+    const { data, error } = await q;
+    if (error) throw error;
+    let rows = data || [];
+
+    if (rows.length === 0) {
+      body.innerHTML = `<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:8px;padding:12px;font-size:12px;color:var(--muted);text-align:center;">
+        Bu güzergaha (<b>${_esc(e.yukle_yeri)} → ${_esc(e.teslim_yeri)}</b>) yapılmış başka bir sefer bulunmadı.<br>
+        İleride aynı çifte yapılan işler burada otomatik karşılaştırılacak.
+      </div>`;
+      if (cnt) { cnt.style.display = 'none'; }
+      return;
+    }
+
+    // Geçmiş seferlerin GPS özetlerini tek seferde çek
+    const ids = rows.map(r => r.id);
+    let ozetMap = {};
+    try {
+      const { data: ozetler } = await sb
+        .from('is_emri_guzergah_ozet')
+        .select('is_emri_id, toplam_km, basla_ts, bitir_ts, ort_hiz_kmh')
+        .in('is_emri_id', ids);
+      (ozetler || []).forEach(o => { ozetMap[o.is_emri_id] = o; });
+    } catch (e2) { /* ignore */ }
+
+    // Aktif iş emrinin GPS özeti — referans satırı için
+    const aktifOzet = await _opsGuzergahOzetGetir(dbId).catch(()=>null);
+
+    // Sürücü adı çözümleme: snapshot driverData
+    const snap = (window._fleetly && window._fleetly.snapshot) || {};
+    const driverById = {};
+    (snap.driverData || []).forEach(d => { if (d) driverById[d.id] = d; });
+    const drvName = (r) => {
+      if (r.surucu_id && driverById[r.surucu_id]) {
+        const d = driverById[r.surucu_id];
+        return ((d.ad || '') + ' ' + (d.soyad || '')).trim() || r.sofor || '—';
+      }
+      return r.sofor || '—';
+    };
+
+    // Her satır için karşılaştırma metriği — GPS km öncelikli, yoksa beyan km
+    const enrich = rows.map(r => {
+      const beyanKm = (r.baslangic_km != null && r.bitis_km != null && r.bitis_km > r.baslangic_km)
+        ? +(r.bitis_km - r.baslangic_km).toFixed(1) : null;
+      const ozet = ozetMap[r.id];
+      const gpsKm = ozet && ozet.toplam_km > 0 ? +(+ozet.toplam_km).toFixed(1) : null;
+      const sortKm = gpsKm != null ? gpsKm : (beyanKm != null ? beyanKm : Infinity);
+      let sureDk = null;
+      if (ozet && ozet.basla_ts && ozet.bitir_ts) {
+        sureDk = Math.max(0, Math.round((new Date(ozet.bitir_ts) - new Date(ozet.basla_ts)) / 60000));
+      } else if (r.yola_zaman && r.teslim_zamani) {
+        sureDk = Math.max(0, Math.round((new Date(r.teslim_zamani) - new Date(r.yola_zaman)) / 60000));
+      }
+      return { r, beyanKm, gpsKm, sortKm, sureDk, ozet };
+    });
+    enrich.sort((a, b) => a.sortKm - b.sortKm);
+
+    // En düşük & en yüksek km — vurgulamak için
+    const finiteKms = enrich.filter(x => isFinite(x.sortKm)).map(x => x.sortKm);
+    const minKm = finiteKms.length ? Math.min.apply(null, finiteKms) : null;
+    const maxKm = finiteKms.length ? Math.max.apply(null, finiteKms) : null;
+
+    if (cnt) { cnt.textContent = String(enrich.length); cnt.style.display = ''; }
+
+    const fmtKm   = (v) => v == null ? '—' : v.toLocaleString('tr-TR') + ' km';
+    const fmtSure = (m) => {
+      if (m == null) return '—';
+      if (m < 60) return m + ' dk';
+      return Math.floor(m/60) + 's ' + (m%60) + 'dk';
+    };
+    const fmtDate = (s) => s ? new Date(s).toLocaleDateString('tr-TR', {day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
+
+    // Aktif iş emrinin referans satırı
+    const aktifBeyanKm = (e.baslangic_km != null && e.bitis_km != null && e.bitis_km > e.baslangic_km)
+      ? +(e.bitis_km - e.baslangic_km).toFixed(1) : null;
+    const aktifGpsKm = aktifOzet && aktifOzet.toplam_km > 0 ? +(+aktifOzet.toplam_km).toFixed(1) : null;
+    const aktifSureDk = aktifOzet && aktifOzet.basla_ts && aktifOzet.bitir_ts
+      ? Math.max(0, Math.round((new Date(aktifOzet.bitir_ts) - new Date(aktifOzet.basla_ts)) / 60000))
+      : (e.yola_zaman && e.teslim_zamani
+          ? Math.max(0, Math.round((new Date(e.teslim_zamani) - new Date(e.yola_zaman)) / 60000))
+          : null);
+
+    const refBg = 'background:rgba(99,102,241,.10);border-left:3px solid var(--accent);';
+    const refRow = `<tr style="${refBg}">
+      <td style="padding:7px 8px;font-weight:700;color:var(--accent);">▶ Bu iş</td>
+      <td style="padding:7px 8px;">${_esc(opsDrvNameForRow(e))}</td>
+      <td style="padding:7px 8px;font-family:var(--font-mono);">${_esc(e.arac_plaka || '—')}</td>
+      <td style="padding:7px 8px;font-family:var(--font-mono);text-align:right;">${fmtKm(aktifBeyanKm)}</td>
+      <td style="padding:7px 8px;font-family:var(--font-mono);text-align:right;">${fmtKm(aktifGpsKm)}</td>
+      <td style="padding:7px 8px;font-family:var(--font-mono);text-align:right;">${fmtSure(aktifSureDk)}</td>
+    </tr>`;
+
+    const dataRows = enrich.map(({r, beyanKm, gpsKm, sortKm, sureDk}) => {
+      const isMin = minKm != null && sortKm === minKm;
+      const isMax = maxKm != null && sortKm === maxKm && minKm !== maxKm;
+      const tag = isMin ? `<span style="background:rgba(34,197,94,.15);color:var(--green);font-weight:700;padding:1px 6px;border-radius:99px;font-size:10px;margin-left:4px;">en kısa</span>`
+                : isMax ? `<span style="background:rgba(239,68,68,.15);color:var(--red);font-weight:700;padding:1px 6px;border-radius:99px;font-size:10px;margin-left:4px;">en uzun</span>` : '';
+      const kmCellStyle = isMin ? 'color:var(--green);font-weight:700;' : (isMax ? 'color:var(--red);font-weight:700;' : '');
+      return `<tr style="border-top:1px solid var(--border2);cursor:pointer;" onclick="openOpsDrawer(${r.id})" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background=''">
+        <td style="padding:7px 8px;color:var(--muted);">${fmtDate(r.teslim_zamani || r.yola_zaman || r.atama_zamani)}</td>
+        <td style="padding:7px 8px;">${_esc(drvName(r))} ${tag}</td>
+        <td style="padding:7px 8px;font-family:var(--font-mono);">${_esc(r.arac_plaka || '—')}</td>
+        <td style="padding:7px 8px;font-family:var(--font-mono);text-align:right;">${fmtKm(beyanKm)}</td>
+        <td style="padding:7px 8px;font-family:var(--font-mono);text-align:right;${kmCellStyle}">${fmtKm(gpsKm)}</td>
+        <td style="padding:7px 8px;font-family:var(--font-mono);text-align:right;color:var(--muted);">${fmtSure(sureDk)}</td>
+      </tr>`;
+    }).join('');
+
+    body.innerHTML = `<div style="overflow-x:auto;border:1px solid var(--border2);border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
+        <thead>
+          <tr style="background:var(--surface2);color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.04em;">
+            <th style="padding:7px 8px;text-align:left;font-weight:700;">Tarih</th>
+            <th style="padding:7px 8px;text-align:left;font-weight:700;">Sürücü</th>
+            <th style="padding:7px 8px;text-align:left;font-weight:700;">Plaka</th>
+            <th style="padding:7px 8px;text-align:right;font-weight:700;" title="Sürücünün girdiği bitiş - başlangıç farkı">Beyan</th>
+            <th style="padding:7px 8px;text-align:right;font-weight:700;" title="GPS güzergahından hesaplanan gerçek mesafe">GPS</th>
+            <th style="padding:7px 8px;text-align:right;font-weight:700;">Süre</th>
+          </tr>
+        </thead>
+        <tbody>${refRow}${dataRows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:6px;font-size:10.5px;color:var(--muted);">
+      ↑ GPS km'ye göre sıralı (en kısa rota üstte). Satıra tıklayınca o iş emrinin detayı açılır.
+    </div>`;
+  } catch (err) {
+    console.error('[ops] benzer seferler yüklenemedi:', err);
+    body.innerHTML = `<div style="font-size:11px;color:var(--red);background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:8px 10px;">Karşılaştırma yüklenemedi: ${_esc(err?.message || 'hata')}</div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Yenile'; }
+  }
+}
+
+// Aktif iş emri için sürücü adı çözümleme (snapshot'tan tek satır)
+function opsDrvNameForRow(e) {
+  const snap = (window._fleetly && window._fleetly.snapshot) || {};
+  const drv = (e.surucu_id && Array.isArray(snap.driverData))
+    ? snap.driverData.find(d => d && d.id === e.surucu_id)
+    : null;
+  return drv ? (((drv.ad || '') + ' ' + (drv.soyad || '')).trim() || e.sofor || '—') : (e.sofor || '—');
+}
+
+// HTML escape — string güvenliği için
+function _esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
+  });
+}
+
+/* ── Foto Tip Eşleştirme — şoför app'indeki PhotoTypeMatcher ile birebir ──
+   Konteyner çekicinin üstünde olduğu için pratikte konteyner ön yüzü +
+   dorse plakası tek karede çekiliyor → tek "Konteyner & Plaka" rolü.
+   Eski etiket varyantları geriye uyumluluk için hâlâ kabul edilir. */
+const _OPS_FOTO_MATCHERS = {
+  konteynerPlaka: (label) => {
+    const l = String(label || '').trim().toLowerCase();
+    return l === 'konteyner & plaka'
+        || l === 'konteyner & çekici plaka'
+        || l === 'konteyner ön yüzü'
+        || l === 'dorse plakası'
+        || l === 'konteyner'
+        || l === 'plaka';
+  },
+  muhur: (label) => {
+    const l = String(label || '').trim().toLowerCase();
+    return l === 'mühür' || l === 'muhur';
+  }
+};
+
+/* Drawer'da fotoğraflar listesinin üstüne basılır:
+   her zorunlu tip için ✓ / ✗ rozeti + eksiklerin biri varsa "Şoföre hatırlat" butonu. */
+function _opsZorunluFotoCheckHtml(e, fotos) {
+  const isBosKonteyner = (e.kont_durum || '').toLowerCase() === 'boş';
+  const items = [
+    { key: 'konteynerPlaka', label: 'Konteyner & Plaka', emoji: '🚛',
+      done: (fotos || []).some(f => _OPS_FOTO_MATCHERS.konteynerPlaka(f.tip)) },
+  ];
+  if (isBosKonteyner) {
+    items.push({ key: 'muhur', label: 'Mühür', emoji: '🔒',
+      done: (fotos || []).some(f => _OPS_FOTO_MATCHERS.muhur(f.tip)) });
+  }
+  const eksikler = items.filter(i => !i.done);
+  const allDone  = eksikler.length === 0;
+  const dbId     = e._dbId || e.id;
+
+  const itemsHtml = items.map(i => {
+    const renk = i.done ? 'var(--green)' : 'var(--red)';
+    const icon = i.done ? '✓' : '✗';
+    const bg   = i.done ? 'rgba(34,197,94,.10)' : 'rgba(239,68,68,.08)';
+    return `<span style="display:inline-flex;align-items:center;gap:5px;background:${bg};border:1px solid ${i.done ? 'rgba(34,197,94,.30)' : 'rgba(239,68,68,.25)'};color:${renk};padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;font-family:var(--font-mono);">
+      <span>${i.emoji}</span><span style="font-family:var(--font-body);">${i.label}</span><span style="font-weight:900;">${icon}</span>
+    </span>`;
+  }).join('');
+
+  const hintHtml = allDone
+    ? `<div style="font-size:11px;color:var(--green);font-weight:600;">Tüm zorunlu fotoğraflar tamam.</div>`
+    : `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="font-size:11px;color:var(--red);font-weight:600;">Eksik: ${eksikler.map(x => x.label).join(', ')}</div>
+        ${(e.surucu_id || e.sofor_user_id)
+          ? `<button onclick="opsZorunluFotoHatirlat(${dbId})" id="ops-foto-hatirlat-${dbId}" style="background:rgba(232,82,26,.12);border:1px solid rgba(232,82,26,.35);color:var(--accent);border-radius:6px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;">📡 Şoföre hatırlat</button>`
+          : ''}
+       </div>`;
+
+  return `<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">
+        📋 Zorunlu Fotoğraflar${isBosKonteyner ? ' <span style="color:var(--accent);text-transform:none;">(boş konteyner)</span>' : ''}
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">${itemsHtml}</div>
+    ${hintHtml}
+  </div>`;
+}
+
+/* Eksik fotoğraflar için şoföre push bildirimi — mevcut notify-driver Edge Function'ı kullanır.
+   Drawer kapatılmadan önce eksikleri göndereceği için tekrarlanan istek korunur (4sn debounce). */
+async function opsZorunluFotoHatirlat(opsId) {
+  const e = isEmirleri.find(x => (x.id === opsId) || (x._dbId === opsId));
+  if (!e) return;
+  const surucuId = e.surucu_id || e.sofor_user_id;
+  if (!surucuId) { showToast('Sürücü bağlı değil — hatırlatma gönderilemez', 'error'); return; }
+
+  const fotos = opsFotoArray(e);
+  const isBosKonteyner = (e.kont_durum || '').toLowerCase() === 'boş';
+  const eksikler = [];
+  if (!fotos.some(f => _OPS_FOTO_MATCHERS.konteynerPlaka(f.tip))) eksikler.push('Konteyner & Plaka');
+  if (isBosKonteyner && !fotos.some(f => _OPS_FOTO_MATCHERS.muhur(f.tip))) eksikler.push('Mühür');
+
+  if (eksikler.length === 0) { showToast('Eksik fotoğraf yok', 'success'); return; }
+
+  const btn = document.getElementById('ops-foto-hatirlat-' + (e._dbId || e.id));
+  if (btn) { btn.disabled = true; btn.style.opacity = '.6'; btn.textContent = '📡 Gönderiliyor...'; }
+
+  try {
+    const sb = getSB();
+    if (!sb) throw new Error('Supabase istemcisi yok');
+    const plaka = e.arac_plaka || '';
+    const { error } = await sb.functions.invoke('notify-driver', {
+      body: {
+        surucu_id : surucuId,
+        is_emri_id: e._dbId || e.id,
+        title     : '📸 Eksik fotoğraf hatırlatması',
+        body      : (plaka ? `${plaka} — ` : '') + 'Lütfen şu fotoğrafları çekin: ' + eksikler.join(', '),
+        url       : '/sofor.html'
+      }
+    });
+    if (error) throw error;
+    showToast('Hatırlatma gönderildi: ' + eksikler.join(', '), 'success');
+    if (btn) { btn.textContent = '✓ Gönderildi'; setTimeout(()=>{ if(btn){btn.disabled=false;btn.style.opacity='';btn.textContent='📡 Şoföre hatırlat';}}, 4000); }
+  } catch (err) {
+    console.error('foto hatırlatma hatası:', err);
+    showToast('Hatırlatma gönderilemedi: ' + (err?.message || 'hata'), 'error');
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.textContent = '📡 Şoföre hatırlat'; }
+  }
 }
 
 /* ── DURUM GÜNCELLE ─────────────────────────────────────── */
