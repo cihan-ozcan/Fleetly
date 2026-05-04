@@ -1,674 +1,2167 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#021530">
-  <title>Fleetly — Ambarlı'nın Filo Sirkülasyonu, Tek Panelde</title>
-  <meta name="description" content="Ambarlı limanından Çerkezköy'e, Hadımköy'e, Gebze'ye çıkan filolar için saha panosu. Sefer durumu, muayene takvimi, sürücü belgeleri — lacivert ve temiz.">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fleetly.fit — Filonuzun beyni. Cebinizdeki operasyon müdürü.</title>
+<meta name="description" content="Konteyner taşımacılığı yapan filolar için uçtan uca operasyon yönetim sistemi. Canlı GPS, dijital teslim makbuzu, yakıt yönetimi ve daha fazlası." />
 
-  <!-- Tipografi: Fraunces (editorial serif) + Inter + JetBrains Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,30..100;1,9..144,300..600,30..100&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 
-  <link rel="icon" href="favicon.ico">
-  <link rel="stylesheet" href="css/pages/landing.css">
+<style>
+/* =========================================================
+   TOKENS
+   ========================================================= */
+:root {
+  --navy-500: #2C5A9E;
+  --navy-600: #234A85;
+  --navy-dark: #0B1A2F;
+  --navy-50:  #EEF4FB;
+  --accent:   #FF6B1F;
+  --accent-d: #E55A0F;
+  --accent-soft: #FFE4D1;
+  --success: #16A974;
+  --warning: #E5A100;
+  --danger:  #DC3838;
+  --info:    #2C5A9E;
+  --bg:      #F4F6FA;
+  --surface: #FFFFFF;
+  --border:  #E1E7F0;
+  --text:    #0B1A2F;
+  --text-muted: #5B6B82;
+
+  --radius-card: 14px;
+  --radius-btn:  10px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 2px 6px rgba(11,26,47,0.05);
+  --shadow-md: 0 8px 20px rgba(11,26,47,0.10);
+  --shadow-lg: 0 20px 50px rgba(11,26,47,0.18);
+
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --container: 1200px;
+}
+
+/* =========================================================
+   RESET / BASE
+   ========================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+img, svg { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+
+.container {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: var(--radius-btn);
+  font-weight: 600;
+  font-size: 15px;
+  transition: transform .15s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
+  white-space: nowrap;
+}
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.btn--primary {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 6px 14px rgba(255,107,31,0.25);
+}
+.btn--primary:hover { background: var(--accent-d); transform: translateY(-1px); box-shadow: 0 10px 22px rgba(255,107,31,0.32); }
+.btn--ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn--ghost:hover { border-color: var(--navy-500); color: var(--navy-500); }
+.btn--ghost-light {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.25);
+}
+.btn--ghost-light:hover { border-color: white; background: rgba(255,255,255,0.08); }
+.btn--white {
+  background: white;
+  color: var(--navy-dark);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+}
+.btn--white:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(0,0,0,0.22); }
+.btn--lg { padding: 16px 28px; font-size: 16px; }
+
+/* Tag / micro */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent-d);
+}
+
+.section { padding: 96px 0; }
+.section--tight { padding: 64px 0; }
+.section-head { text-align: center; margin-bottom: 56px; }
+.section-head .eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+.section-head h2 {
+  font-size: clamp(32px, 4vw, 44px);
+  line-height: 1.15;
+  margin-bottom: 14px;
+  color: var(--navy-dark);
+}
+.section-head p {
+  font-size: 17px;
+  color: var(--text-muted);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* Reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .7s ease, transform .7s ease;
+}
+.reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* =========================================================
+   NAV
+   ========================================================= */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color .2s ease, background .2s ease;
+}
+.nav.is-scrolled { border-bottom-color: var(--border); }
+.nav__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+}
+.nav__logo { display: flex; align-items: center; gap: 10px; }
+.nav__logo-wordmark {
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: var(--navy-dark);
+}
+.nav__logo-fit {
+  display: inline-block;
+  background: var(--accent);
+  color: white;
+  padding: 1px 8px 2px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 17px;
+  margin-left: 2px;
+  transform: translateY(-2px);
+}
+.nav__links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+.nav__links a {
+  color: var(--text);
+  transition: color .15s ease;
+}
+.nav__links a:hover { color: var(--accent); }
+.nav__cta { display: flex; gap: 12px; align-items: center; }
+.nav__login {
+  font-weight: 600;
+  font-size: 15px;
+  padding: 10px 16px;
+  border-radius: var(--radius-btn);
+  color: var(--text);
+}
+.nav__login:hover { color: var(--navy-500); }
+.nav__hamburger {
+  display: none;
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  align-items: center;
+  justify-content: center;
+}
+.nav__hamburger svg { width: 20px; height: 20px; }
+
+/* Logo SVG truck icon */
+.logo-truck {
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+
+/* mobile */
+@media (max-width: 900px) {
+  .nav__links, .nav__login { display: none; }
+  .nav__hamburger { display: inline-flex; }
+}
+.nav__mobile {
+  display: none;
+  border-top: 1px solid var(--border);
+  background: white;
+  padding: 16px 24px 24px;
+}
+.nav__mobile.is-open { display: block; }
+.nav__mobile ul { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 4px; }
+.nav__mobile a { display: block; padding: 10px 0; font-weight: 500; }
+
+/* =========================================================
+   HERO
+   ========================================================= */
+.hero {
+  position: relative;
+  padding: 72px 0 88px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 800px 400px at 85% -10%, rgba(255,107,31,0.08), transparent 60%),
+    radial-gradient(ellipse 600px 300px at 5% 20%, rgba(44,90,158,0.06), transparent 60%),
+    var(--surface);
+}
+.hero__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+.hero__title {
+  font-size: clamp(40px, 5.4vw, 68px);
+  line-height: 1.05;
+  font-weight: 900;
+  margin: 18px 0 20px;
+  color: var(--navy-dark);
+  letter-spacing: -0.025em;
+}
+.hero__title .accent { color: var(--accent); }
+.hero__sub {
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+  max-width: 540px;
+}
+.hero__ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+.hero__proof {
+  display: flex; flex-wrap: wrap; gap: 20px;
+  font-size: 14px; color: var(--text-muted);
+  font-weight: 500;
+}
+.hero__proof span { display: inline-flex; align-items: center; gap: 6px; }
+.hero__proof .check { color: var(--success); font-weight: 700; }
+
+@media (max-width: 960px) {
+  .hero__grid { grid-template-columns: 1fr; gap: 40px; }
+  .hero { padding: 56px 0 64px; }
+}
+
+/* Hero mockup */
+.mockup {
+  position: relative;
+  background: white;
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.mockup__chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 14px;
+  background: #F8F9FB;
+  border-bottom: 1px solid var(--border);
+}
+.mockup__dot { width: 12px; height: 12px; border-radius: 50%; background: #E1E7F0; }
+.mockup__dot:nth-child(1){ background: #FF5F57; }
+.mockup__dot:nth-child(2){ background: #FEBC2E; }
+.mockup__dot:nth-child(3){ background: #28C840; }
+.mockup__url {
+  margin-left: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  background: white;
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 6px;
+  flex: 1;
+  max-width: 320px;
+}
+
+/* Map mockup */
+.map {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background:
+    linear-gradient(180deg, #EAF1FA 0%, #DDE7F4 100%);
+  overflow: hidden;
+}
+.map__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map__pin {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+}
+.map__pin::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse 2.2s ease-out infinite;
+  opacity: .55;
+}
+.map__pin::after {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  background: var(--accent);
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+@keyframes pulse {
+  0%   { transform: scale(0.6); opacity: .6; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.map__popup {
+  position: absolute;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+  min-width: 200px;
+  pointer-events: none;
+}
+.map__popup::after {
+  content: '';
+  position: absolute;
+  bottom: -6px; left: 24px;
+  width: 12px; height: 12px;
+  background: white;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+.map__popup .plate {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--navy-dark);
+  font-size: 13px;
+}
+.map__popup .driver { color: var(--text-muted); margin-top: 2px; }
+.map__popup .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 2px 8px;
+  background: rgba(22,169,116,0.12);
+  color: var(--success);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+}
+.map__popup .status .ago { color: var(--text-muted); font-weight: 400; margin-left: 4px; }
+
+.map__legend {
+  position: absolute;
+  top: 12px; left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+.map__legend .live-dot {
+  width: 8px; height: 8px;
+  background: var(--success);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(22,169,116,0.2);
+  animation: livepulse 1.4s ease-in-out infinite;
+}
+@keyframes livepulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(22,169,116,0.2); }
+  50% { box-shadow: 0 0 0 6px rgba(22,169,116,0.05); }
+}
+.map__counter {
+  position: absolute;
+  bottom: 14px; right: 14px;
+  background: var(--navy-dark);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.map__counter .num { font-family: var(--font-mono); font-size: 15px; color: var(--accent); }
+
+/* =========================================================
+   TRUST BAR
+   ========================================================= */
+.trust {
+  padding: 48px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.trust__title {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 28px;
+}
+.trust__row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+.trust__logo {
+  height: 36px;
+  background: linear-gradient(135deg, #C5CFDB 0%, #AEB9C9 100%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: rgba(11,26,47,0.45);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  opacity: .65;
+}
+@media (max-width: 720px) {
+  .trust__row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* =========================================================
+   PROBLEM / SOLUTION
+   ========================================================= */
+.compare {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 32px;
+  align-items: stretch;
+}
+.compare__col {
+  border-radius: var(--radius-card);
+  padding: 32px;
+  border: 1px solid var(--border);
+}
+.compare__col--before {
+  background: #FDF2F2;
+  border-color: #F5D5D5;
+  position: relative;
+}
+.compare__col--after {
+  background: linear-gradient(180deg, #F0F7F2 0%, #E5F2EA 100%);
+  border-color: #BFE5CC;
+}
+.compare__label {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 16px;
+}
+.compare__col--before .compare__label { background: #F5D5D5; color: var(--danger); }
+.compare__col--after .compare__label { background: #BFE5CC; color: var(--success); }
+.compare__col h3 {
+  font-size: 22px;
+  margin-bottom: 18px;
+  color: var(--navy-dark);
+  line-height: 1.3;
+}
+.compare__list {
+  list-style: none;
+  padding: 0; margin: 0;
+  display: flex; flex-direction: column;
+  gap: 14px;
+}
+.compare__list li {
+  display: flex;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.compare__list .icon {
+  flex: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+.compare__col--before .icon { background: #F5D5D5; color: var(--danger); }
+.compare__col--after  .icon { background: #BFE5CC; color: var(--success); }
+.compare__arrow {
+  align-self: center;
+  width: 56px; height: 56px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 8px 18px rgba(255,107,31,0.32);
+}
+@media (max-width: 860px) {
+  .compare { grid-template-columns: 1fr; }
+  .compare__arrow { transform: rotate(90deg); margin: 0 auto; }
+}
+
+/* =========================================================
+   FEATURE CARDS (6)
+   ========================================================= */
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 28px;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  display: flex; flex-direction: column;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: #CBD7E5;
+}
+.feature-card__icon {
+  width: 52px; height: 52px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-d);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  margin-bottom: 18px;
+}
+.feature-card h3 {
+  font-size: 19px;
+  margin-bottom: 8px;
+  color: var(--navy-dark);
+}
+.feature-card__desc {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.feature-card__list {
+  list-style: none;
+  padding: 0; margin: 0 0 18px;
+  flex: 1;
+  display: flex; flex-direction: column;
+  gap: 8px;
+}
+.feature-card__list li {
+  font-size: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text);
+}
+.feature-card__list li::before {
+  content: '';
+  flex: none;
+  width: 6px; height: 6px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.feature-card__link {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--navy-500);
+  display: inline-flex; align-items: center; gap: 4px;
+  transition: gap .15s ease;
+}
+.feature-card__link:hover { gap: 8px; color: var(--accent); }
+
+@media (max-width: 980px) { .features { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .features { grid-template-columns: 1fr; } }
+
+/* =========================================================
+   DETAIL SECTIONS
+   ========================================================= */
+.detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+  padding: 56px 0;
+}
+.detail--reverse { direction: rtl; }
+.detail--reverse > * { direction: ltr; }
+.detail__text .tag { margin-bottom: 16px; }
+.detail__text h2 {
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.15;
+  margin-bottom: 16px;
+  color: var(--navy-dark);
+}
+.detail__text p {
+  font-size: 17px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.detail__check {
+  list-style: none;
+  padding: 0; margin: 0 0 24px;
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+.detail__check li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 15px;
+}
+.detail__check .check {
+  flex: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: rgba(22,169,116,0.15);
+  color: var(--success);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+}
+.detail__highlight {
+  margin-top: 8px;
+  padding: 14px 16px;
+  background: var(--navy-50);
+  border-left: 3px solid var(--navy-500);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--navy-dark);
+  font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  .detail, .detail--reverse { grid-template-columns: 1fr; gap: 32px; direction: ltr; }
+}
+
+/* Phone + dashboard combo */
+.combo {
+  position: relative;
+  aspect-ratio: 5 / 4;
+}
+.combo__dash {
+  position: absolute;
+  right: 0; top: 12%;
+  width: 78%;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.combo__dash-head {
+  background: var(--navy-dark);
+  color: white;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.combo__dash-head .dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; }
+.combo__dash-body { padding: 14px; }
+.combo__row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.combo__row:last-child { border-bottom: 0; }
+.combo__plate { font-family: var(--font-mono); font-weight: 600; color: var(--navy-dark); }
+.combo__status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+.combo__status--ok { background: rgba(22,169,116,0.12); color: var(--success); }
+.combo__status--wait { background: rgba(229,161,0,0.15); color: var(--warning); }
+.combo__status--done { background: rgba(44,90,158,0.12); color: var(--navy-500); }
+
+.combo__phone {
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 38%;
+  aspect-ratio: 9 / 19;
+  background: var(--navy-dark);
+  border-radius: 28px;
+  border: 8px solid #1A2A42;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 2;
+}
+.combo__phone-screen {
+  background: white;
+  height: 100%;
+  padding: 22px 12px 12px;
+  display: flex; flex-direction: column;
+}
+.combo__phone-time {
+  font-size: 11px; font-weight: 600; text-align: center;
+  margin-bottom: 12px; color: var(--text-muted);
+}
+.combo__notif {
+  background: var(--navy-50);
+  border: 1px solid #D6E2F1;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 11px;
+  display: flex; gap: 8px;
+  align-items: flex-start;
+  animation: slideIn .6s ease-out 1s both;
+}
+.combo__notif .icon-box {
+  width: 24px; height: 24px;
+  background: var(--accent);
+  color: white;
+  border-radius: 6px;
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+}
+.combo__notif strong { color: var(--navy-dark); display: block; font-size: 11px; }
+.combo__notif span { color: var(--text-muted); font-size: 10px; line-height: 1.4; }
+@keyframes slideIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+
+.combo__work {
+  margin-top: 12px;
+  padding: 10px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 11px;
+}
+.combo__work .label { color: var(--text-muted); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; }
+.combo__work .val { font-weight: 600; color: var(--navy-dark); margin-top: 2px; }
+
+/* Import modal mockup */
+.import-mock {
+  background: white;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.import-mock__head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.import-mock__head h4 { font-size: 15px; color: var(--navy-dark); }
+.import-mock__head .file-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--navy-50);
+  color: var(--navy-500);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+.import-mock__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.import-mock__table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 10px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.import-mock__table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.import-mock__table tbody tr:last-child td { border-bottom: 0; }
+.import-mock__table .plate { font-family: var(--font-mono); font-weight: 600; color: var(--navy-dark); }
+.import-mock__table .num { font-family: var(--font-mono); }
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge--ok { background: rgba(22,169,116,0.12); color: var(--success); }
+.badge--err { background: rgba(220,56,56,0.12); color: var(--danger); }
+.badge--warn { background: rgba(229,161,0,0.15); color: var(--warning); }
+
+.import-mock__foot {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+.import-mock__foot .summary { color: var(--text-muted); }
+.import-mock__foot .summary strong { color: var(--navy-dark); }
+
+/* PDF mockup */
+.pdf {
+  background: white;
+  aspect-ratio: 1 / 1.41;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.pdf__band {
+  background: var(--navy-dark);
+  color: white;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pdf__band h4 { font-size: 14px; font-weight: 600; }
+.pdf__band .month { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+.pdf__band .logo-mini {
+  font-weight: 800; font-size: 13px;
+  letter-spacing: -0.02em;
+}
+.pdf__band .logo-mini .fit {
+  background: var(--accent);
+  padding: 0 5px;
+  border-radius: 3px;
+  margin-left: 1px;
+}
+.pdf__body { padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.pdf__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.pdf__kpi {
+  background: var(--navy-50);
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+}
+.pdf__kpi .label { font-size: 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.pdf__kpi .val { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--navy-dark); margin-top: 2px; }
+.pdf__kpi .val.accent { color: var(--accent); }
+.pdf__section {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+}
+.pdf__section h5 {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.pdf__bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 10px; }
+.pdf__bar .name { flex: 0 0 70px; font-weight: 500; color: var(--navy-dark); }
+.pdf__bar .track { flex: 1; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.pdf__bar .fill { height: 100%; background: var(--accent); border-radius: 3px; }
+.pdf__bar .num { font-family: var(--font-mono); flex: 0 0 40px; text-align: right; font-weight: 600; color: var(--navy-dark); }
+.pdf__sign {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+  font-size: 9px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+}
+.pdf__sign .line { width: 80px; height: 1px; background: var(--text-muted); margin-top: 14px; }
+
+/* =========================================================
+   STATS BAND
+   ========================================================= */
+.stats {
+  background:
+    radial-gradient(ellipse 600px 300px at 80% 50%, rgba(255,107,31,0.12), transparent 60%),
+    var(--navy-dark);
+  padding: 80px 0;
+  color: white;
+}
+.stats__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+}
+.stat {
+  text-align: center;
+}
+.stat__num {
+  font-family: var(--font-mono);
+  font-size: clamp(36px, 4.5vw, 56px);
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.stat__num .suffix { font-size: 0.5em; color: white; opacity: .7; margin-left: 2px; }
+.stat__label {
+  margin-top: 10px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.75);
+  font-weight: 500;
+}
+@media (max-width: 720px) { .stats__grid { grid-template-columns: repeat(2, 1fr); gap: 40px; } }
+
+/* =========================================================
+   QUOTE
+   ========================================================= */
+.quote-section { background: var(--bg); }
+.quote {
+  max-width: 880px;
+  margin: 0 auto;
+  text-align: center;
+}
+.quote__mark {
+  font-family: Georgia, serif;
+  font-size: 96px;
+  line-height: .4;
+  color: var(--accent);
+  margin-bottom: 12px;
+  display: inline-block;
+}
+.quote__text {
+  font-size: clamp(22px, 2.6vw, 32px);
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--navy-dark);
+  margin-bottom: 32px;
+  letter-spacing: -0.01em;
+}
+.quote__author {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+.quote__avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--navy-500) 0%, var(--accent) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+  font-family: var(--font-sans);
+}
+.quote__meta { text-align: left; }
+.quote__name { font-weight: 700; color: var(--navy-dark); }
+.quote__role { font-size: 14px; color: var(--text-muted); }
+
+/* =========================================================
+   PRICING
+   ========================================================= */
+.pricing {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+.plan {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.plan:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+.plan--featured {
+  border: 2px solid var(--accent);
+  box-shadow: 0 16px 36px rgba(255,107,31,0.18);
+}
+.plan__badge {
+  position: absolute;
+  top: -12px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.08em;
+}
+.plan__name {
+  font-size: 18px;
+  color: var(--navy-dark);
+  margin-bottom: 6px;
+}
+.plan__desc { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; }
+.plan__price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 22px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+.plan__price .num {
+  font-family: var(--font-mono);
+  font-size: 44px;
+  font-weight: 700;
+  color: var(--navy-dark);
+  letter-spacing: -0.02em;
+}
+.plan__price .currency { font-size: 22px; font-weight: 600; color: var(--navy-dark); }
+.plan__price .period { font-size: 14px; color: var(--text-muted); }
+.plan__price .custom { font-size: 22px; font-weight: 700; color: var(--navy-dark); }
+.plan__list {
+  list-style: none; padding: 0; margin: 0 0 28px;
+  flex: 1;
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+.plan__list li {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 14px;
+}
+.plan__list .check {
+  flex: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: rgba(22,169,116,0.15);
+  color: var(--success);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  margin-top: 2px;
+}
+.plan .btn { width: 100%; justify-content: center; }
+.pricing__note {
+  text-align: center;
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.pricing__note strong { color: var(--navy-dark); }
+
+@media (max-width: 900px) { .pricing { grid-template-columns: 1fr; } }
+
+/* =========================================================
+   FAQ
+   ========================================================= */
+.faq {
+  max-width: 780px;
+  margin: 0 auto;
+}
+.faq__item {
+  border-bottom: 1px solid var(--border);
+}
+.faq__item:first-child { border-top: 1px solid var(--border); }
+.faq__q {
+  width: 100%;
+  text-align: left;
+  padding: 22px 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--navy-dark);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.faq__q .toggle {
+  flex: none;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--navy-50);
+  color: var(--navy-500);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  transition: transform .25s ease, background .2s ease;
+}
+.faq__item.is-open .toggle { transform: rotate(45deg); background: var(--accent); color: white; }
+.faq__a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .3s ease;
+}
+.faq__a-inner {
+  padding: 0 0 22px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-muted);
+  max-width: 680px;
+}
+
+/* =========================================================
+   CTA BAND
+   ========================================================= */
+.cta-band {
+  background:
+    radial-gradient(ellipse 600px 300px at 20% 30%, rgba(255,255,255,0.18), transparent 60%),
+    linear-gradient(135deg, var(--accent) 0%, var(--accent-d) 100%);
+  color: white;
+  padding: 80px 0;
+  text-align: center;
+}
+.cta-band h2 {
+  font-size: clamp(32px, 4.4vw, 52px);
+  line-height: 1.1;
+  margin-bottom: 14px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.cta-band p {
+  font-size: 18px;
+  opacity: .9;
+  margin-bottom: 32px;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+.footer {
+  background: var(--navy-dark);
+  color: rgba(255,255,255,0.7);
+  padding: 72px 0 24px;
+}
+.footer__top {
+  display: grid;
+  grid-template-columns: 2fr 3fr 2fr;
+  gap: 48px;
+  padding-bottom: 48px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.footer__brand img {
+  width: 200px;
+  margin-bottom: 18px;
+}
+.footer__brand p {
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 320px;
+  margin-bottom: 14px;
+}
+.footer__credit {
+  font-size: 12px;
+  font-style: italic;
+  color: rgba(255,255,255,0.4);
+}
+.footer__cols {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+.footer__col h5 {
+  color: white;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+.footer__col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.footer__col a { font-size: 14px; transition: color .15s ease; }
+.footer__col a:hover { color: var(--accent); }
+.footer__newsletter h5 {
+  color: white;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+.footer__newsletter p { font-size: 13px; margin-bottom: 14px; }
+.footer__form {
+  display: flex;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-btn);
+  padding: 4px;
+}
+.footer__form input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: white;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.footer__form input::placeholder { color: rgba(255,255,255,0.4); }
+.footer__form button {
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 6px;
+}
+.footer__form button:hover { background: var(--accent-d); }
+
+.footer__bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 24px;
+  font-size: 13px;
+}
+.footer__social { display: flex; gap: 14px; }
+.footer__social a {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.15);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .2s ease, border-color .2s ease;
+}
+.footer__social a:hover { background: var(--accent); border-color: var(--accent); color: white; }
+.footer__social svg { width: 16px; height: 16px; }
+
+@media (max-width: 900px) {
+  .footer__top { grid-template-columns: 1fr; gap: 36px; padding-bottom: 36px; }
+  .footer__cols { grid-template-columns: repeat(2, 1fr); }
+  .footer__bottom { flex-direction: column; gap: 16px; }
+}
+
+</style>
 </head>
 <body>
 
-  <!-- =======================================================================
-       NAV
-       ======================================================================= -->
-  <nav class="nav" id="topnav">
-    <div class="container nav-inner">
-      <a href="/" class="brand" aria-label="Fleetly">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span class="brand-name">Fleet<em>ly</em></span>
-      </a>
+<!-- =========================================================
+     NAV
+     ========================================================= -->
+<header class="nav" id="nav">
+  <div class="container nav__inner">
+    <a href="#" class="nav__logo" aria-label="Fleetly.fit ana sayfa">
+      <!-- Logo: orange truck icon + wordmark -->
+      <svg class="logo-truck" viewBox="0 0 64 64" aria-hidden="true">
+        <g fill="#FF6B1F">
+          <!-- speed lines -->
+          <path d="M2 16 H22 L26 12 H30 L26 16 H22" />
+          <path d="M4 22 H18" />
+          <path d="M2 28 H14" />
+          <!-- truck body -->
+          <path d="M10 32 L10 50 L18 50 A6 6 0 0 1 30 50 L36 50 L36 38 L42 38 L48 44 L48 50 A6 6 0 0 1 60 50 L62 50 L62 36 L54 28 L36 28 L36 32 Z" />
+          <!-- truck cabin window -->
+          <path d="M40 32 L52 32 L56 38 L40 38 Z" fill="#0B1A2F" />
+        </g>
+        <!-- wheels -->
+        <circle cx="24" cy="50" r="4" fill="#0B1A2F" />
+        <circle cx="54" cy="50" r="4" fill="#0B1A2F" />
+        <circle cx="24" cy="50" r="1.5" fill="#FF6B1F" />
+        <circle cx="54" cy="50" r="1.5" fill="#FF6B1F" />
+      </svg>
+      <span class="nav__logo-wordmark">Fleetly<span class="nav__logo-fit">.fit</span></span>
+    </a>
 
-      <div class="nav-links">
-        <a href="#problem">Saha</a>
-        <a href="#ozellikler">Özellikler</a>
-        <a href="#panel">Panel</a>
-        <a href="#fiyat">Fiyat</a>
-        <a href="register.html" class="nav-cta">Ücretsiz dene</a>
-      </div>
+    <nav aria-label="Ana menü">
+      <ul class="nav__links">
+        <li><a href="#features">Özellikler</a></li>
+        <li><a href="#modules">Modüller</a></li>
+        <li><a href="#pricing">Fiyatlandırma</a></li>
+        <li><a href="#faq">SSS</a></li>
+        <li><a href="#contact">İletişim</a></li>
+      </ul>
+    </nav>
 
-      <button class="nav-toggle" aria-label="Menüyü aç">
-        <span></span>
+    <div class="nav__cta">
+      <a href="#" class="nav__login">Giriş Yap</a>
+      <a href="#cta" class="btn btn--primary">Demo Talep Et</a>
+      <button class="nav__hamburger" id="hamburger" aria-label="Menüyü aç" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
-  </nav>
+  </div>
 
+  <div class="nav__mobile" id="navMobile">
+    <ul>
+      <li><a href="#features">Özellikler</a></li>
+      <li><a href="#modules">Modüller</a></li>
+      <li><a href="#pricing">Fiyatlandırma</a></li>
+      <li><a href="#faq">SSS</a></li>
+      <li><a href="#contact">İletişim</a></li>
+      <li><a href="#" style="margin-top:8px; font-weight:600;">Giriş Yap</a></li>
+    </ul>
+    <a href="#cta" class="btn btn--primary" style="width:100%; justify-content:center;">Demo Talep Et</a>
+  </div>
+</header>
 
-  <!-- =======================================================================
-       HERO
-       ======================================================================= -->
-  <header class="hero">
+<main>
 
-    <!-- Ambient silhouette: konteyner gemisi + liman vinci -->
-    <svg class="hero-bg" viewBox="0 0 900 500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="hfade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"  stop-color="#c8102e" stop-opacity="0"/>
-          <stop offset="70%" stop-color="#e8ddb5" stop-opacity="0.55"/>
-          <stop offset="100%" stop-color="#e8ddb5" stop-opacity="0.9"/>
-        </linearGradient>
-      </defs>
-      <!-- deniz çizgisi -->
-      <line x1="0" y1="420" x2="900" y2="420" stroke="#e8ddb5" stroke-width="0.6" opacity="0.6"/>
-      <!-- konteyner gemisi silueti -->
-      <g fill="url(#hfade)">
-        <path d="M120 420 L120 380 L180 360 L680 360 L720 380 L760 420 Z"/>
-        <!-- konteyner istifleri -->
-        <rect x="200" y="310" width="60" height="50"/>
-        <rect x="262" y="310" width="60" height="50"/>
-        <rect x="324" y="310" width="60" height="50"/>
-        <rect x="386" y="310" width="60" height="50"/>
-        <rect x="448" y="310" width="60" height="50"/>
-        <rect x="510" y="310" width="60" height="50"/>
-        <rect x="572" y="310" width="60" height="50"/>
-        <rect x="231" y="258" width="60" height="50"/>
-        <rect x="293" y="258" width="60" height="50"/>
-        <rect x="355" y="258" width="60" height="50"/>
-        <rect x="417" y="258" width="60" height="50"/>
-        <rect x="479" y="258" width="60" height="50"/>
-        <rect x="541" y="258" width="60" height="50"/>
-        <rect x="324" y="206" width="60" height="50"/>
-        <rect x="386" y="206" width="60" height="50"/>
-        <rect x="448" y="206" width="60" height="50"/>
-        <!-- gemi kulesi -->
-        <rect x="640" y="220" width="38" height="140"/>
-        <rect x="648" y="200" width="8" height="25"/>
-      </g>
-      <!-- liman vinci -->
-      <g stroke="#e8ddb5" stroke-width="1.2" fill="none" opacity="0.55">
-        <line x1="80"  y1="420" x2="80"  y2="110"/>
-        <line x1="100" y1="420" x2="100" y2="110"/>
-        <line x1="80"  y1="110" x2="300" y2="110"/>
-        <line x1="100" y1="140" x2="280" y2="140"/>
-        <line x1="80"  y1="110" x2="40"  y2="210"/>
-        <line x1="100" y1="110" x2="60"  y2="210"/>
-        <line x1="160" y1="110" x2="160" y2="250"/>
-        <line x1="160" y1="250" x2="150" y2="270"/>
-        <line x1="160" y1="250" x2="170" y2="270"/>
-        <rect x="140" y="270" width="40" height="26"/>
-      </g>
-    </svg>
-
-    <div class="container hero-grid">
-
-      <div class="hero-left">
-        <span class="eyebrow">AMBARLI · ÇERKEZKÖY · HADIMKÖY · GEBZE</span>
-
-        <h1 class="hero-title">
-          <span class="line">Kapıdan</span>
-          <span class="line"><em>limana,</em></span>
-          <span class="line">tek <span class="red">nefeste.</span></span>
-        </h1>
-
-        <p class="hero-lede">
-          Ambarlı'dan çıkan <strong>40'lık konteynerler,</strong> Çerkezköy OSB'ye dönen çekici–dorse takımları, Hadımköy'de sıra bekleyen şoförler. Fleetly hepsini tek bir <strong>lacivert panoda</strong> canlı tutar; sefer durumu, muayene takvimi, belge son kullanma — kağıt dosyaya, WhatsApp grubuna, "kim nereyi biliyordu"ya elveda.
-        </p>
-
-        <div class="hero-actions">
-          <a href="register.html" class="btn btn-primary">
-            Ücretsiz başla
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M1 8h14M9 2l6 6-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/>
-            </svg>
-          </a>
-          <a href="#panel" class="btn btn-secondary">Paneli gör</a>
-        </div>
-
-        <div class="hero-stamp">
-          <span class="dot"></span>
-          <span>34 plakalı 180+ araç için saha geri bildirimi ile kuruldu</span>
-        </div>
-      </div>
-
-      <!-- Hero kartı: canlı "şu anda sahada" özeti -->
-      <aside class="hero-card" aria-label="Canlı filo özeti">
-        <span class="hero-card-chip">CANLI · ŞU AN</span>
-
-        <div class="hero-card-head">
-          <h3>Bugün sahada</h3>
-          <span>24 Nisan · 14:32</span>
-        </div>
-
-        <div class="hc-row">
-          <div>
-            <div class="hc-plate">34 FSB 145</div>
-            <div class="hc-driver">Mehmet Y. · Ambarlı → Çerkezköy OSB</div>
-          </div>
-          <span class="hc-status go">YOLDA</span>
-        </div>
-        <div class="hc-row">
-          <div>
-            <div class="hc-plate">34 DV 8821</div>
-            <div class="hc-driver">Hasan K. · Gebze → Ambarlı (dönüş)</div>
-          </div>
-          <span class="hc-status go">YOLDA</span>
-        </div>
-        <div class="hc-row">
-          <div>
-            <div class="hc-plate">34 LP 3452</div>
-            <div class="hc-driver">Ramazan B. · Muayene 6 gün</div>
-          </div>
-          <span class="hc-status warn">UYARI</span>
-        </div>
-        <div class="hc-row">
-          <div>
-            <div class="hc-plate">34 TN 9014</div>
-            <div class="hc-driver">Sürücü SRC3 süresi dolmuş</div>
-          </div>
-          <span class="hc-status stop">DUR</span>
-        </div>
-
-        <div class="hc-kpis">
-          <div class="hc-kpi">
-            <label>AKTİF</label>
-            <strong>42<em>/58</em></strong>
-          </div>
-          <div class="hc-kpi">
-            <label>SEFER / GÜN</label>
-            <strong>87</strong>
-          </div>
-          <div class="hc-kpi">
-            <label>BEKLEYEN</label>
-            <strong>6<em>*</em></strong>
-          </div>
-        </div>
-      </aside>
-
-    </div>
-
-    <div class="hero-scroll-hint">KAYDIR · AŞAĞI</div>
-  </header>
-
-
-  <!-- =======================================================================
-       STATS BANT
-       ======================================================================= -->
-  <section class="stats-bar">
-    <div class="container stats-bar-inner">
-      <div class="stat-item">
-        <div class="num">180<em>+</em></div>
-        <div class="label">Filo · ARAÇ</div>
-      </div>
-      <div class="stat-item">
-        <div class="num">12.400<em>+</em></div>
-        <div class="label">Aylık Sefer</div>
-      </div>
-      <div class="stat-item">
-        <div class="num">%94</div>
-        <div class="label">Zamanında Varış</div>
-      </div>
-      <div class="stat-item">
-        <div class="num">0<em>·</em></div>
-        <div class="label">Kağıt Dosya</div>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- =======================================================================
-       PROBLEM STRIPE
-       ======================================================================= -->
-  <section class="problems" id="problem">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">SAHA · GERÇEĞİ</span>
-        <h2>Liman <em>bekleme sırası</em> uzun; <span class="red">belirsizlik</span> daha uzun.</h2>
-      </div>
-
-      <div class="problem-grid">
-        <article class="problem">
-          <div class="problem-num">01 · DEFTER</div>
-          <h3>Şoförün <em>SRC'si</em> hangi tarihe kadar geçerli?</h3>
-          <p>Belgeler kimi zaman müdürün çekmecesinde, kimi zaman şoförün cebinde. Ambarlı kapısında "ruhsat fotoğrafını at" diye aranıyorsa, sistem o gün kaybetti.</p>
-          <span class="problem-tag">SRC · PSK · MUAYENE</span>
-        </article>
-
-        <article class="problem">
-          <div class="problem-num">02 · WHATSAPP</div>
-          <h3>"Bu sefer <em>kime</em> verildi, hangi konteynerle?"</h3>
-          <p>Sekiz farklı grupta dönen bilgi aynı anda hem eski hem yeni. Çerkezköy OSB teslimi Hadımköy'de sanılıyor — şoför arar, dispeçer bakar, müdür arar, dispeçer tekrar bakar.</p>
-          <span class="problem-tag">WHATSAPP KARMAŞA</span>
-        </article>
-
-        <article class="problem">
-          <div class="problem-num">03 · EXCEL</div>
-          <h3>Excel <em>büyüdükçe</em> kimse güvenmiyor.</h3>
-          <p>V14_son_SON_REVIZE.xlsx. Farklı iki kişi aynı gün kaydedince gidiyor. Rapor istediğinde "ben akşam toparlayayım" cevabı — rapor bir hafta gecikiyor.</p>
-          <span class="problem-tag">VERSİYON KAYBI</span>
-        </article>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- =======================================================================
-       FEATURES
-       ======================================================================= -->
-  <section class="features" id="ozellikler">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">TEMELLER</span>
-        <h2>Konteyneri <em>takip</em> etmek <span class="red">kolaydır</span>, geri kalan her şeyi biz taşıdık.</h2>
-      </div>
-
-      <div class="feature-grid">
-
-        <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <rect x="2" y="6" width="13" height="10" stroke="currentColor" stroke-width="1.5"/>
-              <rect x="15" y="9" width="5" height="7" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="6" cy="17" r="1.7" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="16" cy="17" r="1.7" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-          </div>
-          <h3>Araç kartı, tek kaynak</h3>
-          <p>34 FSB 145'in ruhsatı, muayenesi, sigorta bitişi, K1 yetkisi, bakım geçmişi — hepsi tek kartta. Yeni bir şoför atandığında geçmiş de onunla gelir.</p>
-          <a href="#" class="feature-link">Araç modülü</a>
-        </article>
-
-        <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <circle cx="11" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M3 19c1.5-4 5-5.5 8-5.5s6.5 1.5 8 5.5" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-          </div>
-          <h3>Sürücü dosyası, sahne arkasında</h3>
-          <p>SRC sınıfı, psikoteknik, ehliyet, iş sağlığı — her belge kendi son kullanma tarihini kendisi hatırlatır. Süre dolmadan uyarır, dolduğunda o aracı listede kilitler.</p>
-          <a href="#" class="feature-link">Sürücü modülü</a>
-        </article>
-
-        <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <path d="M3 11h7l2-5 2 10 2-5h3" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/>
-            </svg>
-          </div>
-          <h3>Sefer akışı, canlı</h3>
-          <p>Ambarlı kapıda yüklenen konteynerden Çerkezköy OSB kapısına kadar tek durum çubuğu. "Geçti mi, geçmedi mi" diye aramak yerine panele bakarsın.</p>
-          <a href="#" class="feature-link">Sefer modülü</a>
-        </article>
-
-        <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <rect x="3" y="4" width="16" height="16" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M3 8h16M7 4v3M15 4v3" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="16" cy="14" r="1.5" fill="currentColor"/>
-            </svg>
-          </div>
-          <h3>Takvim, susmayan hafıza</h3>
-          <p>Muayene, sigorta, takograf indirme, lastik, fren — hepsinin tarihi birden fazla kanala düşer. Dispeçerin telefonunda titrer, müdürün e-postasına gider.</p>
-          <a href="#" class="feature-link">Takvim modülü</a>
-        </article>
-
-        <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <path d="M4 18V8l7-4 7 4v10" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M4 18h14M9 18v-5h4v5" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-          </div>
-          <h3>Şoför portalı, cepten</h3>
-          <p>Şoförün telefonunda sade bir PWA: bugünün seferi, bir sonraki muayene, avans talebi. SMS OTP ile giriş; uygulama yüklemeye zorlamaz.</p>
-          <a href="#" class="feature-link">Şoför PWA</a>
-        </article>
-
-        <article class="feature">
-          <div class="feature-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <rect x="3" y="6" width="16" height="12" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M3 6l8 7 8-7" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-          </div>
-          <h3>Müşteri takip bağlantısı</h3>
-          <p>Gönderici, "yolda mı geldi mi" diye aramak yerine tek bir linkten görür: konteyner no, araç, şoför, tahmini varış. Karşı tarafın gözünde hep şeffaf.</p>
-          <a href="#" class="feature-link">Takip linki</a>
-        </article>
-
-      </div>
-    </div>
-  </section>
-
-
-  <!-- =======================================================================
-       PANEL PREVIEW
-       ======================================================================= -->
-  <section class="preview" id="panel">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">PANEL</span>
-        <h2>Her sabah <em>aynı ekran,</em> her akşam <span class="red">daha az soru.</span></h2>
-      </div>
-
-      <p class="preview-lede">
-        Müdür masasına oturduğunda ilk 8 saniyede "bugün filo ne durumda"yı görür. Dispeçer aynı ekranda sefer atar. Şoför kendi cebindeki sade sürümü açar.
-      </p>
-
-      <div class="preview-frame">
-        <div class="preview-chrome">
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="url">fleetly.app / panel / ambarli-filo</span>
-          <span style="width:10px"></span>
-        </div>
-
-        <div class="preview-body">
-
-          <aside class="preview-side">
-            <div class="preview-side-title">FİLO · 58</div>
-            <ul>
-              <li class="active">Bugünkü Seferler <span class="count">24</span></li>
-              <li>Araçlar <span class="count">58</span></li>
-              <li>Sürücüler <span class="count">63</span></li>
-              <li>Muayene yaklaşan <span class="count">6</span></li>
-              <li>Belge yaklaşan <span class="count">9</span></li>
-              <li>Servis / Bakım <span class="count">3</span></li>
-              <li>Müşteriler <span class="count">14</span></li>
-            </ul>
-          </aside>
-
-          <div class="preview-main">
-            <div class="preview-main-head">
-              <h4>Bugünün sirkülasyonu</h4>
-              <span>24 NİSAN · 14:32 · CANLI</span>
-            </div>
-
-            <div class="preview-kpis">
-              <div class="pv-kpi">
-                <label>AKTİF SEFER</label>
-                <strong>42<em>+3</em></strong>
-              </div>
-              <div class="pv-kpi">
-                <label>AMBARLI ↔ ÇERKEZKÖY</label>
-                <strong>18</strong>
-              </div>
-              <div class="pv-kpi">
-                <label>DOLULUK</label>
-                <strong>%87<em>+4</em></strong>
-              </div>
-              <div class="pv-kpi neg">
-                <label>GECİKME</label>
-                <strong>2<em>−1</em></strong>
-              </div>
-            </div>
-
-            <div class="preview-chart" aria-hidden="true">
-              <svg viewBox="0 0 680 150" preserveAspectRatio="none">
-                <line x1="0" y1="120" x2="680" y2="120" stroke="#1a3560" stroke-width="0.5"/>
-                <line x1="0" y1="80"  x2="680" y2="80"  stroke="#1a3560" stroke-width="0.5" stroke-dasharray="2 4"/>
-                <line x1="0" y1="40"  x2="680" y2="40"  stroke="#1a3560" stroke-width="0.5" stroke-dasharray="2 4"/>
-
-                <polyline fill="none" stroke="#e8ddb5" stroke-width="1.5"
-                  points="10,95 60,82 110,70 160,55 210,48 260,62 310,45 360,30 410,38 460,25 510,40 560,32 610,20 660,28"/>
-                <polyline fill="rgba(232,221,181,0.06)" stroke="none"
-                  points="10,95 60,82 110,70 160,55 210,48 260,62 310,45 360,30 410,38 460,25 510,40 560,32 610,20 660,28 660,120 10,120"/>
-
-                <polyline fill="none" stroke="#c8102e" stroke-width="1.2" stroke-dasharray="4 3"
-                  points="10,110 60,108 110,105 160,112 210,100 260,104 310,98 360,108 410,90 460,96 510,88 560,92 610,85 660,80"/>
-
-                <text x="10"  y="142" fill="#7d8fa6" font-family="JetBrains Mono" font-size="9">06:00</text>
-                <text x="160" y="142" fill="#7d8fa6" font-family="JetBrains Mono" font-size="9">09:00</text>
-                <text x="310" y="142" fill="#7d8fa6" font-family="JetBrains Mono" font-size="9">12:00</text>
-                <text x="460" y="142" fill="#7d8fa6" font-family="JetBrains Mono" font-size="9">15:00</text>
-                <text x="610" y="142" fill="#7d8fa6" font-family="JetBrains Mono" font-size="9">18:00</text>
-
-                <circle cx="510" cy="40" r="3" fill="#c8102e"/>
-                <text x="518" y="34" fill="#e8ddb5" font-family="JetBrains Mono" font-size="9">ŞU AN · 42</text>
-              </svg>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- =======================================================================
-       PRICING — tek plan, aylık / yıllık toggle
-       ======================================================================= -->
-  <section class="pricing" id="fiyat">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">FİYAT</span>
-        <h2>Tek <em>plan.</em> Gizli kalem, kademe, sürpriz <span class="red">yok.</span></h2>
-      </div>
-
-      <div class="pricing-toggle" role="tablist" aria-label="Fatura dönemi">
-        <button type="button" class="active" data-period="aylik" role="tab" aria-selected="true">AYLIK</button>
-        <button type="button" data-period="yillik" role="tab" aria-selected="false">YILLIK <span class="save">%25</span></button>
-      </div>
-
-      <article class="pricing-card">
-        <div class="pricing-card-head">
-          <div>
-            <div class="name">FLEETLY · SAHA</div>
-            <div class="plan">Sınırsız <em>araç,</em> sınırsız kullanıcı</div>
-          </div>
-          <div class="price">
-            <strong data-price-aylik><span class="currency">₺</span>990</strong>
-            <strong data-price-yillik hidden><span class="currency">₺</span>8.900</strong>
-            <span class="period" data-period-aylik>/ AY · KDV HARİÇ</span>
-            <span class="period" data-period-yillik hidden>/ YIL · KDV HARİÇ</span>
-            <span class="equiv" data-equiv-aylik>Yıllık ödemede %25 tasarruf</span>
-            <span class="equiv" data-equiv-yillik hidden>≈ ₺742 / ay · peşin ödeme</span>
-          </div>
-        </div>
-
-        <ul class="pricing-feat">
-          <li>Sınırsız araç ve çekici–dorse ikilisi</li>
-          <li>Sınırsız dispeçer & müdür hesabı</li>
-          <li>Şoför PWA · SMS OTP giriş</li>
-          <li>Muayene, sigorta, SRC, takograf takvimi</li>
-          <li>Canlı sefer panosu</li>
-          <li>Müşteri takip linki</li>
-          <li>Aylık PDF & Excel raporu</li>
-          <li>Türkçe canlı destek</li>
-          <li>Günlük yedek · Supabase altyapı</li>
-          <li>Kurulum & eğitim dahil</li>
-        </ul>
-
-        <div class="pricing-card-cta">
-          <a href="register.html" class="btn btn-primary">
-            14 gün ücretsiz dene
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M1 8h14M9 2l6 6-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/>
-            </svg>
-          </a>
-          <a href="#" class="btn btn-secondary">Demo iste</a>
-        </div>
-
-        <div class="pricing-note">
-          KREDİ KARTI · HAVALE · CARİ · İADE GARANTİSİ İLK 30 GÜN
-        </div>
-      </article>
-    </div>
-  </section>
-
-
-  <!-- =======================================================================
-       FAQ
-       ======================================================================= -->
-  <section class="faq">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">SIK GELEN</span>
-        <h2>Cevaplar · <em>kısa</em> ve <span class="red">dürüst.</span></h2>
-      </div>
-
-      <div class="faq-list">
-        <details class="faq-item" open>
-          <summary>Ambarlı'da kapı işlemleri için entegrasyon var mı?</summary>
-          <p>Kapı sistemleriyle doğrudan API entegrasyonu bazı operatörlerde mevcut, bazılarında değil. Olmayanlar için dispeçer tek tuşla kapı giriş/çıkış saatini kaydeder; sefer kartına otomatik işler. Yol haritasında TCDD ve Ro-Ro entegrasyonu yaz sonu için planlı.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Mevcut Excel dosyalarımızı yükleyebilir miyiz?</summary>
-          <p>Evet. Araçlar, sürücüler, müşteriler için hazır şablonlar veriyoruz; ekip üyemiz ilk hafta sizinle birlikte yüklüyor. Çoğu filo 2–3 gün içinde tam anlamıyla devreye giriyor.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Şoförler uygulama yüklemek zorunda mı?</summary>
-          <p>Hayır. Sistem PWA olarak çalışır — şoför telefonunda tarayıcıdan açar, ana ekrana ekler, bitti. SMS OTP ile giriş, şifre yok. Eski modellerde de sorunsuz çalışır.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Verilerimiz nerede tutuluyor?</summary>
-          <p>Supabase altyapısında (Frankfurt bölgesi, AB-GDPR uyumlu). Her firma kendi RLS'i ile izole; başka firmanın verisini kimse göremez. Günlük yedek, 30 gün geri dönüş noktası. Talep üzerine verinin tamamı dışa aktarılır.</p>
-        </details>
-        <details class="faq-item">
-          <summary>50 araçtan büyük filoya ölçeklenir mi?</summary>
-          <p>Evet. Ambarlı'da 180+ araçla operasyon yürüten filolarda sahadayız. Aynı veritabanı şeması, aynı RLS, aynı panel. 500 araca kadar performans düşmeden çalıştığını ölçtük.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Sözleşme kilidi var mı?</summary>
-          <p>Yok. Aylık abonelikte istediğin ay iptal edersin; yıllık planda kullanılmayan ayların iadesi pro-rata yapılır. Veriyi dışa aktarıp gitmek istersen tek tıkla JSON + Excel.</p>
-        </details>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- =======================================================================
-       FOOTER CTA
-       ======================================================================= -->
-  <section class="footer-cta">
-    <div class="container">
-      <span class="eyebrow">AYARLANMIŞ · HAZIR</span>
-      <h2>Ambarlı <em>sabah 06:00.</em> Paneliniz <span class="red">açık mı?</span></h2>
-      <p>
-        14 gün ücretsiz. Kredi kartı istemiyoruz. Kurulum dahil, ekibinizle birlikte kuruyoruz. Beğenmezseniz — verinin tamamı sizin, kapı tek tıkla açık.
-      </p>
-      <div class="footer-cta-actions">
-        <a href="register.html" class="btn btn-primary">
-          Ücretsiz başla
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M1 8h14M9 2l6 6-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/>
-          </svg>
+<!-- =========================================================
+     HERO
+     ========================================================= -->
+<section class="hero">
+  <div class="container hero__grid">
+    <div class="hero__text">
+      <span class="tag">🚛 Konteyner & Filo Yönetimi</span>
+      <h1 class="hero__title">Filonuzun beyni. <br/><span class="accent">Cebinizdeki</span> operasyon müdürü.</h1>
+      <p class="hero__sub">Şoförden müşteriye, yakıt fişinden teslim makbuzuna — tek panelde. Excel ve WhatsApp karmaşası bitsin, operasyon tek panelden yürüsün.</p>
+      <div class="hero__ctas">
+        <a href="#cta" class="btn btn--primary btn--lg">🚀 Ücretsiz Dene</a>
+        <a href="#" class="btn btn--ghost btn--lg">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          90 saniyelik turu izle
         </a>
-        <a href="#" class="btn btn-secondary">Demo ayarla</a>
+      </div>
+      <div class="hero__proof">
+        <span><span class="check">✓</span> 500+ araç</span>
+        <span><span class="check">✓</span> 15K+ tamamlanan iş</span>
+        <span><span class="check">✓</span> 0 kayıp POD</span>
       </div>
     </div>
-  </section>
 
-
-  <!-- =======================================================================
-       FOOTER
-       ======================================================================= -->
-  <footer class="footer">
-    <div class="container">
-
-      <div class="footer-inner">
-        <div class="footer-brand">
-          <a href="/" class="brand">
-            <span class="brand-mark" aria-hidden="true"></span>
-            <span class="brand-name">Fleet<em>ly</em></span>
-          </a>
-          <p>Ambarlı limanı trafiğine göre ayarlanmış, Türkiye karayolu taşımacılığı için tasarlanmış filo panosu.</p>
+    <div class="hero__visual reveal">
+      <div class="mockup">
+        <div class="mockup__chrome">
+          <span class="mockup__dot"></span>
+          <span class="mockup__dot"></span>
+          <span class="mockup__dot"></span>
+          <span class="mockup__url">app.fleetly.fit/canli-harita</span>
         </div>
+        <div class="map">
+          <!-- Stylized Turkey map -->
+          <svg class="map__svg" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(44,90,158,0.06)" stroke-width="1"/>
+              </pattern>
+            </defs>
+            <rect width="800" height="500" fill="url(#grid)" />
+            <!-- Approximate Turkey silhouette -->
+            <path d="M70,210 L120,180 L180,170 L240,165 L300,160 L360,155 L420,150 L480,160 L540,170 L600,165 L650,170 L710,180 L740,200 L730,240 L700,270 L640,290 L580,295 L520,300 L460,295 L400,290 L340,295 L280,290 L220,280 L160,270 L110,260 L80,240 Z"
+                  fill="#C8D5E6" stroke="#9FB1C9" stroke-width="1.5" opacity="0.75"/>
+            <!-- Roads -->
+            <path d="M100,240 Q260,220 420,230 T720,220" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-dasharray="0" opacity="0.8"/>
+            <path d="M180,180 Q280,260 360,200 T540,260" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.6"/>
+          </svg>
 
-        <div>
-          <h5>ÜRÜN</h5>
+          <div class="map__legend">
+            <span class="live-dot"></span>
+            <span>Canlı · 7 araç</span>
+          </div>
+
+          <!-- Pins -->
+          <div class="map__pin" style="left: 22%; top: 48%;"></div>
+          <div class="map__pin" style="left: 36%; top: 42%;"></div>
+          <div class="map__pin" style="left: 48%; top: 56%;"></div>
+          <div class="map__pin" style="left: 62%; top: 44%;"></div>
+          <div class="map__pin" style="left: 74%; top: 50%;"></div>
+          <div class="map__pin" style="left: 30%; top: 62%;"></div>
+          <div class="map__pin" style="left: 56%; top: 38%;"></div>
+
+          <!-- Popup near a pin -->
+          <div class="map__popup" style="left: 42%; top: 22%;">
+            <div class="plate">34 ABC 1234</div>
+            <div class="driver">Mehmet Y. — Yolda</div>
+            <div class="status">
+              <span style="width:6px; height:6px; background:currentColor; border-radius:50%;"></span>
+              Hareketli
+              <span class="ago">12 dk önce</span>
+            </div>
+          </div>
+
+          <div class="map__counter">
+            <span>Aktif rota</span>
+            <span class="num">7/12</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     TRUST BAR
+     ========================================================= -->
+<section class="trust" aria-label="Müşteri logoları">
+  <div class="container">
+    <p class="trust__title">Türkiye'nin önde gelen lojistik firmaları kullanıyor</p>
+    <div class="trust__row">
+      <div class="trust__logo">ANADOLU LOJ.</div>
+      <div class="trust__logo">MARMARA TRANS</div>
+      <div class="trust__logo">EGE KARGO</div>
+      <div class="trust__logo">DENİZ FİLO</div>
+      <div class="trust__logo">KONTEYNER A.Ş.</div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     PROBLEM / SOLUTION
+     ========================================================= -->
+<section class="section">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Önce / Sonra</span>
+      <h2>Operasyon kaosu yerine, tek bir gerçeklik.</h2>
+      <p>Excel sekmeleri, WhatsApp grupları, kâğıt fişler — hepsi tek panele dönüşüyor.</p>
+    </div>
+
+    <div class="compare reveal">
+      <div class="compare__col compare__col--before">
+        <span class="compare__label">Önce</span>
+        <h3>Operasyon parça parça, kimse bütünü görmüyordu.</h3>
+        <ul class="compare__list">
+          <li><span class="icon">✕</span><span>WhatsApp grupları kaynıyordu, kim hangi işte belirsizdi.</span></li>
+          <li><span class="icon">✕</span><span>Yakıt fişleri kayboluyor, ay sonu mutabakat çıkmıyor.</span></li>
+          <li><span class="icon">✕</span><span>Şoförün nerede olduğunu kimse bilmiyor, telefona sarılıyor.</span></li>
+          <li><span class="icon">✕</span><span>Teslim makbuzları araçtan ofise iki gün sonra geliyor.</span></li>
+          <li><span class="icon">✕</span><span>Aylık patron raporu için 4 saatlik Excel mesaisi.</span></li>
+        </ul>
+      </div>
+
+      <div class="compare__arrow" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </div>
+
+      <div class="compare__col compare__col--after">
+        <span class="compare__label">Sonra · Fleetly</span>
+        <h3>Tek panel. Anlık görünüm. Net karar.</h3>
+        <ul class="compare__list">
+          <li><span class="icon">✓</span><span>Tek panelden 70 araç, 5 kişiye değil 1 kişiye yetiyor.</span></li>
+          <li><span class="icon">✓</span><span>Yakıt fişleri otomatik içe aktarılıyor, anomali işaretleniyor.</span></li>
+          <li><span class="icon">✓</span><span>Canlı GPS — "neredesin?" sorusu artık tek tıkla cevaplanıyor.</span></li>
+          <li><span class="icon">✓</span><span>POD şoförün cebinde imzalanıyor, anında dashboard'a düşüyor.</span></li>
+          <li><span class="icon">✓</span><span>Aylık rapor PDF olarak otomatik hazır, masaya geliyor.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     FEATURES
+     ========================================================= -->
+<section class="section" id="features" style="background: var(--bg);">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Ana Modüller</span>
+      <h2>Filonun her köşesi tek panelde.</h2>
+      <p>Sahada, ofiste ve patronun masasında — herkes aynı gerçeği görür.</p>
+    </div>
+
+    <div class="features" id="modules">
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">📡</div>
+        <h3>Canlı Konum Haritası</h3>
+        <p class="feature-card__desc">Hangi şoför nerede, hangi rotada — saniye saniye gerçek zamanlı.</p>
+        <ul class="feature-card__list">
+          <li>Realtime GPS, 5–10 sn güncellenen pozisyon</li>
+          <li>Geofence: liman/fabrika giriş-çıkış otomatik</li>
+          <li>Geçmiş rota oynatma (replay)</li>
+        </ul>
+        <a href="#" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">📦</div>
+        <h3>Konteyner Operasyon</h3>
+        <p class="feature-card__desc">İş emrinden teslime, durum akışı tek bakışta.</p>
+        <ul class="feature-card__list">
+          <li>Bekliyor → Yolda → Fabrikada → Teslim Edildi</li>
+          <li>Çoklu konteyner, çoklu durak desteği</li>
+          <li>Müşteri başına özel statü kuralları</li>
+        </ul>
+        <a href="#" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">📋</div>
+        <h3>Dijital Teslim Makbuzu (POD)</h3>
+        <p class="feature-card__desc">Şoför imzalar, anında web'e düşer; müşteriye PDF gider.</p>
+        <ul class="feature-card__list">
+          <li>Mobilde dijital imza ve fotoğraf</li>
+          <li>Yönetici onayı ve revizyon notu</li>
+          <li>Müşteriye otomatik PDF e-postası</li>
+        </ul>
+        <a href="#" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">⛽</div>
+        <h3>Yakıt Yönetimi & Anomali Tespit</h3>
+        <p class="feature-card__desc">Excel'i içe aktar, sistem L/100km sapmasını yakalasın.</p>
+        <ul class="feature-card__list">
+          <li>XLSX drag & drop import, plaka eşleştirme</li>
+          <li>L/100km, KM geri gitme, çift dolum tespiti</li>
+          <li>Aylık profesyonel PDF özet raporu</li>
+        </ul>
+        <a href="#" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">🛣</div>
+        <h3>Güzergah Karşılaştırma</h3>
+        <p class="feature-card__desc">Aynı işi yapan sürücüleri km, süre ve yakıtla yan yana koy.</p>
+        <ul class="feature-card__list">
+          <li>Sürücü performans skor tablosu</li>
+          <li>Kestirme rota / sapma tespiti</li>
+          <li>Aylık en verimli sürücü raporu</li>
+        </ul>
+        <a href="#" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">📱</div>
+        <h3>Şoför Mobil Uygulaması</h3>
+        <p class="feature-card__desc">Android'de bildirim, foto, dijital imza ve çevrimdışı sync.</p>
+        <ul class="feature-card__list">
+          <li>Davet kodu + PIN ile gerçek kullanıcı</li>
+          <li>Çevrimdışıyken çekilen imza/foto sonra senkron</li>
+          <li>Push: yeni iş emri, "neredesin?" sorgusu</li>
+        </ul>
+        <a href="#" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     DETAIL A — Driver app + dashboard
+     ========================================================= -->
+<section class="section">
+  <div class="container">
+    <div class="detail reveal">
+      <div class="detail__text">
+        <span class="tag">📱 Saha + Ofis</span>
+        <h2>Şoförün cebinde, ofiste tüm filo.</h2>
+        <p>Şoför iş emrini cebinde alır; teslimi imzalar, fotoğrafı çeker. Aynı bilgi, ofisteki dashboard'a saniyeler içinde düşer. Uçuk telefon trafiği, kayıp evraklar, "ben gönderdim hocam" tartışmaları biter.</p>
+        <ul class="detail__check">
+          <li><span class="check">✓</span><span>Push: yeni iş emri, durum güncellemesi, "neredesin?" sorgusu</span></li>
+          <li><span class="check">✓</span><span>Çevrimdışı çalışma — internet gelince otomatik senkron</span></li>
+          <li><span class="check">✓</span><span>Yakıt fişi & teslim fotoğrafı tek tıkla yükleme</span></li>
+          <li><span class="check">✓</span><span>Operasyon paneli: 70 araçlık filoyu 1 kişi yönetir</span></li>
+        </ul>
+        <div class="detail__highlight">
+          🔒 <strong>Anonim sign-in yok.</strong> Her şoför davet kodu + PIN ile gerçek kullanıcı kimliğiyle giriş yapar. Sahada kim ne yaptı — geriye dönük net izlenir.
+        </div>
+      </div>
+
+      <div class="detail__visual">
+        <div class="combo">
+          <div class="combo__dash">
+            <div class="combo__dash-head">
+              <span class="dot"></span>
+              Operasyon Paneli · Bugün
+            </div>
+            <div class="combo__dash-body">
+              <div class="combo__row">
+                <span class="combo__plate">34 ABC 1234</span>
+                <span>Mehmet Y.</span>
+                <span class="combo__status combo__status--ok">Yolda</span>
+              </div>
+              <div class="combo__row">
+                <span class="combo__plate">06 KLM 7890</span>
+                <span>Ahmet K.</span>
+                <span class="combo__status combo__status--wait">Bekliyor</span>
+              </div>
+              <div class="combo__row">
+                <span class="combo__plate">35 XYZ 4456</span>
+                <span>Hasan T.</span>
+                <span class="combo__status combo__status--done">Teslim</span>
+              </div>
+              <div class="combo__row">
+                <span class="combo__plate">34 DEF 8821</span>
+                <span>Osman B.</span>
+                <span class="combo__status combo__status--ok">Yolda</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="combo__phone">
+            <div class="combo__phone-screen">
+              <div class="combo__phone-time">09:42 ◆ Fleetly</div>
+              <div class="combo__notif">
+                <div class="icon-box">📦</div>
+                <div>
+                  <strong>Yeni iş emri</strong>
+                  <span>Ambarlı Limanı → BURSA OSB • 2 konteyner</span>
+                </div>
+              </div>
+              <div class="combo__work">
+                <div class="label">Aktif İş</div>
+                <div class="val">CNT-77821</div>
+                <div class="label" style="margin-top:6px;">Durum</div>
+                <div class="val" style="color: var(--success);">● Yolda</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     DETAIL B — Fuel import
+     ========================================================= -->
+<section class="section" style="background: var(--bg);">
+  <div class="container">
+    <div class="detail detail--reverse reveal">
+      <div class="detail__text">
+        <span class="tag">⛽ Yakıt Yönetimi</span>
+        <h2>Yakıt: Excel'den 30 saniyede içe aktar.</h2>
+        <p>POS firmasının XLSX'ini sürükle-bırak. Sistem plakaları otomatik eşleştirir, uyumsuz satırları işaretler. Geçerli satırları onayla — her şey buluta düşer, bir daha kayıp fiş kalmaz.</p>
+        <ul class="detail__check">
+          <li><span class="check">✓</span><span>Drag & drop XLSX → otomatik plaka & tarih eşleştirme</span></li>
+          <li><span class="check">✓</span><span>L/100km tüketim sapması, KM geri gitme, çift dolum tespiti</span></li>
+          <li><span class="check">✓</span><span>Şüpheli satırları onayla / reddet — denetim izi</span></li>
+          <li><span class="check">✓</span><span>Aylık özet PDF olarak otomatik üretilir</span></li>
+        </ul>
+        <div class="detail__highlight">
+          💡 <strong>Anomali sistemi otomatik çalışır.</strong> Sistem 50 araç içinde "şu plaka 17 L/100km tüketmiş, ortalaması 9'du" diye flag atar — patron ay sonunu beklemez.
+        </div>
+      </div>
+
+      <div class="detail__visual">
+        <div class="import-mock">
+          <div class="import-mock__head">
+            <h4>Yakıt İçe Aktarma — Önizleme</h4>
+            <span class="file-pill">📎 yakit-2026-04.xlsx</span>
+          </div>
+          <table class="import-mock__table">
+            <thead>
+              <tr><th>Plaka</th><th>Tarih</th><th>Litre</th><th>Tutar</th><th>Durum</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="plate">34 ABC 1234</td><td class="num">02.04</td><td class="num">87.5 L</td><td class="num">3.412 ₺</td><td><span class="badge badge--ok">✓ Geçerli</span></td></tr>
+              <tr><td class="plate">06 KLM 7890</td><td class="num">02.04</td><td class="num">142.2 L</td><td class="num">5.541 ₺</td><td><span class="badge badge--warn">⚠ Yüksek</span></td></tr>
+              <tr><td class="plate">35 XYZ 4456</td><td class="num">03.04</td><td class="num">76.0 L</td><td class="num">2.962 ₺</td><td><span class="badge badge--ok">✓ Geçerli</span></td></tr>
+              <tr><td class="plate">34 ZZZ 0001</td><td class="num">03.04</td><td class="num">95.5 L</td><td class="num">3.722 ₺</td><td><span class="badge badge--err">✕ Plaka yok</span></td></tr>
+              <tr><td class="plate">34 DEF 8821</td><td class="num">04.04</td><td class="num">72.4 L</td><td class="num">2.821 ₺</td><td><span class="badge badge--ok">✓ Geçerli</span></td></tr>
+            </tbody>
+          </table>
+          <div class="import-mock__foot">
+            <span class="summary"><strong>164</strong> satır · <strong style="color:var(--success);">158 geçerli</strong> · <strong style="color:var(--warning);">4 anomali</strong> · <strong style="color:var(--danger);">2 hata</strong></span>
+            <button class="btn btn--primary" style="padding:8px 14px; font-size:13px;">Geçerli Satırları Kaydet</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     DETAIL C — Monthly PDF
+     ========================================================= -->
+<section class="section">
+  <div class="container">
+    <div class="detail reveal">
+      <div class="detail__text">
+        <span class="tag">📄 Patron Raporu</span>
+        <h2>Patron için tek sayfa: Aylık Yakıt Yönetici Özeti.</h2>
+        <p>Her ay başı, otomatik üretilen tek sayfalık PDF. KPI kartları, en çok yakıt tüketen 5 araç, anomali listesi ve imza alanı. Saatlerce Excel mesaisi yerine, masaya bir kâğıt gelir.</p>
+        <ul class="detail__check">
+          <li><span class="check">✓</span><span>4 KPI kartı: toplam tüketim, ortalama L/100km, tasarruf, anomali</span></li>
+          <li><span class="check">✓</span><span>Top 5 sürücü/araç performans listesi</span></li>
+          <li><span class="check">✓</span><span>Anomali tablosu — flagli her satır gerekçesiyle</span></li>
+          <li><span class="check">✓</span><span>Yönetici imza alanı — kâğıt + dijital arşiv</span></li>
+        </ul>
+        <a href="#" class="btn btn--ghost">📄 Örnek raporu indir</a>
+      </div>
+
+      <div class="detail__visual">
+        <div class="pdf">
+          <div class="pdf__band">
+            <div>
+              <h4>Aylık Yakıt Yönetici Özeti</h4>
+              <div class="month">Nisan 2026 · 47 araç</div>
+            </div>
+            <div class="logo-mini">Fleetly<span class="fit">.fit</span></div>
+          </div>
+          <div class="pdf__body">
+            <div class="pdf__kpis">
+              <div class="pdf__kpi"><div class="label">Toplam</div><div class="val">38.4K L</div></div>
+              <div class="pdf__kpi"><div class="label">Ort. L/100km</div><div class="val">9.2</div></div>
+              <div class="pdf__kpi"><div class="label">Tasarruf</div><div class="val accent">%23</div></div>
+              <div class="pdf__kpi"><div class="label">Anomali</div><div class="val">7</div></div>
+            </div>
+            <div class="pdf__section">
+              <h5>En Çok Tüketim · Top 5 Araç</h5>
+              <div class="pdf__bar"><span class="name">06 KLM 7890</span><span class="track"><span class="fill" style="width:92%"></span></span><span class="num">14.2 L</span></div>
+              <div class="pdf__bar"><span class="name">34 DEF 8821</span><span class="track"><span class="fill" style="width:78%"></span></span><span class="num">12.0 L</span></div>
+              <div class="pdf__bar"><span class="name">35 XYZ 4456</span><span class="track"><span class="fill" style="width:64%"></span></span><span class="num">9.8 L</span></div>
+              <div class="pdf__bar"><span class="name">34 ABC 1234</span><span class="track"><span class="fill" style="width:52%"></span></span><span class="num">8.0 L</span></div>
+              <div class="pdf__bar"><span class="name">16 GHI 0099</span><span class="track"><span class="fill" style="width:46%"></span></span><span class="num">7.1 L</span></div>
+            </div>
+            <div class="pdf__sign">
+              <div>Operasyon Müdürü<div class="line"></div></div>
+              <div>Genel Müdür<div class="line"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     STATS BAND
+     ========================================================= -->
+<section class="stats">
+  <div class="container">
+    <div class="stats__grid">
+      <div class="stat">
+        <div class="stat__num"><span class="counter" data-target="500" data-suffix="+">0</span></div>
+        <div class="stat__label">Aktif Araç</div>
+      </div>
+      <div class="stat">
+        <div class="stat__num"><span class="counter" data-target="15000" data-suffix="+">0</span></div>
+        <div class="stat__label">Tamamlanan İş</div>
+      </div>
+      <div class="stat">
+        <div class="stat__num">%<span class="counter" data-target="23">0</span></div>
+        <div class="stat__label">Yakıt Tasarrufu Ortalaması</div>
+      </div>
+      <div class="stat">
+        <div class="stat__num">%<span class="counter" data-target="98">0</span></div>
+        <div class="stat__label">POD Anlık Tamamlama</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     QUOTE
+     ========================================================= -->
+<section class="section quote-section">
+  <div class="container">
+    <figure class="quote reveal">
+      <span class="quote__mark" aria-hidden="true">&ldquo;</span>
+      <blockquote class="quote__text">
+        Önceden 3 kişi takip ederdi, şimdi 1 kişi 70 araca yetiyor. Yakıt giderimiz aylık ortalama %18 düştü.
+      </blockquote>
+      <figcaption class="quote__author">
+        <div class="quote__avatar">MY</div>
+        <div class="quote__meta">
+          <div class="quote__name">Mehmet Yılmaz</div>
+          <div class="quote__role">Operasyon Müdürü, ABC Lojistik</div>
+        </div>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- =========================================================
+     PRICING
+     ========================================================= -->
+<section class="section" id="pricing" style="background: var(--bg);">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Fiyatlandırma</span>
+      <h2>Filonuza göre ölçeklenir.</h2>
+      <p>14 gün ücretsiz deneme. Kredi kartı istemiyoruz, taahhüt yok.</p>
+    </div>
+
+    <div class="pricing reveal">
+      <div class="plan">
+        <h3 class="plan__name">Başlangıç</h3>
+        <p class="plan__desc">5 araca kadar küçük filolar için.</p>
+        <div class="plan__price">
+          <span class="currency">₺</span><span class="num">1.490</span><span class="period">/ay</span>
+        </div>
+        <ul class="plan__list">
+          <li><span class="check">✓</span>Canlı Konum Haritası</li>
+          <li><span class="check">✓</span>Konteyner Operasyon Yönetimi</li>
+          <li><span class="check">✓</span>Şoför Mobil Uygulaması</li>
+          <li><span class="check">✓</span>Dijital POD (10/ay)</li>
+          <li><span class="check">✓</span>E-posta destek</li>
+        </ul>
+        <a href="#cta" class="btn btn--ghost">Ücretsiz Dene</a>
+      </div>
+
+      <div class="plan plan--featured">
+        <span class="plan__badge">EN POPÜLER</span>
+        <h3 class="plan__name">Profesyonel</h3>
+        <p class="plan__desc">50 araca kadar, tüm modüller dahil.</p>
+        <div class="plan__price">
+          <span class="currency">₺</span><span class="num">4.890</span><span class="period">/ay</span>
+        </div>
+        <ul class="plan__list">
+          <li><span class="check">✓</span><strong>Başlangıç planındaki her şey</strong></li>
+          <li><span class="check">✓</span>Sınırsız Dijital POD</li>
+          <li><span class="check">✓</span>Yakıt Yönetimi & Anomali Tespit</li>
+          <li><span class="check">✓</span>Güzergah Karşılaştırma</li>
+          <li><span class="check">✓</span>Push Bildirim Sistemi</li>
+          <li><span class="check">✓</span>Aylık PDF Yönetici Raporu</li>
+          <li><span class="check">✓</span>Telefon + e-posta destek</li>
+        </ul>
+        <a href="#cta" class="btn btn--primary">Hemen Başla</a>
+      </div>
+
+      <div class="plan">
+        <h3 class="plan__name">Kurumsal</h3>
+        <p class="plan__desc">Sınırsız araç, özel ihtiyaçlar.</p>
+        <div class="plan__price">
+          <span class="custom">Özel teklif</span>
+        </div>
+        <ul class="plan__list">
+          <li><span class="check">✓</span><strong>Profesyonel'deki her şey</strong></li>
+          <li><span class="check">✓</span>Sınırsız araç & kullanıcı</li>
+          <li><span class="check">✓</span>On-premise opsiyonu</li>
+          <li><span class="check">✓</span>SSO & gelişmiş yetkilendirme</li>
+          <li><span class="check">✓</span>Özel entegrasyonlar (ERP/SAP)</li>
+          <li><span class="check">✓</span>Atanmış müşteri yöneticisi</li>
+        </ul>
+        <a href="#contact" class="btn btn--ghost">Bizimle görüşün</a>
+      </div>
+    </div>
+
+    <p class="pricing__note">
+      <strong>14 gün ücretsiz deneme</strong> · Kredi kartı istemiyoruz · İstediğiniz zaman iptal edebilirsiniz.
+    </p>
+  </div>
+</section>
+
+<!-- =========================================================
+     FAQ
+     ========================================================= -->
+<section class="section" id="faq">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">SSS</span>
+      <h2>Sıkça sorulanlar.</h2>
+      <p>Aklınıza takılan başka bir şey varsa, ekip 24 saat içinde dönüş yapar.</p>
+    </div>
+
+    <div class="faq reveal">
+      <div class="faq__item">
+        <button class="faq__q" aria-expanded="false">
+          <span>Şoförler kullanmayı kolayca öğreniyor mu?</span>
+          <span class="toggle" aria-hidden="true">+</span>
+        </button>
+        <div class="faq__a"><div class="faq__a-inner">
+          Mobil uygulama tek odaklı tasarlandı: aktif iş emri, "yola çıktım", "vardım", "imzaladım" — sadece bunları görüyor. Ortalama bir şoför ilk yarım saatte rahatça kullanıyor. Sahaya çıkarken 15 dakikalık ekip eğitimi ile başlıyoruz, ihtiyaç olursa video kütüphanesinden destek alıyorlar.
+        </div></div>
+      </div>
+
+      <div class="faq__item">
+        <button class="faq__q" aria-expanded="false">
+          <span>Verilerim nerede saklanıyor? GDPR/KVKK uyumlu mu?</span>
+          <span class="toggle" aria-hidden="true">+</span>
+        </button>
+        <div class="faq__a"><div class="faq__a-inner">
+          Tüm veriler Türkiye'deki ISO 27001 sertifikalı veri merkezinde, AES-256 ile şifrelenerek saklanıyor. KVKK ve GDPR uyumluyuz; veri işleme sözleşmesi (DPA) talep ederseniz bir gün içinde imzalı geri gönderiyoruz.
+        </div></div>
+      </div>
+
+      <div class="faq__item">
+        <button class="faq__q" aria-expanded="false">
+          <span>Mevcut Excel'lerimi sisteme aktarabilir miyim?</span>
+          <span class="toggle" aria-hidden="true">+</span>
+        </button>
+        <div class="faq__a"><div class="faq__a-inner">
+          Evet. Yakıt fişleri, araç listeleri, sürücü kayıtları ve geçmiş iş emirleri için XLSX şablonları hazır. Sürükle-bırak ile yüklersiniz, sistem plakaları eşleştirir, sorunlu satırları işaretler — siz onaylar onaylamaz veriler sisteme akar.
+        </div></div>
+      </div>
+
+      <div class="faq__item">
+        <button class="faq__q" aria-expanded="false">
+          <span>İnternet kesilirse şoför uygulaması çalışmayı sürdürür mü?</span>
+          <span class="toggle" aria-hidden="true">+</span>
+        </button>
+        <div class="faq__a"><div class="faq__a-inner">
+          Evet. Şoför uygulaması çevrimdışı modda iş emrini, imzayı ve fotoğrafları yerelde saklar. Sinyal geri geldiğinde otomatik senkronlanır — sürücü hiçbir şey yapmadan veriler buluta düşer. Liman alanları gibi kapalı bölgeler için bu kritik.
+        </div></div>
+      </div>
+
+      <div class="faq__item">
+        <button class="faq__q" aria-expanded="false">
+          <span>iPhone desteği var mı?</span>
+          <span class="toggle" aria-hidden="true">+</span>
+        </button>
+        <div class="faq__a"><div class="faq__a-inner">
+          Şu an sadece Android destekliyoruz — şoför pazarımızda Android cihaz oranı %95'in üzerinde olduğu için odağımızı oraya verdik. iOS sürümü 2026 yol haritasında, beta listesine yazılmak isterseniz iletişime geçin.
+        </div></div>
+      </div>
+
+      <div class="faq__item">
+        <button class="faq__q" aria-expanded="false">
+          <span>İptal etmek istersem ne olur?</span>
+          <span class="toggle" aria-hidden="true">+</span>
+        </button>
+        <div class="faq__a"><div class="faq__a-inner">
+          Tek tıkla aboneliği durdurursunuz, taahhüt yok. Tüm verileriniz 90 gün boyunca arşivlenir, isterseniz XLSX/PDF olarak dışa aktarıp indirebilirsiniz. 90 gün sonra kalıcı olarak silinir.
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     CTA BAND
+     ========================================================= -->
+<section class="cta-band" id="cta">
+  <div class="container reveal">
+    <h2>Filonuzu 7 gün boyunca ücretsiz deneyin.</h2>
+    <p>Kredi kartı gerekmez. Tüm modüller açık. 15 dakikada kurulum.</p>
+    <a href="#" class="btn btn--white btn--lg">🚀 Hemen Başla</a>
+  </div>
+</section>
+
+</main>
+
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+<footer class="footer" id="contact">
+  <div class="container">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <img src="logo-dark.jpg" alt="Fleetly.fit" loading="lazy" />
+        <p>Konteyner taşımacılığı yapan filolar için uçtan uca operasyon yönetim sistemi. Türkiye'de geliştirildi, Türkçe destek.</p>
+        <p class="footer__credit">© 2026 Fleetly.fit · created by cihanozcan</p>
+      </div>
+
+      <div class="footer__cols">
+        <div class="footer__col">
+          <h5>Ürün</h5>
           <ul>
-            <li><a href="#ozellikler">Özellikler</a></li>
-            <li><a href="#panel">Panel</a></li>
-            <li><a href="#fiyat">Fiyat</a></li>
-            <li><a href="register.html">Başla</a></li>
+            <li><a href="#features">Özellikler</a></li>
+            <li><a href="#modules">Modüller</a></li>
+            <li><a href="#pricing">Fiyatlandırma</a></li>
+            <li><a href="#">Yenilikler</a></li>
+            <li><a href="#">Yol haritası</a></li>
           </ul>
         </div>
-
-        <div>
-          <h5>ŞİRKET</h5>
+        <div class="footer__col">
+          <h5>Kaynaklar</h5>
+          <ul>
+            <li><a href="#">Dokümantasyon</a></li>
+            <li><a href="#">Yardım merkezi</a></li>
+            <li><a href="#">Vaka çalışmaları</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">API</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h5>Şirket</h5>
           <ul>
             <li><a href="#">Hakkımızda</a></li>
-            <li><a href="#">Güvenlik</a></li>
-            <li><a href="#">KVKK</a></li>
-            <li><a href="#">İletişim</a></li>
+            <li><a href="#">Kariyer</a></li>
+            <li><a href="#contact">İletişim</a></li>
+            <li><a href="#">Basın</a></li>
+            <li><a href="#">Partnerler</a></li>
           </ul>
         </div>
-
-        <div>
-          <h5>DESTEK</h5>
+        <div class="footer__col">
+          <h5>Yasal</h5>
           <ul>
-            <li><a href="#">Yardım merkezi</a></li>
-            <li><a href="#">Durum sayfası</a></li>
-            <li><a href="#">Yol haritası</a></li>
-            <li><a href="#">destek@fleetly.app</a></li>
+            <li><a href="#">Kullanım Koşulları</a></li>
+            <li><a href="#">Gizlilik</a></li>
+            <li><a href="#">KVKK</a></li>
+            <li><a href="#">Çerez Politikası</a></li>
+            <li><a href="#">Güvenlik</a></li>
           </ul>
         </div>
       </div>
 
-      <div class="footer-bottom">
-        <div>© 2026 FLEETLY · AMBARLI İÇİN KURULDU</div>
-        <div><a href="#">GİZLİLİK</a> · <a href="#">ŞARTLAR</a> · <a href="#">KVKK</a></div>
+      <div class="footer__newsletter">
+        <h5>Bültene kaydolun</h5>
+        <p>Ayda 1 e-posta — yeni modüller, vaka çalışmaları ve filo verimlilik ipuçları.</p>
+        <form class="footer__form" onsubmit="event.preventDefault(); this.querySelector('input').value=''; this.querySelector('button').textContent='Tamam ✓';">
+          <input type="email" placeholder="ornek@firma.com" aria-label="E-posta" required />
+          <button type="submit">Kaydol</button>
+        </form>
       </div>
-
     </div>
-  </footer>
 
+    <div class="footer__bottom">
+      <span>Fleetly.fit · Made in Turkey 🇹🇷</span>
+      <div class="footer__social">
+        <a href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg></a>
+        <a href="#" aria-label="Twitter / X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+        <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+        <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
 
-  <!-- =======================================================================
-       MINIMAL JS — nav scroll state, pricing toggle, mobil menü
-       ======================================================================= -->
-  <script>
-    // Nav blur yoğunlaştırma
-    (function () {
-      var nav = document.getElementById('topnav');
-      if (!nav) return;
-      var onScroll = function () {
-        if (window.scrollY > 24) nav.classList.add('is-scrolled');
-        else nav.classList.remove('is-scrolled');
-      };
-      onScroll();
-      window.addEventListener('scroll', onScroll, { passive: true });
-    })();
+<!-- =========================================================
+     SCRIPTS
+     ========================================================= -->
+<script>
+(function() {
+  'use strict';
 
-    // Fiyat toggle (aylık / yıllık)
-    (function () {
-      var buttons = document.querySelectorAll('.pricing-toggle button');
-      if (!buttons.length) return;
+  // Sticky nav border on scroll
+  const nav = document.getElementById('nav');
+  const onScroll = () => {
+    if (window.scrollY > 8) nav.classList.add('is-scrolled');
+    else nav.classList.remove('is-scrolled');
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 
-      var swap = function (period) {
-        buttons.forEach(function (b) {
-          var isOn = b.getAttribute('data-period') === period;
-          b.classList.toggle('active', isOn);
-          b.setAttribute('aria-selected', isOn ? 'true' : 'false');
-        });
+  // Hamburger
+  const ham = document.getElementById('hamburger');
+  const navMobile = document.getElementById('navMobile');
+  ham.addEventListener('click', () => {
+    const open = navMobile.classList.toggle('is-open');
+    ham.setAttribute('aria-expanded', open);
+  });
+  navMobile.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    navMobile.classList.remove('is-open');
+    ham.setAttribute('aria-expanded', 'false');
+  }));
 
-        ['price', 'period', 'equiv'].forEach(function (kind) {
-          var activeAttr = 'data-' + kind + '-' + period;
-          var otherAttr  = 'data-' + kind + '-' + (period === 'aylik' ? 'yillik' : 'aylik');
-          document.querySelectorAll('[' + activeAttr + ']').forEach(function (el) { el.hidden = false; });
-          document.querySelectorAll('[' + otherAttr + ']').forEach(function (el) { el.hidden = true;  });
-        });
-      };
-
-      buttons.forEach(function (b) {
-        b.addEventListener('click', function () { swap(b.getAttribute('data-period')); });
+  // FAQ accordion
+  document.querySelectorAll('.faq__item').forEach(item => {
+    const btn = item.querySelector('.faq__q');
+    const ans = item.querySelector('.faq__a');
+    btn.addEventListener('click', () => {
+      const isOpen = item.classList.contains('is-open');
+      // close all
+      document.querySelectorAll('.faq__item.is-open').forEach(o => {
+        o.classList.remove('is-open');
+        o.querySelector('.faq__q').setAttribute('aria-expanded', 'false');
+        o.querySelector('.faq__a').style.maxHeight = '0px';
       });
-    })();
+      if (!isOpen) {
+        item.classList.add('is-open');
+        btn.setAttribute('aria-expanded', 'true');
+        ans.style.maxHeight = ans.scrollHeight + 'px';
+      }
+    });
+  });
 
-    // Mobil menü (basit)
-    (function () {
-      var toggle = document.querySelector('.nav-toggle');
-      var links  = document.querySelector('.nav-links');
-      if (!toggle || !links) return;
-      toggle.addEventListener('click', function () {
-        var open = links.classList.toggle('is-open');
-        if (open) {
-          links.style.cssText = 'display:flex;position:absolute;top:80px;left:0;right:0;background:rgba(1,9,22,0.96);backdrop-filter:blur(32px) saturate(200%);-webkit-backdrop-filter:blur(32px) saturate(200%);flex-direction:column;gap:24px;padding:32px 48px;border-bottom:1px solid rgba(26,53,96,0.8);box-shadow:0 20px 60px rgba(0,0,0,0.6);';
-        } else {
-          links.style.cssText = '';
-        }
-      });
-    })();
-  </script>
+  // Reveal on scroll
+  const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('is-visible');
+        revealObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
 
+  // Number counters
+  const fmt = n => {
+    if (n >= 1000) return n.toLocaleString('tr-TR');
+    return String(n);
+  };
+  const animateCount = (el) => {
+    const target = parseInt(el.dataset.target, 10);
+    const suffix = el.dataset.suffix || '';
+    const dur = 1600;
+    const t0 = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const v = Math.round(target * eased);
+      el.textContent = fmt(v) + suffix;
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+  const counterObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        animateCount(e.target);
+        counterObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.4 });
+  document.querySelectorAll('.counter').forEach(el => counterObs.observe(el));
+
+  // Smooth-scroll handled by CSS scroll-behavior; nothing extra
+})();
+</script>
 </body>
 </html>
