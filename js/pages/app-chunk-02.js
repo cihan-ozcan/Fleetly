@@ -3302,7 +3302,8 @@ async function downloadSingleVehiclePDF() {
       .replace(/ü/g,'u').replace(/Ü/g,'U').replace(/ö/g,'o').replace(/Ö/g,'O')
       .replace(/ç/g,'c').replace(/Ç/g,'C').replace(/ı/g,'i').replace(/İ/g,'I');
   }
-  const _logo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAAFHUlEQVR4nO3dTW7UQBAF4JyCq3EQ7sARsuAC3IAtWbOBJZtssgCBhFCEkCCZmeD2zBgnmfFP13vdVdXVUolNZE/6ozztKrdzcUEaf1+9eIhYHiwH8ag9Md4jUBuKgG0kAreBCNwGImAbicBtIALYeQRuAxG4DUTgNhAB7DwCt4EIYOcRwM4jcBuIAHYeAew8Ath5BLDzCODM2N58fNjdfuv/rf1ZZoFrfwiLsdtu9vHnd/XPMotc+wNYix52t9vH/Z34eGkEMCjGIxv4iNvF5upS/DmejgAG4OZOZsrY/8BbOC4DuQlg1ESOszctshi4aOQAXorbLajGwExcJLJ7YNQEPsrejNVzABcGXoXbXY4l2RvAinF74G5BNQB3t0klcFHIAbwIWJa9uciIOXALjMPdim+NAlg1sDx7A1gr7rgsKcjeHGTUXLgDRk7aOHtRnaOSuE0Br8Z9VJaUXZ7Hsfn8vhiuO2BW9iLbgpufX/bRQR8/M3NOmgBejSssS57F/fB2j/v9uticuAGmZS+g5zsAd7CbXz+G7A1gAPDa4/SP4xCy9+7Nyz1ul8El58UFMHLBIi1Lnos+e9Pl+eZTANcFxmdvD3xYXJWeG/PAtOwFFDYG3C5ra2RvAD8D9pW95oGhuOCy5ICbsjctrgreGgXwKWBCWbIHrpi9poGhuMSyZJ+9Fb57TQNPjSxgVlnycGt0/+51ACOAs3BZZcmUvYXLki6AqdmLLEsevntrZq8r4JxjscqSNZoKLoDx2UssSxZuKrgGzj0eI3vTJblGU8E8MB6XVJas1FQI4GfA/sqSZoHhuMyypKLsbRdYuA30LLCy7DUBDMdlFTaOTQVF2aseeGpkA5PLkrXnzAVwNi5gG+hJXAVNBXPAnOwd3RoRypLpwbra82YeOBvh6tJ1U8EUMCV7x7dGyLKkkqaCC2DJMWlNhYqP45gEpuCysvfYVOiga89b28CAt9M9DW1NBRPAFFzA2+lOxdBUUNASbBu4obKkamAKLrMsaSB71QBPDREwcxO34pWzGWARLqssqbSpoBaYl73cbaC15808sPS41LKkkeytDlwke5G3RkZWzuqBpcdtsamgDpiGy3reKuF2iyutTYV2gAnbQC00FVQB03BZ20ANNBXaACYUNvqmgsHFVTVgGi6rLGmkqeAfmLANtH95meHsLQ7MwqVtAz2WJY1mb1HgqSE9Nq0safC+Vx0w4tjRVKgMXCx7Gy9LFgXe3X6dBYach9nQN569UOAEeiqo2cssSzrIXgjwOdg5YMh/KkZZ8pi9xhdXEOBc3PHlO/vcrLKk0aYCHHgOdw5YiswoSw67BJ1kLxV4DlcCTC9LGmwqQIER2StBZpQlrTcVigIvxc0BppUljTcVigFPDQQwoyw5ZK+j797iwOd+fj1wNBWowMjL81rkKEsWAJ5DZuHugYmP4zgoS54ETgMJ/BR57mcXnzPKknm4DOA1sfichG2gnpoKpoFphQ3H2SsCRiEvPhejLOmsqWAWmLYN9NBU0PjyMhXAUuTF5yC8nc5jU2ESuDTyYgjW2+kcNhUmcSXAa6BXH3Pc8wWVJYddgo4XVxTgU+DiY6TVc7r/ZfyhZodlyUlgBrI0+s5Rt8hCPY7juakwi6sRGB2a/p5RFWDvyBZePUjF9YzsvamwGNcrsveV8ypcb8D94irdHjn+7l0N7A25iZJk7qj9C0SQYANZb0BxA1lXUHADun7QYQO7EdQlo/bEWAuWwz+aKJThdQXEYAAAAABJRU5ErkJggg==';
+  // Fleetly logo — js/assets/fleetly-logo.js global'inden yükle (yoksa boş)
+  const _logo = (typeof window !== 'undefined' && window.FLEETLY_LOGO_B64) || '';
   function sf(c) { doc.setFillColor(...c); }
   function st(c) { doc.setTextColor(...c); }
   function rc(x,y,w,h,s='F') { doc.rect(x,y,w,h,s); }
@@ -3319,25 +3320,37 @@ async function downloadSingleVehiclePDF() {
   }
   function newPage() { footer(); doc.addPage(); pg++; drawHeader(); }
   function drawHeader() {
-    // Navy gradient bant — sabit dark, beyaz tipografi
+    // Navy banner — sabit koyu zemin, alt çizgi (navy + accent)
     sf(C.navyDark); rc(0,0,PW,42);
-    sf(C.navy); rc(0,38,PW,2);          // alt navy çizgisi
-    sf(C.accent); rc(0,40,PW,2);        // ince accent çizgisi
-    doc.addImage(_logo,'PNG',ML,7,28,28);
-    st(C.white); doc.setFontSize(20); doc.setFont('helvetica','bold');
-    doc.text(_tr(v.plaka||'—'), ML+32, 18);
-    doc.setFontSize(10); doc.setFont('helvetica','normal'); st([200,215,235]);
-    doc.text(_tr('Yakit Tuketim Raporu  •  ' + [v.tip,v.sofor].filter(Boolean).join(' • ')), ML+32, 26);
+    sf(C.navy); rc(0,38,PW,2);
+    sf(C.accent); rc(0,40,PW,2);
+
+    // Sol: Fleetly logo (689x113 → 6.1:1) — 50 mm genişlik × ~8.2 mm yükseklik
+    if (_logo) {
+      try { doc.addImage(_logo,'PNG',ML, 8, 50, 8.2); } catch(_){}
+    }
+    // Logonun altında ince bir slogan
+    st([200,215,235]); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.text(_tr('Filo Yonetim Sistemi'), ML, 21);
+
+    // Orta: rapor başlığı + plaka
+    st(C.white); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text(_tr('YAKIT TUKETIM RAPORU'), ML, 31);
+    st([255,255,255]); doc.setFontSize(13);
+    doc.text(_tr('•  ' + (v.plaka || '—')), ML+50, 31);
+    st([200,215,235]); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    const meta = _tr([v.tip,v.sofor].filter(Boolean).join(' • '));
+    if (meta) doc.text(meta, ML+50, 36);
+
     // Sağ üst tarih kapsülü
-    sf([255,255,255,0.10]); doc.setFillColor(255,255,255); rr(PW-ML-58,11,58,20,4);
-    sf(C.navyDark); rr(PW-ML-58,11,58,20,4,'S');
+    sf(C.white); rr(PW-ML-58,11,58,20,4);
     setStrokeIfPossible(doc, C.borderS);
-    st(C.navy); doc.setFontSize(8); doc.setFont('helvetica','bold');
-    doc.text(_tr('RAPOR TARIHI'), PW-ML-29, 18, {align:'center'});
+    rr(PW-ML-58,11,58,20,4,'S');
+    st(C.navy); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text(_tr('RAPOR TARIHI'), PW-ML-29, 17, {align:'center'});
     st(C.navyDark); doc.setFontSize(10);
-    doc.text(_tr(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})), PW-ML-29, 26, {align:'center'});
+    doc.text(_tr(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})), PW-ML-29, 25, {align:'center'});
   }
-  // Yardımcı: setDrawColor varsa stroke ayarla
   function setStrokeIfPossible(d, c) { try { d.setDrawColor(c[0],c[1],c[2]); d.setLineWidth(0.3); } catch(_){} }
   drawHeader();
   let y = 52;
@@ -3481,7 +3494,8 @@ async function downloadFuelPDF() {
       .replace(/ç/g,'c').replace(/Ç/g,'C')
       .replace(/ı/g,'i').replace(/İ/g,'I');
   }
-  const LOGO_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAAFHUlEQVR4nO3dTW7UQBAF4JyCq3EQ7sARsuAC3IAtWbOBJZtssgCBhFCEkCCZmeD2zBgnmfFP13vdVdXVUolNZE/6ozztKrdzcUEaf1+9eIhYHiwH8ag9Md4jUBuKgG0kAreBCNwGImAbicBtIALYeQRuAxG4DUTgNhAB7DwCt4EIYOcRwM4jcBuIAHYeAew8Ath5BLDzCODM2N58fNjdfuv/rf1ZZoFrfwiLsdtu9vHnd/XPMotc+wNYix52t9vH/Z34eGkEMCjGIxv4iNvF5upS/DmejgAG4OZOZsrY/8BbOC4DuQlg1ESOszctshi4aOQAXorbLajGwExcJLJ7YNQEPsrejNVzABcGXoXbXY4l2RvAinF74G5BNQB3t0klcFHIAbwIWJa9uciIOXALjMPdim+NAlg1sDx7A1gr7rgsKcjeHGTUXLgDRk7aOHtRnaOSuE0Br8Z9VJaUXZ7Hsfn8vhiuO2BW9iLbgpufX/bRQR8/M3NOmgBejSssS57F/fB2j/v9uticuAGmZS+g5zsAd7CbXz+G7A1gAPDa4/SP4xCy9+7Nyz1ul8El58UFMHLBIi1Lnos+e9Pl+eZTANcFxmdvD3xYXJWeG/PAtOwFFDYG3C5ra2RvAD8D9pW95oGhuOCy5ICbsjctrgreGgXwKWBCWbIHrpi9poGhuMSyZJ+9Fb57TQNPjSxgVlnycGt0/+51ACOAs3BZZcmUvYXLki6AqdmLLEsevntrZq8r4JxjscqSNZoKLoDx2UssSxZuKrgGzj0eI3vTJblGU8E8MB6XVJas1FQI4GfA/sqSZoHhuMyypKLsbRdYuA30LLCy7DUBDMdlFTaOTQVF2aseeGpkA5PLkrXnzAVwNi5gG+hJXAVNBXPAnOwd3RoRypLpwbra82YeOBvh6tJ1U8EUMCV7x7dGyLKkkqaCC2DJMWlNhYqP45gEpuCysvfYVOiga89b28CAt9M9DW1NBRPAFFzA2+lOxdBUUNASbBu4obKkamAKLrMsaSB71QBPDREwcxO34pWzGWARLqssqbSpoBaYl73cbaC15808sPS41LKkkeytDlwke5G3RkZWzuqBpcdtsamgDpiGy3reKuF2iyutTYV2gAnbQC00FVQB03BZ20ANNBXaACYUNvqmgsHFVTVgGi6rLGmkqeAfmLANtH95meHsLQ7MwqVtAz2WJY1mb1HgqSE9Nq0safC+Vx0w4tjRVKgMXCx7Gy9LFgXe3X6dBYach9nQN569UOAEeiqo2cssSzrIXgjwOdg5YMh/KkZZ8pi9xhdXEOBc3PHlO/vcrLKk0aYCHHgOdw5YiswoSw67BJ1kLxV4DlcCTC9LGmwqQIER2StBZpQlrTcVigIvxc0BppUljTcVigFPDQQwoyw5ZK+j797iwOd+fj1wNBWowMjL81rkKEsWAJ5DZuHugYmP4zgoS54ETgMJ/BR57mcXnzPKknm4DOA1sfichG2gnpoKpoFphQ3H2SsCRiEvPhejLOmsqWAWmLYN9NBU0PjyMhXAUuTF5yC8nc5jU2ESuDTyYgjW2+kcNhUmcSXAa6BXH3Pc8wWVJYddgo4XVxTgU+DiY6TVc7r/ZfyhZodlyUlgBrI0+s5Rt8hCPY7juakwi6sRGB2a/p5RFWDvyBZePUjF9YzsvamwGNcrsveV8ypcb8D94irdHjn+7l0N7A25iZJk7qj9C0SQYANZb0BxA1lXUHADun7QYQO7EdQlo/bEWAuWwz+aKJThdQXEYAAAAABJRU5ErkJggg==';
+  // Fleetly logo — js/assets/fleetly-logo.js global'inden yükle (yoksa boş)
+  const LOGO_B64 = (typeof window !== 'undefined' && window.FLEETLY_LOGO_B64) || '';
 
   const PH = 297; // A4 height mm
   const ML = 14;  // margin left
@@ -3536,19 +3550,28 @@ async function downloadFuelPDF() {
     rect(0, 0, PW, 42);
     setFill(C.navy);   rect(0, 38, PW, 2);
     setFill(C.accent); rect(0, 40, PW, 2);
-    doc.addImage(LOGO_B64, 'PNG', ML, 7, 28, 28);
-    setTxt(C.white); doc.setFontSize(20); doc.setFont('helvetica','bold');
-    doc.text(tr('Yakit Tuketim Raporu'), ML+32, 18);
-    setTxt([200,215,235]); doc.setFontSize(10); doc.setFont('helvetica','normal');
-    doc.text(tr('Tum Araclar  •  Filo Genel Ozeti'), ML+32, 26);
+
+    // Sol: Fleetly logo (50 mm × ~8.2 mm)
+    if (LOGO_B64) {
+      try { doc.addImage(LOGO_B64, 'PNG', ML, 8, 50, 8.2); } catch(_){}
+    }
+    setTxt([200,215,235]); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.text(tr('Filo Yonetim Sistemi'), ML, 21);
+
+    // Orta: başlık + alt başlık
+    setTxt(C.white); doc.setFontSize(15); doc.setFont('helvetica','bold');
+    doc.text(tr('YAKIT TUKETIM RAPORU'), ML, 31);
+    setTxt([200,215,235]); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(tr('Tum Araclar  •  Filo Genel Ozeti'), ML, 36);
+
     // Sağ tarih kapsülü
     setFill(C.white);
     roundRect(PW-ML-58, 11, 58, 20, 4);
-    try { doc.setDrawColor(...C.navyDark); doc.setLineWidth(0.3); roundRect(PW-ML-58, 11, 58, 20, 4, 'S'); } catch(_){}
-    setTxt(C.navy); doc.setFontSize(8); doc.setFont('helvetica','bold');
-    doc.text(tr('RAPOR TARIHI'), PW-ML-29, 18, {align:'center'});
+    try { doc.setDrawColor(...C.borderS); doc.setLineWidth(0.3); roundRect(PW-ML-58, 11, 58, 20, 4, 'S'); } catch(_){}
+    setTxt(C.navy); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text(tr('RAPOR TARIHI'), PW-ML-29, 17, {align:'center'});
     setTxt(C.navyDark); doc.setFontSize(10);
-    doc.text(tr(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})), PW-ML-29, 26, {align:'center'});
+    doc.text(tr(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})), PW-ML-29, 25, {align:'center'});
   }
 
   function newPage() {
@@ -3976,6 +3999,250 @@ async function downloadFuelPDF() {
     setFill(C.border); rect(ML,y,CW,0.5);
     y+=5;
   }
+
+  // ─────────────────────────────────────────────────────────
+  // SON SAYFA — AYLIK YAKIT YÖNETİCİ ÖZETİ
+  // Patron için one-pager: bu ay toplam, geçen aya göre değişim,
+  // en çok yakan araç/şoför top 5, anomali listesi, imza alanı
+  // ─────────────────────────────────────────────────────────
+  addPageNum();
+  doc.addPage(); pageNum++;
+  drawHeaderBand();
+
+  // Sayfa başlığı bandı — accent şeritli
+  let yy = 52;
+  setFill(C.surface2); rect(ML, yy, CW, 12);
+  setFill(C.accent);   rect(ML, yy, 4, 12);
+  setTxt(C.navyDark); doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text(tr('AYLIK YAKIT YONETICI OZETI'), ML+8, yy+8);
+  setTxt(C.text2); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(tr('Patron icin tek sayfa yonetici raporu'), PW-MR, yy+8, {align:'right'});
+  yy += 16;
+
+  // Bu ay ve geçen ay key'leri
+  const _now    = new Date();
+  const buAyKey = _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0');
+  const _prev   = new Date(_now.getFullYear(), _now.getMonth()-1, 1);
+  const oncekiAyKey = _prev.getFullYear() + '-' + String(_prev.getMonth()+1).padStart(2,'0');
+  const buAyAdi = _now.toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
+
+  // Bu ay & geçen ay toplam
+  let buAyL = 0, buAyTL = 0, buAyDolum = 0;
+  let oncL  = 0, oncTL  = 0;
+  const buAyPerVehicle = {}; // vehicleId → { litre, tl, ad }
+  const buAyPerSofor   = {}; // sofor adı → { litre, tl, dolum }
+  vehicles.forEach(v => {
+    (fuelData[v.id]||[]).forEach(e => {
+      const mk = e.tarih ? e.tarih.slice(0,7) : '';
+      const lit = +(e.litre||0); const tl = lit * (+(e.fiyat||0));
+      if (mk === buAyKey) {
+        buAyL += lit; buAyTL += tl; buAyDolum++;
+        if (!buAyPerVehicle[v.id]) buAyPerVehicle[v.id] = {litre:0, tl:0, plaka:v.plaka, dolum:0};
+        buAyPerVehicle[v.id].litre += lit;
+        buAyPerVehicle[v.id].tl    += tl;
+        buAyPerVehicle[v.id].dolum++;
+        const sof = (e.sofor||'').trim();
+        if (sof) {
+          if (!buAyPerSofor[sof]) buAyPerSofor[sof] = {litre:0, tl:0, dolum:0};
+          buAyPerSofor[sof].litre += lit;
+          buAyPerSofor[sof].tl    += tl;
+          buAyPerSofor[sof].dolum++;
+        }
+      } else if (mk === oncekiAyKey) {
+        oncL  += lit; oncTL += tl;
+      }
+    });
+  });
+  const trendL  = oncL  > 0 ? ((buAyL  - oncL ) / oncL ) * 100 : null;
+  const trendTL = oncTL > 0 ? ((buAyTL - oncTL) / oncTL) * 100 : null;
+  const fmtTrend = (p) => {
+    if (p == null) return '—';
+    const sign = p >= 0 ? '+' : '';
+    return sign + p.toFixed(1) + '%';
+  };
+
+  // ÜST KARTLAR — bu ay özeti
+  setTxt(C.text2); doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.text(tr(buAyAdi.toUpperCase() + ' OZET'), ML, yy);
+  yy += 4;
+
+  const yKards = [
+    { l:'Toplam Yakit', v: buAyL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' L',
+      sub: 'Onceki ay '+oncL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' L',
+      trend: fmtTrend(trendL),
+      trendC: trendL == null ? C.muted : (trendL > 5 ? C.red : (trendL < -5 ? C.green : C.text2)),
+      c: C.accent },
+    { l:'Toplam Maliyet', v: buAyTL > 0 ? buAyTL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL' : '—',
+      sub: 'Onceki ay '+oncTL.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL',
+      trend: fmtTrend(trendTL),
+      trendC: trendTL == null ? C.muted : (trendTL > 5 ? C.red : (trendTL < -5 ? C.green : C.text2)),
+      c: C.green },
+    { l:'Toplam Dolum', v: buAyDolum + ' adet',
+      sub: Object.keys(buAyPerVehicle).length + ' arac dolum yapti',
+      trend: '', trendC: C.text2, c: C.blue },
+    { l:'Ort. Litre / Dolum', v: buAyDolum > 0 ? (buAyL/buAyDolum).toFixed(0)+' L' : '—',
+      sub: 'Dolum basina ortalama', trend: '', trendC: C.text2, c: C.yellow },
+  ];
+  const yckW = (CW - 9) / 4;
+  yKards.forEach((k, ki) => {
+    const cx = ML + ki * (yckW + 3);
+    setFill(C.surface); roundRect(cx, yy, yckW, 30, 3);
+    try { doc.setDrawColor(...C.border); doc.setLineWidth(0.3); roundRect(cx, yy, yckW, 30, 3, 'S'); } catch(_){}
+    setFill(k.c); roundRect(cx, yy, 2.6, 30, 1);
+    setTxt(C.muted); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(tr(k.l).toUpperCase(), cx+5, yy+5);
+    setTxt(k.c); doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text(k.v, cx+5, yy+14);
+    if (k.trend) {
+      setTxt(k.trendC); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+      doc.text(k.trend, cx+yckW-4, yy+14, {align:'right'});
+    }
+    setTxt(C.text2); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(tr(k.sub), cx+5, yy+22);
+  });
+  yy += 36;
+
+  // İKİ KOLON — Sol: Top 5 Araç, Sağ: Top 5 Şoför
+  const colW = (CW - 6) / 2;
+  function drawTopList(x, top, baslik) {
+    setFill(C.surface2); rect(x, yy, colW, 8);
+    setFill(C.navy); rect(x, yy, 3, 8);
+    setTxt(C.navyDark); doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text(tr(baslik), x+6, yy+5.5);
+  }
+  drawTopList(ML, null, 'En Cok Yakit Yakan Araclar (Top 5)');
+  drawTopList(ML+colW+6, null, 'En Cok Yakit Yakan Soforler (Top 5)');
+  let listY = yy + 12;
+
+  // Top 5 araç tablosu
+  const topVeh = Object.entries(buAyPerVehicle)
+    .sort((a,b) => b[1].litre - a[1].litre).slice(0, 5);
+  const topSof = Object.entries(buAyPerSofor)
+    .sort((a,b) => b[1].litre - a[1].litre).slice(0, 5);
+
+  // Header
+  setFill(C.navyDark); rect(ML, listY, colW, 7);
+  setTxt(C.white); doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.text('#',                ML+3,   listY+5);
+  doc.text(tr('PLAKA'),        ML+10,  listY+5);
+  doc.text(tr('LITRE'),        ML+colW-50, listY+5);
+  doc.text(tr('TUTAR'),        ML+colW-25, listY+5);
+
+  setFill(C.navyDark); rect(ML+colW+6, listY, colW, 7);
+  doc.text('#',                ML+colW+9,  listY+5);
+  doc.text(tr('SOFOR'),        ML+colW+16, listY+5);
+  doc.text(tr('LITRE'),        ML+colW*2-44, listY+5);
+  doc.text(tr('TUTAR'),        ML+colW*2-19, listY+5);
+  listY += 8;
+
+  const maxRows = Math.max(topVeh.length, topSof.length);
+  for (let i = 0; i < maxRows; i++) {
+    // Sol: araç
+    if (i < topVeh.length) {
+      const [vid, dat] = topVeh[i];
+      setFill(i%2===0 ? C.surface : C.white); rect(ML, listY, colW, 7);
+      setTxt(C.muted); doc.setFontSize(8); doc.setFont('helvetica','bold');
+      doc.text(String(i+1), ML+3, listY+5);
+      setTxt(C.navy); doc.setFontSize(8.5);
+      doc.text(tr(dat.plaka||'—'), ML+10, listY+5);
+      setTxt(C.accent);
+      doc.text(dat.litre.toLocaleString('tr-TR',{maximumFractionDigits:1})+' L', ML+colW-50, listY+5);
+      setTxt(C.green);
+      doc.text(dat.tl > 0 ? dat.tl.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL' : '—', ML+colW-25, listY+5);
+    }
+    // Sağ: şoför
+    if (i < topSof.length) {
+      const [sof, dat] = topSof[i];
+      setFill(i%2===0 ? C.surface : C.white); rect(ML+colW+6, listY, colW, 7);
+      setTxt(C.muted); doc.setFontSize(8); doc.setFont('helvetica','bold');
+      doc.text(String(i+1), ML+colW+9, listY+5);
+      setTxt(C.navy); doc.setFontSize(8.5);
+      doc.text(tr(sof.slice(0,22)), ML+colW+16, listY+5);
+      setTxt(C.accent);
+      doc.text(dat.litre.toLocaleString('tr-TR',{maximumFractionDigits:1})+' L', ML+colW*2-44, listY+5);
+      setTxt(C.green);
+      doc.text(dat.tl > 0 ? dat.tl.toLocaleString('tr-TR',{maximumFractionDigits:0})+' TL' : '—', ML+colW*2-19, listY+5);
+    }
+    listY += 7;
+  }
+  if (topVeh.length === 0 && topSof.length === 0) {
+    setTxt(C.muted); doc.setFontSize(9); doc.setFont('helvetica','italic');
+    doc.text(tr('Bu ayda yakit kaydi bulunmadi.'), PW/2, listY+5, {align:'center'});
+    listY += 10;
+  }
+  yy = listY + 8;
+
+  // ANOMALİ KUTUSU — varsa
+  const anomaliler = [];
+  vehicles.forEach(v => {
+    const ve = (fuelData[v.id]||[]).slice().sort((a,b) => new Date(a.tarih)-new Date(b.tarih)||a.km-b.km);
+    for (let i = 1; i < ve.length; i++) {
+      const e = ve[i], prev = ve[i-1];
+      // KM düşüşü
+      if (e.km < prev.km - 5) {
+        anomaliler.push({ tarih:e.tarih, plaka:v.plaka, tip:'KM Geri Gitti',
+          detay: prev.km.toLocaleString('tr-TR') + ' → ' + e.km.toLocaleString('tr-TR') });
+      }
+      // Yüksek tüketim
+      const dKm = e.km - prev.km;
+      if (dKm > 0 && dKm < 5000) {
+        const cons = (e.litre / dKm) * 100;
+        if (cons > 60) anomaliler.push({ tarih:e.tarih, plaka:v.plaka, tip:'Yuksek Tuketim',
+          detay: cons.toFixed(1) + ' L/100km' });
+      }
+      // Aynı gün çift dolum
+      const sameDay = ve.filter(x => x.tarih === e.tarih);
+      if (sameDay.length > 1 && i === ve.findIndex(x => x.tarih === e.tarih) + 1) {
+        anomaliler.push({ tarih:e.tarih, plaka:v.plaka, tip:'Cift Dolum',
+          detay: sameDay.length + ' kez ayni gun dolum' });
+      }
+    }
+  });
+
+  if (anomaliler.length > 0) {
+    if (yy + 30 > PH - 30) { addPageNum(); doc.addPage(); pageNum++; drawHeaderBand(); yy = 52; }
+    setFill(C.surface2); rect(ML, yy, CW, 8);
+    setFill(C.red); rect(ML, yy, 3, 8);
+    setTxt(C.navyDark); doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text(tr('Anomali Uyarilari (' + anomaliler.length + ')'), ML+6, yy+5.5);
+    yy += 12;
+
+    // En fazla 8 anomali
+    anomaliler.slice(0, 8).forEach((a, ai) => {
+      setFill(ai%2===0 ? C.surface : C.white); rect(ML, yy, CW, 7);
+      setTxt(C.text2); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(a.tarih ? a.tarih.split('-').reverse().join('.') : '—', ML+3, yy+5);
+      setTxt(C.navy); doc.setFont('helvetica','bold');
+      doc.text(tr(a.plaka||'—'), ML+25, yy+5);
+      setTxt(C.red); doc.text(tr(a.tip), ML+60, yy+5);
+      setTxt(C.text2); doc.setFont('helvetica','normal');
+      doc.text(tr(a.detay), ML+110, yy+5);
+      yy += 7;
+    });
+    if (anomaliler.length > 8) {
+      setTxt(C.muted); doc.setFontSize(8); doc.setFont('helvetica','italic');
+      doc.text(tr('… +' + (anomaliler.length - 8) + ' daha'), ML, yy+5);
+      yy += 8;
+    }
+    yy += 4;
+  }
+
+  // İMZA ALANI — sayfanın altında
+  const imzaY = Math.max(yy + 10, PH - 50);
+  setFill(C.border); rect(ML, imzaY, CW, 0.4);
+  const ic = (CW - 14) / 2;
+  // Hazırlayan
+  setTxt(C.muted); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(tr('Hazirlayan'), ML+ic/2, imzaY+8, {align:'center'});
+  setFill(C.borderS); rect(ML+10, imzaY+18, ic-20, 0.3);
+  setTxt(C.text2); doc.setFontSize(8.5);
+  doc.text(tr('Ad Soyad / Imza'), ML+ic/2, imzaY+22, {align:'center'});
+  // Onaylayan
+  setTxt(C.muted); doc.setFontSize(8);
+  doc.text(tr('Onaylayan'), ML+ic+14+ic/2, imzaY+8, {align:'center'});
+  setFill(C.borderS); rect(ML+ic+14+10, imzaY+18, ic-20, 0.3);
+  setTxt(C.text2); doc.setFontSize(8.5);
+  doc.text(tr('Yonetici Imza'), ML+ic+14+ic/2, imzaY+22, {align:'center'});
 
   addPageNum();
   _pdfSave(doc, 'yakit_raporu_' + new Date().toISOString().slice(0,10) + '.pdf');
@@ -4616,7 +4883,8 @@ async function downloadMaintPDF() {
       .replace(/ç/g,'c').replace(/Ç/g,'C').replace(/ı/g,'i').replace(/İ/g,'I');
   }
 
-  const LOGO_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAAFHUlEQVR4nO3dTW7UQBAF4JyCq3EQ7sARsuAC3IAtWbOBJZtssgCBhFCEkCCZmeD2zBgnmfFP13vdVdXVUolNZE/6ozztKrdzcUEaf1+9eIhYHiwH8ag9Md4jUBuKgG0kAreBCNwGImAbicBtIALYeQRuAxG4DUTgNhAB7DwCt4EIYOcRwM4jcBuIAHYeAew8Ath5BLDzCODM2N58fNjdfuv/rf1ZZoFrfwiLsdtu9vHnd/XPMotc+wNYix52t9vH/Z34eGkEMCjGIxv4iNvF5upS/DmejgAG4OZOZsrY/8BbOC4DuQlg1ESOszctshi4aOQAXorbLajGwExcJLJ7YNQEPsrejNVzABcGXoXbXY4l2RvAinF74G5BNQB3t0klcFHIAbwIWJa9uciIOXALjMPdim+NAlg1sDx7A1gr7rgsKcjeHGTUXLgDRk7aOHtRnaOSuE0Br8Z9VJaUXZ7Hsfn8vhiuO2BW9iLbgpufX/bRQR8/M3NOmgBejSssS57F/fB2j/v9uticuAGmZS+g5zsAd7CbXz+G7A1gAPDa4/SP4xCy9+7Nyz1ul8El58UFMHLBIi1Lnos+e9Pl+eZTANcFxmdvD3xYXJWeG/PAtOwFFDYG3C5ra2RvAD8D9pW95oGhuOCy5ICbsjctrgreGgXwKWBCWbIHrpi9poGhuMSyZJ+9Fb57TQNPjSxgVlnycGt0/+51ACOAs3BZZcmUvYXLki6AqdmLLEsevntrZq8r4JxjscqSNZoKLoDx2UssSxZuKrgGzj0eI3vTJblGU8E8MB6XVJas1FQI4GfA/sqSZoHhuMyypKLsbRdYuA30LLCy7DUBDMdlFTaOTQVF2aseeGpkA5PLkrXnzAVwNi5gG+hJXAVNBXPAnOwd3RoRypLpwbra82YeOBvh6tJ1U8EUMCV7x7dGyLKkkqaCC2DJMWlNhYqP45gEpuCysvfYVOiga89b28CAt9M9DW1NBRPAFFzA2+lOxdBUUNASbBu4obKkamAKLrMsaSB71QBPDREwcxO34pWzGWARLqssqbSpoBaYl73cbaC15808sPS41LKkkeytDlwke5G3RkZWzuqBpcdtsamgDpiGy3reKuF2iyutTYV2gAnbQC00FVQB03BZ20ANNBXaACYUNvqmgsHFVTVgGi6rLGmkqeAfmLANtH95meHsLQ7MwqVtAz2WJY1mb1HgqSE9Nq0safC+Vx0w4tjRVKgMXCx7Gy9LFgXe3X6dBYach9nQN569UOAEeiqo2cssSzrIXgjwOdg5YMh/KkZZ8pi9xhdXEOBc3PHlO/vcrLKk0aYCHHgOdw5YiswoSw67BJ1kLxV4DlcCTC9LGmwqQIER2StBZpQlrTcVigIvxc0BppUljTcVigFPDQQwoyw5ZK+j797iwOd+fj1wNBWowMjL81rkKEsWAJ5DZuHugYmP4zgoS54ETgMJ/BR57mcXnzPKknm4DOA1sfichG2gnpoKpoFphQ3H2SsCRiEvPhejLOmsqWAWmLYN9NBU0PjyMhXAUuTF5yC8nc5jU2ESuDTyYgjW2+kcNhUmcSXAa6BXH3Pc8wWVJYddgo4XVxTgU+DiY6TVc7r/ZfyhZodlyUlgBrI0+s5Rt8hCPY7juakwi6sRGB2a/p5RFWDvyBZePUjF9YzsvamwGNcrsveV8ypcb8D94irdHjn+7l0N7A25iZJk7qj9C0SQYANZb0BxA1lXUHADun7QYQO7EdQlo/bEWAuWwz+aKJThdQXEYAAAAABJRU5ErkJggg==';
+  // Fleetly logo — js/assets/fleetly-logo.js global'inden yükle (yoksa boş)
+  const LOGO_B64 = (typeof window !== 'undefined' && window.FLEETLY_LOGO_B64) || '';
 
   const C = {
     bg:[8,12,16], surface:[17,24,32], surface2:[24,32,44], border:[37,47,62],
