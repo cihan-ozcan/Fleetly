@@ -374,10 +374,41 @@
       </button>
 
       <!-- Bildirim -->
-      <button class="topbar__icon-btn" id="topbar-notif" title="Bildirimler" aria-label="Bildirimler">
-        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <span class="dot" id="topbar-notif-dot"></span>
-      </button>
+      <div class="notif-wrap" id="notif-wrap" style="position:relative;">
+        <button class="topbar__icon-btn" id="topbar-notif" onclick="notifTogglePanel()" title="Bildirimler" aria-label="Bildirimler" aria-haspopup="true" aria-expanded="false" aria-controls="notif-panel">
+          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="dot" id="topbar-notif-dot"></span>
+          <span id="topbar-notif-badge" style="display:none;position:absolute;top:2px;right:2px;background:var(--red);color:#fff;font-family:var(--font-mono);font-size:9px;font-weight:700;line-height:1;padding:2px 5px;border-radius:99px;border:2px solid var(--surface);min-width:14px;text-align:center;"></span>
+        </button>
+        <!-- Bildirim paneli (dropdown) -->
+        <div id="notif-panel" class="hidden" role="menu" aria-labelledby="topbar-notif"
+             style="position:absolute;top:calc(100% + 8px);right:0;width:380px;max-width:calc(100vw - 24px);max-height:70vh;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(11,26,47,.18);z-index:500;display:flex;flex-direction:column;overflow:hidden;">
+          <!-- Header -->
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--surface2);">
+            <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;">
+              Bildirimler <span id="notif-panel-count" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);font-weight:500;margin-left:4px;"></span>
+            </div>
+            <button id="notif-mark-all-btn" onclick="notifMarkAllRead()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;display:none;">
+              Tümünü okundu say
+            </button>
+          </div>
+          <!-- Filtre tab -->
+          <div style="display:flex;gap:0;padding:0 14px;border-bottom:1px solid var(--border);background:var(--surface);">
+            <button class="notif-tab is-active" data-filter="all"    onclick="notifSetFilter('all', this)"
+                    style="background:none;border:none;padding:8px 12px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;border-bottom:2px solid var(--accent);">Tümü</button>
+            <button class="notif-tab" data-filter="unread" onclick="notifSetFilter('unread', this)"
+                    style="background:none;border:none;padding:8px 12px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;">Okunmamış</button>
+          </div>
+          <!-- Liste -->
+          <div id="notif-list" style="flex:1;overflow-y:auto;padding:4px 0;">
+            <div style="text-align:center;padding:36px 16px;color:var(--muted);font-size:12.5px;">Yükleniyor…</div>
+          </div>
+          <!-- Footer -->
+          <div style="padding:8px 14px;border-top:1px solid var(--border);background:var(--surface2);text-align:center;">
+            <span style="font-size:10.5px;color:var(--muted);font-family:var(--font-mono);">Otomatik yenileme: 30 saniye</span>
+          </div>
+        </div>
+      </div>
 
       <!-- PWA Yükle (yalnızca destekleniyorsa görünür) -->
       <button class="topbar__icon-btn" id="pwa-desktop-btn" onclick="pwaShowInfo()" style="display:none" title="Uygulamayı yükle" aria-label="Uygulamayı yükle">
@@ -4733,6 +4764,9 @@
 <!-- Filo Yönetimi — docs/filo-cekici-dorse.md (sbUrl/sbHeaders/isLocalMode app-chunk-02'den gelir, bu yüzden sonra yüklenir) -->
 <script src="js/integrations/filo-api.js"></script>
 <script src="js/pages/filo-page.js"></script>
+<!-- Bildirim sistemi — css/db/migrations/2026_05_05__bildirimler.sql -->
+<script src="js/integrations/notifications-api.js"></script>
+<script src="js/ui/notifications-bell.js"></script>
 
 <!-- ─────────────────────────────────────────────────────────────────────
      SÜRÜCÜ TAKİBİ — FOTOĞRAF LIGHTBOX MODALI
