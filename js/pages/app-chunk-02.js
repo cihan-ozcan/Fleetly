@@ -3351,8 +3351,8 @@ async function downloadSingleVehiclePDF() {
       try { doc.addImage(_logo,'PNG',ML, 8, 50, 8.2); } catch(_){}
     }
     // Logonun altında ince bir slogan
-    st([200,215,235]); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
-    doc.text(_tr('Filo Yonetim Sistemi'), ML, 21);
+    st([200,215,235]); doc.setFontSize(7.5); doc.setFont('helvetica','italic');
+    doc.text(_tr('created by cihanozcan'), ML, 21);
 
     // Orta: rapor başlığı + plaka
     st(C.white); doc.setFontSize(11); doc.setFont('helvetica','bold');
@@ -3580,8 +3580,8 @@ async function downloadFuelPDF() {
     if (LOGO_B64) {
       try { doc.addImage(LOGO_B64, 'PNG', ML, 8, 50, 8.2); } catch(_){}
     }
-    setTxt([200,215,235]); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
-    doc.text(tr('Filo Yonetim Sistemi'), ML, 21);
+    setTxt([200,215,235]); doc.setFontSize(7.5); doc.setFont('helvetica','italic');
+    doc.text(tr('created by cihanozcan'), ML, 21);
 
     // Orta: başlık + alt başlık
     setTxt(C.white); doc.setFontSize(15); doc.setFont('helvetica','bold');
