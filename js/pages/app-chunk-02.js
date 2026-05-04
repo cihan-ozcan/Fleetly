@@ -3008,10 +3008,12 @@ function fuelImportFromFile(input) {
 }
 
 function _fuelImportRenderPreview() {
+  try {
   const total   = _fuelImportRows.length;
   const valid   = _fuelImportRows.filter(r => r.ok).length;
   const invalid = total - valid;
   const unmapped = _fuelImportRows.filter(r => !r.vehicleId).length;
+  console.log('[fuel-import] preview:', { total, valid, invalid, unmapped, sample: _fuelImportRows.slice(0,3) });
 
   // Özet kartları
   const sum = document.getElementById('fuel-import-summary');
@@ -3030,8 +3032,10 @@ function _fuelImportRenderPreview() {
   const unmappedEl = document.getElementById('fuel-import-unmapped');
   if (unmapped > 0) {
     const groups = {};
-    _fuelImportRows.filter(r => !r.vehicleId && r.plaka).forEach(r => {
-      groups[r.plaka] = (groups[r.plaka] || 0) + 1;
+    // Plaka boşsa "(plaka yok)" anahtarı altında topla — tamamen gizlenmesin
+    _fuelImportRows.filter(r => !r.vehicleId).forEach(r => {
+      const key = r.plaka && r.plaka.trim() ? r.plaka : '(plaka yok)';
+      groups[key] = (groups[key] || 0) + 1;
     });
     const opts = vehicles.map(v => `<option value="${v.id}">${v.plaka}</option>`).join('');
     unmappedEl.innerHTML = `
@@ -3081,6 +3085,10 @@ function _fuelImportRenderPreview() {
   document.getElementById('fuel-import-confirm-btn').style.opacity = valid === 0 ? '.5' : '1';
 
   document.getElementById('fuel-import-backdrop').classList.remove('hidden');
+  } catch (err) {
+    console.error('[fuel-import] preview render hatası:', err);
+    showToast('Önizleme oluşturulamadı: ' + err.message, 'error');
+  }
 }
 
 function fuelImportRemapPlate(originalPlate, newVehicleId) {
@@ -3096,62 +3104,103 @@ function fuelImportRemapPlate(originalPlate, newVehicleId) {
 }
 
 async function fuelImportConfirm() {
-  const valid = _fuelImportRows.filter(r => r.ok && r.vehicleId);
-  if (valid.length === 0) { showToast('Kaydedilecek satır yok', 'error'); return; }
+  console.log('[fuel-import] confirm tıklandı');
+  try {
+    const valid = (_fuelImportRows || []).filter(r => r.ok && r.vehicleId);
+    console.log('[fuel-import] geçerli satır sayısı:', valid.length, 'toplam:', (_fuelImportRows||[]).length);
+    if (valid.length === 0) { showToast('Kaydedilecek satır yok', 'error'); return; }
 
-  const btn = document.getElementById('fuel-import-confirm-btn');
-  const prog = document.getElementById('fuel-import-progress');
-  btn.disabled = true; btn.style.opacity = '.6';
+    const btn  = document.getElementById('fuel-import-confirm-btn');
+    const prog = document.getElementById('fuel-import-progress');
+    if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
+    if (prog) prog.textContent = `Başlatılıyor… 0 / ${valid.length}`;
 
-  let ok = 0, fail = 0;
-  // Paralel chunk — 4'lü gruplar halinde
-  const chunkSize = 4;
-  for (let i = 0; i < valid.length; i += chunkSize) {
-    const chunk = valid.slice(i, i + chunkSize);
-    await Promise.all(chunk.map(async (r) => {
-      const entry = {
-        id: uid(),
-        tarih: r.tarih,
-        km: r.km,
-        litre: r.litre,
-        fiyat: r.fiyat,
-        not: r.not,
-        sofor: r.sofor,
-        yakitTuru: r.yakitTuru,
-        istasyon: r.istasyon,
-        odemeTipi: r.odemeTipi,
-        fisNo: r.fisNo,
-        litreFiyat: r.litreFiyat,
-        anomaliFlag: ''
-      };
-      // Local cache'e ekle
-      if (!fuelData[r.vehicleId]) fuelData[r.vehicleId] = [];
-      fuelData[r.vehicleId].push(entry);
-      // Buluta yaz
-      const res = await saveFuelEntry(r.vehicleId, entry);
-      if (res && res.ok) ok++; else { fail++; r.errors.push('Buluta gönderilemedi: ' + (res?.error || 'hata')); r.ok = false; }
-    }));
-    prog.textContent = `Kaydediliyor… ${Math.min(i + chunkSize, valid.length)} / ${valid.length}`;
-  }
+    // Auth/firma erken kontrol — saveFuelEntry her satırda aynı hatayı vermesin
+    if (typeof currentFirmaId === 'undefined' || !currentFirmaId) {
+      showToast('Firma bilgisi yüklenmedi — sayfayı yenileyip tekrar deneyin', 'error');
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      return;
+    }
 
-  // Local sırala + kaydet + UI güncelle
-  Object.keys(fuelData).forEach(vid => {
-    fuelData[vid].sort((a, b) => new Date(a.tarih) - new Date(b.tarih) || a.km - b.km);
-  });
-  saveFuelDataLocal();
-  updateFuelStat();
-  updateStats();
-  if (typeof renderFuelModal === 'function') renderFuelModal();
+    let ok = 0, fail = 0;
+    const chunkSize = 4;
+    for (let i = 0; i < valid.length; i += chunkSize) {
+      const chunk = valid.slice(i, i + chunkSize);
+      await Promise.all(chunk.map(async (r) => {
+        try {
+          const entry = {
+            id: (typeof uid === 'function')
+                  ? uid()
+                  : (Date.now().toString(36) + Math.random().toString(36).slice(2)),
+            tarih: r.tarih,
+            km: r.km,
+            litre: r.litre,
+            fiyat: r.fiyat,
+            not: r.not || '',
+            sofor: r.sofor || '',
+            yakitTuru: r.yakitTuru || 'Motorin',
+            istasyon: r.istasyon || '',
+            odemeTipi: r.odemeTipi || '',
+            fisNo: r.fisNo || '',
+            litreFiyat: r.litreFiyat || 0,
+            anomaliFlag: ''
+          };
+          if (!fuelData[r.vehicleId]) fuelData[r.vehicleId] = [];
+          fuelData[r.vehicleId].push(entry);
+          const res = await saveFuelEntry(r.vehicleId, entry);
+          if (res && res.ok) {
+            ok++;
+          } else {
+            fail++;
+            r.errors.push('Buluta gönderilemedi: ' + (res?.error || 'bilinmeyen hata'));
+            r.ok = false;
+            // Cache'e eklenen satırı geri al — buluta gitmedi
+            const arr = fuelData[r.vehicleId];
+            const idx = arr.findIndex(e => e.id === entry.id);
+            if (idx >= 0) arr.splice(idx, 1);
+          }
+        } catch (perRowErr) {
+          console.error('[fuel-import] satır hatası:', r, perRowErr);
+          fail++;
+          r.errors.push('İstisna: ' + (perRowErr?.message || perRowErr));
+          r.ok = false;
+        }
+      }));
+      if (prog) prog.textContent = `Kaydediliyor… ${Math.min(i + chunkSize, valid.length)} / ${valid.length}`;
+    }
 
-  btn.disabled = false; btn.style.opacity = '1';
-  if (fail === 0) {
-    showToast(`✓ ${ok} yakıt kaydı içe aktarıldı`, 'success');
-    fuelImportClose();
-  } else {
-    showToast(`${ok} kayıt başarılı, ${fail} kayıt başarısız — listede görüldü`, 'error');
-    _fuelImportRenderPreview();
+    // Local sırala + kaydet + UI güncelle
+    Object.keys(fuelData).forEach(vid => {
+      fuelData[vid].sort((a, b) => new Date(a.tarih) - new Date(b.tarih) || a.km - b.km);
+    });
+    saveFuelDataLocal();
+    if (typeof updateFuelStat === 'function') updateFuelStat();
+    if (typeof updateStats === 'function') updateStats();
+    if (typeof renderFuelModal === 'function') renderFuelModal();
+
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+    if (fail === 0) {
+      showToast(`✓ ${ok} yakıt kaydı içe aktarıldı`, 'success');
+      fuelImportClose();
+    } else {
+      showToast(`${ok} kayıt başarılı, ${fail} başarısız — uyarı sütununa bakın`, 'error');
+      _fuelImportRenderPreview();
+    }
+  } catch (err) {
+    console.error('[fuel-import] confirm catastrophic:', err);
+    showToast('İçe aktarma hatası: ' + (err?.message || err), 'error');
+    const btn = document.getElementById('fuel-import-confirm-btn');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
   }
 }
+
+// Globale expose — script chunk sıralaması nedeniyle inline onclick'lerin
+// fonksiyonu bulamama riskini ortadan kaldırır.
+window.fuelImportFromFile        = fuelImportFromFile;
+window.fuelImportClose           = fuelImportClose;
+window.fuelImportConfirm         = fuelImportConfirm;
+window.fuelImportRemapPlate      = fuelImportRemapPlate;
+window.fuelImportDownloadTemplate= fuelImportDownloadTemplate;
 
 function closeVehicleSelect() {
   document.getElementById('vehicle-select-backdrop').classList.add('hidden');
