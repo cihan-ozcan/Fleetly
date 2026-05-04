@@ -2968,28 +2968,46 @@ function fuelImportFromFile(input) {
         const odeme = M.odeme    != null ? String(r[M.odeme] || '').trim() : '';
 
         const veh = _fuelImportFindVehicleByPlate(plaka);
-        const fiyat = (toplam && toplam > 0) ? toplam : (birim && litre ? +(birim * litre).toFixed(2) : 0);
+        // ÖNEMLİ: Sistem `entry.fiyat`'ı **birim fiyat (TL/L)** olarak saklar
+        // (form etiketi "Birim Fiyat (₺/L)"). Toplam = litre × fiyat formülüyle
+        // diğer tüm hesaplarda kullanılır. Bu yüzden import'ta da:
+        //   - Önce Excel'in "Birim Fiyat" sütunu (varsa)
+        //   - Yoksa Excel'in "Toplam / Litre" hesabı
+        // ile birim fiyatı çıkarıp `entry.fiyat`'a yazıyoruz.
+        const fiyat = (birim && birim > 0)
+          ? +birim
+          : (toplam && litre && litre > 0 ? +(toplam / litre).toFixed(4) : 0);
+        // Toplamı da not'a yazalım (cross-check için)
+        const hesaplananToplam = +(litre * fiyat).toFixed(2);
 
         const errors = [];
         if (!plaka)             errors.push('Plaka boş');
         if (!tarih)             errors.push('Tarih okunamadı');
         if (!km || km <= 0)     errors.push('KM geçersiz');
         if (!litre || litre <= 0) errors.push('Litre geçersiz');
+        if (!fiyat || fiyat <= 0) errors.push('Birim fiyat çıkarılamadı');
         if (!veh)               errors.push('Plaka eşleşmedi');
 
+        // Önizleme tablosu için yardımcı: gösterirken kullanıcı toplamı görsün
+        const notlar = [];
+        if (saat) notlar.push('Saat ' + saat);
+        if (toplam && toplam > 0) notlar.push('Toplam ' + toplam.toFixed(2) + ' ₺');
+        if (kdv != null) notlar.push('KDV ' + kdv + ' ₺');
+
         parsed.push({
-          rowNo : i + 1,           // Excel satır no (1-bazlı + header)
+          rowNo : i + 1,
           plaka,
           vehicleId : veh?.id || null,
           tarih, saat,
-          km, litre, fiyat,
-          litreFiyat : birim || (litre > 0 ? +(fiyat / litre).toFixed(2) : 0),
+          km, litre, fiyat,                      // ← fiyat = birim fiyat
+          toplam : hesaplananToplam,             // önizleme için
+          litreFiyat : fiyat,                    // alias — geriye uyum
           istasyon : ist,
           fisNo : fis,
           sofor,
           yakitTuru : yakit || 'Motorin',
           odemeTipi : odeme,
-          not : saat ? `Saat ${saat}` + (kdv != null ? ` · KDV ${kdv} ₺` : '') : (kdv != null ? `KDV ${kdv} ₺` : ''),
+          not : notlar.join(' · '),
           errors,
           ok : errors.length === 0
         });
@@ -3071,8 +3089,8 @@ function _fuelImportRenderPreview() {
       <td style="padding:6px 8px;font-weight:700;color:${r.vehicleId ? '#2C5A9E' : '#E5A100'}">${r.plaka || '—'}</td>
       <td style="padding:6px 8px;text-align:right">${r.km != null ? r.km.toLocaleString('tr-TR') : '—'}</td>
       <td style="padding:6px 8px;text-align:right;color:#FF6B1F;font-weight:700">${r.litre != null ? r.litre.toLocaleString('tr-TR',{maximumFractionDigits:2}) : '—'}</td>
-      <td style="padding:6px 8px;text-align:right">${r.litreFiyat ? r.litreFiyat.toFixed(2) : '—'}</td>
-      <td style="padding:6px 8px;text-align:right;color:#16A974;font-weight:700">${r.fiyat ? r.fiyat.toLocaleString('tr-TR',{maximumFractionDigits:2}) : '—'}</td>
+      <td style="padding:6px 8px;text-align:right">${r.fiyat ? r.fiyat.toFixed(2) : '—'}</td>
+      <td style="padding:6px 8px;text-align:right;color:#16A974;font-weight:700">${r.toplam ? r.toplam.toLocaleString('tr-TR',{maximumFractionDigits:2}) : '—'}</td>
       <td style="padding:6px 8px;color:var(--text2)">${(r.istasyon || '').slice(0,28)}</td>
       <td style="padding:6px 8px;color:var(--text2)">${r.fisNo || '—'}</td>
       <td style="padding:6px 8px;color:#DC3838;font-size:10.5px">${r.errors.join(', ')}</td>
@@ -3311,12 +3329,15 @@ async function downloadSingleVehiclePDF() {
   let pg = 1;
   function footer() {
     // Üst hairline
-    sf(C.border); rc(ML, PH-12, CW, 0.3);
+    sf(C.border); rc(ML, PH-14, CW, 0.3);
     st(C.text2); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text(_tr('Fleetly Filo Yonetim  •  ') + _tr(v.plaka||''), ML, PH-7);
-    doc.text(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH-7, {align:'center'});
+    doc.text(_tr('Fleetly Filo Yonetim  •  ') + _tr(v.plaka||''), ML, PH-9);
+    doc.text(new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH-9, {align:'center'});
     st(C.navy); doc.setFont('helvetica','bold');
-    doc.text(_tr('Sayfa ') + pg, PW-MR, PH-7, {align:'right'});
+    doc.text(_tr('Sayfa ') + pg, PW-MR, PH-9, {align:'right'});
+    // İmza satırı: created by cihanozcan
+    st(C.muted); doc.setFontSize(7); doc.setFont('helvetica','italic');
+    doc.text(_tr('Created by cihanozcan  •  fleetly.fit'), PW/2, PH-4, {align:'center'});
   }
   function newPage() { footer(); doc.addPage(); pg++; drawHeader(); }
   function drawHeader() {
@@ -3438,7 +3459,8 @@ async function downloadSingleVehiclePDF() {
     const prev = ei>0?ve[ei-1]:null;
     const kmFark = prev?e.km-prev.km:null;
     const cons = (kmFark&&kmFark>0)?(e.litre/kmFark)*100:null;
-    const tutar = e.litre*(e.fiyat||0);
+    // Sistem semantiği: e.fiyat = birim fiyat (TL/L). Toplam = litre × birim.
+    const tutar = +(e.litre || 0) * +(e.fiyat || 0);
     // Zebra: alternatif beyaz / soft surface
     sf(ei%2===0?C.surface:C.white); rc(ML,y,CW,6.8);
     setStrokeIfPossible(doc, C.border); rc(ML, y+6.8, CW, 0.2);
@@ -3537,12 +3559,15 @@ async function downloadFuelPDF() {
   let pageNum = 1;
   function addPageNum() {
     // Üst hairline
-    setFill(C.border); rect(ML, PH-12, CW, 0.3);
+    setFill(C.border); rect(ML, PH-14, CW, 0.3);
     setTxt(C.text2); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text(tr('Fleetly Filo Yonetim  •  Yakit Raporu'), ML, PH - 7);
-    doc.text(new Date().toLocaleDateString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH - 7, {align:'center'});
+    doc.text(tr('Fleetly Filo Yonetim  •  Yakit Raporu'), ML, PH - 9);
+    doc.text(new Date().toLocaleDateString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric'}), PW/2, PH - 9, {align:'center'});
     setTxt(C.navy); doc.setFont('helvetica','bold');
-    doc.text(tr('Sayfa ') + pageNum, PW - MR, PH - 7, { align: 'right' });
+    doc.text(tr('Sayfa ') + pageNum, PW - MR, PH - 9, { align: 'right' });
+    // İmza satırı: created by cihanozcan
+    setTxt(C.muted); doc.setFontSize(7); doc.setFont('helvetica','italic');
+    doc.text(tr('Created by cihanozcan  •  fleetly.fit'), PW/2, PH - 4, {align:'center'});
   }
 
   function drawHeaderBand() {
