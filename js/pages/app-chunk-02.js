@@ -2818,6 +2818,341 @@ function exportFuelJSON() {
   showToast('JSON indirildi ✓', 'success');
 }
 
+/* ════════════════════════════════════════════════════════════════
+   EXCEL'DEN YAKIT FİŞİ İÇE AKTARMA
+   - SheetJS (window.XLSX) ile parse
+   - Plaka normalizasyonu + araçla eşle (vehicles.plaka)
+   - Tarih DD-MM-YYYY veya Excel serial number desteği
+   - Önizleme tablosu, eksik/hatalı satırları işaretle
+   - Onayla → batch saveFuelEntry (paralel 4'lü chunk)
+═════════════════════════════════════════════════════════════════ */
+
+let _fuelImportRows = []; // önizleme verisi (parse + validate edilmiş)
+
+function fuelImportClose() {
+  document.getElementById('fuel-import-backdrop').classList.add('hidden');
+  _fuelImportRows = [];
+}
+
+function fuelImportDownloadTemplate() {
+  if (typeof XLSX === 'undefined') { showToast('Excel kütüphanesi yüklenmedi', 'error'); return; }
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Sıra','Tarih','Saat','Plaka','KM','Litre','Birim Fiyat (₺)','KDV (₺)','Toplam (₺)','İstasyon','Fiş No'],
+    [1, '06-04-2026', '14:31', '34ABC123', 169085, 262.74, 77.80, 3406.86, 20441.17, 'Örnek İstasyon / İlçe-Şehir', '0001'],
+    [2, '07-04-2026', '09:15', '34DEF456', 543366, 380.20, 77.80, 4929.93, 29579.56, 'Örnek İstasyon 2', '0002'],
+  ]);
+  ws['!cols'] = [{wch:6},{wch:12},{wch:8},{wch:14},{wch:10},{wch:10},{wch:14},{wch:12},{wch:14},{wch:32},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Yakit Fisleri');
+  XLSX.writeFile(wb, 'yakit_fisi_sablon.xlsx');
+  showToast('Şablon indirildi ✓', 'success');
+}
+
+function _fuelImportNormPlaka(s) {
+  // Türk plaka normalize: boşluk-tire kaldır, büyüt, türkçe karakter dönüştür
+  return String(s || '')
+    .replace(/[\s\-\.]/g, '')
+    .toUpperCase()
+    .replace(/Ş/g,'S').replace(/Ğ/g,'G').replace(/Ü/g,'U').replace(/Ö/g,'O').replace(/Ç/g,'C').replace(/İ/g,'I');
+}
+
+function _fuelImportFindVehicleByPlate(plate) {
+  if (!plate) return null;
+  const norm = _fuelImportNormPlaka(plate);
+  return vehicles.find(v => _fuelImportNormPlaka(v.plaka) === norm) || null;
+}
+
+function _fuelImportParseDate(v) {
+  // 1) Excel serial number (örn. 45650)
+  if (typeof v === 'number' && v > 25000 && v < 80000) {
+    // Excel epoch 1900-01-01 (1 = 1900-01-01, 2 = 1900-01-02, ...) — 1900 leap bug için 1 günlük offset
+    const ms = (v - 25569) * 86400 * 1000;
+    const d = new Date(ms);
+    return isNaN(d) ? null : d.toISOString().slice(0,10);
+  }
+  // 2) String formatları
+  const s = String(v || '').trim();
+  if (!s) return null;
+  // DD-MM-YYYY veya DD/MM/YYYY veya DD.MM.YYYY
+  let m = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{2,4})$/);
+  if (m) {
+    let yr = m[3];
+    if (yr.length === 2) yr = (parseInt(yr) > 50 ? '19' : '20') + yr;
+    return `${yr}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  }
+  // YYYY-MM-DD
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  // ISO datetime
+  const d = new Date(s);
+  return isNaN(d) ? null : d.toISOString().slice(0,10);
+}
+
+function _fuelImportNum(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return v;
+  // "1.234,56" → 1234.56  ; "1234.56" zaten OK
+  const s = String(v).trim().replace(/[^\d,.\-]/g, '');
+  // Hem . hem , varsa: . binlik, , ondalık
+  if (s.includes('.') && s.includes(',')) {
+    return parseFloat(s.replace(/\./g, '').replace(',', '.'));
+  }
+  // Sadece , varsa ondalık olarak yorumla
+  if (s.includes(',')) return parseFloat(s.replace(',', '.'));
+  return parseFloat(s);
+}
+
+// Header eşleme — esnek; küçük/büyük harf ve emoji/parantez tolere eder
+function _fuelImportHeaderMap(headers) {
+  const norm = (s) => String(s || '').toLowerCase().trim()
+    .replace(/[ı]/g,'i').replace(/[ş]/g,'s').replace(/[ğ]/g,'g').replace(/[ü]/g,'u').replace(/[ö]/g,'o').replace(/[ç]/g,'c')
+    .replace(/[\(\)₺\.]/g, '').trim();
+  const M = {};
+  headers.forEach((h, i) => {
+    const n = norm(h);
+    if (!M.tarih      && /tarih|date/.test(n))                   M.tarih = i;
+    if (!M.saat       && /saat|time/.test(n))                    M.saat = i;
+    if (!M.plaka      && /plaka|plate/.test(n))                  M.plaka = i;
+    if (!M.km         && /^km|kilometre|sayac/.test(n))          M.km = i;
+    if (!M.litre      && /litre|liter|hacim/.test(n))            M.litre = i;
+    if (!M.birim      && /(birim.?fiyat|litre.?fiyat|unit)/.test(n)) M.birim = i;
+    if (!M.kdv        && /\bkdv\b|vat/.test(n))                  M.kdv = i;
+    if (!M.toplam     && /toplam|tutar|total/.test(n))           M.toplam = i;
+    if (!M.istasyon   && /istasyon|station/.test(n))             M.istasyon = i;
+    if (!M.fis        && /fis.?no|fis|receipt/.test(n))          M.fis = i;
+    if (!M.sofor      && /sofor|surucu|driver/.test(n))          M.sofor = i;
+    if (!M.yakit      && /(yakit.?tur|fuel.?type)/.test(n))      M.yakit = i;
+    if (!M.odeme      && /(odeme|payment)/.test(n))              M.odeme = i;
+  });
+  return M;
+}
+
+function fuelImportFromFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { showToast('Excel kütüphanesi yüklenmedi', 'error'); return; }
+  showToast('Dosya okunuyor…', 'info');
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: false });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      if (!ws) throw new Error('Sayfa bulunamadı');
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+      if (rows.length < 2) throw new Error('Boş dosya');
+      const headers = rows[0];
+      const M = _fuelImportHeaderMap(headers);
+      if (M.plaka == null || M.km == null || M.litre == null || M.tarih == null) {
+        throw new Error('Zorunlu sütunlar eksik (Tarih, Plaka, KM, Litre)');
+      }
+
+      // Validasyon ve normalize
+      const parsed = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r || r.every(x => x == null || x === '')) continue;
+
+        const plaka = String(r[M.plaka] || '').trim();
+        const tarih = _fuelImportParseDate(r[M.tarih]);
+        const km    = _fuelImportNum(r[M.km]);
+        const litre = _fuelImportNum(r[M.litre]);
+        const birim = M.birim    != null ? _fuelImportNum(r[M.birim]) : null;
+        const kdv   = M.kdv      != null ? _fuelImportNum(r[M.kdv])   : null;
+        const toplam= M.toplam   != null ? _fuelImportNum(r[M.toplam]): null;
+        const ist   = M.istasyon != null ? String(r[M.istasyon] || '').trim() : '';
+        const fis   = M.fis      != null ? String(r[M.fis] || '').trim() : '';
+        const saat  = M.saat     != null ? String(r[M.saat] || '').trim() : '';
+        const sofor = M.sofor    != null ? String(r[M.sofor] || '').trim() : '';
+        const yakit = M.yakit    != null ? String(r[M.yakit] || '').trim() : '';
+        const odeme = M.odeme    != null ? String(r[M.odeme] || '').trim() : '';
+
+        const veh = _fuelImportFindVehicleByPlate(plaka);
+        const fiyat = (toplam && toplam > 0) ? toplam : (birim && litre ? +(birim * litre).toFixed(2) : 0);
+
+        const errors = [];
+        if (!plaka)             errors.push('Plaka boş');
+        if (!tarih)             errors.push('Tarih okunamadı');
+        if (!km || km <= 0)     errors.push('KM geçersiz');
+        if (!litre || litre <= 0) errors.push('Litre geçersiz');
+        if (!veh)               errors.push('Plaka eşleşmedi');
+
+        parsed.push({
+          rowNo : i + 1,           // Excel satır no (1-bazlı + header)
+          plaka,
+          vehicleId : veh?.id || null,
+          tarih, saat,
+          km, litre, fiyat,
+          litreFiyat : birim || (litre > 0 ? +(fiyat / litre).toFixed(2) : 0),
+          istasyon : ist,
+          fisNo : fis,
+          sofor,
+          yakitTuru : yakit || 'Motorin',
+          odemeTipi : odeme,
+          not : saat ? `Saat ${saat}` + (kdv != null ? ` · KDV ${kdv} ₺` : '') : (kdv != null ? `KDV ${kdv} ₺` : ''),
+          errors,
+          ok : errors.length === 0
+        });
+      }
+
+      _fuelImportRows = parsed;
+      _fuelImportRenderPreview();
+      input.value = ''; // aynı dosyayı tekrar seçebilsin
+    } catch (err) {
+      console.error('Excel parse hatası:', err);
+      showToast('Excel okunamadı: ' + err.message, 'error');
+    }
+  };
+  reader.onerror = () => showToast('Dosya okunamadı', 'error');
+  reader.readAsArrayBuffer(file);
+}
+
+function _fuelImportRenderPreview() {
+  const total   = _fuelImportRows.length;
+  const valid   = _fuelImportRows.filter(r => r.ok).length;
+  const invalid = total - valid;
+  const unmapped = _fuelImportRows.filter(r => !r.vehicleId).length;
+
+  // Özet kartları
+  const sum = document.getElementById('fuel-import-summary');
+  const card = (label, val, color, bg) => `
+    <div style="flex:1;min-width:140px;background:${bg};border:1px solid ${color}40;border-radius:10px;padding:10px 14px">
+      <div style="font-size:10.5px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.04em">${label}</div>
+      <div style="font-size:20px;font-weight:800;color:${color};font-family:var(--font-mono);margin-top:2px">${val}</div>
+    </div>`;
+  sum.innerHTML =
+    card('Toplam Satır', total, '#2C5A9E', 'rgba(44,90,158,.08)') +
+    card('Geçerli', valid, '#16A974', 'rgba(22,169,116,.08)') +
+    card('Hatalı', invalid, '#DC3838', 'rgba(220,56,56,.08)') +
+    card('Plaka Eşleşmemiş', unmapped, '#E5A100', 'rgba(229,161,0,.08)');
+
+  // Plaka eşleşmemiş satırlar için manuel eşleme arayüzü
+  const unmappedEl = document.getElementById('fuel-import-unmapped');
+  if (unmapped > 0) {
+    const groups = {};
+    _fuelImportRows.filter(r => !r.vehicleId && r.plaka).forEach(r => {
+      groups[r.plaka] = (groups[r.plaka] || 0) + 1;
+    });
+    const opts = vehicles.map(v => `<option value="${v.id}">${v.plaka}</option>`).join('');
+    unmappedEl.innerHTML = `
+      <div style="background:rgba(229,161,0,.08);border:1px solid rgba(229,161,0,.30);border-radius:10px;padding:12px;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:#E5A100;margin-bottom:8px">⚠ Plakaları Manuel Eşle</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">
+          ${Object.entries(groups).map(([plk, cnt]) => `
+            <div style="display:flex;align-items:center;gap:8px;background:var(--bg);padding:8px 10px;border-radius:6px;border:1px solid var(--border)">
+              <span style="font-family:var(--font-mono);font-weight:700;color:var(--text);min-width:90px">${plk}</span>
+              <span style="font-size:11px;color:var(--muted)">${cnt} satır</span>
+              <select onchange="fuelImportRemapPlate('${plk.replace(/'/g,"\\'")}', this.value)" style="flex:1;padding:5px 8px;background:var(--surface);border:1px solid var(--border);border-radius:5px;font-size:11.5px;color:var(--text)">
+                <option value="">— Araç seç —</option>
+                ${opts}
+              </select>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  } else {
+    unmappedEl.innerHTML = '';
+  }
+
+  // Önizleme tablosu (ilk 50 satır)
+  const tbody = document.getElementById('fuel-import-tbody');
+  const rows = _fuelImportRows.slice(0, 50);
+  tbody.innerHTML = rows.map(r => {
+    const statusBg = r.ok ? 'rgba(22,169,116,.10)' : 'rgba(220,56,56,.08)';
+    const statusColor = r.ok ? '#16A974' : '#DC3838';
+    const statusIcon = r.ok ? '✓' : '✗';
+    return `<tr style="background:${statusBg}">
+      <td style="padding:6px 8px;font-weight:700;color:${statusColor}">${statusIcon}</td>
+      <td style="padding:6px 8px">${r.tarih || '<span style="color:#DC3838">—</span>'}</td>
+      <td style="padding:6px 8px;font-weight:700;color:${r.vehicleId ? '#2C5A9E' : '#E5A100'}">${r.plaka || '—'}</td>
+      <td style="padding:6px 8px;text-align:right">${r.km != null ? r.km.toLocaleString('tr-TR') : '—'}</td>
+      <td style="padding:6px 8px;text-align:right;color:#FF6B1F;font-weight:700">${r.litre != null ? r.litre.toLocaleString('tr-TR',{maximumFractionDigits:2}) : '—'}</td>
+      <td style="padding:6px 8px;text-align:right">${r.litreFiyat ? r.litreFiyat.toFixed(2) : '—'}</td>
+      <td style="padding:6px 8px;text-align:right;color:#16A974;font-weight:700">${r.fiyat ? r.fiyat.toLocaleString('tr-TR',{maximumFractionDigits:2}) : '—'}</td>
+      <td style="padding:6px 8px;color:var(--text2)">${(r.istasyon || '').slice(0,28)}</td>
+      <td style="padding:6px 8px;color:var(--text2)">${r.fisNo || '—'}</td>
+      <td style="padding:6px 8px;color:#DC3838;font-size:10.5px">${r.errors.join(', ')}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('fuel-import-progress').textContent =
+    valid > 0 ? `${valid} satır kaydedilebilir.` : `Kaydedilebilir geçerli satır yok — hataları düzeltip tekrar deneyin.`;
+  document.getElementById('fuel-import-confirm-btn').disabled = valid === 0;
+  document.getElementById('fuel-import-confirm-btn').style.opacity = valid === 0 ? '.5' : '1';
+
+  document.getElementById('fuel-import-backdrop').classList.remove('hidden');
+}
+
+function fuelImportRemapPlate(originalPlate, newVehicleId) {
+  if (!newVehicleId) return;
+  _fuelImportRows.forEach(r => {
+    if (r.plaka === originalPlate) {
+      r.vehicleId = newVehicleId;
+      r.errors = r.errors.filter(e => e !== 'Plaka eşleşmedi');
+      r.ok = r.errors.length === 0;
+    }
+  });
+  _fuelImportRenderPreview();
+}
+
+async function fuelImportConfirm() {
+  const valid = _fuelImportRows.filter(r => r.ok && r.vehicleId);
+  if (valid.length === 0) { showToast('Kaydedilecek satır yok', 'error'); return; }
+
+  const btn = document.getElementById('fuel-import-confirm-btn');
+  const prog = document.getElementById('fuel-import-progress');
+  btn.disabled = true; btn.style.opacity = '.6';
+
+  let ok = 0, fail = 0;
+  // Paralel chunk — 4'lü gruplar halinde
+  const chunkSize = 4;
+  for (let i = 0; i < valid.length; i += chunkSize) {
+    const chunk = valid.slice(i, i + chunkSize);
+    await Promise.all(chunk.map(async (r) => {
+      const entry = {
+        id: uid(),
+        tarih: r.tarih,
+        km: r.km,
+        litre: r.litre,
+        fiyat: r.fiyat,
+        not: r.not,
+        sofor: r.sofor,
+        yakitTuru: r.yakitTuru,
+        istasyon: r.istasyon,
+        odemeTipi: r.odemeTipi,
+        fisNo: r.fisNo,
+        litreFiyat: r.litreFiyat,
+        anomaliFlag: ''
+      };
+      // Local cache'e ekle
+      if (!fuelData[r.vehicleId]) fuelData[r.vehicleId] = [];
+      fuelData[r.vehicleId].push(entry);
+      // Buluta yaz
+      const res = await saveFuelEntry(r.vehicleId, entry);
+      if (res && res.ok) ok++; else { fail++; r.errors.push('Buluta gönderilemedi: ' + (res?.error || 'hata')); r.ok = false; }
+    }));
+    prog.textContent = `Kaydediliyor… ${Math.min(i + chunkSize, valid.length)} / ${valid.length}`;
+  }
+
+  // Local sırala + kaydet + UI güncelle
+  Object.keys(fuelData).forEach(vid => {
+    fuelData[vid].sort((a, b) => new Date(a.tarih) - new Date(b.tarih) || a.km - b.km);
+  });
+  saveFuelDataLocal();
+  updateFuelStat();
+  updateStats();
+  if (typeof renderFuelModal === 'function') renderFuelModal();
+
+  btn.disabled = false; btn.style.opacity = '1';
+  if (fail === 0) {
+    showToast(`✓ ${ok} yakıt kaydı içe aktarıldı`, 'success');
+    fuelImportClose();
+  } else {
+    showToast(`${ok} kayıt başarılı, ${fail} kayıt başarısız — listede görüldü`, 'error');
+    _fuelImportRenderPreview();
+  }
+}
+
 function closeVehicleSelect() {
   document.getElementById('vehicle-select-backdrop').classList.add('hidden');
 }

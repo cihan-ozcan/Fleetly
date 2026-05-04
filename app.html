@@ -3276,6 +3276,23 @@
 
       <!-- SEKME 3: Yönetim -->
       <div class="vs-tab-panel" id="vspanel-ayarlar">
+        <!-- Excel İçe Aktarma -->
+        <div style="background:linear-gradient(135deg,rgba(255,107,31,.08),rgba(44,90,158,.08));border:1px solid rgba(255,107,31,.30);border-radius:12px;padding:14px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:4px">📥 Excel'den Yakıt Fişlerini İçe Aktar</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+            Excel dosyanızı (.xlsx / .xls / .csv) seçin — sistem otomatik plaka eşler, önizleme gösterir.<br>
+            <b>Beklenen sütunlar:</b> Tarih · Saat · Plaka · KM · Litre · Birim Fiyat · KDV · Toplam · İstasyon · Fiş No
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="file" id="fuel-import-file" accept=".xlsx,.xls,.csv"
+                   style="display:none" onchange="fuelImportFromFile(this)" />
+            <button class="fuel-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none;background:linear-gradient(135deg,#FF6B1F,#E55A0F)"
+                    onclick="document.getElementById('fuel-import-file').click()">📥 Excel Dosyası Seç</button>
+            <button class="fuel-add-btn" style="font-size:12px;padding:7px 16px;box-shadow:none;background:var(--surface3);color:var(--text2);border:1px solid var(--border)"
+                    onclick="fuelImportDownloadTemplate()">📋 Şablon İndir</button>
+          </div>
+        </div>
+
         <!-- JSON dışa aktarım -->
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
           <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">📤 Yakıt Verilerini Dışa Aktar</div>
@@ -3556,6 +3573,63 @@
         </div>
       </div>
     </div><!-- /fuel-modal-body -->
+  </div>
+</div>
+
+<!-- ===== EXCEL IMPORT ÖNİZLEME MODALI ===== -->
+<div class="fuel-modal-backdrop hidden" id="fuel-import-backdrop" onclick="if(event.target===this)fuelImportClose()">
+  <div class="fuel-modal" style="max-width:1100px">
+    <div class="fuel-modal-header">
+      <div class="fuel-modal-title">
+        <span style="font-size:22px">📥</span>
+        <span>Excel'den Yakıt Fişleri İçe Aktar</span>
+      </div>
+      <button class="fuel-modal-close" onclick="fuelImportClose()">×</button>
+    </div>
+    <div class="fuel-modal-body" style="padding:18px;max-height:75vh;overflow-y:auto">
+      <!-- Özet bandı -->
+      <div id="fuel-import-summary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+      <!-- Plaka eşleşmemişler — kullanıcı manuel araç seçebilir -->
+      <div id="fuel-import-unmapped" style="margin-bottom:14px"></div>
+
+      <!-- Önizleme tablosu -->
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        <div style="background:var(--surface2);padding:8px 12px;font-size:12px;font-weight:700;color:var(--text2);border-bottom:1px solid var(--border)">
+          Önizleme — ilk 50 satır gösteriliyor
+        </div>
+        <div style="overflow-x:auto;max-height:50vh;overflow-y:auto">
+          <table id="fuel-import-table" style="width:100%;border-collapse:collapse;font-size:11.5px;font-family:var(--font-mono)">
+            <thead style="background:var(--navy-dark,#0B1A2F);color:#fff;position:sticky;top:0;z-index:1">
+              <tr>
+                <th style="padding:7px 8px;text-align:left;font-weight:700;font-size:10.5px">DURUM</th>
+                <th style="padding:7px 8px;text-align:left;font-weight:700;font-size:10.5px">TARİH</th>
+                <th style="padding:7px 8px;text-align:left;font-weight:700;font-size:10.5px">PLAKA</th>
+                <th style="padding:7px 8px;text-align:right;font-weight:700;font-size:10.5px">KM</th>
+                <th style="padding:7px 8px;text-align:right;font-weight:700;font-size:10.5px">LİTRE</th>
+                <th style="padding:7px 8px;text-align:right;font-weight:700;font-size:10.5px">B.FİYAT</th>
+                <th style="padding:7px 8px;text-align:right;font-weight:700;font-size:10.5px">TOPLAM</th>
+                <th style="padding:7px 8px;text-align:left;font-weight:700;font-size:10.5px">İSTASYON</th>
+                <th style="padding:7px 8px;text-align:left;font-weight:700;font-size:10.5px">FİŞ NO</th>
+                <th style="padding:7px 8px;text-align:left;font-weight:700;font-size:10.5px">UYARI</th>
+              </tr>
+            </thead>
+            <tbody id="fuel-import-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Aksiyon butonları -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px;flex-wrap:wrap">
+        <div id="fuel-import-progress" style="font-size:12px;color:var(--muted)"></div>
+        <div style="display:flex;gap:8px">
+          <button class="fuel-add-btn" style="background:var(--surface3);color:var(--text);border:1px solid var(--border);box-shadow:none" onclick="fuelImportClose()">İptal</button>
+          <button class="fuel-add-btn" id="fuel-import-confirm-btn"
+                  style="background:linear-gradient(135deg,#16A974,#0B6D4B);box-shadow:none"
+                  onclick="fuelImportConfirm()">✓ Geçerli Satırları Kaydet</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
