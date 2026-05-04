@@ -296,6 +296,10 @@
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></svg>
         <span class="sidebar__item-label">Operasyon</span>
       </button>
+      <button class="sidebar__item" onclick="openFiloPage();closeSidebar&&closeSidebar()" title="Filo Yönetimi (Çekici / Dorse)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17h2l1-3h8l1 3h2"/><path d="M14 17V7H3v10"/><path d="M14 10h5l3 3v4h-3"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+        <span class="sidebar__item-label">Filo</span>
+      </button>
       <button class="sidebar__item" onclick="openMusteriPage();closeSidebar&&closeSidebar()" title="Müşteri & Sipariş">
         <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span class="sidebar__item-label">Müşteriler</span>
@@ -1304,6 +1308,333 @@
      MÜŞTERİ & SİPARİŞ MODÜLÜ
      ========================================================= -->
 <!-- =========================================================
+     FİLO SAYFASI (Çekici / Dorse / Eşleşmeler / Bakım)
+     Karar dokümanı: docs/filo-cekici-dorse.md
+     ========================================================= -->
+<div id="filo-page" class="hidden">
+  <div class="crm-topbar" style="box-shadow:inset 3px 0 0 var(--accent);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="crm-back-btn" onclick="closeFiloPage()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Ana Sayfa
+      </button>
+      <div style="width:1px;height:28px;background:var(--border);margin:0 2px"></div>
+      <div style="width:34px;height:34px;background:rgba(255,107,31,.12);border:1px solid rgba(255,107,31,.2);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;">🚛</div>
+      <div>
+        <div style="font-size:15px;font-weight:800;letter-spacing:-.02em;color:var(--text)">Filo Yönetimi</div>
+        <div style="font-size:11px;color:var(--muted)">Çekici · Dorse · Eşleşmeler · Bakım</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="filo-stat-summary" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-right:8px;"></span>
+      <button id="filo-add-btn" onclick="openFiloAddModal()" style="display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:none;cursor:pointer;border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;box-shadow:0 2px 10px rgba(255,107,31,.35);transition:background .15s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span id="filo-add-btn-label">Yeni Çekici</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="ops-scroll">
+    <div class="ops-page">
+
+      <!-- Sekme barı (mevcut srm-tab kalıbı; tabs.js veya manuel toggle) -->
+      <div style="display:flex;gap:0;background:var(--surface3);border-radius:10px;padding:3px;margin-bottom:20px;width:fit-content;">
+        <button class="srm-tab active" id="filo-tab-cekiciler"  onclick="switchFiloTab('cekiciler',this)">🚛 Çekiciler <span id="filo-cnt-cekiciler" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
+        <button class="srm-tab"        id="filo-tab-dorseler"   onclick="switchFiloTab('dorseler',this)">📦 Dorseler <span id="filo-cnt-dorseler" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
+        <button class="srm-tab"        id="filo-tab-eslesmeler" onclick="switchFiloTab('eslesmeler',this)">🔗 Eşleşmeler <span id="filo-cnt-eslesmeler" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
+        <button class="srm-tab"        id="filo-tab-bakim"      onclick="switchFiloTab('bakim',this)">🔧 Bakım</button>
+      </div>
+
+      <!-- Sekme 1: Çekiciler -->
+      <div id="filo-panel-cekiciler" class="srm-panel active">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="position:relative;flex:1;min-width:220px;">
+            <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;">🔍</span>
+            <input id="filo-cekici-search" class="srm-inp" style="padding-left:34px;width:100%;" placeholder="Plaka, marka, model, sürücü…" oninput="filoRenderCekiciler()">
+          </div>
+          <select id="filo-cekici-durum" class="srm-inp" style="width:auto;min-width:140px;" onchange="filoRenderCekiciler()">
+            <option value="">Tüm Durumlar</option>
+            <option value="Aktif">Aktif</option>
+            <option value="Pasif">Pasif</option>
+            <option value="Bakımda">Bakımda</option>
+          </select>
+          <span id="filo-cekici-count" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);"></span>
+        </div>
+        <div class="srm-table-wrap">
+          <table class="srm-table" id="filo-cekici-table">
+            <thead><tr>
+              <th>Plaka</th><th>Marka / Model</th><th>Yıl</th><th>Birincil Sürücü</th><th>Aktif Dorse</th><th>Durum</th><th>Muayene</th><th>Sigorta</th><th class="col-islem">İşlem</th>
+            </tr></thead>
+            <tbody id="filo-cekici-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sekme 2: Dorseler -->
+      <div id="filo-panel-dorseler" class="srm-panel">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="position:relative;flex:1;min-width:220px;">
+            <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;">🔍</span>
+            <input id="filo-dorse-search" class="srm-inp" style="padding-left:34px;width:100%;" placeholder="Plaka, marka, tip…" oninput="filoRenderDorseler()">
+          </div>
+          <select id="filo-dorse-tip" class="srm-inp" style="width:auto;min-width:160px;" onchange="filoRenderDorseler()">
+            <option value="">Tüm Tipler</option>
+          </select>
+          <select id="filo-dorse-durum" class="srm-inp" style="width:auto;min-width:140px;" onchange="filoRenderDorseler()">
+            <option value="">Tüm Durumlar</option>
+            <option value="Aktif">Aktif</option>
+            <option value="Pasif">Pasif</option>
+            <option value="Bakımda">Bakımda</option>
+          </select>
+          <span id="filo-dorse-count" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);"></span>
+        </div>
+        <div class="srm-table-wrap">
+          <table class="srm-table" id="filo-dorse-table">
+            <thead><tr>
+              <th>Plaka</th><th>Marka</th><th>Tip</th><th>Kapasite</th><th>Aks</th><th>Bağlı Çekici</th><th>Durum</th><th class="col-islem">İşlem</th>
+            </tr></thead>
+            <tbody id="filo-dorse-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sekme 3: Eşleşmeler -->
+      <div id="filo-panel-eslesmeler" class="srm-panel">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <button onclick="openFiloEslesmeModal()" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Yeni Eşleştirme
+          </button>
+          <span id="filo-eslesme-count" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-left:auto;"></span>
+        </div>
+        <div class="srm-table-wrap">
+          <table class="srm-table" id="filo-eslesme-table">
+            <thead><tr>
+              <th>Çekici</th><th>Dorse</th><th>Tip / Kapasite</th><th>Birincil</th><th>Başlangıç</th><th>Notlar</th><th class="col-islem">İşlem</th>
+            </tr></thead>
+            <tbody id="filo-eslesme-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sekme 4: Bakım (Paket 4'te detaylanır — şimdilik placeholder) -->
+      <div id="filo-panel-bakim" class="srm-panel">
+        <div style="text-align:center;padding:48px 12px;color:var(--muted);">
+          <div style="font-size:32px;opacity:.5;margin-bottom:8px;">🔧</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px;">Bakım takibi</div>
+          <div style="font-size:12px;">Bu sekme sonraki pakette aktive edilecek (mevcut <code>bakim_kayitlari</code> tablosu kullanılarak).</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     FİLO — Çekici / Dorse / Tek Parça ekleme & düzenleme MODAL
+     openFiloAddModal('cekici'|'dorse'|'tek_parca')  → yeni
+     openFiloEditModal(aractId)                      → düzenle
+     ========================================================= -->
+<div id="filo-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)closeFiloModal()">
+  <div class="srm-modal" style="max-width:640px;">
+    <div class="srm-modal-header" style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);">
+      <div id="filo-modal-icon" style="width:32px;height:32px;background:rgba(255,107,31,.12);border:1px solid rgba(255,107,31,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">🚛</div>
+      <div style="flex:1;">
+        <div id="filo-modal-title" style="font-size:14px;font-weight:700;color:var(--text);">Yeni Çekici</div>
+        <div id="filo-modal-sub" style="font-size:11px;color:var(--muted);">Plaka ve temel bilgileri girin.</div>
+      </div>
+      <button onclick="closeFiloModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;">×</button>
+    </div>
+
+    <div class="srm-modal-body" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;max-height:70vh;overflow-y:auto;">
+
+      <!-- Tür segmented (yeni eklemede aktif, düzenlemede readonly) -->
+      <div class="srm-group" id="filo-m-kind-group">
+        <label style="font-size:10.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);">Tür</label>
+        <div id="filo-m-kind-segmented" style="display:inline-flex;padding:3px;background:var(--bg-sunk);border:1px solid var(--border);border-radius:8px;gap:2px;">
+          <button type="button" data-kind="cekici"    class="filo-seg active" onclick="filoMKindSelect('cekici')">🚛 Çekici</button>
+          <button type="button" data-kind="dorse"     class="filo-seg"        onclick="filoMKindSelect('dorse')">📦 Dorse</button>
+          <button type="button" data-kind="tek_parca" class="filo-seg"        onclick="filoMKindSelect('tek_parca')">🚐 Tek Parça</button>
+        </div>
+      </div>
+
+      <!-- Satır 1: plaka + durum -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
+        <div class="srm-group">
+          <label>Plaka <span style="color:var(--red);">*</span></label>
+          <input id="filo-m-plaka" class="srm-inp" placeholder="34 EE 5314" style="font-family:var(--font-mono);font-weight:700;letter-spacing:.04em;text-transform:uppercase;" autocomplete="off" />
+        </div>
+        <div class="srm-group">
+          <label>Durum</label>
+          <select id="filo-m-durum" class="srm-inp">
+            <option value="Aktif">Aktif</option>
+            <option value="Pasif">Pasif</option>
+            <option value="Bakımda">Bakımda</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Satır 2: marka + model + yıl -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 100px;gap:12px;">
+        <div class="srm-group">
+          <label>Marka</label>
+          <input id="filo-m-marka" class="srm-inp" placeholder="Mercedes / Esmeliler / Kron…" autocomplete="off" />
+        </div>
+        <div class="srm-group">
+          <label>Model</label>
+          <input id="filo-m-model" class="srm-inp" placeholder="Axor / Teleskopik…" autocomplete="off" />
+        </div>
+        <div class="srm-group">
+          <label>Yıl</label>
+          <input id="filo-m-yil" class="srm-inp" type="number" min="1990" max="2100" placeholder="2008" />
+        </div>
+      </div>
+
+      <!-- ÇEKİCİ / TEK PARÇA bölümü -->
+      <div id="filo-m-cekici-section" style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="srm-group">
+            <label>Birincil Sürücü (ad)</label>
+            <input id="filo-m-sofor" class="srm-inp" placeholder="Ad Soyad" autocomplete="off" />
+          </div>
+          <div class="srm-group">
+            <label>Telefon</label>
+            <input id="filo-m-telefon" class="srm-inp" type="tel" placeholder="0500 000 00 00" autocomplete="off" />
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div class="srm-group">
+            <label>Muayene</label>
+            <input id="filo-m-muayene" class="srm-inp" type="date" />
+          </div>
+          <div class="srm-group">
+            <label>Sigorta</label>
+            <input id="filo-m-sigorta" class="srm-inp" type="date" />
+          </div>
+          <div class="srm-group">
+            <label>Takograf</label>
+            <input id="filo-m-takograf" class="srm-inp" type="date" />
+          </div>
+        </div>
+      </div>
+
+      <!-- DORSE bölümü -->
+      <div id="filo-m-dorse-section" style="display:none;flex-direction:column;gap:14px;">
+        <div style="display:grid;grid-template-columns:1fr 80px;gap:12px;">
+          <div class="srm-group">
+            <label>Dorse Tipi <span style="color:var(--red);">*</span></label>
+            <select id="filo-m-dorse-tipi" class="srm-inp" onchange="filoMDorseTipiChange()">
+              <option value="">Seçin…</option>
+            </select>
+          </div>
+          <div class="srm-group">
+            <label>Aks</label>
+            <input id="filo-m-aks" class="srm-inp" type="number" min="1" max="6" placeholder="3" />
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end;">
+          <div class="srm-group">
+            <label>Kapasite (m³)</label>
+            <input id="filo-m-m3" class="srm-inp" type="number" step="0.1" min="0" placeholder="67" />
+          </div>
+          <div class="srm-group">
+            <label>Kapasite (ton)</label>
+            <input id="filo-m-ton" class="srm-inp" type="number" step="0.1" min="0" placeholder="28" />
+          </div>
+          <div class="srm-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 10px;background:var(--bg-sunk);border:1px solid var(--border);border-radius:6px;height:36px;">
+              <input id="filo-m-frigorifik" type="checkbox" style="margin:0;" />
+              <span style="font-size:12.5px;color:var(--text);text-transform:none;letter-spacing:0;font-weight:500;">❄️ Frigorifik</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notlar (ortak) -->
+      <div class="srm-group">
+        <label>Notlar</label>
+        <textarea id="filo-m-notlar" class="srm-inp" rows="2" placeholder="Opsiyonel — örn. çekici sahibi, sözleşme süresi…" style="resize:vertical;"></textarea>
+      </div>
+
+      <div id="filo-m-error" style="display:none;padding:10px 12px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.30);border-radius:6px;color:var(--red);font-size:12.5px;font-weight:600;"></div>
+    </div>
+
+    <div class="srm-modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface2);">
+      <button onclick="closeFiloModal()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;">İptal</button>
+      <button id="filo-m-submit-btn" onclick="filoMSubmit()" style="background:var(--accent);border:none;color:#fff;border-radius:6px;padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Kaydet
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Filo modal — segmented buton stili -->
+<style>
+  .filo-seg { background:transparent; border:none; padding:6px 12px; font-family:var(--font-body); font-size:12px; font-weight:600; color:var(--text2); border-radius:5px; cursor:pointer; transition:background .15s, color .15s; display:inline-flex; align-items:center; gap:5px; }
+  .filo-seg:hover { color:var(--text); }
+  .filo-seg.active { background:var(--accent); color:#fff; box-shadow:0 1px 0 rgba(0,0,0,.1); }
+  .filo-seg[disabled] { opacity:.4; cursor:not-allowed; }
+</style>
+
+<!-- =========================================================
+     FİLO — Eşleştirme Modalı (Çekici ↔ Dorse)
+     openFiloEslesmeModal(cekiciId?)
+     ========================================================= -->
+<div id="filo-eslesme-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)closeFiloEslesmeModal()">
+  <div class="srm-modal" style="max-width:560px;">
+    <div class="srm-modal-header" style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);">
+      <div style="width:32px;height:32px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">🔗</div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);">Yeni Eşleştirme</div>
+        <div style="font-size:11px;color:var(--muted);">Bir çekiciye dorse atayın. Dorse başka bir çekiciye bağlıysa, eski eşleştirme kapatılır.</div>
+      </div>
+      <button onclick="closeFiloEslesmeModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;">×</button>
+    </div>
+
+    <div class="srm-modal-body" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;">
+      <div class="srm-group">
+        <label>Çekici <span style="color:var(--red);">*</span></label>
+        <select id="filo-es-cekici" class="srm-inp" onchange="filoEsCekiciChange()">
+          <option value="">Seçin…</option>
+        </select>
+        <div id="filo-es-cekici-info" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+
+      <div class="srm-group">
+        <label>Dorse <span style="color:var(--red);">*</span></label>
+        <select id="filo-es-dorse" class="srm-inp" onchange="filoEsDorseChange()">
+          <option value="">Seçin…</option>
+        </select>
+        <div id="filo-es-dorse-info" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+
+      <div class="srm-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 10px;background:var(--bg-sunk);border:1px solid var(--border);border-radius:6px;">
+          <input id="filo-es-birincil" type="checkbox" style="margin:0;" />
+          <span style="font-size:12.5px;color:var(--text);text-transform:none;letter-spacing:0;font-weight:500;">★ Bu çekicinin birincil dorsesi olarak işaretle</span>
+        </label>
+      </div>
+
+      <div class="srm-group">
+        <label>Notlar</label>
+        <input id="filo-es-notlar" class="srm-inp" placeholder="Opsiyonel — ör. günlük rotasyon, yedek dorse…" />
+      </div>
+
+      <div id="filo-es-warn" style="display:none;padding:10px 12px;background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.30);border-radius:6px;color:var(--yellow);font-size:12px;font-weight:500;"></div>
+      <div id="filo-es-error" style="display:none;padding:10px 12px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.30);border-radius:6px;color:var(--red);font-size:12.5px;font-weight:600;"></div>
+    </div>
+
+    <div class="srm-modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface2);">
+      <button onclick="closeFiloEslesmeModal()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;">İptal</button>
+      <button id="filo-es-submit-btn" onclick="filoEsSubmit()" style="background:var(--accent);border:none;color:#fff;border-radius:6px;padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;">
+        Eşleştir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
      OPERASYON SAYFASI
      ========================================================= -->
 <div id="operasyon-page">
@@ -1608,19 +1939,32 @@
     <div class="srm-body">
       <div class="srm-grid">
 
-        <!-- ── SATIR 1: Müşteri + Araç ── -->
+        <!-- ── SATIR 1: Müşteri + Çekici ── -->
         <div class="srm-group">
           <label>Müşteri</label>
           <select id="ops-m-musteri" class="srm-inp"></select>
         </div>
         <div class="srm-group" style="position:relative;">
-          <label>Araç / Şoför Ara</label>
-          <input id="ops-m-arac-search" class="srm-inp" placeholder="Plaka veya şoför adı girin…" autocomplete="off"
+          <label>Çekici Ara <span style="font-size:10px;color:var(--muted);font-weight:500;letter-spacing:.4px;">(plaka / sürücü)</span></label>
+          <input id="ops-m-arac-search" class="srm-inp" placeholder="34 EE 5314 / Mehmet…" autocomplete="off"
             oninput="opsAracAra(this.value)"
             onblur="setTimeout(()=>{ const d=document.getElementById('ops-arac-dropdown'); if(d) d.style.display='none'; }, 200)"
             onfocus="opsAracAra(this.value)" />
           <input type="hidden" id="ops-m-arac" />
+          <input type="hidden" id="ops-m-cekici-id" />
           <div id="ops-arac-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:var(--surface);border:1px solid var(--border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);max-height:220px;overflow-y:auto;margin-top:2px;"></div>
+        </div>
+
+        <!-- ── SATIR 1B: Dorse (opsiyonel) ── -->
+        <div class="srm-group" style="position:relative;grid-column:span 2;">
+          <label>Dorse Ara <span style="font-size:10px;color:var(--muted);font-weight:500;letter-spacing:.4px;">(opsiyonel — çekici seçilince ona bağlı dorseler önce gelir)</span></label>
+          <input id="ops-m-dorse-search" class="srm-inp" placeholder="Dorse plakası, marka veya tip…" autocomplete="off"
+            oninput="opsDorseAra(this.value)"
+            onblur="setTimeout(()=>{ const d=document.getElementById('ops-dorse-dropdown'); if(d) d.style.display='none'; }, 200)"
+            onfocus="opsDorseAra(this.value)" />
+          <input type="hidden" id="ops-m-dorse-id" />
+          <button type="button" id="ops-m-dorse-clear" onclick="opsDorseTemizle()" style="display:none;position:absolute;right:8px;top:30px;background:transparent;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:4px 6px;" title="Dorse seçimini temizle">×</button>
+          <div id="ops-dorse-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:var(--surface);border:1px solid var(--border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);max-height:240px;overflow-y:auto;margin-top:2px;"></div>
         </div>
 
         <!-- ── SATIR 2: Sürücü ── -->
@@ -4200,6 +4544,9 @@
 <script src="js/pages/app-chunk-kpi-rapor.js"></script>
 <script src="js/pages/app-chunk-pod.js"></script>
 <script src="js/pages/app-chunk-surucu-takip.js"></script>
+<!-- Filo Yönetimi — docs/filo-cekici-dorse.md (sbUrl/sbHeaders/isLocalMode app-chunk-02'den gelir, bu yüzden sonra yüklenir) -->
+<script src="js/integrations/filo-api.js"></script>
+<script src="js/pages/filo-page.js"></script>
 
 <!-- ─────────────────────────────────────────────────────────────────────
      SÜRÜCÜ TAKİBİ — FOTOĞRAF LIGHTBOX MODALI

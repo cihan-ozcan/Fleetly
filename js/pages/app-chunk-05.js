@@ -1489,11 +1489,20 @@ function opsRenderTable() {
       ? `<div class="col-mono" style="font-size:11.5px;color:var(--text-primary);">${e.baslangic_km.toLocaleString('tr-TR')}${e.bitis_km!=null?` → ${e.bitis_km.toLocaleString('tr-TR')}`:''}</div>${km!=null?`<div class="col-mono" style="font-size:10px;color:var(--ops-info);font-weight:600;">${km.toLocaleString('tr-TR')} km</div>`:''}`
       : '<span style="color:var(--text-dim);font-size:11px;">—</span>';
 
+    // Dorse bilgisi (varsa) — Araç sütununun altına küçük satır
+    let dorseSubHtml = '';
+    if (e.dorse_id && typeof vehicles !== 'undefined') {
+      const dorse = vehicles.find(v => v.id === e.dorse_id);
+      if (dorse) {
+        dorseSubHtml = `<div class="col-time__sub" style="color:var(--ops-info,#5B9DF9);font-family:var(--ops-font-mono,var(--font-mono));margin-top:2px;">⌖ ${dorse.plaka}</div>`;
+      }
+    }
+
     return `
     <tr class="${rowCls}">
       <td><span class="col-mono col-plate">#${e.id}</span>${syncBadge}</td>
       <td>${e.musteri_adi || '—'}</td>
-      <td><span class="col-plate">${e.arac_plaka || '—'}</span></td>
+      <td><span class="col-plate">${e.arac_plaka || '—'}</span>${dorseSubHtml}</td>
       <td>${kontHtml}</td>
       <td><span class="ops-pill ops-pill--neutral ops-pill--mono">${e.kont_tip || '—'}</span></td>
       <td><span class="ops-pill ops-pill--${dbTone}">${dbLabel}</span></td>
@@ -1582,11 +1591,19 @@ function opsBuildContainerCard(e, status) {
   const kontNolar = (e.konteyner_no || '').split('\n').filter(Boolean);
   const kontLabel = kontNolar.length > 1 ? `${kontNolar[0]} +${kontNolar.length - 1}` : (kontNolar[0] || '—');
 
-  /* head: plaka · tip pill · dolu/boş pill · sağda durum-bazlı pill */
+  /* head: plaka · dorse pill · tip pill · dolu/boş pill · sağda durum-bazlı pill */
   const tipPill = e.kont_tip ? `<span class="ops-pill ops-pill--neutral ops-pill--mono">${e.kont_tip}</span>` : '';
   const dbPill = e.kont_durum === 'Boş'
     ? `<span class="ops-pill ops-pill--neutral">Boş</span>`
     : `<span class="ops-pill ops-pill--brand">Dolu</span>`;
+  // Dorse pill (varsa)
+  let dorsePill = '';
+  if (e.dorse_id && typeof vehicles !== 'undefined') {
+    const dorse = vehicles.find(v => v.id === e.dorse_id);
+    if (dorse) {
+      dorsePill = `<span class="ops-pill ops-pill--info ops-pill--mono" title="${escAttr((dorse.dorse_tipi_ad || dorse.dorse_tipi || 'Dorse') + ' — ' + (dorse.plaka || ''))}">⌖ ${dorse.plaka}</span>`;
+    }
+  }
   let statusPill = '';
   if (isUrgent)        statusPill = `<span class="ops-pill ops-pill--solid-danger">ACİL</span>`;
   else if (isDelayed)  statusPill = `<span class="ops-pill ops-pill--warning">+${(alert.delayMin || 15)}dk</span>`;
@@ -1663,6 +1680,7 @@ function opsBuildContainerCard(e, status) {
          onclick="openOpsDrawer(${e.id})">
       <div class="ops-card__head">
         <span class="ops-card__plate">${e.arac_plaka || '—'}</span>
+        ${dorsePill}
         ${tipPill}
         ${dbPill}
         ${podBadge}
@@ -1839,14 +1857,33 @@ function openOpsIsEmriModal(duzenlemeObj) {
   // Alanları temizle / duzenleme için doldur
   const d = duzenlemeObj || {};
 
-  // Araç arama alanını doldur
+  // Araç (çekici) arama alanını doldur
   const aSel = document.getElementById('ops-m-arac');
   const aSearch = document.getElementById('ops-m-arac-search');
+  const cekiciHidden = document.getElementById('ops-m-cekici-id');
   if (aSel)    aSel.value    = d.arac_plaka || '';
   if (aSearch) aSearch.value = d.arac_plaka || '';
-  // Dropdown'u gizle
+  if (cekiciHidden) cekiciHidden.value = d.cekici_id || '';
   const aDD = document.getElementById('ops-arac-dropdown');
   if (aDD) aDD.style.display = 'none';
+
+  // Dorse alanını doldur (varsa)
+  const dorseHidden = document.getElementById('ops-m-dorse-id');
+  const dorseSearch = document.getElementById('ops-m-dorse-search');
+  const dorseClear  = document.getElementById('ops-m-dorse-clear');
+  if (dorseHidden) dorseHidden.value = d.dorse_id || '';
+  if (d.dorse_id && typeof vehicles !== 'undefined') {
+    const ds = vehicles.find(v => v.id === d.dorse_id);
+    if (ds && dorseSearch) {
+      dorseSearch.value = ds.plaka + (ds.dorse_tipi ? ' · ' + ds.dorse_tipi : '');
+      if (dorseClear) dorseClear.style.display = 'inline-block';
+    }
+  } else {
+    if (dorseSearch) dorseSearch.value = '';
+    if (dorseClear)  dorseClear.style.display = 'none';
+  }
+  const dorseDD = document.getElementById('ops-dorse-dropdown');
+  if (dorseDD) dorseDD.style.display = 'none';
 
   if (d.musteri_id) mSel.value = d.musteri_id;
   const map = {
@@ -2061,6 +2098,8 @@ function opsKonumLinkPreview(inputEl, previewId) {
 function saveOpsIsEmri() {
   const musteriId = document.getElementById('ops-m-musteri').value;
   const aracPlaka = document.getElementById('ops-m-arac').value;
+  const cekiciId  = document.getElementById('ops-m-cekici-id')?.value || null;
+  const dorseId   = document.getElementById('ops-m-dorse-id')?.value  || null;
   if (!musteriId || !aracPlaka) { showToast('Müşteri ve araç zorunlu', 'error'); return; }
 
   const musteriObj = typeof crmMusteriler !== 'undefined' ? crmMusteriler.find(m => m.id == musteriId) : null;
@@ -2072,6 +2111,8 @@ function saveOpsIsEmri() {
     e.musteri_id   = parseInt(musteriId);
     e.musteri_adi  = musteriObj ? musteriObj.firma : e.musteri_adi;
     e.arac_plaka   = aracPlaka;
+    e.cekici_id    = cekiciId || e.cekici_id || null;
+    e.dorse_id     = dorseId  || null;
     e.sofor        = document.getElementById('ops-m-sofor').value.trim();
     e.sofor_tel    = document.getElementById('ops-m-sofor-tel').value.trim();
     e.sofor_user_id = _opsSoforUserId !== null ? _opsSoforUserId : (e.sofor_user_id || null);
@@ -2123,6 +2164,8 @@ function saveOpsIsEmri() {
     musteri_id     : parseInt(musteriId),
     musteri_adi    : musteriObj ? musteriObj.firma : '',
     arac_plaka     : aracPlaka,
+    cekici_id      : cekiciId,
+    dorse_id       : dorseId,
     sofor          : document.getElementById('ops-m-sofor').value.trim(),
     sofor_tel      : document.getElementById('ops-m-sofor-tel').value.trim(),
     sofor_user_id  : _opsSoforUserId,
@@ -3099,34 +3142,52 @@ function opsAracAra(q) {
   const dd = document.getElementById('ops-arac-dropdown');
   if (!dd) return;
   const query = (q || '').toLowerCase().trim();
-  const list = vehicles.filter(v =>
+  // Yalnızca çekici / tek_parca — dorse'ler "Dorse Ara" alanında listelenir.
+  // Kayıtlarda kind eksikse 'cekici' varsay (Karar 7).
+  const cekiciler = vehicles.filter(v => {
+    const k = v.kind || 'cekici';
+    return k === 'cekici' || k === 'tek_parca';
+  });
+  const list = cekiciler.filter(v =>
     !query ||
     (v.plaka  || '').toLowerCase().includes(query) ||
     (v.sofor  || '').toLowerCase().includes(query) ||
+    (v.marka  || '').toLowerCase().includes(query) ||
+    (v.model  || '').toLowerCase().includes(query) ||
     (v.esleme || '').toLowerCase().includes(query)
   );
   if (!list.length) {
     dd.style.display = 'none';
     return;
   }
-  const tipIcon = { 'Çekici':'🚛','Dorse':'🚚','Kamyon':'🚚','Kamyonet':'🛻','Binek Araç':'🚗' };
+  const tipIcon = { 'cekici': '🚛', 'tek_parca': '🚐' };
   dd.style.display = 'block';
-  dd.innerHTML = list.map(v => `
-    <div onclick="opsAracSec('${v.plaka}','${(v.sofor||'').replace(/'/g,"\\'")}','${(v.telefon||'').replace(/'/g,"\\'")}')"
+  dd.innerHTML = list.map(v => {
+    const k = v.kind || 'cekici';
+    const ico = tipIcon[k] || '🚛';
+    const markaModel = [v.marka, v.model].filter(Boolean).join(' ');
+    return `
+    <div onclick="opsAracSec('${v.id || ''}','${v.plaka}','${(v.sofor||'').replace(/'/g,"\\'")}','${(v.telefon||'').replace(/'/g,"\\'")}')"
       style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;"
       onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-      <span style="font-size:18px;flex-shrink:0">${tipIcon[v.tip]||'🚗'}</span>
+      <span style="font-size:18px;flex-shrink:0">${ico}</span>
       <div style="flex:1;min-width:0;">
         <div style="font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px;">${v.plaka}</div>
-        ${v.sofor ? `<div style="font-size:11px;color:var(--muted);">👤 ${v.sofor}${v.telefon?' · 📞 '+v.telefon:''}</div>` : ''}
-        ${v.esleme ? `<div style="font-size:10px;color:var(--border2);">${v.esleme}</div>` : ''}
+        ${markaModel ? `<div style="font-size:11px;color:var(--text2);">${markaModel}${v.yil ? ` · ${v.yil}` : ''}</div>` : ''}
+        ${v.sofor ? `<div style="font-size:10.5px;color:var(--muted);">👤 ${v.sofor}${v.telefon?' · 📞 '+v.telefon:''}</div>` : ''}
       </div>
-      <span style="font-size:10px;color:var(--muted);background:var(--surface3);padding:2px 6px;border-radius:4px;">${v.tip||'—'}</span>
-    </div>`).join('');
+      <span style="font-size:10px;color:var(--muted);background:var(--surface3);padding:2px 6px;border-radius:4px;">${k === 'tek_parca' ? 'Tek Parça' : 'Çekici'}</span>
+    </div>`;
+  }).join('');
 }
 
-async function opsAracSec(plaka, sofor, tel) {
-  document.getElementById('ops-m-arac').value        = plaka;
+async function opsAracSec(cekiciId, plaka, sofor, tel) {
+  // Backward compat: eski çağrılarda sadece plaka/sofor/tel verilirdi
+  if (arguments.length <= 3) { tel = sofor; sofor = plaka; plaka = cekiciId; cekiciId = ''; }
+  const aracHidden  = document.getElementById('ops-m-arac');
+  const cekiciHidden= document.getElementById('ops-m-cekici-id');
+  if (aracHidden)  aracHidden.value  = plaka;
+  if (cekiciHidden) cekiciHidden.value = cekiciId || '';
   document.getElementById('ops-m-arac-search').value = plaka;
   const soforEl = document.getElementById('ops-m-sofor');
   const telEl   = document.getElementById('ops-m-sofor-tel');
@@ -3134,6 +3195,9 @@ async function opsAracSec(plaka, sofor, tel) {
   if (telEl   && !telEl.value   && tel)   telEl.value   = tel;
   const dd = document.getElementById('ops-arac-dropdown');
   if (dd) dd.style.display = 'none';
+  // Çekiciye atanmış birincil dorseyi otomatik öner (hidden = boş kalır;
+  // kullanıcı dorse alanına focus edince listede üstte görür)
+  if (cekiciId) opsDorseSugest(cekiciId);
   // Şoförün Supabase auth user_id'sini surucu_davetleri'nden bul
   _opsSoforUserId = null;
   try {
@@ -3153,6 +3217,132 @@ async function opsAracSec(plaka, sofor, tel) {
       if (eslesme?.kullanan_user_id) _opsSoforUserId = eslesme.kullanan_user_id;
     }
   } catch(e) { console.warn('opsAracSec: şoför user_id aranamadı', e); }
+}
+
+/* ── DORSE ARAMA (iş emri formunda — opsiyonel) ─────────── */
+async function opsDorseAra(q) {
+  const dd = document.getElementById('ops-dorse-dropdown');
+  if (!dd) return;
+  const query = (q || '').toLowerCase().trim();
+  const cekiciId = document.getElementById('ops-m-cekici-id')?.value || '';
+
+  // Tüm dorseler
+  const dorseler = (typeof vehicles !== 'undefined' ? vehicles : []).filter(v => v.kind === 'dorse');
+  if (!dorseler.length) {
+    dd.innerHTML = `<div style="padding:14px;text-align:center;color:var(--muted);font-size:11.5px;">
+      Henüz dorse tanımlı değil. <a onclick="closeOpsIsEmriModal();openFiloPage();" style="color:var(--accent);cursor:pointer;font-weight:600;">Filo'ya git</a></div>`;
+    dd.style.display = 'block';
+    return;
+  }
+
+  // Eşleşmeleri çek (varsa cache'lenmiş)
+  let eslesmeler = [];
+  try {
+    eslesmeler = (window.FiloAPI ? await window.FiloAPI.aktifEslesmeler() : []) || [];
+  } catch (_) { eslesmeler = []; }
+
+  // Tip lookup
+  let tipler = [];
+  try { tipler = (window.FiloAPI ? await window.FiloAPI.dorseTipleri() : []) || []; } catch (_) {}
+  const tipMap = Object.fromEntries(tipler.map(t => [t.kod, t.ad]));
+
+  // Filtrele
+  const list = dorseler.filter(d =>
+    !query ||
+    (d.plaka || '').toLowerCase().includes(query) ||
+    (d.marka || '').toLowerCase().includes(query) ||
+    (d.dorse_tipi || '').toLowerCase().includes(query) ||
+    ((tipMap[d.dorse_tipi] || '').toLowerCase()).includes(query)
+  );
+
+  // Sırala: önce seçili çekiciye atananlar (birincil en üstte), sonra serbest, sonra başka çekicide
+  const sortKey = (d) => {
+    const e = eslesmeler.find(x => x.dorse_id === d.id);
+    if (cekiciId && e && e.cekici_id === cekiciId) return e.birincil_mi ? 0 : 1; // bu çekicinin
+    if (!e) return 2; // serbest
+    return 3; // başka çekicide
+  };
+  list.sort((a, b) => sortKey(a) - sortKey(b));
+
+  if (!list.length) {
+    dd.style.display = 'none';
+    return;
+  }
+  dd.style.display = 'block';
+  dd.innerHTML = list.slice(0, 30).map(d => {
+    const e = eslesmeler.find(x => x.dorse_id === d.id);
+    const tipAd = d.dorse_tipi ? (tipMap[d.dorse_tipi] || d.dorse_tipi) : '';
+    const kap = [];
+    if (d.kapasite_m3 != null)  kap.push(d.kapasite_m3 + ' m³');
+    if (d.kapasite_ton != null) kap.push(d.kapasite_ton + ' ton');
+    if (d.frigorifik) kap.push('❄️');
+    let badge = '';
+    if (cekiciId && e && e.cekici_id === cekiciId) {
+      badge = e.birincil_mi
+        ? '<span style="background:rgba(255,107,31,.15);color:var(--accent);padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;">★ Birincil</span>'
+        : '<span style="background:rgba(56,189,248,.15);color:var(--blue);padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;">Bağlı</span>';
+    } else if (e) {
+      badge = `<span style="background:rgba(234,179,8,.15);color:var(--yellow);padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;" title="Şu an ${e.cekici_plaka} çekicisinde">⚠ ${e.cekici_plaka}</span>`;
+    } else {
+      badge = '<span style="color:var(--muted);font-size:10px;">— serbest</span>';
+    }
+    const safeTip   = (d.dorse_tipi || '').replace(/'/g,"\\'");
+    const safeMarka = (d.marka || '').replace(/'/g,"\\'");
+    return `
+    <div onclick="opsDorseSec('${d.id}','${d.plaka}','${safeTip}','${safeMarka}')"
+      style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <span style="font-size:18px;flex-shrink:0">📦</span>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span style="font-family:var(--font-mono);font-weight:700;color:var(--blue);font-size:13px;">${d.plaka}</span>
+          ${tipAd ? `<span style="font-size:10.5px;color:var(--text2);background:var(--surface3);padding:1px 6px;border-radius:4px;">${tipAd}</span>` : ''}
+        </div>
+        ${kap.length ? `<div style="font-family:var(--font-mono);font-size:10.5px;color:var(--muted);margin-top:2px;">${kap.join(' · ')}</div>` : ''}
+      </div>
+      ${badge}
+    </div>`;
+  }).join('');
+}
+
+function opsDorseSec(dorseId, plaka, dorseTipi, marka) {
+  const search = document.getElementById('ops-m-dorse-search');
+  const hidden = document.getElementById('ops-m-dorse-id');
+  const clear  = document.getElementById('ops-m-dorse-clear');
+  if (search) search.value = plaka + (dorseTipi ? ' · ' + dorseTipi : '');
+  if (hidden) hidden.value = dorseId;
+  if (clear)  clear.style.display = 'inline-block';
+  // Konteyner tipi alanı boşsa ve dorse tipi container ise otomatik öner
+  const kontTip = document.getElementById('ops-m-kont-tip');
+  if (kontTip && !kontTip.value) {
+    if (dorseTipi === 'sabit_40') kontTip.value = '40 DC';
+    else if (dorseTipi === 'sabit_20') kontTip.value = '20 DC';
+    else if (dorseTipi === 'frigorifik') kontTip.value = 'Reefer';
+  }
+  const dd = document.getElementById('ops-dorse-dropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function opsDorseTemizle() {
+  const search = document.getElementById('ops-m-dorse-search');
+  const hidden = document.getElementById('ops-m-dorse-id');
+  const clear  = document.getElementById('ops-m-dorse-clear');
+  if (search) search.value = '';
+  if (hidden) hidden.value = '';
+  if (clear)  clear.style.display = 'none';
+  search?.focus();
+}
+
+/* Çekici seçilince: o çekicinin birincil dorsesi varsa otomatik öner (kullanıcı dorse alanı boşsa). */
+async function opsDorseSugest(cekiciId) {
+  if (!cekiciId || !window.FiloAPI) return;
+  const search = document.getElementById('ops-m-dorse-search');
+  if (!search || search.value.trim()) return; // kullanıcı zaten yazdıysa müdahale etme
+  try {
+    const baglılar = await window.FiloAPI.cekicininDorseleri(cekiciId);
+    const birincil = baglılar.find(b => b.birincil_mi) || baglılar[0];
+    if (birincil) opsDorseSec(birincil.dorse_id, birincil.dorse_plaka, birincil.dorse_tipi, birincil.dorse_marka);
+  } catch (_) {}
 }
 
 /* ── ŞOFÖR USER_ID EŞLEŞTIR (geriye dönük düzeltme) ─────── */
