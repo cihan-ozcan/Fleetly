@@ -135,16 +135,24 @@
   // -----------------------------------------------------------------
   // Panel toggle
   // -----------------------------------------------------------------
+  // getComputedStyle ile gerçek görünür halini al; HTML/CSS specificity tuzaklarını atla
   function _isPanelOpen() {
     const p = $('notif-panel');
-    return !!p && p.style.display !== 'none' && p.style.display !== '';
+    if (!p) return false;
+    try {
+      return getComputedStyle(p).display !== 'none';
+    } catch (_) {
+      return p.style.display === 'flex' || p.style.display === 'block';
+    }
   }
 
   function _openPanel() {
     const p = $('notif-panel');
     const btn = $('topbar-notif');
     if (!p) return;
-    p.style.display = 'flex';
+    // !important ile herhangi bir CSS kuralının önüne geç
+    p.style.setProperty('display', 'flex', 'important');
+    p.classList.remove('hidden');
     if (btn) btn.setAttribute('aria-expanded', 'true');
     if (window.NotificationsAPI) {
       window.NotificationsAPI.list({ limit: 30 }).catch(() => {});
@@ -155,7 +163,8 @@
     const p = $('notif-panel');
     const btn = $('topbar-notif');
     if (!p) return;
-    p.style.display = 'none';
+    p.style.setProperty('display', 'none', 'important');
+    p.classList.add('hidden');
     if (btn) btn.setAttribute('aria-expanded', 'false');
   }
 
