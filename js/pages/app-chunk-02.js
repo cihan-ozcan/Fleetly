@@ -6217,17 +6217,51 @@ function soforDavetWhatsApp() {
   soforDavetLinkPaylas();
 }
 
-// Davet listesini Supabase'ten yükle
-async function soforDavetlerYukle() {
+// State (filtre + arama + cache)
+let _davetFilter = 'aktif';   // 'aktif' | 'kullanilan' | 'sonlanan' | 'tumu'
+let _davetArama  = '';
+let _davetCache  = [];
+
+// Auth token henüz yoksa Supabase session'ından bekle (sayfa ilk açılışında race var)
+async function _waitForAuth(timeoutMs = 4000) {
+  if (_authToken) return _authToken;
+  if (isLocalMode()) return null;
+  const start = Date.now();
+  while (!_authToken && (Date.now() - start) < timeoutMs) {
+    try {
+      const { data: { session } } = await getSB().auth.getSession();
+      if (session?.access_token) {
+        _authToken = session.access_token;
+        return _authToken;
+      }
+    } catch (_) {}
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return _authToken || null;
+}
+
+// Davet listesini Supabase'ten yükle (auth-aware, filtreli, aramalı)
+async function soforDavetlerYukle(forceRefresh) {
   const list = document.getElementById('davet-liste');
   if (!list) return;
 
-  if (isLocalMode() || !_authToken) {
+  if (isLocalMode()) {
     list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Buluta bağlı değil.</div>';
     return;
   }
 
-  list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Yükleniyor…</div>';
+  // Auth race fix — token gelmesini bekle (sayfa ilk açılış)
+  if (!_authToken) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Bağlantı bekleniyor…</div>';
+    const tok = await _waitForAuth();
+    if (!tok) {
+      list.innerHTML = '<div style="text-align:center;color:var(--red);padding:18px;font-size:12px">Bağlantı kurulamadı. Sayfayı yenileyin.</div>';
+      return;
+    }
+  }
+
+  // Cache varsa ve forceRefresh false ise hızlıca render et, sonra arka planda yenile
+  if (_davetCache.length && !forceRefresh) _davetRender();
 
   try {
     const sb = getSB();
@@ -6235,78 +6269,235 @@ async function soforDavetlerYukle() {
       .from('surucu_davetleri')
       .select('id, ad, telefon, davet_kodu, pin, arac_id, expires_at, kullanildi_at, kullanan_user_id, iptal_mi, kilitli_mi, yanlis_pin_sayisi, notlar, created_at')
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(200);
     if (error) throw error;
 
-    if (!data || data.length === 0) {
-      list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Henüz davet yok.</div>';
-      return;
-    }
-
-    const now = Date.now();
-    list.innerHTML = data.map(d => {
-      const expMs = d.expires_at ? new Date(d.expires_at).getTime() : 0;
-      let durumTxt, durumColor;
-      if (d.iptal_mi) { durumTxt = '🚫 İptal Edildi'; durumColor = 'var(--muted)'; }
-      else if (d.kilitli_mi) { durumTxt = '🔒 Kilitli (5 yanlış PIN)'; durumColor = '#ef4444'; }
-      else if (d.kullanildi_at) { durumTxt = '✅ Kullanıldı'; durumColor = '#22c55e'; }
-      else if (expMs && expMs < now) { durumTxt = '⏰ Süresi Doldu'; durumColor = 'var(--muted)'; }
-      else { durumTxt = '🕐 Bekliyor'; durumColor = '#f59e0b'; }
-
-      const aktif = !d.iptal_mi && !d.kilitli_mi && !d.kullanildi_at && expMs > now;
-      const plaka = d.arac_id ? (vehicles.find(v => v.id === d.arac_id)?.plaka || d.arac_id) : null;
-      const createdTxt = d.created_at ? new Date(d.created_at).toLocaleString('tr-TR') : '';
-      const expTxt     = d.expires_at ? new Date(d.expires_at).toLocaleString('tr-TR') : '—';
-
-      // Telefon maskele: son 4 hane görünür
-      const tel = d.telefon || '';
-      const telMask = tel.length >= 4 ? '****' + tel.slice(-4) : tel;
-
-      // PIN gizli toggle (panel kullanıcısı PIN'i unutursa görebilsin)
-      const pinId = `davet-pin-${d.id}`;
-      const pinHtml = d.pin
-        ? `<span id="${pinId}" data-pin="${d.pin}" style="font-family:monospace;font-size:11px;background:rgba(245,158,11,.12);color:#f59e0b;padding:2px 6px;border-radius:4px;font-weight:600;cursor:pointer;letter-spacing:1.5px" onclick="soforDavetPinToggle('${pinId}')" title="PIN'i göster/gizle">🔐 ••••</span>`
-        : '';
-
-      const yanlisHtml = (d.yanlis_pin_sayisi > 0 && !d.kilitli_mi)
-        ? ` · <span style="color:#f59e0b;font-weight:700">${d.yanlis_pin_sayisi} yanlış PIN</span>`
-        : '';
-
-      return `
-        <div style="border:1px solid var(--border2);border-radius:10px;padding:10px 12px;background:var(--card);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <div style="flex:1;min-width:200px">
-            <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">
-              <span style="font-weight:700;color:var(--text)">${d.ad}</span>
-              <span style="font-size:11px;color:var(--muted)">· ${telMask}</span>
-              ${plaka ? `<span style="font-size:11px;background:rgba(56,189,248,.12);color:#38bdf8;padding:2px 6px;border-radius:4px;font-weight:600">${plaka}</span>` : ''}
-            </div>
-            <div style="display:flex;gap:10px;align-items:center;margin-top:4px;flex-wrap:wrap">
-              <span style="font-family:monospace;font-size:13px;font-weight:700;letter-spacing:1.5px;color:#818cf8">${d.davet_kodu}</span>
-              ${pinHtml}
-              <span style="font-size:10.5px;color:${durumColor};font-weight:700">${durumTxt}</span>
-            </div>
-            <div style="font-size:10px;color:var(--muted);margin-top:3px">
-              Oluşturuldu: ${createdTxt}${aktif ? ' · Bitiş: ' + expTxt : ''}
-              ${yanlisHtml}
-              ${d.notlar ? ' · <i>' + d.notlar + '</i>' : ''}
-            </div>
-          </div>
-          ${aktif ? `
-            <div style="display:flex;gap:6px">
-              <button onclick="soforDavetTekrarPaylas(${d.id})" title="Tekrar paylaş (link + PIN)" style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">💬</button>
-              <button onclick="soforDavetIptal(${d.id})" title="Daveti iptal et" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">🚫</button>
-            </div>
-          ` : (d.kilitli_mi ? `
-            <div style="display:flex;gap:6px">
-              <button onclick="soforDavetKilitAc(${d.id})" title="Daveti yeniden aç (PIN sayacı sıfırlanır)" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);color:#818cf8;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">🔓 Kilit Aç</button>
-              <button onclick="soforDavetIptal(${d.id})" title="Daveti iptal et" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">🚫</button>
-            </div>
-          ` : '')}
-        </div>`;
-    }).join('');
+    _davetCache = data || [];
+    _davetRender();
   } catch (err) {
     console.error('Davet listesi yüklenemedi:', err);
     list.innerHTML = '<div style="text-align:center;color:var(--red);padding:18px;font-size:12px">Liste yüklenemedi: ' + (err?.message || 'hata') + '</div>';
+  }
+}
+
+// Filtre değişimi (UI handler)
+function soforDavetFilterSet(name, btn) {
+  _davetFilter = name;
+  document.querySelectorAll('.davet-filter').forEach(b => {
+    const active = b.dataset.filter === name;
+    b.classList.toggle('is-active', active);
+    b.style.background = active ? 'var(--accent)' : 'transparent';
+    b.style.color      = active ? '#fff' : 'var(--text2)';
+  });
+  _davetRender();
+}
+
+// Arama (UI handler)
+function soforDavetArama(q) {
+  _davetArama = (q || '').toLowerCase().trim();
+  _davetRender();
+}
+
+// Davetleri filtre + aramaya göre kategorize et
+function _davetKategori(d, now) {
+  const expMs = d.expires_at ? new Date(d.expires_at).getTime() : 0;
+  if (d.iptal_mi || (expMs && expMs < now && !d.kullanildi_at)) return 'sonlanan';
+  if (d.kullanildi_at) return 'kullanilan';
+  if (d.kilitli_mi) return 'sonlanan'; // kilitli de sonlanmış sayılır
+  return 'aktif';
+}
+
+// Listeyi render et (filtre + arama uygulayarak)
+function _davetRender() {
+  const list = document.getElementById('davet-liste');
+  if (!list) return;
+  const now = Date.now();
+
+  // Sayım rozetleri (filtre dışı, toplam üzerinden)
+  const sayim = { aktif: 0, kullanilan: 0, sonlanan: 0, tumu: _davetCache.length };
+  _davetCache.forEach(d => sayim[_davetKategori(d, now)]++);
+  ['aktif','kullanilan','sonlanan','tumu'].forEach(k => {
+    const el = document.getElementById('davet-flt-' + k);
+    if (el) el.textContent = sayim[k] ? '· ' + sayim[k] : '';
+  });
+
+  // Filtreleme
+  let filt = _davetCache.slice();
+  if (_davetFilter !== 'tumu') {
+    filt = filt.filter(d => _davetKategori(d, now) === _davetFilter);
+  }
+  // Arama
+  if (_davetArama) {
+    filt = filt.filter(d => {
+      const blob = (d.ad + ' ' + (d.telefon || '') + ' ' + (d.davet_kodu || '') + ' ' + (d.notlar || '')).toLowerCase();
+      return blob.includes(_davetArama);
+    });
+  }
+
+  // Toplam sayım rozeti
+  const totalEl = document.getElementById('davet-count');
+  if (totalEl) totalEl.textContent = filt.length ? `· ${filt.length}` : '';
+
+  if (!filt.length) {
+    const empty = !_davetCache.length
+      ? 'Henüz davet yok. Yukarıdaki "Davet Oluştur" formunu kullanın.'
+      : (_davetArama
+          ? `"${_davetArama}" için sonuç yok.`
+          : 'Bu filtre için kayıt yok.');
+    list.innerHTML = `<div style="text-align:center;color:var(--muted);padding:24px 12px;font-size:12px;">${empty}</div>`;
+    return;
+  }
+
+  list.innerHTML = filt.map(d => _davetItemHtml(d, now)).join('');
+}
+
+// Bir davet kartının HTML'i (önceki yapıyı koru, ikon butonlarına Sil ekle)
+function _davetItemHtml(d, now) {
+  const expMs = d.expires_at ? new Date(d.expires_at).getTime() : 0;
+  let durumTxt, durumColor, durumBg;
+  if (d.iptal_mi) {
+    durumTxt = '🚫 İptal Edildi'; durumColor = 'var(--muted)'; durumBg = 'rgba(148,163,184,.12)';
+  } else if (d.kilitli_mi) {
+    durumTxt = '🔒 Kilitli'; durumColor = '#ef4444'; durumBg = 'rgba(239,68,68,.12)';
+  } else if (d.kullanildi_at) {
+    const kullanildiTxt = new Date(d.kullanildi_at).toLocaleDateString('tr-TR', { day:'2-digit', month:'short', year:'numeric' });
+    durumTxt = '✅ Kullanıldı · ' + kullanildiTxt; durumColor = '#22c55e'; durumBg = 'rgba(34,197,94,.12)';
+  } else if (expMs && expMs < now) {
+    durumTxt = '⏰ Süresi Doldu'; durumColor = 'var(--muted)'; durumBg = 'rgba(148,163,184,.12)';
+  } else {
+    // Aktif — kalan süre
+    const kalanMs = expMs - now;
+    const kalanH  = Math.max(0, Math.floor(kalanMs / 3600000));
+    durumTxt = kalanH > 24 ? `🕐 ${Math.floor(kalanH/24)} gün ${kalanH%24}sa kaldı`
+                            : `🕐 ${kalanH}sa kaldı`;
+    durumColor = '#f59e0b'; durumBg = 'rgba(245,158,11,.12)';
+  }
+
+  const aktif = !d.iptal_mi && !d.kilitli_mi && !d.kullanildi_at && expMs > now;
+  const plaka = d.arac_id ? (vehicles.find(v => v.id === d.arac_id)?.plaka || d.arac_id) : null;
+  const createdTxt = d.created_at ? new Date(d.created_at).toLocaleString('tr-TR') : '';
+
+  // Telefon maskele
+  const tel = d.telefon || '';
+  const telMask = tel.length >= 4 ? '****' + tel.slice(-4) : tel;
+
+  // PIN toggle
+  const pinId = `davet-pin-${d.id}`;
+  const pinHtml = (d.pin && aktif)
+    ? `<span id="${pinId}" data-pin="${d.pin}" style="font-family:monospace;font-size:11px;background:rgba(245,158,11,.12);color:#f59e0b;padding:2px 6px;border-radius:4px;font-weight:600;cursor:pointer;letter-spacing:1.5px" onclick="soforDavetPinToggle('${pinId}')" title="PIN'i göster/gizle">🔐 ••••</span>`
+    : '';
+
+  const yanlisHtml = (d.yanlis_pin_sayisi > 0 && !d.kilitli_mi)
+    ? ` · <span style="color:#f59e0b;font-weight:700">${d.yanlis_pin_sayisi} yanlış PIN</span>` : '';
+
+  // Aksiyon butonları — duruma göre değişir; SİL her zaman var (ama kullanıldığında "Şoförle bağı kes" anlamında)
+  let aksiyonlar = '';
+  if (aktif) {
+    aksiyonlar = `
+      <button onclick="soforDavetTekrarPaylas(${d.id})" title="Tekrar paylaş (link + PIN)" style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer">💬</button>
+      <button onclick="soforDavetSureUzat(${d.id})" title="Süreyi 48 saat uzat" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#f59e0b;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer">⏱</button>
+      <button onclick="soforDavetIptal(${d.id})" title="Daveti iptal et" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer">🚫</button>`;
+  } else if (d.kilitli_mi) {
+    aksiyonlar = `
+      <button onclick="soforDavetKilitAc(${d.id})" title="Daveti yeniden aç (PIN sayacı sıfırlanır)" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);color:#818cf8;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer">🔓</button>`;
+  }
+  // Hard delete — her zaman görünür ama kullanıldığında ekstra uyarı
+  aksiyonlar += `
+      <button onclick="soforDavetSil(${d.id})" title="Daveti kalıcı sil${d.kullanildi_at ? ' (şoförün uygulamayı kullandığı kayıt silinir!)' : ''}" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);color:#ef4444;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer">🗑</button>`;
+
+  return `
+    <div style="border:1px solid var(--border2);border-radius:10px;padding:10px 12px;background:var(--card);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">
+          <span style="font-weight:700;color:var(--text)">${_esc(d.ad)}</span>
+          <span style="font-size:11px;color:var(--muted)">· ${telMask}</span>
+          ${plaka ? `<span style="font-size:11px;background:rgba(56,189,248,.12);color:#38bdf8;padding:2px 6px;border-radius:4px;font-weight:600">${_esc(plaka)}</span>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap">
+          <span style="font-family:monospace;font-size:13px;font-weight:700;letter-spacing:1.5px;color:#818cf8">${_esc(d.davet_kodu)}</span>
+          ${pinHtml}
+          <span style="font-size:10.5px;color:${durumColor};font-weight:700;background:${durumBg};padding:2px 7px;border-radius:99px;">${durumTxt}</span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">
+          ${createdTxt}${yanlisHtml}${d.notlar ? ' · <i>' + _esc(d.notlar) + '</i>' : ''}
+        </div>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">${aksiyonlar}</div>
+    </div>`;
+}
+
+// Basit HTML escape (XSS güvenliği)
+function _esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+}
+
+// Hard delete — DB satırını kalıcı sil
+async function soforDavetSil(davetId) {
+  const d = _davetCache.find(x => x.id === davetId);
+  const adi = d ? d.ad : '#' + davetId;
+  const ekUyari = d?.kullanildi_at
+    ? '\n\n⚠ DİKKAT: Bu davet şoför tarafından kullanılmış. Silme işlemi:\n• Davet kaydını siler (kim ne zaman katılmış geçmiş kaybolur)\n• Şoförün uygulama girişini etkilemez (mobil oturumu açık kalır)\n• Şoförün iş emri kayıtları korunur\n\nİşten ayrılan şoför için tavsiye: önce daveti İPTAL edin, sonra şoförü "araclar" tablosundan silmeniz önerilir.'
+    : '\n\n(Bu davet henüz kullanılmamış — silme güvenlidir.)';
+  if (!confirm(`"${adi}" kişisinin davet kaydı KALICI silinecek.${ekUyari}\n\nDevam edilsin mi?`)) return;
+  try {
+    const sb = getSB();
+    const { error } = await sb.from('surucu_davetleri').delete().eq('id', davetId);
+    if (error) throw error;
+    showToast('Davet kalıcı silindi.', 'success');
+    soforDavetlerYukle(true);
+  } catch (err) {
+    console.error('Davet silme hatası:', err);
+    showToast('Silinemedi: ' + (err?.message || 'hata') + '\n(RLS DELETE policy migration\'ı çalıştırılmamış olabilir.)', 'error');
+  }
+}
+
+// Süreyi uzat (48 saat ekle)
+async function soforDavetSureUzat(davetId) {
+  if (!confirm('Davet süresi 48 saat uzatılsın mı?')) return;
+  try {
+    const sb = getSB();
+    // Mevcut expires_at'i çek, +48h yap
+    const { data: cur, error: e1 } = await sb.from('surucu_davetleri').select('expires_at').eq('id', davetId).single();
+    if (e1) throw e1;
+    const base = cur?.expires_at ? new Date(cur.expires_at) : new Date();
+    const next = new Date(base.getTime() + 48 * 3600000);
+    const { error } = await sb.from('surucu_davetleri').update({ expires_at: next.toISOString() }).eq('id', davetId);
+    if (error) throw error;
+    showToast('Süre 48 saat uzatıldı.', 'success');
+    soforDavetlerYukle(true);
+  } catch (err) {
+    console.error('Süre uzatma hatası:', err);
+    showToast('Süre uzatılamadı: ' + (err?.message || 'hata'), 'error');
+  }
+}
+
+// Toplu temizle — 30 günden eski sonlanmış (iptal/dolan/kilitli, kullanılmamış) davetleri sil
+async function soforDavetTopluTemizle() {
+  const now = Date.now();
+  const cutoff = now - 30 * 86400000;
+  const aday = _davetCache.filter(d => {
+    if (d.kullanildi_at) return false; // kullanılanları KORU (ist tarihçesi)
+    const c = new Date(d.created_at).getTime();
+    if (!isFinite(c) || c > cutoff) return false;
+    const expMs = d.expires_at ? new Date(d.expires_at).getTime() : 0;
+    const sonlanmis = d.iptal_mi || d.kilitli_mi || (expMs && expMs < now);
+    return sonlanmis;
+  });
+  if (!aday.length) {
+    showToast('Temizlenecek eski davet yok.', 'info');
+    return;
+  }
+  if (!confirm(`${aday.length} eski sonlanmış davet KALICI silinecek (30 günden eski iptal/dolan/kilitli, kullanılmamış olanlar).\n\nKullanılmış davetler korunur.\nDevam edilsin mi?`)) return;
+  try {
+    const sb = getSB();
+    const ids = aday.map(d => d.id);
+    const { error } = await sb.from('surucu_davetleri').delete().in('id', ids);
+    if (error) throw error;
+    showToast(`${aday.length} davet temizlendi.`, 'success');
+    soforDavetlerYukle(true);
+  } catch (err) {
+    console.error('Toplu temizleme hatası:', err);
+    showToast('Temizlenemedi: ' + (err?.message || 'hata'), 'error');
   }
 }
 
