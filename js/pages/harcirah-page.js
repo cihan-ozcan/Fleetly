@@ -14,6 +14,7 @@
   const state = {
     activeTab: 'tarifeler',
     tarifeler: [],
+    ekHizmetler: [],
     kayitlar: [],
     haftalikOzet: [],
     loaded: false
@@ -87,12 +88,17 @@
       try { return await fn(); }
       catch (err) { console.warn('[harcirah-page]', err.message || err); return fallback; }
     };
-    const tarifeler = await safe(() => window.HarcirahAPI.tarifeList(), []);
-    state.tarifeler = tarifeler || [];
+    const [tarifeler, ekHizmetler] = await Promise.all([
+      safe(() => window.HarcirahAPI.tarifeList(), []),
+      safe(() => window.HarcirahAPI.ekHizmetList(), [])
+    ]);
+    state.tarifeler   = tarifeler || [];
+    state.ekHizmetler = ekHizmetler || [];
     state.loaded = true;
     _updateCounts();
     _updateMigrationBanner();
     harcRenderTarifeler();
+    harcRenderEkHizmetler();
   }
 
   function _updateCounts() {
@@ -169,6 +175,21 @@
         ? '<span style="font-size:10px;background:rgba(34,197,94,.15);color:#22c55e;padding:2px 8px;border-radius:99px;font-weight:700;">● Aktif</span>'
         : '<span style="font-size:10px;background:rgba(148,163,184,.15);color:var(--muted);padding:2px 8px;border-radius:99px;font-weight:700;">○ Pasif</span>';
 
+      // Bölgeler: pill listesi (en fazla 5 göster, kalanı "+N daha")
+      let bolgeHtml;
+      if (Array.isArray(t.bolgeler) && t.bolgeler.length) {
+        const visible = t.bolgeler.slice(0, 5);
+        const fazla   = t.bolgeler.length - visible.length;
+        bolgeHtml = `<div style="display:flex;flex-wrap:wrap;gap:3px;max-width:280px;">` +
+          visible.map(b => `<span style="font-size:10.5px;background:rgba(56,189,248,.10);color:#38bdf8;padding:2px 7px;border-radius:99px;font-weight:600;border:1px solid rgba(56,189,248,.20);">${_esc(b)}</span>`).join('') +
+          (fazla > 0 ? `<span style="font-size:10.5px;color:var(--muted);padding:2px 7px;font-weight:600;" title="${_esc(t.bolgeler.slice(5).join(', '))}">+${fazla} daha</span>` : '') +
+        `</div>`;
+      } else if (t.teslim_yeri) {
+        bolgeHtml = `<span style="font-size:12px;">${_esc(t.teslim_yeri)}</span>`;
+      } else {
+        bolgeHtml = `<span style="color:var(--muted);font-size:10.5px;">tüm bölgeler</span>`;
+      }
+
       return `
         <tr>
           <td>
@@ -176,7 +197,7 @@
             ${t.notlar ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;font-style:italic;">${_esc(t.notlar)}</div>` : ''}
           </td>
           <td style="font-size:12px;">${t.alim_yeri ? _esc(t.alim_yeri) : '<span style="color:var(--muted);">—</span>'}</td>
-          <td style="font-size:12px;">${t.teslim_yeri ? _esc(t.teslim_yeri) : '<span style="color:var(--muted);">—</span>'}</td>
+          <td>${bolgeHtml}</td>
           <td>${tipPill}</td>
           <td>${durumPill}</td>
           <td><span class="mono" style="font-size:13px;font-weight:700;color:#22c55e;">${tutar} ₺</span></td>
@@ -199,7 +220,7 @@
   const tarifeModalState = { mode: 'create', editingId: null };
 
   function _resetTarifeForm() {
-    ['harc-t-baslik','harc-t-tutar','harc-t-alim','harc-t-teslim','harc-t-bos-donus',
+    ['harc-t-baslik','harc-t-tutar','harc-t-alim','harc-t-teslim','harc-t-bolgeler','harc-t-bos-donus',
      'harc-t-km','harc-t-sure','harc-t-notlar','harc-t-gec-son'].forEach(id => _setVal(id, ''));
     _setVal('harc-t-kont-tip', '');
     _setVal('harc-t-kont-durum', '');
@@ -232,6 +253,8 @@
     _setVal('harc-t-tutar',      t.tutar);
     _setVal('harc-t-alim',       t.alim_yeri);
     _setVal('harc-t-teslim',     t.teslim_yeri);
+    // Bölgeler array'ini virgülle birleştirip textarea'ya yaz
+    _setVal('harc-t-bolgeler',   Array.isArray(t.bolgeler) ? t.bolgeler.join(', ') : '');
     _setVal('harc-t-bos-donus',  t.bos_donus_yeri);
     _setVal('harc-t-kont-tip',   t.kont_tip || '');
     _setVal('harc-t-kont-durum', t.kont_durum || '');
@@ -263,11 +286,21 @@
     if (!baslik) { _showErr('Başlık zorunlu.'); _$('harc-t-baslik')?.focus(); return; }
     if (!tutar || isNaN(Number(tutar))) { _showErr('Geçerli bir tutar girin.'); _$('harc-t-tutar')?.focus(); return; }
 
+    const bolgelerRaw = _getVal('harc-t-bolgeler');
+    const bolgelerArr = bolgelerRaw
+      ? bolgelerRaw.split(/[,;\n]/).map(s => s.trim()).filter(Boolean)
+      : null;
+    if (!bolgelerArr || !bolgelerArr.length) {
+      // Bölge boşsa, eski tek-teslim alanı varsa onu kullan; yoksa uyarı (zorunlu yapmadık ama tipik kullanım için bilgi ver)
+      // Yine de devam etmesine izin ver — boş bırakanlar tüm rotalar için varsayılan olabilir
+    }
+
     const payload = {
       baslik,
       tutar:           Number(tutar),
       alim_yeri:       _getVal('harc-t-alim') || null,
       teslim_yeri:     _getVal('harc-t-teslim') || null,
+      bolgeler:        bolgelerArr,
       bos_donus_yeri:  _getVal('harc-t-bos-donus') || null,
       kont_tip:        _getVal('harc-t-kont-tip') || null,
       kont_durum:      _getVal('harc-t-kont-durum') || null,
@@ -325,11 +358,174 @@
     }
   }
 
+  // ════════════════════════════════════════════════════════
+  // EK HİZMETLER — render & CRUD
+  // ════════════════════════════════════════════════════════
+  function harcRenderEkHizmetler() {
+    const host = _$('harc-ek-hiz-list');
+    if (!host) return;
+    const list = state.ekHizmetler || [];
+    if (!list.length) {
+      host.innerHTML = `<div style="text-align:center;color:var(--muted);padding:20px 12px;font-size:11.5px;">
+        Henüz ek hizmet tanımlı değil. <button onclick="harcEkHizmetSeed()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;margin-left:4px;">⭐ Hazır şablonu yükle</button>
+        veya <button onclick="openHarcirahEkHizmetModal()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;">+ Yeni ek hizmet</button>
+      </div>`;
+      return;
+    }
+    const TYPE_LABEL = {
+      sabit: 'Sabit', saatlik: 'Saatlik', yarim_tarife: 'Yarı Tarife', yuzde: 'Yüzde'
+    };
+    host.innerHTML = list.map(h => {
+      const aktif = h.aktif_mi !== false;
+      const tutarStr = h.hesaplama_tipi === 'yarim_tarife'
+        ? '<span style="color:#0284c7;font-weight:700;">Yarı tutar</span>'
+        : `<span class="mono" style="font-weight:700;color:#22c55e;">${Number(h.tutar || 0).toLocaleString('tr-TR')} ₺</span>`;
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-sunk);border:1px solid var(--border);border-radius:8px;${!aktif ? 'opacity:.55;' : ''}">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span style="font-weight:700;color:var(--text);font-size:12.5px;">${_esc(h.ad)}</span>
+              <span style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);color:var(--text2);padding:1px 6px;border-radius:4px;">${_esc(h.kod)}</span>
+              <span style="font-size:10px;background:rgba(56,189,248,.10);color:#38bdf8;padding:1px 6px;border-radius:4px;font-weight:600;">${TYPE_LABEL[h.hesaplama_tipi] || h.hesaplama_tipi}</span>
+              ${!aktif ? '<span style="font-size:10px;background:rgba(148,163,184,.15);color:var(--muted);padding:1px 6px;border-radius:4px;font-weight:600;">PASİF</span>' : ''}
+            </div>
+            ${h.aciklama ? `<div style="font-size:10.5px;color:var(--muted);margin-top:2px;">${_esc(h.aciklama)}</div>` : ''}
+          </div>
+          <div style="font-size:13px;">${tutarStr}</div>
+          <div style="display:flex;gap:4px;">
+            <button onclick="openHarcirahEkHizmetEdit('${h.id}')" class="icon-btn" title="Düzenle" style="color:var(--accent);">✎</button>
+            <button onclick="harcEkHizmetDelete('${h.id}')" class="icon-btn del" title="Sil">🗑</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // Modal-içi state
+  const ekHizModalState = { mode: 'create', editingId: null };
+
+  function _resetEkHizForm() {
+    ['harc-eh-ad','harc-eh-tutar','harc-eh-kod','harc-eh-aciklama'].forEach(id => _setVal(id, ''));
+    _setVal('harc-eh-htipi', 'sabit');
+    _setVal('harc-eh-sira',  '100');
+    const aktif = _$('harc-eh-aktif'); if (aktif) aktif.checked = true;
+    const err = _$('harc-eh-error'); if (err) { err.style.display = 'none'; err.textContent = ''; }
+  }
+
+  function openHarcirahEkHizmetModal() {
+    _resetEkHizForm();
+    ekHizModalState.mode = 'create';
+    ekHizModalState.editingId = null;
+    _$('harc-ekhiz-modal-title').textContent = 'Yeni Ek Hizmet';
+    _$('harc-ekhiz-modal-bg')?.classList.remove('hidden');
+    setTimeout(() => _$('harc-eh-ad')?.focus(), 50);
+  }
+
+  function openHarcirahEkHizmetEdit(id) {
+    const h = state.ekHizmetler.find(x => x.id === id);
+    if (!h) {
+      if (typeof toast === 'function') toast('Ek hizmet bulunamadı', 'error');
+      return;
+    }
+    _resetEkHizForm();
+    ekHizModalState.mode = 'edit';
+    ekHizModalState.editingId = id;
+    _$('harc-ekhiz-modal-title').textContent = 'Ek Hizmeti Düzenle';
+    _setVal('harc-eh-ad',       h.ad);
+    _setVal('harc-eh-tutar',    h.tutar);
+    _setVal('harc-eh-kod',      h.kod);
+    _setVal('harc-eh-htipi',    h.hesaplama_tipi || 'sabit');
+    _setVal('harc-eh-aciklama', h.aciklama);
+    _setVal('harc-eh-sira',     h.sira || 100);
+    const aktif = _$('harc-eh-aktif'); if (aktif) aktif.checked = h.aktif_mi !== false;
+    _$('harc-ekhiz-modal-bg')?.classList.remove('hidden');
+  }
+
+  function closeHarcirahEkHizmetModal() {
+    _$('harc-ekhiz-modal-bg')?.classList.add('hidden');
+  }
+
+  function _ekHizShowErr(msg) {
+    const el = _$('harc-eh-error');
+    if (!el) return;
+    el.style.display = msg ? 'block' : 'none';
+    el.textContent = msg || '';
+  }
+
+  async function harcEkHizmetSubmit() {
+    _ekHizShowErr('');
+    const ad    = _getVal('harc-eh-ad');
+    const tutar = _getVal('harc-eh-tutar');
+    let kod     = _getVal('harc-eh-kod');
+    if (!ad)    { _ekHizShowErr('Hizmet adı zorunlu.'); return; }
+    if (!tutar || isNaN(Number(tutar))) { _ekHizShowErr('Geçerli tutar girin.'); return; }
+    if (!kod) {
+      // Adı kod'a çevir (ascii lowercase + tire)
+      kod = ad.toLowerCase()
+        .replace(/[ıİ]/g,'i').replace(/[şŞ]/g,'s').replace(/[ğĞ]/g,'g')
+        .replace(/[üÜ]/g,'u').replace(/[öÖ]/g,'o').replace(/[çÇ]/g,'c')
+        .replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0, 30);
+    }
+    const payload = {
+      ad, kod, tutar: Number(tutar),
+      hesaplama_tipi: _getVal('harc-eh-htipi') || 'sabit',
+      aciklama:       _getVal('harc-eh-aciklama') || null,
+      sira:           parseInt(_getVal('harc-eh-sira') || '100', 10),
+      aktif_mi:       !!_$('harc-eh-aktif')?.checked
+    };
+    const btn = _$('harc-eh-submit-btn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
+    try {
+      if (ekHizModalState.mode === 'edit') {
+        await window.HarcirahAPI.ekHizmetUpdate(ekHizModalState.editingId, payload);
+        if (typeof toast === 'function') toast('Ek hizmet güncellendi', 'success');
+      } else {
+        await window.HarcirahAPI.ekHizmetCreate(payload);
+        if (typeof toast === 'function') toast('Ek hizmet eklendi', 'success');
+      }
+      closeHarcirahEkHizmetModal();
+      await refreshAll();
+    } catch (err) {
+      console.error(err);
+      _ekHizShowErr('Kaydedilemedi: ' + (err.message || 'bilinmeyen hata'));
+    } finally {
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    }
+  }
+
+  async function harcEkHizmetDelete(id) {
+    const h = state.ekHizmetler.find(x => x.id === id);
+    if (!confirm(`"${h?.ad || id}" ek hizmeti silinsin mi?`)) return;
+    try {
+      await window.HarcirahAPI.ekHizmetDelete(id);
+      if (typeof toast === 'function') toast('Silindi', 'success');
+      await refreshAll();
+    } catch (err) {
+      if (typeof toast === 'function') toast('Silinemedi: ' + err.message, 'error');
+    }
+  }
+
+  // Hazır şablon: 4 standart ek hizmeti tek tıkla ekle
+  async function harcEkHizmetSeed() {
+    if (state.ekHizmetler && state.ekHizmetler.length) {
+      if (!confirm('Mevcut ek hizmetler var. Eksik olan standart kayıtlar eklensin mi? (Mevcut kayıtlar değişmez.)')) return;
+    }
+    try {
+      await window.HarcirahAPI.ekHizmetSeed();
+      if (typeof toast === 'function') toast('Standart ek hizmetler yüklendi', 'success');
+      await refreshAll();
+    } catch (err) {
+      console.error(err);
+      if (typeof toast === 'function') toast('Yüklenemedi: ' + err.message, 'error');
+    }
+  }
+
   // ESC ile modal kapat
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      const bg = _$('harc-tarife-modal-bg');
-      if (bg && !bg.classList.contains('hidden')) closeHarcirahTarifeModal();
+      const tBg = _$('harc-tarife-modal-bg');
+      if (tBg && !tBg.classList.contains('hidden')) { closeHarcirahTarifeModal(); return; }
+      const eBg = _$('harc-ekhiz-modal-bg');
+      if (eBg && !eBg.classList.contains('hidden')) closeHarcirahEkHizmetModal();
     }
   });
 
@@ -347,4 +543,12 @@
   window.harcTarifeSubmit           = harcTarifeSubmit;
   window.harcTarifeAktifToggle      = harcTarifeAktifToggle;
   window.harcTarifeDelete           = harcTarifeDelete;
+  // Ek Hizmet
+  window.harcRenderEkHizmetler      = harcRenderEkHizmetler;
+  window.openHarcirahEkHizmetModal  = openHarcirahEkHizmetModal;
+  window.openHarcirahEkHizmetEdit   = openHarcirahEkHizmetEdit;
+  window.closeHarcirahEkHizmetModal = closeHarcirahEkHizmetModal;
+  window.harcEkHizmetSubmit         = harcEkHizmetSubmit;
+  window.harcEkHizmetDelete         = harcEkHizmetDelete;
+  window.harcEkHizmetSeed           = harcEkHizmetSeed;
 })();
