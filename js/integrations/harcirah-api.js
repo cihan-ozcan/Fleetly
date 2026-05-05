@@ -23,10 +23,19 @@
   'use strict';
 
   const LS = {
-    tarifeler: 'filo_harcirah_tarifeleri',
-    kayitlar:  'filo_harcirah_kayitlari',
-    haftalik:  'filo_harcirah_haftalik'
+    tarifeler:    'filo_harcirah_tarifeleri',
+    kayitlar:     'filo_harcirah_kayitlari',
+    haftalik:     'filo_harcirah_haftalik',
+    ekHizmetler:  'filo_harcirah_ek_hizmetler'
   };
+
+  // Ek hizmet seed (referans çalışmadan)
+  const EK_HIZMET_SEED = [
+    { kod: 'aktarma',       ad: 'Boş/Dolu Aktarma',           tutar: 300, hesaplama_tipi: 'sabit',        aciklama: 'Liman içi aktarma',         sira: 10 },
+    { kod: 'bekleme',       ad: 'Bekleme (7sa+)',             tutar: 350, hesaplama_tipi: 'sabit',        aciklama: '7 saat dolduğunda eklenir', sira: 20 },
+    { kod: 'ats',           ad: 'ATS & Kolcu Farkı',          tutar: 100, hesaplama_tipi: 'sabit',        aciklama: '',                          sira: 30 },
+    { kod: 'yari_harcirah', ad: 'Yarı Harcırah (Ambarlı↔Gebze)', tutar: 0,  hesaplama_tipi: 'yarim_tarife', aciklama: 'Tam tarifenin yarısı',     sira: 40 }
+  ];
 
   let _migMissing = false;
   function _isLocal() { return typeof window.isLocalMode === 'function' && window.isLocalMode(); }
@@ -79,6 +88,20 @@
     if (Number(p.tutar) < 0) throw new Error('Tutar negatif olamaz.');
   }
 
+  // Bölge listesini normalize et: virgül/boşluk/tire ayraçlı string → array
+  function _normalizeBolgeler(input) {
+    if (!input) return null;
+    if (Array.isArray(input)) {
+      const arr = input.map(x => String(x).trim()).filter(Boolean);
+      return arr.length ? arr : null;
+    }
+    const s = String(input).trim();
+    if (!s) return null;
+    // Önce virgül, sonra tire, sonra noktalı virgül; çoklu ayraç
+    const arr = s.split(/[,;\n]/).map(x => x.trim()).filter(Boolean);
+    return arr.length ? arr : null;
+  }
+
   async function tarifeCreate(payload) {
     _validateTarife(payload);
     const firmaId = _firmaId();
@@ -88,6 +111,7 @@
       baslik:          payload.baslik.trim(),
       alim_yeri:       payload.alim_yeri || null,
       teslim_yeri:     payload.teslim_yeri || null,
+      bolgeler:        _normalizeBolgeler(payload.bolgeler),
       bos_donus_yeri:  payload.bos_donus_yeri || null,
       kont_tip:        payload.kont_tip || null,
       kont_durum:      payload.kont_durum || null,
@@ -115,6 +139,8 @@
 
   async function tarifeUpdate(id, patch) {
     if (!id) throw new Error('id zorunlu.');
+    // bolgeler patch'lendiyse normalize et
+    if (patch && 'bolgeler' in patch) patch = { ...patch, bolgeler: _normalizeBolgeler(patch.bolgeler) };
     if (_isLocal()) {
       const list = _ls(LS.tarifeler);
       const i = list.findIndex(t => t.id === id);
@@ -139,28 +165,47 @@
     return _sb('DELETE', 'harcirah_tarifeleri?id=eq.' + encodeURIComponent(id));
   }
 
-  // Tarife match — Paket B trigger'ı bu RPC'yi server-side çağıracak.
-  // Şimdilik client-side yardımcı (manuel kayıt formunda otomatik tutar önerme):
+  // Tarife match — bolgeler[] + alim/teslim_yeri kısmi eşleşme
   async function tarifeMatch(criteria) {
     const { alim_yeri, teslim_yeri, kont_tip, kont_durum, dorse_tipi } = criteria || {};
     if (_isLocal()) {
       const list = _ls(LS.tarifeler).filter(t => t.aktif_mi !== false);
       const a = (alim_yeri || '').toLowerCase();
       const b = (teslim_yeri || '').toLowerCase();
-      const candidates = list.filter(t => {
-        const ta = (t.alim_yeri || '').toLowerCase();
-        const tt = (t.teslim_yeri || '').toLowerCase();
-        if (t.alim_yeri && a && !(a.includes(ta) || ta.includes(a))) return false;
-        if (t.teslim_yeri && b && !(b.includes(tt) || tt.includes(b))) return false;
-        if (t.kont_tip && kont_tip && t.kont_tip !== kont_tip) return false;
-        if (t.kont_durum && kont_durum && t.kont_durum !== kont_durum) return false;
-        if (t.dorse_tipi && dorse_tipi && t.dorse_tipi !== dorse_tipi) return false;
-        return true;
-      });
+      const candidates = list.map(t => {
+        // Bölge match (eğer bolgeler tanımlıysa)
+        let bolgeMatch = null;
+        if (Array.isArray(t.bolgeler) && t.bolgeler.length) {
+          if (!b) return null;  // bölge istenmiş ama teslim_yeri yok → eşleşmez
+          const found = t.bolgeler.find(z => {
+            const zl = String(z).toLowerCase();
+            return b.includes(zl) || zl.includes(b);
+          });
+          if (!found) return null;
+          bolgeMatch = found;
+        }
+        // Alım yeri (varsa kısmi)
+        if (t.alim_yeri && a) {
+          const ta = t.alim_yeri.toLowerCase();
+          if (!(a.includes(ta) || ta.includes(a))) return null;
+        }
+        // Eski teslim_yeri (sadece bolgeler yoksa kullan)
+        if (!Array.isArray(t.bolgeler) || !t.bolgeler.length) {
+          if (t.teslim_yeri && b) {
+            const tt = t.teslim_yeri.toLowerCase();
+            if (!(b.includes(tt) || tt.includes(b))) return null;
+          }
+        }
+        if (t.kont_tip && kont_tip && t.kont_tip !== kont_tip) return null;
+        if (t.kont_durum && kont_durum && t.kont_durum !== kont_durum) return null;
+        if (t.dorse_tipi && dorse_tipi && t.dorse_tipi !== dorse_tipi) return null;
+        return { ...t, eslesen_bolge: bolgeMatch };
+      }).filter(Boolean);
+
       // En spesifik olanı seç
       candidates.sort((x, y) => {
-        const sX = (x.alim_yeri ? 0 : 1) + (x.teslim_yeri ? 0 : 1) + (x.kont_tip ? 0 : 1) + (x.kont_durum ? 0 : 1);
-        const sY = (y.alim_yeri ? 0 : 1) + (y.teslim_yeri ? 0 : 1) + (y.kont_tip ? 0 : 1) + (y.kont_durum ? 0 : 1);
+        const sX = (x.eslesen_bolge ? 0 : 1) + (x.alim_yeri ? 0 : 1) + (x.kont_tip ? 0 : 1) + (x.kont_durum ? 0 : 1);
+        const sY = (y.eslesen_bolge ? 0 : 1) + (y.alim_yeri ? 0 : 1) + (y.kont_tip ? 0 : 1) + (y.kont_durum ? 0 : 1);
         return sX - sY || (x.oncelik || 100) - (y.oncelik || 100);
       });
       return candidates[0] || null;
@@ -175,6 +220,91 @@
       p_dorse_tipi:  dorse_tipi || null
     });
     return Array.isArray(res) && res.length ? res[0] : null;
+  }
+
+  // ════════════════════════════════════════════════════════
+  // EK HİZMETLER (Aktarma, ATS, Bekleme, Yarı Harcırah vb.)
+  // ════════════════════════════════════════════════════════
+  async function ekHizmetList() {
+    if (_isLocal()) {
+      let l = _ls(LS.ekHizmetler);
+      if (!l.length) {
+        // İlk yüklemede seed ekle
+        l = EK_HIZMET_SEED.map(x => ({
+          id: _newId('eh'), firma_id: _firmaId(), aktif_mi: true,
+          created_at: new Date().toISOString(), ...x
+        }));
+        _saveLs(LS.ekHizmetler, l);
+      }
+      return l.sort((a, b) => (a.sira || 0) - (b.sira || 0));
+    }
+    return (await _sb('GET', 'harcirah_ek_hizmetler?select=*&order=sira.asc')) || [];
+  }
+
+  async function ekHizmetCreate(payload) {
+    if (!payload || !payload.kod || !payload.ad) throw new Error('kod ve ad zorunlu.');
+    if (payload.tutar == null || isNaN(Number(payload.tutar))) throw new Error('Tutar geçerli olmalı.');
+    const firmaId = _firmaId();
+    const row = {
+      id: payload.id || (window.crypto?.randomUUID ? crypto.randomUUID() : _newId('eh')),
+      firma_id: firmaId,
+      kod: payload.kod.trim(),
+      ad: payload.ad.trim(),
+      tutar: Number(payload.tutar),
+      hesaplama_tipi: payload.hesaplama_tipi || 'sabit',
+      aciklama: payload.aciklama || null,
+      aktif_mi: payload.aktif_mi !== false,
+      sira: payload.sira != null ? parseInt(payload.sira, 10) : 100
+    };
+    if (_isLocal()) {
+      const list = _ls(LS.ekHizmetler);
+      // Aynı kod varsa update et
+      const existing = list.findIndex(x => x.kod === row.kod);
+      if (existing >= 0) list[existing] = { ...list[existing], ...row };
+      else list.push({ ...row, created_at: new Date().toISOString() });
+      _saveLs(LS.ekHizmetler, list);
+      return row;
+    }
+    const created = await _sb('POST', 'harcirah_ek_hizmetler', row);
+    return Array.isArray(created) ? created[0] : created;
+  }
+
+  async function ekHizmetUpdate(id, patch) {
+    if (!id) throw new Error('id zorunlu.');
+    if (_isLocal()) {
+      const list = _ls(LS.ekHizmetler);
+      const i = list.findIndex(x => x.id === id);
+      if (i < 0) throw new Error('Ek hizmet bulunamadı.');
+      list[i] = { ...list[i], ...patch, updated_at: new Date().toISOString() };
+      _saveLs(LS.ekHizmetler, list);
+      return list[i];
+    }
+    const out = await _sb('PATCH', 'harcirah_ek_hizmetler?id=eq.' + encodeURIComponent(id),
+                          { ...patch, updated_at: new Date().toISOString() });
+    return Array.isArray(out) ? out[0] : out;
+  }
+
+  async function ekHizmetDelete(id) {
+    if (!id) throw new Error('id zorunlu.');
+    if (_isLocal()) {
+      const list = _ls(LS.ekHizmetler).filter(x => x.id !== id);
+      _saveLs(LS.ekHizmetler, list);
+      return true;
+    }
+    return _sb('DELETE', 'harcirah_ek_hizmetler?id=eq.' + encodeURIComponent(id));
+  }
+
+  // Seed (Supabase tarafına ek hizmet seed'ini insert et — bir kez)
+  async function ekHizmetSeed() {
+    const existing = await ekHizmetList();
+    if (existing && existing.length) return existing;
+    const created = [];
+    for (const s of EK_HIZMET_SEED) {
+      try {
+        created.push(await ekHizmetCreate(s));
+      } catch (e) { console.warn('seed insert hata:', s.kod, e.message); }
+    }
+    return created;
   }
 
   // ════════════════════════════════════════════════════════
@@ -369,6 +499,8 @@
     isMigrationMissing,
     // Tarife
     tarifeList, tarifeCreate, tarifeUpdate, tarifeDelete, tarifeMatch,
+    // Ek Hizmet
+    ekHizmetList, ekHizmetCreate, ekHizmetUpdate, ekHizmetDelete, ekHizmetSeed,
     // Kayıt
     kayitList, kayitCreate, kayitUpdate, kayitDelete,
     kayitSoforOnay, kayitOpsOnay, kayitOdendi, kayitItiraz,
