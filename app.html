@@ -3095,13 +3095,44 @@
         </div>
 
         <!-- Aktif/Geçmiş Davet Listesi -->
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
-          <span>📋 Davet Geçmişi</span>
-          <button onclick="soforDavetlerYukle()" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:10.5px;font-weight:600;cursor:pointer">🔄 Yenile</button>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span>📋 Davet Geçmişi <span id="davet-count" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;color:var(--text2);font-weight:600;text-transform:none;letter-spacing:0;"></span></span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button onclick="soforDavetTopluTemizle()" title="30 günden eski iptal/süresi dolan davetleri kalıcı sil" style="background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.30);color:#f59e0b;border-radius:6px;padding:4px 10px;font-size:10.5px;font-weight:600;cursor:pointer">🧹 Temizle</button>
+            <button onclick="soforDavetlerYukle(true)" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:10.5px;font-weight:600;cursor:pointer">🔄 Yenile</button>
+          </div>
         </div>
-        <div id="davet-liste" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;padding-right:4px">
-          <div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">Yükleniyor…</div>
+
+        <!-- Filtre + Arama -->
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+          <div style="display:flex;gap:0;background:var(--surface3);border-radius:8px;padding:2px;flex-wrap:wrap;">
+            <button class="davet-filter is-active" data-filter="aktif"   onclick="soforDavetFilterSet('aktif',this)"   style="background:var(--accent);color:#fff;border:none;padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">🕐 Aktif <span class="davet-filter__count" id="davet-flt-aktif" style="font-family:var(--font-mono);font-size:10px;opacity:.85;"></span></button>
+            <button class="davet-filter"           data-filter="kullanilan" onclick="soforDavetFilterSet('kullanilan',this)" style="background:transparent;color:var(--text2);border:none;padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">✅ Kullanıldı <span class="davet-filter__count" id="davet-flt-kullanilan" style="font-family:var(--font-mono);font-size:10px;opacity:.7;"></span></button>
+            <button class="davet-filter"           data-filter="sonlanan"   onclick="soforDavetFilterSet('sonlanan',this)"   style="background:transparent;color:var(--text2);border:none;padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">🚫 Sonlanmış <span class="davet-filter__count" id="davet-flt-sonlanan" style="font-family:var(--font-mono);font-size:10px;opacity:.7;"></span></button>
+            <button class="davet-filter"           data-filter="tumu"       onclick="soforDavetFilterSet('tumu',this)"       style="background:transparent;color:var(--text2);border:none;padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">📂 Tümü <span class="davet-filter__count" id="davet-flt-tumu" style="font-family:var(--font-mono);font-size:10px;opacity:.7;"></span></button>
+          </div>
+          <div style="position:relative;flex:1;min-width:160px;">
+            <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:11px;">🔍</span>
+            <input id="davet-arama" placeholder="Ad veya telefon ara…" oninput="soforDavetArama(this.value)"
+                   style="width:100%;padding:6px 10px 6px 28px;background:var(--bg-sunk);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:11.5px;font-family:var(--font-body);" />
+          </div>
         </div>
+
+        <div id="davet-liste" style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow:auto;padding-right:4px">
+          <!-- Skeleton loading state — JS dolduracak -->
+          <div class="davet-skel" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;animation:davetPulse 1.4s ease-in-out infinite;">
+            <div style="height:14px;width:140px;background:var(--bg-sunk);border-radius:4px;margin-bottom:8px;"></div>
+            <div style="height:10px;width:80%;background:var(--bg-sunk);border-radius:4px;margin-bottom:6px;"></div>
+            <div style="height:10px;width:60%;background:var(--bg-sunk);border-radius:4px;"></div>
+          </div>
+          <div class="davet-skel" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;animation:davetPulse 1.4s ease-in-out 0.2s infinite;">
+            <div style="height:14px;width:120px;background:var(--bg-sunk);border-radius:4px;margin-bottom:8px;"></div>
+            <div style="height:10px;width:70%;background:var(--bg-sunk);border-radius:4px;"></div>
+          </div>
+        </div>
+        <style>
+          @keyframes davetPulse { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+        </style>
       </div>
 
       <!-- SEKME: Onay Kuyruğu (portal → ofis belge güncelleme talepleri) -->
