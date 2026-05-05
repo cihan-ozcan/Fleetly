@@ -626,6 +626,25 @@ function crmExportCSV() {
 
 let isEmirleri = [];
 let opsDrawerActiveId = null;
+// Harcırah kayıt cache: { is_emri_id → kayıt } — kanban/tablo render'ında pill için
+let _opsHarcirahCache = {};
+
+/* Harcırah kayıtlarını yükle ve is_emri_id'ye göre cache'le */
+async function opsHarcirahCacheYukle() {
+  if (typeof HarcirahAPI === 'undefined') return;
+  try {
+    const list = await HarcirahAPI.kayitList({});
+    const map = {};
+    (list || []).forEach(k => { if (k.is_emri_id != null) map[String(k.is_emri_id)] = k; });
+    _opsHarcirahCache = map;
+  } catch (e) {
+    console.warn('[ops] harcirah cache yüklenemedi:', e.message || e);
+  }
+}
+
+function opsHarcirahKayit(isEmriId) {
+  return _opsHarcirahCache[String(isEmriId)] || null;
+}
 
 /* ── VERİ KATMANI ────────────────────────────────────────── */
 
@@ -968,6 +987,8 @@ async function openOperasyonPage() {
   await opsLoadCloud();
   // sofor_user_id eksik iş emirleri varsa geriye dönük eşleştir
   opsSoforUserIdEslestiir().then(n => { if (n > 0) console.log(`${n} iş emrine sofor_user_id atandı`); }).catch(()=>{});
+  // Harcırah kayıtlarını cache'le (kanban/tablo pill'leri için)
+  await opsHarcirahCacheYukle();
   opsRenderAll();
   opsStartRealtime();
 }
@@ -1452,7 +1473,7 @@ function opsRenderTable() {
   document.getElementById('ops-table-count').textContent = sorted.length + ' kayıt';
   const tbody = document.getElementById('ops-table-body');
   if (!sorted.length) {
-    tbody.innerHTML = `<tr><td colspan="17"><div class="ops-empty" style="padding:36px 12px;">
+    tbody.innerHTML = `<tr><td colspan="18"><div class="ops-empty" style="padding:36px 12px;">
       <div class="ops-empty__icon">+</div>
       <div class="ops-empty__title">Aktif iş emri yok</div>
       <div class="ops-empty__msg">Yeni bir konteyner sevkiyatı için iş emri oluştur.</div>
@@ -1524,6 +1545,15 @@ function opsRenderTable() {
       <td><span class="col-mono" style="font-size:11.5px;color:var(--text-primary);">${opsFmtZaman(e.fabrika_giris)}</span></td>
       <td><span class="col-mono" style="font-size:11.5px;color:var(--text-primary);">${opsFmtZaman(e.fabrika_cikis)}</span></td>
       <td><span class="col-mono" style="font-size:11.5px;color:${beklemeColor};">${opsBeklemeSuresi(e.fabrika_giris, e.fabrika_cikis)}</span></td>
+      <td>${(() => {
+        const h = (typeof opsHarcirahKayit === 'function') ? opsHarcirahKayit(e._dbId ?? e.id) : null;
+        if (!h) return '<span style="color:var(--text-dim);font-size:11px;">—</span>';
+        const tutar = Number(h.manuel_tutar ?? h.hesaplanan_tutar ?? 0);
+        if (!tutar) return '<span style="color:var(--text-dim);font-size:11px;">—</span>';
+        const dColor = ({ beklemede:'#22c55e', sofor_onay:'#22c55e', sofor_itiraz:'#f59e0b', ops_onay:'#22c55e', odendi:'#0ea5e9', iptal:'var(--text-dim)' })[h.durum] || '#22c55e';
+        const dIco   = ({ beklemede:'🕐', sofor_onay:'✓', sofor_itiraz:'⚠', ops_onay:'✓✓', odendi:'💵', iptal:'✕' })[h.durum] || '🕐';
+        return `<div class="col-mono" style="font-size:12px;font-weight:700;color:${dColor};">${tutar.toLocaleString('tr-TR')} ₺</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px;">${dIco} ${h.durum.replace('_',' ')}</div>`;
+      })()}</td>
       <td><span class="ops-pill ops-pill--neutral ops-pill--mono">${opsFotoArray(e).length}</span></td>
       <td class="col-actions col-islem">
         <div style="display:inline-flex;gap:2px;">
@@ -1613,6 +1643,32 @@ function opsBuildContainerCard(e, status) {
       dorsePill = `<span class="ops-pill ops-pill--info ops-pill--mono" title="${escAttr((dorse.dorse_tipi_ad || dorse.dorse_tipi || 'Dorse') + ' — ' + (dorse.plaka || ''))}">⌖ ${dorse.plaka}</span>`;
     }
   }
+
+  // Harcırah pill (varsa)
+  let harcirahPill = '';
+  const _harc = (typeof opsHarcirahKayit === 'function') ? opsHarcirahKayit(e._dbId ?? e.id) : null;
+  if (_harc) {
+    const tutar = Number(_harc.manuel_tutar ?? _harc.hesaplanan_tutar ?? 0);
+    if (tutar > 0) {
+      const durumIco = ({
+        beklemede:    '🕐',
+        sofor_onay:   '✓',
+        sofor_itiraz: '⚠',
+        ops_onay:     '✓✓',
+        odendi:       '💵',
+        iptal:        '✕'
+      })[_harc.durum] || '🕐';
+      const durumColor = ({
+        beklemede:    'success',
+        sofor_onay:   'success',
+        sofor_itiraz: 'warning',
+        ops_onay:     'success',
+        odendi:       'success',
+        iptal:        'neutral'
+      })[_harc.durum] || 'success';
+      harcirahPill = `<span class="ops-pill ops-pill--${durumColor}" title="Harcırah · ${_harc.durum}" style="cursor:pointer;">💰 ${tutar.toLocaleString('tr-TR')}₺ ${durumIco}</span>`;
+    }
+  }
   let statusPill = '';
   if (isUrgent)        statusPill = `<span class="ops-pill ops-pill--solid-danger">ACİL</span>`;
   else if (isDelayed)  statusPill = `<span class="ops-pill ops-pill--warning">+${(alert.delayMin || 15)}dk</span>`;
@@ -1694,6 +1750,7 @@ function opsBuildContainerCard(e, status) {
         ${dbPill}
         ${podBadge}
         <span class="ops-card__head-spacer"></span>
+        ${harcirahPill}
         ${statusPill}
       </div>
       <div class="ops-card__container">
@@ -2602,6 +2659,9 @@ function _opsDrawerRender(e) {
   document.getElementById('ops-drawer-foto-count').textContent = fotos.length || '';
   // Belgeler sekmesi rozet sayım'ını güncelle
   try { _opsDrawerUpdateBelgelerCount(); } catch (_) {}
+
+  // ── Harcırah ──
+  try { _opsDrawerHarcirahRender(e); } catch (_) {}
   // Zorunlu fotoğraflar checklist'i — sürücü app'iyle aynı kurallar:
   //   • Konteyner Ön Yüzü — tüm işlerde
   //   • Dorse Plakası — tüm işlerde
@@ -2693,6 +2753,219 @@ function opsDrawerKonumAc() {
   // Google Maps'te yeni sekmede aç
   const url = 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lng);
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/* ─── DRAWER · Harcırah özeti + ek masraf düzenleme ─────── */
+function _opsDrawerHarcirahRender(e) {
+  const host = document.getElementById('ops-drawer-harcirah-body');
+  if (!host) return;
+  const eId = e._dbId ?? e.id;
+  const h = (typeof opsHarcirahKayit === 'function') ? opsHarcirahKayit(eId) : null;
+
+  if (!h) {
+    host.innerHTML = `
+      <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.20);border-left:3px solid var(--ops-warning);border-radius:6px;padding:10px 12px;font-size:11.5px;color:var(--text-secondary);line-height:1.5;">
+        ⚠ Bu iş emri için harcırah kaydı yok.<br>
+        <span style="color:var(--text-muted);">Tarife eşleşmemiş olabilir veya iş emri bu özellik aktif olmadan oluşturulmuş.</span>
+        <div style="margin-top:8px;display:flex;gap:6px;">
+          <button onclick="opsDrawerHarcirahYenidenHesapla()" class="ops-btn ops-btn--quiet ops-btn--sm">↻ Yeniden Hesapla</button>
+          <button onclick="opsDrawerHarcirahManuel()" class="ops-btn ops-btn--quiet ops-btn--sm">+ Manuel Gir</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const tutarBase = Number(h.manuel_tutar ?? h.hesaplanan_tutar ?? 0);
+  const ekMasraf  = Number(h.ek_masraflar || 0);
+  const avans     = Number(h.avans_dusum || 0);
+  const net       = Number(h.net_tutar || (tutarBase + ekMasraf - avans));
+  const fmt = (n) => Number(n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const durumLabel = ({
+    beklemede:    'Beklemede',
+    sofor_onay:   'Şoför Onayladı',
+    sofor_itiraz: 'Şoför İtiraz Etti',
+    ops_onay:     'Operasyon Onayladı',
+    odendi:       'Ödendi',
+    iptal:        'İptal'
+  })[h.durum] || h.durum;
+  const durumColor = ({
+    beklemede:    '#f59e0b',
+    sofor_onay:   '#22c55e',
+    sofor_itiraz: '#ef4444',
+    ops_onay:     '#22c55e',
+    odendi:       '#0ea5e9',
+    iptal:        'var(--text-muted)'
+  })[h.durum] || '#f59e0b';
+
+  host.innerHTML = `
+    <div style="background:var(--bg-raised);border:1px solid var(--border-subtle);border-radius:8px;padding:12px;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;">
+        <div>
+          <span style="font-family:var(--ops-font-mono);font-size:22px;font-weight:700;color:#22c55e;">${fmt(net)} ₺</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">net</span>
+        </div>
+        <span style="font-size:10.5px;font-weight:700;background:${durumColor}22;color:${durumColor};padding:3px 10px;border-radius:99px;letter-spacing:.4px;">${durumLabel}</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:11.5px;margin-bottom:10px;">
+        <span style="color:var(--text-muted);">Tarife</span>
+        <span style="color:var(--text-primary);font-weight:600;text-align:right;font-family:var(--ops-font-mono);">${fmt(tutarBase)} ₺</span>
+        ${ekMasraf > 0 ? `<span style="color:var(--text-muted);">Ek masraf</span><span style="color:var(--ops-warning);font-weight:600;text-align:right;font-family:var(--ops-font-mono);">+ ${fmt(ekMasraf)} ₺</span>` : ''}
+        ${avans > 0 ? `<span style="color:var(--text-muted);">Avans düşümü</span><span style="color:#0ea5e9;font-weight:600;text-align:right;font-family:var(--ops-font-mono);">− ${fmt(avans)} ₺</span>` : ''}
+      </div>
+
+      ${h.ek_masraf_aciklama ? `<div style="font-size:10.5px;color:var(--text-muted);font-style:italic;margin-bottom:8px;">"${h.ek_masraf_aciklama}"</div>` : ''}
+
+      <!-- Hızlı ek masraf ekleme -->
+      <div style="display:flex;gap:6px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-subtle);">
+        <input id="ops-drawer-harc-ek-tutar" type="number" min="0" step="0.01" placeholder="₺" style="width:80px;background:var(--bg-base);border:1px solid var(--border-subtle);color:var(--text-primary);border-radius:5px;padding:5px 8px;font-size:11.5px;font-family:var(--ops-font-mono);">
+        <input id="ops-drawer-harc-ek-aciklama" placeholder="Ek masraf açıklaması (HGS, mola…)" style="flex:1;background:var(--bg-base);border:1px solid var(--border-subtle);color:var(--text-primary);border-radius:5px;padding:5px 8px;font-size:11.5px;">
+        <button onclick="opsDrawerHarcirahEkMasrafEkle('${h.id}')" class="ops-btn ops-btn--quiet ops-btn--sm">+ Ekle</button>
+      </div>
+
+      <!-- Onay aksiyonları -->
+      <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;">
+        ${h.durum === 'beklemede' || h.durum === 'sofor_onay' ? `
+          <button onclick="opsDrawerHarcirahOnayla('${h.id}')" class="ops-btn ops-btn--primary ops-btn--sm">✓ Operasyon Onayla</button>
+        ` : ''}
+        ${h.durum === 'ops_onay' ? `
+          <button onclick="opsDrawerHarcirahOdendi('${h.id}')" class="ops-btn ops-btn--primary ops-btn--sm">💵 Ödendi İşaretle</button>
+        ` : ''}
+        ${h.durum !== 'odendi' && h.durum !== 'iptal' ? `
+          <button onclick="opsDrawerHarcirahIptal('${h.id}')" class="ops-btn ops-btn--quiet ops-btn--sm" style="color:var(--ops-danger);">✕ İptal</button>
+        ` : ''}
+      </div>
+    </div>`;
+}
+
+async function opsDrawerHarcirahYenidenHesapla() {
+  if (!opsDrawerActiveId) return;
+  if (typeof HarcirahAPI === 'undefined') {
+    if (typeof showToast === 'function') showToast('HarcirahAPI yüklü değil', 'error');
+    return;
+  }
+  try {
+    const e = opsById(opsDrawerActiveId);
+    const dbId = e?._dbId ?? e?.id ?? opsDrawerActiveId;
+    const newId = await HarcirahAPI.isEmriHesapla(dbId);
+    if (!newId) {
+      if (typeof showToast === 'function') showToast('Tarife eşleşmedi. Manuel girilebilir.', 'warn');
+    } else {
+      if (typeof showToast === 'function') showToast('Harcırah yeniden hesaplandı', 'success');
+    }
+    await opsHarcirahCacheYukle();
+    if (e) _opsDrawerHarcirahRender(e);
+    opsRenderTable(); opsRenderKanban();
+  } catch (err) {
+    console.error(err);
+    if (typeof showToast === 'function') showToast('Hesaplanamadı: ' + (err.message || 'hata'), 'error');
+  }
+}
+
+async function opsDrawerHarcirahManuel() {
+  if (!opsDrawerActiveId) return;
+  const tutarStr = prompt('Manuel harcırah tutarı (₺):');
+  if (tutarStr == null) return;
+  const tutar = parseFloat(tutarStr);
+  if (!isFinite(tutar) || tutar < 0) {
+    if (typeof showToast === 'function') showToast('Geçerli tutar girin', 'error');
+    return;
+  }
+  try {
+    const e = opsById(opsDrawerActiveId);
+    const dbId = e?._dbId ?? e?.id ?? opsDrawerActiveId;
+    await HarcirahAPI.kayitCreate({
+      is_emri_id:       dbId,
+      sofor_user_id:    e?.sofor_user_id || null,
+      sofor_ad:         e?.sofor || null,
+      arac_plaka:       e?.arac_plaka || null,
+      arac_id:          e?.cekici_id || null,
+      manuel_tutar:     tutar,
+      hesaplanan_tutar: null,
+      durum:            'beklemede',
+      is_tarihi:        (e?.atama_zamani || new Date().toISOString()).slice(0, 10)
+    });
+    if (typeof showToast === 'function') showToast('Manuel harcırah eklendi', 'success');
+    await opsHarcirahCacheYukle();
+    if (e) _opsDrawerHarcirahRender(e);
+    opsRenderTable(); opsRenderKanban();
+  } catch (err) {
+    console.error(err);
+    if (typeof showToast === 'function') showToast('Eklenemedi: ' + err.message, 'error');
+  }
+}
+
+async function opsDrawerHarcirahEkMasrafEkle(kayitId) {
+  const tutarEl = document.getElementById('ops-drawer-harc-ek-tutar');
+  const aciklEl = document.getElementById('ops-drawer-harc-ek-aciklama');
+  const tutar = parseFloat(tutarEl?.value);
+  const aciklama = (aciklEl?.value || '').trim();
+  if (!isFinite(tutar) || tutar <= 0) {
+    if (typeof showToast === 'function') showToast('Geçerli ek tutar girin', 'error');
+    return;
+  }
+  try {
+    // Mevcut ek_masraflar'a ekle (additive)
+    const cur = opsHarcirahKayit(opsDrawerActiveId) || {};
+    const yeniToplam = Number(cur.ek_masraflar || 0) + tutar;
+    const yeniAcikl  = (cur.ek_masraf_aciklama ? cur.ek_masraf_aciklama + ' · ' : '') + (aciklama || (tutar + '₺'));
+    await HarcirahAPI.kayitUpdate(kayitId, {
+      ek_masraflar:       yeniToplam,
+      ek_masraf_aciklama: yeniAcikl
+    });
+    if (typeof showToast === 'function') showToast('Ek masraf eklendi', 'success');
+    await opsHarcirahCacheYukle();
+    const e = opsById(opsDrawerActiveId);
+    if (e) _opsDrawerHarcirahRender(e);
+    opsRenderTable(); opsRenderKanban();
+  } catch (err) {
+    console.error(err);
+    if (typeof showToast === 'function') showToast('Eklenemedi: ' + err.message, 'error');
+  }
+}
+
+async function opsDrawerHarcirahOnayla(kayitId) {
+  if (!confirm('Bu harcırah operasyon tarafından onaylansın mı?')) return;
+  try {
+    await HarcirahAPI.kayitOpsOnay(kayitId);
+    if (typeof showToast === 'function') showToast('Onaylandı', 'success');
+    await opsHarcirahCacheYukle();
+    const e = opsById(opsDrawerActiveId);
+    if (e) _opsDrawerHarcirahRender(e);
+    opsRenderTable(); opsRenderKanban();
+  } catch (err) {
+    if (typeof showToast === 'function') showToast('Onaylanamadı: ' + err.message, 'error');
+  }
+}
+
+async function opsDrawerHarcirahOdendi(kayitId) {
+  const yontem = prompt('Ödeme yöntemi: (Nakit / EFT / Çek / Mahsup)', 'EFT');
+  if (yontem == null) return;
+  try {
+    await HarcirahAPI.kayitOdendi(kayitId, { yontem: yontem.trim() || 'EFT' });
+    if (typeof showToast === 'function') showToast('Ödeme kaydedildi', 'success');
+    await opsHarcirahCacheYukle();
+    const e = opsById(opsDrawerActiveId);
+    if (e) _opsDrawerHarcirahRender(e);
+    opsRenderTable(); opsRenderKanban();
+  } catch (err) {
+    if (typeof showToast === 'function') showToast('Kaydedilemedi: ' + err.message, 'error');
+  }
+}
+
+async function opsDrawerHarcirahIptal(kayitId) {
+  if (!confirm('Bu harcırah kaydı iptal edilsin mi?')) return;
+  try {
+    await HarcirahAPI.kayitUpdate(kayitId, { durum: 'iptal' });
+    if (typeof showToast === 'function') showToast('İptal edildi', 'success');
+    await opsHarcirahCacheYukle();
+    const e = opsById(opsDrawerActiveId);
+    if (e) _opsDrawerHarcirahRender(e);
+    opsRenderTable(); opsRenderKanban();
+  } catch (err) {
+    if (typeof showToast === 'function') showToast('İptal edilemedi: ' + err.message, 'error');
+  }
 }
 
 /* ── Şoför anlık GPS + KM durumu ── */

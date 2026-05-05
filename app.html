@@ -67,6 +67,9 @@
   <link rel="stylesheet" href="css/pages/kpi-rapor.css" />
   <link rel="stylesheet" href="css/pages/pod.css" />
   <link rel="stylesheet" href="css/pages/operasyon.css" />
+  <!-- jsPDF (Harcırah bordro PDF — defer ile lazy yüklenir) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js" defer></script>
   <script src="js/core/event-bus.js" defer></script>
   <script src="js/core/dom.js" defer></script>
   <script src="js/assets/fleetly-logo.js" defer></script>
@@ -1429,37 +1432,119 @@
         </div>
       </div>
 
-      <!-- SEKME 2: Kayıtlar (Paket B'de dolacak — şimdilik placeholder) -->
+      <!-- SEKME 2: Kayıtlar -->
       <div id="harc-panel-kayitlar" class="srm-panel">
-        <div style="text-align:center;padding:48px 12px;color:var(--muted);">
-          <div style="font-size:32px;opacity:.5;margin-bottom:8px;">📑</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px;">Harcırah Kayıtları</div>
-          <div style="font-size:12px;line-height:1.6;max-width:480px;margin:8px auto 0;">
-            İş emri oluşturulduğunda tarife eşleşmesi varsa otomatik kayıt üretilir.
-            Bu özellik <b>Paket B</b>'de aktive edilecek (DB trigger + şoför uygulamasında pill).
-            Şu an manuel kayıt eklemek için RPC kullanılabilir.
+        <!-- KPI rozetleri -->
+        <div id="harc-kayit-kpi" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;"></div>
+
+        <!-- Filtre bar -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="display:flex;gap:0;background:var(--surface3);border-radius:8px;padding:2px;flex-wrap:wrap;">
+            <button class="harc-kayit-filter is-active" data-filter="aktif"     onclick="harcKayitFilterSet('aktif',this)" style="background:var(--accent);color:#fff;border:none;padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">🕐 Aktif <span class="harc-kayit-flt-cnt" id="harc-kayit-flt-aktif" style="font-family:var(--font-mono);font-size:10px;opacity:.85;"></span></button>
+            <button class="harc-kayit-filter"           data-filter="beklemede" onclick="harcKayitFilterSet('beklemede',this)" style="background:transparent;color:var(--text2);border:none;padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">🕐 Beklemede <span class="harc-kayit-flt-cnt" id="harc-kayit-flt-beklemede" style="font-family:var(--font-mono);font-size:10px;opacity:.7;"></span></button>
+            <button class="harc-kayit-filter"           data-filter="onayli"    onclick="harcKayitFilterSet('onayli',this)" style="background:transparent;color:var(--text2);border:none;padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">✓ Onaylı <span class="harc-kayit-flt-cnt" id="harc-kayit-flt-onayli" style="font-family:var(--font-mono);font-size:10px;opacity:.7;"></span></button>
+            <button class="harc-kayit-filter"           data-filter="itiraz"    onclick="harcKayitFilterSet('itiraz',this)" style="background:transparent;color:var(--text2);border:none;padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">⚠ İtiraz <span class="harc-kayit-flt-cnt" id="harc-kayit-flt-itiraz" style="font-family:var(--font-mono);font-size:10px;opacity:.7;"></span></button>
+            <button class="harc-kayit-filter"           data-filter="odendi"    onclick="harcKayitFilterSet('odendi',this)" style="background:transparent;color:var(--text2);border:none;padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">💵 Ödendi <span class="harc-kayit-flt-cnt" id="harc-kayit-flt-odendi" style="font-family:var(--font-mono);font-size:10px;opacity:.7;"></span></button>
+            <button class="harc-kayit-filter"           data-filter="tumu"      onclick="harcKayitFilterSet('tumu',this)" style="background:transparent;color:var(--text2);border:none;padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">📂 Tümü <span class="harc-kayit-flt-cnt" id="harc-kayit-flt-tumu" style="font-family:var(--font-mono);font-size:10px;opacity:.7;"></span></button>
           </div>
+          <div style="position:relative;flex:1;min-width:180px;max-width:300px;">
+            <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:11px;">🔍</span>
+            <input id="harc-kayit-search" placeholder="Şoför, plaka, müşteri…" oninput="harcKayitArama(this.value)"
+                   style="width:100%;padding:6px 10px 6px 28px;background:var(--bg-sunk);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:11.5px;font-family:var(--font-body);" />
+          </div>
+          <span id="harc-kayit-count" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-left:auto;"></span>
+        </div>
+
+        <!-- Tablo -->
+        <div class="srm-table-wrap">
+          <table class="srm-table" id="harc-kayit-table">
+            <thead><tr>
+              <th>Tarih</th>
+              <th>Şoför / Plaka</th>
+              <th>Müşteri / Rota</th>
+              <th>Tarife</th>
+              <th>Manuel</th>
+              <th>Ek</th>
+              <th>Avans</th>
+              <th>Net (₺)</th>
+              <th>Durum</th>
+              <th>Hafta</th>
+              <th class="col-islem">İşlem</th>
+            </tr></thead>
+            <tbody id="harc-kayit-tbody"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- SEKME 3: Haftalık Özet (Paket C'de) -->
+      <!-- SEKME 3: Haftalık Özet -->
       <div id="harc-panel-haftalik" class="srm-panel">
-        <div style="text-align:center;padding:48px 12px;color:var(--muted);">
-          <div style="font-size:32px;opacity:.5;margin-bottom:8px;">📅</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px;">Haftalık Özet</div>
-          <div style="font-size:12px;line-height:1.6;max-width:480px;margin:8px auto 0;">
-            Şoför bazında bu haftanın hak edilenleri, onay aşamaları, ödeme durumu.
-            <b>Paket C</b>'de aktive edilecek (onay akışı + ödeme + masraf transferi).
+        <!-- Hafta seçici -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <button onclick="harcHaftaPrev()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:14px;font-weight:700;cursor:pointer;">‹</button>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;display:flex;flex-direction:column;align-items:center;min-width:200px;">
+            <div id="harc-hafta-baslik" style="font-size:13px;font-weight:700;color:var(--text);">2026 / Hafta 19</div>
+            <div id="harc-hafta-aralik" style="font-size:10.5px;color:var(--muted);font-family:var(--font-mono);margin-top:1px;">11 May - 17 May</div>
           </div>
+          <button onclick="harcHaftaNext()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:14px;font-weight:700;cursor:pointer;">›</button>
+          <button onclick="harcHaftaBugun()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer;">📅 Bu Hafta</button>
+          <span id="harc-hafta-kpi" style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--muted);"></span>
+        </div>
+
+        <!-- Toplu kapatma uyarısı + buton -->
+        <div id="harc-hafta-toplu-bar" style="display:none;align-items:center;gap:10px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.20);border-left:3px solid #22c55e;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--text2);">
+          <span>📋</span>
+          <span id="harc-hafta-toplu-msg" style="flex:1;">…</span>
+          <button id="harc-hafta-toplu-btn" onclick="harcHaftaKapatTumu()" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">Tümünü Kapat</button>
+        </div>
+
+        <!-- Tablo -->
+        <div class="srm-table-wrap">
+          <table class="srm-table" id="harc-haftalik-table">
+            <thead><tr>
+              <th>Şoför</th>
+              <th>Sefer</th>
+              <th>Brut</th>
+              <th>Ek</th>
+              <th>Avans</th>
+              <th>Net (₺)</th>
+              <th>Durum Dağılımı</th>
+              <th>Snapshot</th>
+              <th class="col-islem">İşlem</th>
+            </tr></thead>
+            <tbody id="harc-haftalik-tbody"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- SEKME 4: Arşiv (Paket C'de) -->
+      <!-- SEKME 4: Arşiv (kapanmış haftalar) -->
       <div id="harc-panel-arsiv" class="srm-panel">
-        <div style="text-align:center;padding:48px 12px;color:var(--muted);">
-          <div style="font-size:32px;opacity:.5;margin-bottom:8px;">🗂</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px;">Hafta Arşivi</div>
-          <div style="font-size:12px;line-height:1.6;">Kapatılmış haftaların PDF arşivi — Paket C.</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;">🗂 Kapanmış Haftalar</div>
+          <select id="harc-arsiv-yil" class="srm-inp" style="width:auto;min-width:100px;" onchange="harcRenderArsiv()">
+            <option value="">Tüm Yıllar</option>
+          </select>
+          <select id="harc-arsiv-durum" class="srm-inp" style="width:auto;min-width:140px;" onchange="harcRenderArsiv()">
+            <option value="">Tüm Durumlar</option>
+            <option value="kapali">📋 Kapalı (Ödeme bekliyor)</option>
+            <option value="odendi">💵 Ödendi</option>
+            <option value="iptal">✕ İptal</option>
+          </select>
+          <span id="harc-arsiv-count" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);"></span>
+        </div>
+        <div class="srm-table-wrap">
+          <table class="srm-table" id="harc-arsiv-table">
+            <thead><tr>
+              <th>Hafta</th>
+              <th>Tarih Aralığı</th>
+              <th>Şoför</th>
+              <th>Sefer</th>
+              <th>Net (₺)</th>
+              <th>Durum</th>
+              <th>Ödeme</th>
+              <th class="col-islem">İşlem</th>
+            </tr></thead>
+            <tbody id="harc-arsiv-tbody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -1573,6 +1658,182 @@
     <div class="srm-modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface2);">
       <button onclick="closeHarcirahTarifeModal()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;">İptal</button>
       <button id="harc-t-submit-btn" onclick="harcTarifeSubmit()" style="background:var(--accent);border:none;color:#fff;border-radius:6px;padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Kaydet
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────────
+     HARCIRAH — Hafta Kapatma onay modalı
+     openHarcirahHaftaKapatModal(soforUserId | 'tumu')
+     ───────────────────────────────────────────────────────────────── -->
+<div id="harc-hafta-kapat-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)closeHarcirahHaftaKapatModal()">
+  <div class="srm-modal" style="max-width:560px;">
+    <div class="srm-modal-header" style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);">
+      <div style="width:32px;height:32px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">📅</div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);">Hafta Kapatma Onayı</div>
+        <div id="harc-hafta-kapat-sub" style="font-size:11px;color:var(--muted);">…</div>
+      </div>
+      <button onclick="closeHarcirahHaftaKapatModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;">×</button>
+    </div>
+    <div class="srm-modal-body" style="padding:16px 18px;">
+      <div id="harc-hafta-kapat-onizleme" style="background:var(--bg-sunk);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;font-size:12px;line-height:1.6;color:var(--text2);">…</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.20);border-radius:6px;padding:10px 12px;">
+        ⚠ <b>Önemli:</b> Hafta kapatıldıktan sonra:
+        <ul style="margin:6px 0 0 16px;padding:0;">
+          <li>Bu haftadaki <b>beklemede / şoför onaylı</b> kayıtlar otomatik <b>"Ofis Onaylı"</b>ya geçer.</li>
+          <li>Snapshot oluşur, arşivlenir, PDF olarak indirilebilir.</li>
+          <li>Hafta tekrar kapatılamaz — gerekirse önce iptal edin.</li>
+        </ul>
+      </div>
+      <div class="srm-group" style="margin-top:12px;">
+        <label>Notlar (opsiyonel)</label>
+        <textarea id="harc-hafta-kapat-notlar" class="srm-inp" rows="2" placeholder="Örn. Cuma ödeme · Avans 200₺ kesildi" style="resize:vertical;"></textarea>
+      </div>
+      <div id="harc-hafta-kapat-error" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.30);border-radius:6px;color:var(--red);font-size:12.5px;font-weight:600;"></div>
+    </div>
+    <div class="srm-modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface2);">
+      <button onclick="closeHarcirahHaftaKapatModal()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;">İptal</button>
+      <button id="harc-hafta-kapat-submit" onclick="harcHaftaKapatOnayla()" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Onaylı Şekilde Kapat
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────────
+     HARCIRAH — Hafta Ödeme modalı
+     ───────────────────────────────────────────────────────────────── -->
+<div id="harc-hafta-ode-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)closeHarcirahHaftaOdeModal()">
+  <div class="srm-modal" style="max-width:480px;">
+    <div class="srm-modal-header" style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);">
+      <div style="width:32px;height:32px;background:rgba(2,132,199,.12);border:1px solid rgba(2,132,199,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">💵</div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);">Hafta Ödeme</div>
+        <div id="harc-hafta-ode-sub" style="font-size:11px;color:var(--muted);">…</div>
+      </div>
+      <button onclick="closeHarcirahHaftaOdeModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;">×</button>
+    </div>
+    <div class="srm-modal-body" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;">
+      <div id="harc-hafta-ode-ozet" style="background:var(--bg-sunk);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;">Net Tutar</div>
+        <div id="harc-hafta-ode-tutar" style="font-family:var(--font-mono);font-size:28px;font-weight:700;color:#22c55e;">0,00 ₺</div>
+      </div>
+      <div class="srm-group">
+        <label>Ödeme Yöntemi <span style="color:var(--red);">*</span></label>
+        <select id="harc-hafta-ode-yontem" class="srm-inp">
+          <option value="EFT">🏦 EFT / Havale</option>
+          <option value="Nakit">💵 Nakit</option>
+          <option value="Çek">📄 Çek</option>
+          <option value="Mahsup">⚖ Mahsup</option>
+          <option value="Diğer">📦 Diğer</option>
+        </select>
+      </div>
+      <div class="srm-group">
+        <label>Referans No / Açıklama (opsiyonel)</label>
+        <input id="harc-hafta-ode-ref" class="srm-inp" placeholder="EFT ref no, çek no, dekont…" />
+      </div>
+    </div>
+    <div class="srm-modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface2);">
+      <button onclick="closeHarcirahHaftaOdeModal()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;">İptal</button>
+      <button id="harc-hafta-ode-submit" onclick="harcHaftaOdeOnayla()" style="background:#0284c7;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;">💵 Ödendi Olarak İşaretle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────────
+     HARCIRAH — Manuel kayıt ekleme / düzenleme modalı
+     openHarcirahKayitModal(kayitId?)
+     ───────────────────────────────────────────────────────────────── -->
+<div id="harc-kayit-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)closeHarcirahKayitModal()">
+  <div class="srm-modal" style="max-width:640px;">
+    <div class="srm-modal-header" style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);">
+      <div style="width:32px;height:32px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">📑</div>
+      <div style="flex:1;">
+        <div id="harc-kayit-modal-title" style="font-size:14px;font-weight:700;color:var(--text);">Manuel Harcırah Kaydı</div>
+        <div style="font-size:11px;color:var(--muted);">Tarife eşleşmemiş iş emirleri için manuel kayıt</div>
+      </div>
+      <button onclick="closeHarcirahKayitModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;">×</button>
+    </div>
+
+    <div class="srm-modal-body" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;max-height:75vh;overflow-y:auto;">
+      <!-- İş emri seçici (autocomplete) -->
+      <div class="srm-group" style="position:relative;">
+        <label>İş Emri <span style="color:var(--red);">*</span></label>
+        <input id="harc-k-isemri-search" class="srm-inp" placeholder="ID, plaka, müşteri ara…" autocomplete="off"
+               oninput="harcKayitIsEmriAra(this.value)"
+               onfocus="harcKayitIsEmriAra(this.value)"
+               onblur="setTimeout(()=>{ const d=document.getElementById('harc-k-isemri-dropdown'); if(d) d.style.display='none'; }, 200)" />
+        <input type="hidden" id="harc-k-isemri-id" />
+        <div id="harc-k-isemri-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:var(--surface);border:1px solid var(--border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);max-height:240px;overflow-y:auto;margin-top:2px;"></div>
+        <div id="harc-k-isemri-secili" style="display:none;font-size:11px;color:var(--text2);background:var(--bg-sunk);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-top:6px;"></div>
+      </div>
+
+      <!-- Şoför + Plaka (otomatik dolar, düzenlenebilir) -->
+      <div style="display:grid;grid-template-columns:1fr 160px;gap:12px;">
+        <div class="srm-group">
+          <label>Şoför Adı</label>
+          <input id="harc-k-sofor" class="srm-inp" placeholder="Ad Soyad" autocomplete="off" />
+        </div>
+        <div class="srm-group">
+          <label>Plaka</label>
+          <input id="harc-k-plaka" class="srm-inp" placeholder="34EE5314" style="font-family:var(--font-mono);font-weight:700;text-transform:uppercase;" autocomplete="off" />
+        </div>
+      </div>
+
+      <!-- Tarih + Manuel Tutar (zorunlu) -->
+      <div style="display:grid;grid-template-columns:160px 1fr;gap:12px;">
+        <div class="srm-group">
+          <label>İş Tarihi <span style="color:var(--red);">*</span></label>
+          <input id="harc-k-tarih" class="srm-inp" type="date" />
+        </div>
+        <div class="srm-group">
+          <label>Manuel Tutar (₺) <span style="color:var(--red);">*</span></label>
+          <input id="harc-k-tutar" class="srm-inp" type="number" min="0" step="0.01" placeholder="500" />
+        </div>
+      </div>
+
+      <!-- Ek Masraf + Avans -->
+      <div style="background:var(--bg-sunk);border:1px solid var(--border);border-radius:8px;padding:12px;">
+        <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">💰 Ek Kalemler (Opsiyonel)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="srm-group">
+            <label>Ek Masraf (₺)</label>
+            <input id="harc-k-ek" class="srm-inp" type="number" min="0" step="0.01" placeholder="50" />
+          </div>
+          <div class="srm-group">
+            <label>Avans Düşümü (₺)</label>
+            <input id="harc-k-avans" class="srm-inp" type="number" min="0" step="0.01" placeholder="100" />
+          </div>
+        </div>
+        <div class="srm-group" style="margin-top:8px;">
+          <label>Ek Masraf Açıklama</label>
+          <input id="harc-k-ek-aciklama" class="srm-inp" placeholder="HGS, mola, köprü vb." autocomplete="off" />
+        </div>
+      </div>
+
+      <!-- Net önizleme -->
+      <div id="harc-k-net-preview" style="display:flex;align-items:center;justify-content:space-between;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-left:3px solid #22c55e;border-radius:6px;padding:10px 14px;">
+        <span style="font-size:11.5px;color:var(--text2);font-weight:600;">Net Tutar</span>
+        <span id="harc-k-net-deger" style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#22c55e;">0,00 ₺</span>
+      </div>
+
+      <!-- Açıklama -->
+      <div class="srm-group">
+        <label>Açıklama / Not</label>
+        <textarea id="harc-k-aciklama" class="srm-inp" rows="2" placeholder="Opsiyonel — örn. tarife eşleşmedi, özel anlaşma…" style="resize:vertical;"></textarea>
+      </div>
+
+      <div id="harc-k-error" style="display:none;padding:10px 12px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.30);border-radius:6px;color:var(--red);font-size:12.5px;font-weight:600;"></div>
+    </div>
+
+    <div class="srm-modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface2);">
+      <button onclick="closeHarcirahKayitModal()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;">İptal</button>
+      <button id="harc-k-submit-btn" onclick="harcKayitSubmit()" style="background:var(--accent);border:none;color:#fff;border-radius:6px;padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         Kaydet
       </button>
@@ -2329,6 +2590,7 @@
           <th>Fab. Giriş</th>
           <th>Fab. Çıkış</th>
           <th>Bekleme</th>
+          <th>💰 Harcırah</th>
           <th>Fotoğraf</th>
           <th class="col-actions col-islem">İşlem</th>
         </tr></thead>
@@ -2457,6 +2719,15 @@
     <div class="drawer-section" data-drawer-tab="yakit">
       <div class="drawer-section-title">Yakıt & Maliyet</div>
       <div id="ops-drawer-yakit-card"></div>
+    </div>
+
+    <!-- 💰 Harcırah özeti -->
+    <div class="drawer-section" data-drawer-tab="yakit detaylar">
+      <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>💰 Harcırah</span>
+        <button id="ops-drawer-harc-recalc" onclick="opsDrawerHarcirahYenidenHesapla()" title="Tarife eşleşmesini yeniden çalıştır" style="background:none;border:1px solid var(--border-subtle);color:var(--text-muted);border-radius:5px;padding:2px 8px;font-size:10.5px;cursor:pointer;">↻ Yeniden Hesapla</button>
+      </div>
+      <div id="ops-drawer-harcirah-body"></div>
     </div>
 
     <!-- Sürücü Karşılaştırma — aynı yükle/teslim çiftine yapılmış geçmiş seferler -->

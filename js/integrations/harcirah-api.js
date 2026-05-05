@@ -408,6 +408,30 @@
     return Array.isArray(out) ? out[0] : out;
   }
 
+  // İş emri id'sine göre tek harcırah kaydı (kart/drawer pill için)
+  async function kayitForIsEmri(isEmriId) {
+    if (!isEmriId) return null;
+    if (_isLocal()) {
+      const list = _ls(LS.kayitlar);
+      return list.find(k => String(k.is_emri_id) === String(isEmriId)) || null;
+    }
+    const data = await _sb('GET', 'harcirah_kayitlari?select=*&is_emri_id=eq.' + encodeURIComponent(isEmriId) + '&limit=1');
+    return Array.isArray(data) && data.length ? data[0] : null;
+  }
+
+  // Mevcut iş emri için yeniden hesapla (RPC)
+  async function isEmriHesapla(isEmriId) {
+    if (!isEmriId) throw new Error('is_emri_id zorunlu');
+    if (_isLocal()) {
+      // Local: client-side tarife match
+      const list = _ls(LS.kayitlar).filter(k => String(k.is_emri_id) !== String(isEmriId));
+      _saveLs(LS.kayitlar, list);
+      // Local'de iş emri verisi olmadığı için bu kullanıcı tarafında manual girilebilir.
+      return null;
+    }
+    return _sb('POST', 'rpc/harcirah_isemri_hesapla', { p_is_emri_id: isEmriId });
+  }
+
   async function kayitDelete(id) {
     if (!id) throw new Error('id zorunlu');
     if (_isLocal()) {
@@ -490,6 +514,162 @@
   }
 
   // ════════════════════════════════════════════════════════
+  // HAFTA KAPATMA / ARŞİV
+  // ════════════════════════════════════════════════════════
+  async function haftaKapat(soforUserId, haftaYili, haftaNo, notlar) {
+    if (!soforUserId) throw new Error('sofor_user_id zorunlu');
+    if (_isLocal()) {
+      // Local: snapshot oluştur + kayıtları ops_onay yap
+      const kayitlar = _ls(LS.kayitlar).filter(k =>
+        k.sofor_user_id === soforUserId && k.hafta_yili === haftaYili && k.hafta_no === haftaNo && k.durum !== 'iptal'
+      );
+      if (!kayitlar.length) throw new Error('Bu hafta için kapatılacak kayıt yok.');
+      const brut = kayitlar.reduce((s, k) => s + Number((k.manuel_tutar ?? k.hesaplanan_tutar ?? 0)) + Number(k.ek_masraflar || 0), 0);
+      const avans = kayitlar.reduce((s, k) => s + Number(k.avans_dusum || 0), 0);
+      const net = kayitlar.reduce((s, k) => s + Number(k.net_tutar || 0), 0);
+      const haftalik = {
+        id: window.crypto?.randomUUID ? crypto.randomUUID() : _newId('hft'),
+        firma_id: _firmaId(),
+        sofor_user_id: soforUserId,
+        sofor_ad: kayitlar[0].sofor_ad,
+        hafta_yili: haftaYili,
+        hafta_no: haftaNo,
+        baslangic_tarih: kayitlar.map(k => k.is_tarihi).sort()[0],
+        bitis_tarih:    kayitlar.map(k => k.is_tarihi).sort().slice(-1)[0],
+        kayit_sayisi: kayitlar.length,
+        toplam_brut: brut,
+        toplam_avans: avans,
+        toplam_net: net,
+        durum: 'kapali',
+        notlar: notlar || null,
+        kapatildi_at: new Date().toISOString()
+      };
+      const list = _ls(LS.haftalik);
+      list.push(haftalik);
+      _saveLs(LS.haftalik, list);
+      // Kayıtları ops_onay yap
+      const allKayit = _ls(LS.kayitlar);
+      allKayit.forEach(k => {
+        if (k.sofor_user_id === soforUserId && k.hafta_yili === haftaYili && k.hafta_no === haftaNo
+            && (k.durum === 'beklemede' || k.durum === 'sofor_onay')) {
+          k.durum = 'ops_onay';
+          k.ops_onay_at = new Date().toISOString();
+        }
+      });
+      _saveLs(LS.kayitlar, allKayit);
+      return haftalik.id;
+    }
+    return _sb('POST', 'rpc/harcirah_hafta_kapat', {
+      p_sofor_user_id: soforUserId,
+      p_hafta_yili: haftaYili,
+      p_hafta_no: haftaNo,
+      p_notlar: notlar || null
+    });
+  }
+
+  async function haftaKapatTumu(haftaYili, haftaNo) {
+    if (_isLocal()) {
+      // Local: hafta için tüm farklı şoförleri bul
+      const kayitlar = _ls(LS.kayitlar).filter(k =>
+        k.hafta_yili === haftaYili && k.hafta_no === haftaNo && k.durum !== 'iptal' && k.sofor_user_id
+      );
+      const haftalik = _ls(LS.haftalik);
+      const soforler = [...new Set(kayitlar.map(k => k.sofor_user_id))];
+      let count = 0;
+      for (const sId of soforler) {
+        // Daha önce kapatılmış mı kontrol
+        const kapali = haftalik.some(h => h.sofor_user_id === sId && h.hafta_yili === haftaYili && h.hafta_no === haftaNo && h.durum !== 'iptal');
+        if (kapali) continue;
+        try { await haftaKapat(sId, haftaYili, haftaNo); count++; } catch (_) {}
+      }
+      return count;
+    }
+    return _sb('POST', 'rpc/harcirah_hafta_kapat_tumu', {
+      p_hafta_yili: haftaYili,
+      p_hafta_no: haftaNo
+    });
+  }
+
+  async function haftaIptal(haftalikId) {
+    if (_isLocal()) {
+      const list = _ls(LS.haftalik);
+      const i = list.findIndex(h => h.id === haftalikId);
+      if (i < 0) throw new Error('Bulunamadı');
+      list[i].durum = 'iptal';
+      _saveLs(LS.haftalik, list);
+      return null;
+    }
+    return _sb('POST', 'rpc/harcirah_hafta_iptal', { p_haftalik_id: haftalikId });
+  }
+
+  async function haftaOden(haftalikId, yontem, referans) {
+    if (_isLocal()) {
+      const list = _ls(LS.haftalik);
+      const i = list.findIndex(h => h.id === haftalikId);
+      if (i < 0) throw new Error('Bulunamadı');
+      list[i].durum = 'odendi';
+      list[i].odeme_at = new Date().toISOString();
+      list[i].odeme_yontemi = yontem;
+      list[i].odeme_referans = referans || null;
+      _saveLs(LS.haftalik, list);
+      // Bağlı kayıtları odendi yap
+      const allKayit = _ls(LS.kayitlar);
+      allKayit.forEach(k => {
+        if (k.sofor_user_id === list[i].sofor_user_id
+            && k.hafta_yili === list[i].hafta_yili
+            && k.hafta_no === list[i].hafta_no
+            && k.durum !== 'iptal') {
+          k.durum = 'odendi';
+          k.odeme_at = new Date().toISOString();
+          k.odeme_yontemi = yontem;
+          k.odeme_referans = referans || null;
+        }
+      });
+      _saveLs(LS.kayitlar, allKayit);
+      return null;
+    }
+    return _sb('POST', 'rpc/harcirah_hafta_oden', {
+      p_haftalik_id: haftalikId,
+      p_yontem: yontem,
+      p_referans: referans || null
+    });
+  }
+
+  async function haftalikList(opts = {}) {
+    if (_isLocal()) {
+      let l = _ls(LS.haftalik);
+      if (opts.aktifOnly) l = l.filter(h => h.durum !== 'iptal');
+      if (opts.hafta_yili != null) l = l.filter(h => h.hafta_yili === opts.hafta_yili);
+      if (opts.hafta_no != null)   l = l.filter(h => h.hafta_no === opts.hafta_no);
+      return l.sort((a, b) => (b.hafta_yili - a.hafta_yili) || (b.hafta_no - a.hafta_no) || (a.sofor_ad || '').localeCompare(b.sofor_ad || ''));
+    }
+    let q = 'harcirah_haftalik?select=*&order=hafta_yili.desc,hafta_no.desc,sofor_ad.asc';
+    if (opts.aktifOnly) q += '&durum=neq.iptal';
+    if (opts.hafta_yili != null) q += '&hafta_yili=eq.' + opts.hafta_yili;
+    if (opts.hafta_no   != null) q += '&hafta_no=eq.'   + opts.hafta_no;
+    return (await _sb('GET', q)) || [];
+  }
+
+  // Bir haftalık snapshot için detay kayıtlar (PDF için)
+  async function haftalikKayitlar(haftalik) {
+    if (!haftalik) return [];
+    if (_isLocal()) {
+      return _ls(LS.kayitlar).filter(k =>
+        k.sofor_user_id === haftalik.sofor_user_id &&
+        k.hafta_yili === haftalik.hafta_yili &&
+        k.hafta_no === haftalik.hafta_no &&
+        k.durum !== 'iptal'
+      ).sort((a, b) => (a.is_tarihi || '').localeCompare(b.is_tarihi || ''));
+    }
+    let q = 'harcirah_kayitlari?select=*&order=is_tarihi.asc' +
+            '&sofor_user_id=eq.' + encodeURIComponent(haftalik.sofor_user_id) +
+            '&hafta_yili=eq.' + haftalik.hafta_yili +
+            '&hafta_no=eq.' + haftalik.hafta_no +
+            '&durum=neq.iptal';
+    return (await _sb('GET', q)) || [];
+  }
+
+  // ════════════════════════════════════════════════════════
   // Yardımcı: ISO hafta numarası
   // ════════════════════════════════════════════════════════
   function _isoWeek(d) {
@@ -530,10 +710,12 @@
     // Ek Hizmet
     ekHizmetList, ekHizmetCreate, ekHizmetUpdate, ekHizmetDelete, ekHizmetSeed,
     // Kayıt
-    kayitList, kayitCreate, kayitUpdate, kayitDelete,
+    kayitList, kayitCreate, kayitUpdate, kayitDelete, kayitForIsEmri, isEmriHesapla,
     kayitSoforOnay, kayitOpsOnay, kayitOdendi, kayitItiraz,
     // Haftalık
     haftalikOzet,
+    haftaKapat, haftaKapatTumu, haftaIptal, haftaOden,
+    haftalikList, haftalikKayitlar,
     // Yardımcılar
     suandakiHafta, haftaTarihAraligi, isoWeek: _isoWeek, isoYear: _isoYear
   };
