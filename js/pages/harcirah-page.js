@@ -156,7 +156,7 @@
       const empty = state.tarifeler.length === 0
         ? `Henüz tarife yok. <button onclick="openHarcirahTarifeModal()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;">+ İlk tarifeyi ekle</button>`
         : 'Bu filtre için kayıt yok.';
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:var(--muted);">${empty}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--muted);">${empty}</td></tr>`;
       return;
     }
 
@@ -196,7 +196,6 @@
             <div style="font-weight:700;color:var(--text);font-size:12.5px;">${_esc(t.baslik)}</div>
             ${t.notlar ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;font-style:italic;">${_esc(t.notlar)}</div>` : ''}
           </td>
-          <td style="font-size:12px;">${t.alim_yeri ? _esc(t.alim_yeri) : '<span style="color:var(--muted);">—</span>'}</td>
           <td>${bolgeHtml}</td>
           <td>${tipPill}</td>
           <td>${durumPill}</td>
