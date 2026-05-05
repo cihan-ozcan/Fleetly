@@ -6405,13 +6405,29 @@ function _davetItemHtml(d, now) {
   aksiyonlar += `
       <button onclick="soforDavetSil(${d.id})" title="Daveti kalıcı sil${d.kullanildi_at ? ' (şoförün uygulamayı kullandığı kayıt silinir!)' : ''}" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);color:#ef4444;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer">🗑</button>`;
 
+  // Kullanıldıysa kart tıklanabilir → şoför detay modal'ı açılır
+  const isClickable = !!d.kullanildi_at && !!d.kullanan_user_id;
+  const cardStyle = isClickable
+    ? 'cursor:pointer;transition:border-color .15s,background .15s;'
+    : '';
+  const cardHover = isClickable
+    ? `onmouseover="this.style.borderColor='var(--accent)';this.style.background='var(--surface2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.background='var(--card)'"`
+    : '';
+  const cardClick = isClickable
+    ? `onclick="if(!event.target.closest('button')&&!event.target.closest('span[onclick]'))soforDavetDetayAc(${d.id})"`
+    : '';
+  const detayHint = isClickable
+    ? `<span style="font-size:9.5px;color:var(--accent);font-weight:600;letter-spacing:.4px;margin-left:4px;">→ Detay</span>`
+    : '';
+
   return `
-    <div style="border:1px solid var(--border2);border-radius:10px;padding:10px 12px;background:var(--card);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <div ${cardClick} ${cardHover} style="border:1px solid var(--border2);border-radius:10px;padding:10px 12px;background:var(--card);display:flex;gap:10px;align-items:center;flex-wrap:wrap;${cardStyle}">
       <div style="flex:1;min-width:200px">
         <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">
           <span style="font-weight:700;color:var(--text)">${_esc(d.ad)}</span>
           <span style="font-size:11px;color:var(--muted)">· ${telMask}</span>
           ${plaka ? `<span style="font-size:11px;background:rgba(56,189,248,.12);color:#38bdf8;padding:2px 6px;border-radius:4px;font-weight:600">${_esc(plaka)}</span>` : ''}
+          ${detayHint}
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap">
           <span style="font-family:monospace;font-size:13px;font-weight:700;letter-spacing:1.5px;color:#818cf8">${_esc(d.davet_kodu)}</span>
@@ -6425,6 +6441,271 @@ function _davetItemHtml(d, now) {
       <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">${aksiyonlar}</div>
     </div>`;
 }
+
+// ════════════════════════════════════════════════════════════════════
+// ŞOFÖR DETAY MODALI — kullanılmış davete tıklayınca o şoförün
+// son aktivitesi (son iş emri, son lokasyon, toplam km, KPI'lar)
+// ════════════════════════════════════════════════════════════════════
+let _soforDetayState = { davet: null, isemirleri: [], sonIsEmri: null, aktifIsEmri: null };
+
+async function soforDavetDetayAc(davetId) {
+  const davet = _davetCache.find(d => d.id === davetId);
+  if (!davet || !davet.kullanan_user_id) {
+    showToast('Bu davet henüz kullanılmamış.', 'warn');
+    return;
+  }
+  _soforDetayState.davet = davet;
+
+  // Modal'ı aç + loading göster
+  const bg = document.getElementById('sofor-detay-modal-bg');
+  if (bg) bg.classList.remove('hidden');
+  document.getElementById('sofor-detay-loading').style.display = 'block';
+  document.getElementById('sofor-detay-icerik').style.display  = 'none';
+  document.getElementById('sofor-detay-error').style.display   = 'none';
+
+  // Header'ı hemen doldur (davet bilgisinden)
+  const initials = (davet.ad || '—').split(/\s+/).map(s => s[0] || '').slice(0, 2).join('').toUpperCase();
+  document.getElementById('sofor-detay-avatar').textContent = initials || '—';
+  document.getElementById('sofor-detay-ad').textContent     = davet.ad || '—';
+  const tel = davet.telefon || '';
+  const plaka = davet.arac_id ? (vehicles.find(v => v.id === davet.arac_id)?.plaka || davet.arac_id) : null;
+  document.getElementById('sofor-detay-sub').innerHTML = [
+    tel ? `<span style="font-family:var(--font-mono);">${_esc(tel)}</span>` : '',
+    plaka ? `<span style="background:rgba(56,189,248,.12);color:#38bdf8;padding:1px 7px;border-radius:99px;font-weight:600;">${_esc(plaka)}</span>` : ''
+  ].filter(Boolean).join(' · ') || '—';
+
+  // Tel butonu
+  const callBtn = document.getElementById('sofor-detay-call');
+  if (tel) {
+    callBtn.href = 'tel:' + tel.replace(/[\s\-\(\)]/g, '');
+    callBtn.style.opacity = '';
+    callBtn.style.pointerEvents = '';
+  } else {
+    callBtn.removeAttribute('href');
+    callBtn.style.opacity = '.5';
+    callBtn.style.pointerEvents = 'none';
+  }
+
+  try {
+    const sb = getSB();
+    // Şoförün tüm iş emirlerini çek (sofor_user_id eşleşen, max 200 — ihtiyaç olursa daha fazlası)
+    const { data, error } = await sb
+      .from('is_emirleri')
+      .select('id, durum, arac_plaka, musteri_adi, konteyner_no, kont_tip, yukle_yeri, teslim_yeri, atama_zamani, yola_zaman, fabrika_giris, fabrika_cikis, teslim_zamani, baslangic_km, bitis_km, konum_lat, konum_lng, konum_zaman, created_at')
+      .eq('sofor_user_id', davet.kullanan_user_id)
+      .order('id', { ascending: false })
+      .limit(200);
+    if (error) throw error;
+
+    _soforDetayState.isemirleri = data || [];
+    _soforDetayRender();
+    document.getElementById('sofor-detay-loading').style.display = 'none';
+    document.getElementById('sofor-detay-icerik').style.display  = 'flex';
+  } catch (err) {
+    console.error('Şoför detay hatası:', err);
+    document.getElementById('sofor-detay-loading').style.display = 'none';
+    const errEl = document.getElementById('sofor-detay-error');
+    errEl.style.display = 'block';
+    errEl.textContent = 'Şoför verileri yüklenemedi: ' + (err?.message || 'hata');
+  }
+}
+
+function closeSoforDetayModal() {
+  const bg = document.getElementById('sofor-detay-modal-bg');
+  if (bg) bg.classList.add('hidden');
+  _soforDetayState = { davet: null, isemirleri: [], sonIsEmri: null, aktifIsEmri: null };
+}
+
+function _soforDetayRender() {
+  const list = _soforDetayState.isemirleri;
+  const davet = _soforDetayState.davet;
+  const now = Date.now();
+
+  // KPI: Toplam tamamlanan
+  const tamamlanan = list.filter(e => e.durum === 'Teslim Edildi');
+  document.getElementById('sofor-detay-kpi-toplam').textContent = tamamlanan.length;
+
+  // KPI: Bu ay (created_at veya teslim_zamani'na göre)
+  const ay = new Date().getMonth(), yil = new Date().getFullYear();
+  const buAy = list.filter(e => {
+    const t = e.teslim_zamani || e.created_at || e.atama_zamani;
+    if (!t) return false;
+    const d = new Date(t);
+    return d.getFullYear() === yil && d.getMonth() === ay;
+  }).length;
+  document.getElementById('sofor-detay-kpi-buay').textContent = buAy;
+
+  // KPI: Toplam Km — bitis_km - baslangic_km farkları
+  const toplamKm = list.reduce((sum, e) => {
+    if (e.baslangic_km != null && e.bitis_km != null && e.bitis_km > e.baslangic_km) {
+      return sum + (e.bitis_km - e.baslangic_km);
+    }
+    return sum;
+  }, 0);
+  document.getElementById('sofor-detay-kpi-km').textContent = toplamKm > 0
+    ? toplamKm.toLocaleString('tr-TR')
+    : '—';
+
+  // KPI: Son aktif (en son konum_zaman veya teslim_zamani veya created_at)
+  let sonAktivite = null;
+  list.forEach(e => {
+    [e.konum_zaman, e.teslim_zamani, e.fabrika_cikis, e.fabrika_giris, e.yola_zaman].forEach(t => {
+      if (t) {
+        const ts = new Date(t).getTime();
+        if (isFinite(ts) && (!sonAktivite || ts > sonAktivite)) sonAktivite = ts;
+      }
+    });
+  });
+  if (sonAktivite) {
+    const min = Math.floor((now - sonAktivite) / 60000);
+    let lbl, sub;
+    if (min < 5) {
+      lbl = 'Şimdi';
+      sub = 'çevrimiçi';
+      document.getElementById('sofor-detay-online').style.display = 'inline-block';
+    } else if (min < 60) {
+      lbl = min + ' dk';
+      sub = 'önce';
+    } else if (min < 1440) {
+      lbl = Math.floor(min / 60) + ' sa';
+      sub = 'önce';
+    } else {
+      lbl = Math.floor(min / 1440) + ' gün';
+      sub = 'önce';
+    }
+    document.getElementById('sofor-detay-kpi-sonaktif').textContent = lbl;
+    document.getElementById('sofor-detay-kpi-sonaktif-sub').textContent = sub;
+  } else {
+    document.getElementById('sofor-detay-kpi-sonaktif').textContent = '—';
+    document.getElementById('sofor-detay-kpi-sonaktif-sub').textContent = 'kayıt yok';
+  }
+
+  // Aktif iş emri (durum != Teslim Edildi/İptal)
+  const aktif = list.find(e => e.durum && e.durum !== 'Teslim Edildi' && e.durum !== 'İptal');
+  _soforDetayState.aktifIsEmri = aktif || null;
+  if (aktif) {
+    const sec = document.getElementById('sofor-detay-aktif-section');
+    sec.style.display = 'block';
+    const durumColor = ({
+      'Bekliyor': '#f59e0b', 'Yolda': '#38bdf8', 'Fabrikada': '#a78bfa', 'Teslim Edildi': '#22c55e'
+    })[aktif.durum] || 'var(--text)';
+    document.getElementById('sofor-detay-aktif').innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+        <span style="font-weight:700;font-size:13px;color:${durumColor};">${aktif.durum}</span>
+        ${aktif.arac_plaka ? `<span style="font-family:var(--font-mono);font-weight:700;color:var(--accent);">${_esc(aktif.arac_plaka)}</span>` : ''}
+        ${aktif.kont_tip ? `<span style="font-size:10.5px;background:var(--surface3);padding:1px 6px;border-radius:99px;">${_esc(aktif.kont_tip)}</span>` : ''}
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);">
+        ${_esc(aktif.musteri_adi || '—')}${aktif.yukle_yeri || aktif.teslim_yeri ? ` · ${_esc(aktif.yukle_yeri || '?')} → ${_esc(aktif.teslim_yeri || '?')}` : ''}
+      </div>
+      <div style="margin-top:6px;">
+        <button onclick="closeSoforDetayModal();openOpsDrawer(${aktif.id});" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;">İş Emrini Aç →</button>
+      </div>`;
+  } else {
+    document.getElementById('sofor-detay-aktif-section').style.display = 'none';
+  }
+
+  // Son iş emri (en yüksek id)
+  const sonIs = list[0] || null;
+  _soforDetayState.sonIsEmri = sonIs;
+  const sonHost = document.getElementById('sofor-detay-son-aktivite');
+  if (sonIs) {
+    const sonTar = sonIs.teslim_zamani || sonIs.atama_zamani || sonIs.created_at;
+    const sonTarTxt = sonTar ? new Date(sonTar).toLocaleString('tr-TR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+    const km = (sonIs.baslangic_km != null && sonIs.bitis_km != null && sonIs.bitis_km > sonIs.baslangic_km)
+      ? (sonIs.bitis_km - sonIs.baslangic_km).toLocaleString('tr-TR') + ' km'
+      : null;
+    sonHost.innerHTML = `
+      <div style="background:var(--bg-sunk);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color .15s;"
+           onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"
+           onclick="closeSoforDetayModal();openOpsDrawer(${sonIs.id});">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="font-family:var(--font-mono);font-weight:700;color:var(--accent);">#${sonIs.id}</span>
+          ${sonIs.arac_plaka ? `<span style="font-family:var(--font-mono);font-size:11.5px;font-weight:600;">${_esc(sonIs.arac_plaka)}</span>` : ''}
+          <span class="ops-badge ${(sonIs.durum||'').toLowerCase()}" style="font-size:10px;padding:2px 7px;border-radius:99px;background:rgba(255,255,255,.06);font-weight:700;">${_esc(sonIs.durum || '—')}</span>
+          ${km ? `<span style="font-size:10.5px;color:#22c55e;font-family:var(--font-mono);">${km}</span>` : ''}
+        </div>
+        <div style="font-size:11.5px;color:var(--text2);margin-bottom:2px;">${_esc(sonIs.musteri_adi || '—')}${sonIs.konteyner_no ? ' · ' + _esc(String(sonIs.konteyner_no).split('\n')[0]) : ''}</div>
+        <div style="font-size:10.5px;color:var(--muted);">${sonTarTxt}${sonIs.yukle_yeri || sonIs.teslim_yeri ? ' · ' + _esc(sonIs.yukle_yeri || '?') + ' → ' + _esc(sonIs.teslim_yeri || '?') : ''}</div>
+      </div>
+      ${list.length > 1 ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;">+ ${list.length - 1} önceki iş emri</div>` : ''}`;
+  } else {
+    sonHost.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:12px;">Bu şoför için iş emri kaydı yok.</div>';
+  }
+
+  // Son lokasyon
+  let sonKonumIs = null;
+  list.forEach(e => {
+    if (e.konum_lat != null && e.konum_lng != null && e.konum_zaman) {
+      if (!sonKonumIs || new Date(e.konum_zaman).getTime() > new Date(sonKonumIs.konum_zaman).getTime()) {
+        sonKonumIs = e;
+      }
+    }
+  });
+  const konumSec = document.getElementById('sofor-detay-konum-section');
+  const konumBtn = document.getElementById('sofor-detay-konum-btn');
+  if (sonKonumIs) {
+    konumSec.style.display = 'block';
+    const tar = new Date(sonKonumIs.konum_zaman).toLocaleString('tr-TR');
+    document.getElementById('sofor-detay-konum').innerHTML = `
+      <div>📍 ${parseFloat(sonKonumIs.konum_lat).toFixed(5)}, ${parseFloat(sonKonumIs.konum_lng).toFixed(5)}</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:2px;">Son güncelleme: ${tar} · İş emri #${sonKonumIs.id}</div>`;
+    konumBtn.disabled = false;
+    konumBtn.style.opacity = '';
+    konumBtn.dataset.lat = sonKonumIs.konum_lat;
+    konumBtn.dataset.lng = sonKonumIs.konum_lng;
+  } else {
+    konumSec.style.display = 'none';
+    konumBtn.disabled = true;
+    konumBtn.style.opacity = '.5';
+    delete konumBtn.dataset.lat;
+    delete konumBtn.dataset.lng;
+  }
+
+  // İş emri butonu
+  const isBtn = document.getElementById('sofor-detay-isemri-btn');
+  if (sonIs) {
+    isBtn.disabled = false;
+    isBtn.style.opacity = '';
+  } else {
+    isBtn.disabled = true;
+    isBtn.style.opacity = '.5';
+  }
+
+  // Davet bilgisi
+  const expTxt = davet.expires_at ? new Date(davet.expires_at).toLocaleString('tr-TR') : '—';
+  const kullanildiTxt = davet.kullanildi_at ? new Date(davet.kullanildi_at).toLocaleString('tr-TR') : '—';
+  document.getElementById('sofor-detay-davet').innerHTML = `
+    <div>📨 Davet: <span style="font-family:var(--font-mono);">${_esc(davet.davet_kodu)}</span> · oluşturuldu ${new Date(davet.created_at).toLocaleDateString('tr-TR')}</div>
+    <div>✅ Kullanım tarihi: <span style="font-family:var(--font-mono);color:#22c55e;">${kullanildiTxt}</span></div>
+    ${davet.notlar ? `<div>📝 Not: <i>${_esc(davet.notlar)}</i></div>` : ''}`;
+}
+
+function soforDetayKonumAc() {
+  const btn = document.getElementById('sofor-detay-konum-btn');
+  const lat = btn?.dataset?.lat;
+  const lng = btn?.dataset?.lng;
+  if (!lat || !lng) return;
+  window.open('https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lng), '_blank', 'noopener,noreferrer');
+}
+
+function soforDetaySonIsEmri() {
+  const sonIs = _soforDetayState.sonIsEmri;
+  if (!sonIs) return;
+  closeSoforDetayModal();
+  if (typeof openOpsDrawer === 'function') openOpsDrawer(sonIs.id);
+}
+
+// ESC ile modal kapat
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') {
+    const bg = document.getElementById('sofor-detay-modal-bg');
+    if (bg && !bg.classList.contains('hidden')) {
+      e.preventDefault();
+      closeSoforDetayModal();
+    }
+  }
+});
 
 // Basit HTML escape (XSS güvenliği)
 function _esc(s) {
