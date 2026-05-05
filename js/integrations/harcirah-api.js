@@ -133,8 +133,27 @@
       _saveLs(LS.tarifeler, list);
       return row;
     }
-    const created = await _sb('POST', 'harcirah_tarifeleri', row);
-    return Array.isArray(created) ? created[0] : created;
+    // Cloud: SECURITY DEFINER RPC ile insert (RLS bypass + firma_id auto-resolve)
+    const newId = await _sb('POST', 'rpc/harcirah_tarife_create', {
+      p_baslik:           row.baslik,
+      p_tutar:            row.tutar,
+      p_bolgeler:         row.bolgeler,
+      p_alim_yeri:        row.alim_yeri,
+      p_teslim_yeri:      row.teslim_yeri,
+      p_bos_donus_yeri:   row.bos_donus_yeri,
+      p_kont_tip:         row.kont_tip,
+      p_kont_durum:       row.kont_durum,
+      p_dorse_tipi:       row.dorse_tipi,
+      p_para_birimi:      row.para_birimi,
+      p_tahmini_km:       row.tahmini_km,
+      p_tahmini_sure_dk:  row.tahmini_sure_dk,
+      p_gecerli_baslangic: row.gecerli_baslangic,
+      p_gecerli_bitis:    row.gecerli_bitis,
+      p_aktif_mi:         row.aktif_mi,
+      p_oncelik:          row.oncelik,
+      p_notlar:           row.notlar
+    });
+    return { ...row, id: newId };
   }
 
   async function tarifeUpdate(id, patch) {
@@ -265,8 +284,17 @@
       _saveLs(LS.ekHizmetler, list);
       return row;
     }
-    const created = await _sb('POST', 'harcirah_ek_hizmetler', row);
-    return Array.isArray(created) ? created[0] : created;
+    // Cloud: SECURITY DEFINER RPC ile upsert
+    const newId = await _sb('POST', 'rpc/harcirah_ek_hizmet_create', {
+      p_kod:            row.kod,
+      p_ad:             row.ad,
+      p_tutar:          row.tutar,
+      p_hesaplama_tipi: row.hesaplama_tipi,
+      p_aciklama:       row.aciklama,
+      p_aktif_mi:       row.aktif_mi,
+      p_sira:           row.sira
+    });
+    return { ...row, id: newId };
   }
 
   async function ekHizmetUpdate(id, patch) {

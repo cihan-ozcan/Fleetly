@@ -1405,7 +1405,7 @@
         <div class="srm-table-wrap">
           <table class="srm-table" id="harc-tarife-table">
             <thead><tr>
-              <th>Etiket</th><th>Alım</th><th>Bölgeler</th><th>Tip</th><th>D/B</th><th>Tutar (₺)</th><th>Geçerlilik</th><th>Durum</th><th class="col-islem">İşlem</th>
+              <th>Etiket</th><th>Bölgeler</th><th>Tip</th><th>D/B</th><th>Tutar (₺)</th><th>Geçerlilik</th><th>Durum</th><th class="col-islem">İşlem</th>
             </tr></thead>
             <tbody id="harc-tarife-tbody"></tbody>
           </table>
@@ -1488,11 +1488,7 @@
         <label>Tutar (₺) <span style="color:var(--red);">*</span></label>
         <input id="harc-t-tutar" class="srm-inp" type="number" min="0" step="0.01" placeholder="500" oninput="harcOtoBaslik()" />
       </div>
-      <!-- Rota -->
-      <div class="srm-group">
-        <label>Alım Yeri <span style="font-size:10px;color:var(--muted);font-weight:500;">(opsiyonel — boş = tüm alımlar / limanlar)</span></label>
-        <input id="harc-t-alim" class="srm-inp" placeholder="Kumport / Mardaş / Medkon…" autocomplete="off" />
-      </div>
+      <!-- Bölgeler (zorunlu — ana ayrım) -->
       <div class="srm-group">
         <label style="display:flex;align-items:center;justify-content:space-between;">
           <span>📍 Bölge / Semt Listesi <span style="color:var(--red);">*</span></span>
@@ -1503,8 +1499,11 @@
           💡 Bu tarife yukarıdaki semtlerden <b>en az birine</b> eşleşen iş emrinde otomatik uygulanır.
           Örn: <code style="background:var(--bg-sunk);padding:1px 4px;border-radius:3px;">Çatalca</code> yazılan tarife "Mega Metal Çatalca" iş emrine eşleşir.
         </div>
-        <!-- Eski tek-teslim kolonu yine destekli; gizli sürdürür -->
+        <!-- Gizli alanlar (geriye uyum + DB kolonları için) -->
+        <input type="hidden" id="harc-t-alim" />
         <input type="hidden" id="harc-t-teslim" />
+        <input type="hidden" id="harc-t-bos-donus" />
+        <input type="hidden" id="harc-t-sure" />
       </div>
 
       <!-- Etiket / Başlık (opsiyonel, otomatik üretilir) -->
@@ -1518,10 +1517,10 @@
           Bu alan tablo görünümünde tarifeyi tanımak için kısa bir etikettir. Örn: <code style="background:var(--bg-sunk);padding:1px 4px;border-radius:3px;">Avrupa Yakası Batı (500₺)</code>
         </div>
       </div>
-      <!-- Tip + Durum + Boş Dönüş -->
-      <div style="display:grid;grid-template-columns:160px 130px 1fr;gap:12px;">
+      <!-- Tip + Durum + Tahmini Km (sadeleştirilmiş) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
         <div class="srm-group">
-          <label>Konteyner Tipi</label>
+          <label>Konteyner Tipi <span style="font-size:10px;color:var(--muted);font-weight:500;">(opsiyonel)</span></label>
           <select id="harc-t-kont-tip" class="srm-inp">
             <option value="">Tüm Tipler</option>
             <option value="20 DC">20' DC</option>
@@ -1532,7 +1531,7 @@
           </select>
         </div>
         <div class="srm-group">
-          <label>Dolu / Boş</label>
+          <label>Dolu / Boş <span style="font-size:10px;color:var(--muted);font-weight:500;">(opsiyonel)</span></label>
           <select id="harc-t-kont-durum" class="srm-inp">
             <option value="">Her İkisi</option>
             <option value="Dolu">Dolu</option>
@@ -1540,25 +1539,12 @@
           </select>
         </div>
         <div class="srm-group">
-          <label>Boş Dönüş Yeri <span style="font-size:10px;color:var(--muted);font-weight:500;">(opsiyonel)</span></label>
-          <input id="harc-t-bos-donus" class="srm-inp" placeholder="Marport / Özmarmara…" autocomplete="off" />
-        </div>
-      </div>
-      <!-- Tahmini km/süre + öncelik -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-        <div class="srm-group">
           <label>Tahmini Km <span style="font-size:10px;color:var(--muted);font-weight:500;">(opsiyonel)</span></label>
           <input id="harc-t-km" class="srm-inp" type="number" min="0" step="1" placeholder="120" />
         </div>
-        <div class="srm-group">
-          <label>Tahmini Süre (dk)</label>
-          <input id="harc-t-sure" class="srm-inp" type="number" min="0" step="5" placeholder="180" />
-        </div>
-        <div class="srm-group">
-          <label>Match Önceliği <span style="font-size:10px;color:var(--muted);font-weight:500;">(düşük = önce)</span></label>
-          <input id="harc-t-oncelik" class="srm-inp" type="number" min="1" max="999" step="1" placeholder="100" value="100" />
-        </div>
       </div>
+      <!-- Match önceliği gizli (kullanıcı için kafa karıştırıcı, varsayılan 100) -->
+      <input type="hidden" id="harc-t-oncelik" value="100" />
       <!-- Geçerlilik -->
       <div style="display:grid;grid-template-columns:1fr 1fr 130px;gap:12px;align-items:end;">
         <div class="srm-group">
