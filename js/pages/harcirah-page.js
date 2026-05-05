@@ -279,12 +279,60 @@
     el.textContent = msg || '';
   }
 
+  // Otomatik etiket üretme: bölgeler + tutar'dan kısa bir başlık türet
+  function _otoBaslikUret() {
+    const bolgelerRaw = _getVal('harc-t-bolgeler');
+    const tutarRaw    = _getVal('harc-t-tutar');
+    const tutarNum    = parseFloat(tutarRaw);
+    const tutarTxt    = isFinite(tutarNum) && tutarNum > 0
+      ? ` (${tutarNum.toLocaleString('tr-TR')} ₺)`
+      : '';
+    const bolgeler = bolgelerRaw
+      ? bolgelerRaw.split(/[,;\n]/).map(s => s.trim()).filter(Boolean)
+      : [];
+    if (bolgeler.length === 0) {
+      const alim = _getVal('harc-t-alim');
+      if (alim && tutarTxt) return `${alim} → Genel${tutarTxt}`;
+      if (tutarTxt) return `Genel Tarife${tutarTxt}`;
+      return '';
+    }
+    if (bolgeler.length === 1) return `${bolgeler[0]}${tutarTxt}`;
+    if (bolgeler.length === 2) return `${bolgeler[0]}-${bolgeler[1]}${tutarTxt}`;
+    return `${bolgeler[0]}-${bolgeler[1]} +${bolgeler.length - 2}${tutarTxt}`;
+  }
+
+  // Bölge/tutar yazılırken başlık BOŞSA placeholder'ı dinamik göster (otomatik öneri)
+  function harcOtoBaslik() {
+    const inp = _$('harc-t-baslik');
+    if (!inp) return;
+    const oneri = _otoBaslikUret();
+    // Kullanıcı bir şey yazmadıysa placeholder olarak göster
+    inp.placeholder = oneri || 'Bölge listesinden otomatik üretilecek…';
+  }
+
+  // "Otomatik Üret" butonu: tahmini başlığı doğrudan input'a yaz
+  function harcOtoBaslikUret() {
+    const inp = _$('harc-t-baslik');
+    if (!inp) return;
+    const oneri = _otoBaslikUret();
+    if (!oneri) {
+      if (typeof toast === 'function') toast('Önce tutar ve bölge gir', 'warn');
+      else alert('Önce tutar ve bölge gir.');
+      return;
+    }
+    inp.value = oneri;
+    inp.focus();
+  }
+
   async function harcTarifeSubmit() {
     _showErr('');
-    const baslik = _getVal('harc-t-baslik');
+    let baslik   = _getVal('harc-t-baslik');
     const tutar  = _getVal('harc-t-tutar');
-    if (!baslik) { _showErr('Başlık zorunlu.'); _$('harc-t-baslik')?.focus(); return; }
     if (!tutar || isNaN(Number(tutar))) { _showErr('Geçerli bir tutar girin.'); _$('harc-t-tutar')?.focus(); return; }
+    // Başlık boşsa otomatik üret
+    if (!baslik) {
+      baslik = _otoBaslikUret() || 'Genel Tarife';
+    }
 
     const bolgelerRaw = _getVal('harc-t-bolgeler');
     const bolgelerArr = bolgelerRaw
@@ -551,4 +599,6 @@
   window.harcEkHizmetSubmit         = harcEkHizmetSubmit;
   window.harcEkHizmetDelete         = harcEkHizmetDelete;
   window.harcEkHizmetSeed           = harcEkHizmetSeed;
+  window.harcOtoBaslik              = harcOtoBaslik;
+  window.harcOtoBaslikUret          = harcOtoBaslikUret;
 })();

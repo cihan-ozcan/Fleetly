@@ -1405,7 +1405,7 @@
         <div class="srm-table-wrap">
           <table class="srm-table" id="harc-tarife-table">
             <thead><tr>
-              <th>Başlık</th><th>Alım</th><th>Bölgeler</th><th>Tip</th><th>D/B</th><th>Tutar (₺)</th><th>Geçerlilik</th><th>Durum</th><th class="col-islem">İşlem</th>
+              <th>Etiket</th><th>Alım</th><th>Bölgeler</th><th>Tip</th><th>D/B</th><th>Tutar (₺)</th><th>Geçerlilik</th><th>Durum</th><th class="col-islem">İşlem</th>
             </tr></thead>
             <tbody id="harc-tarife-tbody"></tbody>
           </table>
@@ -1483,16 +1483,10 @@
     </div>
 
     <div class="srm-modal-body" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;max-height:75vh;overflow-y:auto;">
-      <!-- Başlık + tutar -->
-      <div style="display:grid;grid-template-columns:1fr 160px;gap:12px;">
-        <div class="srm-group">
-          <label>Başlık <span style="color:var(--red);">*</span></label>
-          <input id="harc-t-baslik" class="srm-inp" placeholder="Kumport → Çatalca 40 DC Dolu" autocomplete="off" />
-        </div>
-        <div class="srm-group">
-          <label>Tutar (₺) <span style="color:var(--red);">*</span></label>
-          <input id="harc-t-tutar" class="srm-inp" type="number" min="0" step="0.01" placeholder="2500" />
-        </div>
+      <!-- Tutar (üstte, en önemli alan) -->
+      <div class="srm-group">
+        <label>Tutar (₺) <span style="color:var(--red);">*</span></label>
+        <input id="harc-t-tutar" class="srm-inp" type="number" min="0" step="0.01" placeholder="500" oninput="harcOtoBaslik()" />
       </div>
       <!-- Rota -->
       <div class="srm-group">
@@ -1504,13 +1498,25 @@
           <span>📍 Bölge / Semt Listesi <span style="color:var(--red);">*</span></span>
           <span style="font-size:10px;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0;">virgül veya yeni satır ile ayır</span>
         </label>
-        <textarea id="harc-t-bolgeler" class="srm-inp" rows="3" placeholder="Avcılar, Esenyurt, Beylikdüzü, Hadımköy, Çatalca, Silivri" style="resize:vertical;font-family:var(--font-body);"></textarea>
+        <textarea id="harc-t-bolgeler" class="srm-inp" rows="3" placeholder="Avcılar, Esenyurt, Beylikdüzü, Hadımköy, Çatalca, Silivri" style="resize:vertical;font-family:var(--font-body);" oninput="harcOtoBaslik()"></textarea>
         <div style="font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.5;">
           💡 Bu tarife yukarıdaki semtlerden <b>en az birine</b> eşleşen iş emrinde otomatik uygulanır.
-          Örn: "Çatalca" yazılan tarife "Mega Metal Çatalca" iş emrine eşleşir.
+          Örn: <code style="background:var(--bg-sunk);padding:1px 4px;border-radius:3px;">Çatalca</code> yazılan tarife "Mega Metal Çatalca" iş emrine eşleşir.
         </div>
         <!-- Eski tek-teslim kolonu yine destekli; gizli sürdürür -->
         <input type="hidden" id="harc-t-teslim" />
+      </div>
+
+      <!-- Etiket / Başlık (opsiyonel, otomatik üretilir) -->
+      <div class="srm-group">
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Etiket <span style="font-size:10px;color:var(--muted);font-weight:500;">(opsiyonel — boş bırakırsan otomatik oluşturulur)</span></span>
+          <button type="button" onclick="harcOtoBaslikUret()" style="background:transparent;border:1px solid var(--border);color:var(--accent);border-radius:5px;padding:3px 8px;font-size:10.5px;font-weight:600;cursor:pointer;">⚡ Otomatik Üret</button>
+        </label>
+        <input id="harc-t-baslik" class="srm-inp" placeholder="Bölge listesinden otomatik üretilecek…" autocomplete="off" />
+        <div style="font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.5;">
+          Bu alan tablo görünümünde tarifeyi tanımak için kısa bir etikettir. Örn: <code style="background:var(--bg-sunk);padding:1px 4px;border-radius:3px;">Avrupa Yakası Batı (500₺)</code>
+        </div>
       </div>
       <!-- Tip + Durum + Boş Dönüş -->
       <div style="display:grid;grid-template-columns:160px 130px 1fr;gap:12px;">
