@@ -54,6 +54,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- Leaflet.draw — polygon çizimi (Limanlar Phase 2 — 2026_05_06l) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <!-- Gizli config — .gitignore'da, repoya GİTMEZ -->
@@ -306,6 +309,10 @@
       <button class="sidebar__item" onclick="openFleetFullscreen();closeSidebar&&closeSidebar()" title="Tüm sürücüleri tek haritada izle (sürücüler arası tek tıkla geçiş)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 22s-7-7-7-12a7 7 0 0 1 14 0c0 5-7 12-7 12z"/><path d="M3 8l3 1M21 8l-3 1M3 14l3-1M21 14l-3-1"/></svg>
         <span class="sidebar__item-label">Canlı Takip</span>
+      </button>
+      <button class="sidebar__item" onclick="openLimanlarPage();closeSidebar&&closeSidebar()" title="Liman / Fabrika polygonları — sıra tahmini için">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 9v12M15 9v12"/></svg>
+        <span class="sidebar__item-label">Limanlar</span>
       </button>
       <button class="sidebar__item" onclick="openFiloPage();closeSidebar&&closeSidebar()" title="Filo Yönetimi (Çekici / Dorse)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17h2l1-3h8l1 3h2"/><path d="M14 17V7H3v10"/><path d="M14 10h5l3 3v4h-3"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
@@ -3025,6 +3032,116 @@
     font-size: 10px; color: var(--text);
   }
 </style>
+
+<!-- =============================================================================
+     LİMANLAR / FABRİKALAR — Polygon yöneticisi (Phase 2 — 2026_05_06l)
+     ============================================================================= -->
+<div id="limanlar-page" class="page-fullscreen hidden">
+  <style>
+    #limanlar-page {
+      position: fixed; inset: 0; z-index: 1500; background: var(--bg, #0b1220);
+      color: var(--text, #f1f5f9); display: flex; flex-direction: column; overflow: hidden;
+    }
+    #limanlar-page.hidden { display: none; }
+    #limanlar-topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; border-bottom: 1px solid var(--border, #1e293b);
+      background: var(--surface, #0f172a);
+    }
+    #limanlar-topbar h1 { margin: 0; font-size: 17px; font-weight: 700; }
+    #limanlar-topbar .sub { font-size: 12px; color: var(--text-muted, #64748b); }
+    #limanlar-body { flex: 1; display: flex; min-height: 0; }
+    #limanlar-list-aside {
+      width: 320px; flex-shrink: 0; border-right: 1px solid var(--border, #1e293b);
+      overflow-y: auto; background: var(--surface, #0f172a);
+    }
+    #limanlar-list { padding: 8px; }
+    .liman-row {
+      padding: 12px; border: 1px solid var(--border); border-radius: 8px;
+      margin-bottom: 6px; cursor: pointer;
+      background: var(--surface);
+    }
+    .liman-row:hover { border-color: var(--accent, #f97316); }
+    .liman-row.is-active { border-color: var(--accent); background: rgba(249,115,22,.08); }
+    .liman-row .top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .liman-row .ad { font-weight: 700; font-size: 13px; color: var(--text); flex: 1; }
+    .liman-row .meta { font-size: 11px; color: var(--text-muted); }
+    .liman-row .stats { display: flex; gap: 8px; margin-top: 6px; font-size: 11px; }
+    .liman-row .stats .pill {
+      padding: 1px 6px; border-radius: 4px; font-weight: 700;
+    }
+    #limanlar-main { flex: 1; position: relative; min-width: 0; }
+    #limanlar-map { width: 100%; height: 100%; }
+    #limanlar-form-panel {
+      position: absolute; right: 14px; top: 14px; z-index: 1000;
+      width: 320px; padding: 14px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.3);
+    }
+    #limanlar-form-panel.hidden { display: none; }
+    #limanlar-form-panel h3 { margin: 0 0 10px; font-size: 14px; }
+    #limanlar-form-panel label { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .3px; font-weight: 700; }
+    #limanlar-form-panel input, #limanlar-form-panel select, #limanlar-form-panel textarea {
+      width: 100%; padding: 8px 10px; font-size: 12px;
+      background: var(--surface, #0f172a); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); margin-bottom: 10px;
+    }
+    #limanlar-form-panel .row { display: flex; gap: 6px; }
+  </style>
+
+  <div id="limanlar-topbar">
+    <button class="ops-btn ops-btn--ghost ops-btn--sm" onclick="closeLimanlarPage()">← Kapat</button>
+    <div style="flex:1;">
+      <h1>🏗️ Limanlar &amp; Fabrikalar</h1>
+      <div class="sub">Polygon çizip kaydet — şoförler içeri girince otomatik ziyaret kayıt + sıra tahmini</div>
+    </div>
+    <button class="ops-btn ops-btn--primary ops-btn--sm" onclick="limanlarYeniBaslat()" id="limanlar-yeni-btn">
+      + Yeni Liman Çiz
+    </button>
+    <button class="ops-btn ops-btn--quiet ops-btn--sm" onclick="limanlarYukle()">↻ Yenile</button>
+  </div>
+
+  <div id="limanlar-body">
+    <aside id="limanlar-list-aside">
+      <div style="padding: 10px 14px; border-bottom: 1px solid var(--border);">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-muted);">
+          Tanımlı Limanlar
+        </span>
+        <span id="limanlar-count" style="font-family:var(--ops-font-mono, var(--font-mono));margin-left:6px;font-size:11px;font-weight:700;color:var(--accent);"></span>
+      </div>
+      <div id="limanlar-list">Yükleniyor…</div>
+    </aside>
+    <main id="limanlar-main">
+      <div id="limanlar-map"></div>
+
+      <!-- Form paneli: yeni liman çizilirken veya düzenlerken görünür -->
+      <div id="limanlar-form-panel" class="hidden">
+        <h3 id="limanlar-form-baslik">Yeni Liman</h3>
+        <label>Ad *</label>
+        <input id="liman-form-ad" type="text" placeholder="Kumport, Mardaş, Mega Metal Çatalca..." />
+        <label>Tip</label>
+        <select id="liman-form-tip">
+          <option value="liman">⚓ Liman</option>
+          <option value="fabrika">🏭 Fabrika</option>
+          <option value="terminal">🚉 Terminal</option>
+          <option value="depo">📦 Depo</option>
+          <option value="servis">🔧 Servis</option>
+        </select>
+        <label>Görünürlük</label>
+        <select id="liman-form-firma-ozel">
+          <option value="false">🌐 Genel (tüm firmalar görür)</option>
+          <option value="true">🔒 Sadece firmamız</option>
+        </select>
+        <label>Notlar (opsiyonel)</label>
+        <textarea id="liman-form-notlar" rows="2" placeholder="Çalışma saatleri, kapı no..."></textarea>
+        <div class="row">
+          <button class="ops-btn ops-btn--primary ops-btn--sm" style="flex:1;" onclick="limanFormKaydet()">Kaydet</button>
+          <button class="ops-btn ops-btn--ghost ops-btn--sm" onclick="limanFormKapat()">İptal</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
 
 <!-- ── HIZLI MÜŞTERİ EKLE MODAL (iş emri formu açıkken üstüne biner) ─── -->
 <div id="ops-hizli-musteri-bg" class="srm-backdrop hidden"
@@ -5808,6 +5925,8 @@
 <!-- Şoför Koordinasyon Modülü — css/db/migrations/2026_05_05j__surucu_paylasimlari.sql -->
 <script src="js/integrations/surucu-paylasim-api.js"></script>
 <script src="js/pages/surucu-paylasim-page.js"></script>
+<!-- Limanlar / Fabrikalar (Phase 2) — css/db/migrations/2026_05_06l__limanlar_ve_ziyaretler.sql -->
+<script src="js/pages/limanlar-page.js"></script>
 
 <!-- ─────────────────────────────────────────────────────────────────────
      SÜRÜCÜ TAKİBİ — FOTOĞRAF LIGHTBOX MODALI

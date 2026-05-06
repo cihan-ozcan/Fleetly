@@ -351,6 +351,10 @@
     } else {
       UI._dashCluster = null;
     }
+    // Liman polygon overlay — Phase 2 (2026_05_06l)
+    if (typeof _limanOverlayBaslat === 'function') {
+      _limanOverlayBaslat(map, 'dashboard');
+    }
 
     // İlk fetch + periyodik yenileme + realtime
     UI.refreshLiveDriverMap();
