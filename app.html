@@ -1712,6 +1712,7 @@
           <select id="harc-t-kont-tip" class="srm-inp">
             <option value="">Tüm Tipler</option>
             <option value="20 DC">20' DC</option>
+            <option value="20 HC">20' HC</option>
             <option value="40 DC">40' DC</option>
             <option value="40 HC">40' HC</option>
             <option value="45 HC">45' HC</option>
@@ -3330,15 +3331,15 @@
           </div>
           <div class="srm-group">
             <label>Konteyner Durumu</label>
-            <select id="ops-m-kont-durum" class="srm-inp">
+            <select id="ops-m-kont-durum" class="srm-inp" onchange="opsKontDurumChanged()">
               <option value="Dolu">📦 Dolu Alım</option>
               <option value="Boş">🔲 Boş Alım</option>
             </select>
           </div>
           <div class="srm-group full">
             <label style="display:flex;align-items:center;justify-content:space-between;">
-              <span>Konteyner No(lar) *</span>
-              <span style="font-size:10px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">Birden fazlaysa her birini yeni satıra yazın</span>
+              <span id="ops-m-konteyner-label">Konteyner No(lar) *</span>
+              <span id="ops-m-konteyner-hint" style="font-size:10px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">Birden fazlaysa her birini yeni satıra yazın</span>
             </label>
             <textarea id="ops-m-konteyner" class="srm-inp" rows="3" placeholder="ABCU1234567&#10;HLBU3981430&#10;SEKU1484480" style="font-family:var(--ops-font-mono);font-weight:600;letter-spacing:.05em;" oninput="opsCokluPanelGuncelle()"></textarea>
           </div>
@@ -3393,6 +3394,7 @@
             <label>Konteyner Tipi</label>
             <div class="ops-step__kont-tip" id="ops-m-kont-tip-segmented">
               <button type="button" data-val="20 DC"  onclick="opsKontTipSec(this)">20 DC</button>
+              <button type="button" data-val="20 HC"  onclick="opsKontTipSec(this)">20 HC</button>
               <button type="button" data-val="40 DC"  onclick="opsKontTipSec(this)">40 DC</button>
               <button type="button" data-val="40 HC"  onclick="opsKontTipSec(this)">40 HC</button>
               <button type="button" data-val="45 HC"  onclick="opsKontTipSec(this)">45 HC</button>
@@ -3402,6 +3404,7 @@
             <select id="ops-m-kont-tip" style="display:none;">
               <option value=""></option>
               <option value="20 DC">20 DC</option>
+              <option value="20 HC">20 HC</option>
               <option value="40 DC">40 DC</option>
               <option value="40 HC">40 HC</option>
               <option value="45 HC">45 HC</option>
@@ -3455,14 +3458,18 @@
             <input id="ops-m-boslama-zaman" class="srm-inp ops-time-24h" type="datetime-local" lang="tr-TR" />
           </div>
           <div class="srm-group">
-            <label>Referans No</label>
+            <label id="ops-m-referans-label">Referans No</label>
             <input id="ops-m-referans" class="srm-inp" placeholder="BKG261558" style="font-family:var(--ops-font-mono);font-weight:600;" />
+            <div id="ops-m-referans-hint" style="font-size:10.5px;color:var(--text-muted);margin-top:4px;display:none;">
+              Şoför boş konteyneri bu referans numarasıyla teslim alacak.
+            </div>
           </div>
           <div class="srm-group">
             <label>Mühür No</label>
             <input id="ops-m-muhur" class="srm-inp" placeholder="M-12345" style="font-family:var(--ops-font-mono);font-weight:600;" />
           </div>
         </div>
+        <div class="ops-step__error" id="ops-step3-err"></div>
       </div>
 
       <!-- ============ ADIM 4: Onay & Notlar ============ -->
@@ -4569,6 +4576,7 @@
               <select class="srm-inp" id="f-tek-kont" onchange="_teklifTarifeBul()">
                 <option value="">—</option>
                 <option value="20 DC">20' DC</option>
+                <option value="20 HC">20' HC</option>
                 <option value="40 DC">40' DC</option>
                 <option value="40 HC">40' HC</option>
                 <option value="45 HC">45' HC</option>
@@ -4691,6 +4699,7 @@
               <select class="srm-inp" id="f-tarife-kont">
                 <option value="">— Tüm tipler —</option>
                 <option value="20 DC">20' DC</option>
+                <option value="20 HC">20' HC</option>
                 <option value="40 DC">40' DC</option>
                 <option value="40 HC">40' HC</option>
                 <option value="45 HC">45' HC</option>
