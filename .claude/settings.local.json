@@ -7,7 +7,12 @@
       "Bash(awk '/<div id=\"ops-drawer\"/{f=1} f' \"C:/Users/cihan/Desktop/Fleetly-main/app.html\")",
       "Bash(awk 'NR<=200{print NR\": \"$0}')",
       "Read(//c/Users/cihan/Desktop/**)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" ./gradlew :app:compileDebugKotlin --no-daemon -q)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" /c/Users/cihan/Desktop/Fleetly-Android/gradlew.bat -p /c/Users/cihan/Desktop/Fleetly-Android :app:compileDebugKotlin --no-daemon -q)",
+      "Bash(export JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\")",
+      "Bash(./gradlew :app:compileDebugKotlin --no-daemon -q)",
+      "PowerShell($env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; & \"C:\\\\Users\\\\cihan\\\\Desktop\\\\Fleetly-Android\\\\gradlew.bat\" -p \"C:\\\\Users\\\\cihan\\\\Desktop\\\\Fleetly-Android\" :app:compileDebugKotlin --no-daemon -q 2>&1 | Select-Object -Last 80)"
     ]
   }
 }
