@@ -2074,6 +2074,8 @@ async function opsRenderFleetMap() {
     }
     // Realtime subscription — is_emirleri UPDATE event'lerinde haritayı tazele
     _fleetRealtimeSubscribe();
+    // Liman polygon overlay — Phase 2 (2026_05_06l)
+    _limanOverlayBaslat(_fleetMap, 'fleet');
   }
   setTimeout(() => _fleetMap.invalidateSize(), 80);
 
@@ -4916,6 +4918,107 @@ function brandingHexInput() {
 }
 
 /* =============================================================================
+ * LİMAN POLYGON OVERLAY — 3 haritada paylaşılan layer (Phase 2 — 2026_05_06l)
+ * limanlari_listele() RPC + limanlar_yogunluk_ozet() RPC'leri kullanır.
+ * Migration uygulanmadıysa sessizce skip eder.
+ * ===========================================================================*/
+const _LIMAN_OVERLAY_RENK = {
+  'liman':    '#1a73e8',
+  'fabrika':  '#9c27b0',
+  'terminal': '#22c55e',
+  'depo':     '#f59e0b',
+  'servis':   '#7a8299'
+};
+const _LIMAN_OVERLAY_EMOJI = {
+  'liman': '⚓', 'fabrika': '🏭', 'terminal': '🚉', 'depo': '📦', 'servis': '🔧'
+};
+
+const _limanOverlayStore = {
+  fleet:     { layers: [], yogunluk: {}, refreshTimer: null },
+  fleetFull: { layers: [], yogunluk: {}, refreshTimer: null },
+  dashboard: { layers: [], yogunluk: {}, refreshTimer: null }
+};
+
+async function _limanlariYukle(map, key) {
+  if (!map) return;
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb) return;
+  const store = _limanOverlayStore[key];
+  if (!store) return;
+
+  let limanlar = [];
+  let yogunluk = {};
+  try {
+    const [lR, yR] = await Promise.all([
+      sb.rpc('limanlari_listele'),
+      sb.rpc('limanlar_yogunluk_ozet')
+    ]);
+    if (lR.error) throw lR.error;
+    limanlar = lR.data || [];
+    (yR.data || []).forEach(d => { yogunluk[d.liman_id] = d; });
+  } catch (err) {
+    // Migration uygulanmamışsa veya RPC yoksa sessizce çık
+    return;
+  }
+  store.yogunluk = yogunluk;
+
+  // Eski layer'ları temizle
+  store.layers.forEach(l => { try { map.removeLayer(l); } catch {} });
+  store.layers = [];
+
+  limanlar.forEach(l => {
+    if (!l.poligon_geojson) return;
+    try {
+      const geo = JSON.parse(l.poligon_geojson);
+      const renk = _LIMAN_OVERLAY_RENK[l.tip] || '#7a8299';
+      const y = yogunluk[l.id] || {};
+      const aktif = y.icerideki_arac || 0;
+      const ortDk = y.ort_bekleme_son1sa_dk;
+      // Yoğunluğa göre stil — kalabalıksa kalın kenar
+      const weight = aktif >= 5 ? 3 : aktif >= 1 ? 2 : 1;
+      const fillOpacity = aktif >= 5 ? 0.30 : aktif >= 1 ? 0.20 : 0.10;
+      const layer = L.geoJSON(geo, {
+        style: () => ({
+          color: renk, weight, opacity: 0.9,
+          fillColor: renk, fillOpacity,
+          interactive: true
+        })
+      }).addTo(map);
+
+      const emoji = _LIMAN_OVERLAY_EMOJI[l.tip] || '📍';
+      const stat = aktif > 0
+        ? `<b style="color:#f59e0b;">🅿️ ${aktif} araç içeride</b>` +
+          (ortDk ? `<br><span style="opacity:.85;">⏱ Ort. ${ortDk} dk bekleme (son 1sa)</span>` : '')
+        : '<span style="opacity:.65;">— Şu an boş</span>';
+      layer.bindTooltip(
+        `<div style="font:600 12px/1.4 system-ui;min-width:160px;">
+          <div>${emoji} <b>${(l.ad+'').replace(/[<>]/g,'')}</b></div>
+          <div style="margin-top:4px;">${stat}</div>
+        </div>`,
+        { direction: 'top', sticky: true, opacity: 0.95 }
+      );
+      store.layers.push(layer);
+    } catch (err) { /* parse hata, skip */ }
+  });
+}
+
+/** Bir harita için liman overlay'i etkinleştir + 90sn polling */
+function _limanOverlayBaslat(map, key) {
+  _limanlariYukle(map, key);
+  const store = _limanOverlayStore[key];
+  if (!store) return;
+  if (store.refreshTimer) clearInterval(store.refreshTimer);
+  store.refreshTimer = setInterval(() => _limanlariYukle(map, key), 90000);
+}
+function _limanOverlayDurdur(key) {
+  const store = _limanOverlayStore[key];
+  if (!store) return;
+  if (store.refreshTimer) { clearInterval(store.refreshTimer); store.refreshTimer = null; }
+  // Layer'lar map.remove ile zaten gider — burada referansları temizle
+  store.layers = [];
+}
+
+/* =============================================================================
  * FİLO TRAFİK RENDER — Migration 2026_05_06k
  * Kendi GPS verilerimizden grid bazlı yoğunluk haritası.
  * Renk algoritması: kisa_ort_hiz / beklenen_hiz oranı
@@ -5568,6 +5671,8 @@ function _fleetFullInitMap() {
     });
     _fleetFullMap.addLayer(_fleetFullCluster);
   }
+  // Liman polygon overlay — Phase 2 (2026_05_06l)
+  _limanOverlayBaslat(_fleetFullMap, 'fleetFull');
   setTimeout(() => _fleetFullMap.invalidateSize(), 80);
 }
 
