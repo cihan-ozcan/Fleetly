@@ -68,6 +68,14 @@
 
   function isMigrationMissing() { return _migMissing; }
 
+  // Yönetici → mevcut NULL sofor_user_id'leri davet eşleşmesi ile doldur
+  async function soforMatchYenile() {
+    if (_isLocal()) return { isemri_guncellenen: 0, harcirah_guncellenen: 0 };
+    const res = await _sb('POST', 'rpc/harcirah_sofor_match_yenile', {});
+    // PostgREST tablo döndüren fonksiyon → array
+    return Array.isArray(res) && res.length ? res[0] : { isemri_guncellenen: 0, harcirah_guncellenen: 0 };
+  }
+
   // ════════════════════════════════════════════════════════
   // TARİFELER (rate card)
   // ════════════════════════════════════════════════════════
@@ -705,6 +713,7 @@
   // ════════════════════════════════════════════════════════
   window.HarcirahAPI = {
     isMigrationMissing,
+    soforMatchYenile,
     // Tarife
     tarifeList, tarifeCreate, tarifeUpdate, tarifeDelete, tarifeMatch,
     // Ek Hizmet

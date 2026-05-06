@@ -307,6 +307,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         <span class="sidebar__item-label">Harcırah</span>
       </button>
+      <button class="sidebar__item" onclick="openSuruciuAkisPage();closeSidebar&&closeSidebar()" title="Şoför Akışı — Moderasyon, DM Trafiği, Duyuru">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="13" cy="10" r="1"/><circle cx="17" cy="10" r="1"/></svg>
+        <span class="sidebar__item-label">Şoför Akışı</span>
+      </button>
       <button class="sidebar__item" onclick="openMusteriPage();closeSidebar&&closeSidebar()" title="Müşteri & Sipariş">
         <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span class="sidebar__item-label">Müşteriler</span>
@@ -1365,6 +1369,10 @@
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
       <span id="harcirah-summary" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-right:8px;"></span>
+      <button onclick="harcSoforEslestir()" title="Şoför davetini iş emirlerine ve harcırah kayıtlarına bağla — şoför uygulamasında kayıt görünmüyorsa kullan" style="display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--border);color:var(--text2);cursor:pointer;border-radius:6px;padding:7px 12px;font-size:11.5px;font-weight:600;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Şoför Eşleştir
+      </button>
       <button id="harcirah-add-btn" onclick="harcAddBtnClick()" style="display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:none;cursor:pointer;border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;box-shadow:0 2px 10px rgba(255,107,31,.35);transition:background .15s;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span id="harcirah-add-btn-label">Yeni Tarife</span>
@@ -5507,7 +5515,11 @@
 <script src="js/ui/notifications-bell.js"></script>
 <!-- Harcırah sistemi — css/db/migrations/2026_05_05d__harcirah_sistemi.sql -->
 <script src="js/integrations/harcirah-api.js"></script>
+<script src="js/integrations/pdf-fonts.js"></script>
 <script src="js/pages/harcirah-page.js"></script>
+<!-- Şoför Koordinasyon Modülü — css/db/migrations/2026_05_05j__surucu_paylasimlari.sql -->
+<script src="js/integrations/surucu-paylasim-api.js"></script>
+<script src="js/pages/surucu-paylasim-page.js"></script>
 
 <!-- ─────────────────────────────────────────────────────────────────────
      SÜRÜCÜ TAKİBİ — FOTOĞRAF LIGHTBOX MODALI
