@@ -1303,7 +1303,10 @@ function _opsDecodePolyline(str) {
  *  • Çok dağılan/kaybolan GPS noktalarında matchings split olur, hepsini birleştiririz
  */
 async function _opsOsrmMatch(latlngs) {
-  if (!latlngs || latlngs.length < 2) return null;
+  if (!latlngs || latlngs.length < 2) {
+    console.info('[OSRM] çok az nokta, snap atlandı:', latlngs?.length);
+    return null;
+  }
   const max = 90;
   let pts = latlngs;
   if (pts.length > max) {
@@ -1315,17 +1318,35 @@ async function _opsOsrmMatch(latlngs) {
   const url = `https://router.project-osrm.org/match/v1/driving/${coords}` +
               `?overview=full&geometries=polyline&radiuses=${radiuses}&tidy=true`;
   try {
-    const res = await fetch(url, { method: 'GET' });
-    if (!res.ok) return null;
+    // 5 saniye timeout — public OSRM bazen yavaş veya rate-limit verir
+    const ctrl = new AbortController();
+    const timeoutId = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(url, { method: 'GET', signal: ctrl.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      console.warn('[OSRM] HTTP', res.status, '— ham polyline kalıyor');
+      return null;
+    }
     const data = await res.json();
-    if (data.code !== 'Ok' || !Array.isArray(data.matchings) || !data.matchings.length) return null;
+    if (data.code !== 'Ok' || !Array.isArray(data.matchings) || !data.matchings.length) {
+      console.warn('[OSRM] eşleşme yok (code=' + data.code + ') — ham polyline kalıyor');
+      return null;
+    }
     const all = [];
     data.matchings.forEach(m => {
       if (typeof m.geometry === 'string') all.push(..._opsDecodePolyline(m.geometry));
     });
-    return all.length >= 2 ? all : null;
+    if (all.length >= 2) {
+      console.info('[OSRM] ✓ snap başarılı, ' + all.length + ' nokta');
+      return all;
+    }
+    return null;
   } catch (e) {
-    console.warn('[OSRM match] başarısız:', e?.message || e);
+    if (e.name === 'AbortError') {
+      console.warn('[OSRM] timeout (5sn) — ham polyline kalıyor');
+    } else {
+      console.warn('[OSRM] hata:', e?.message || e);
+    }
     return null;
   }
 }
@@ -1371,15 +1392,19 @@ async function opsGuzergahYukle() {
     if (error) throw error;
 
     const izler = data || [];
+    console.info('[drawer-guzergah] iş #' + dbId + ' →', izler.length, 'GPS noktası');
     if (cntEl) {
       cntEl.textContent = izler.length;
       cntEl.style.display = izler.length ? '' : 'none';
     }
 
-    if (!izler.length) {
+    if (izler.length < 2) {
       mapEl.style.display    = 'none';
       statsEl.innerHTML      = '';
       emptyEl.style.display  = '';
+      emptyEl.innerHTML = izler.length === 0
+        ? `<span style="color:var(--muted);">Henüz GPS noktası yok. Şoför "Yola Çıktım" diyince ve hareket etmeye başlayınca rota dolacak.</span>`
+        : `<span style="color:var(--muted);">Sadece <b>${izler.length}</b> nokta var (en az 2 lazım). Şoför hareket etmeye başlayınca rota oluşur.</span>`;
       return;
     }
     mapEl.style.display    = '';
@@ -5309,13 +5334,25 @@ function _fleetRealtimeSubscribe() {
 const _focusModu = {};   // ctxId → { layers, originalOpacities, jobId }
 
 async function _haritaFocusGir(ctx, jobId) {
+  console.info('[focus] giriliyor:', { ctxId: ctx?.id, jobId, mapVar: !!ctx?.map });
   const map = ctx.map;
-  if (!map) return;
+  if (!map) {
+    console.warn('[focus] map yok, çıkıyorum');
+    return;
+  }
   // Önceki odak modu varsa temizle
   _haritaFocusCik(ctx);
 
-  const e = (isEmirleri || []).find(x => (x._dbId || x.id) === jobId);
-  if (!e) return;
+  // jobId tip uyumsuzluğuna karşı number'a normalize et
+  const targetId = typeof jobId === 'string' ? parseInt(jobId, 10) : jobId;
+  const e = (isEmirleri || []).find(x => (x._dbId || x.id) === targetId);
+  if (!e) {
+    console.warn('[focus] iş emri bulunamadı:', targetId, 'isEmirleri.length=', (isEmirleri||[]).length);
+    if (typeof showToast === 'function') {
+      showToast('İş emri bulunamadı (id=' + targetId + '). Sayfayı yenileyin.', 'error');
+    }
+    return;
+  }
   const dbId = e._dbId || e.id;
 
   // Diğer marker'ları sönükleştir; seçileni vurgula
@@ -5371,7 +5408,10 @@ async function _haritaFocusGir(ctx, jobId) {
 
   // Konum izleri + duraksamalar
   const sb = (typeof getSB === 'function') ? getSB() : null;
-  if (!sb) return;
+  if (!sb) {
+    console.warn('[focus] Supabase yok, sadece pinler gösterildi');
+    return;
+  }
   let izlerR, durakR;
   try {
     [izlerR, durakR] = await Promise.all([
@@ -5380,9 +5420,29 @@ async function _haritaFocusGir(ctx, jobId) {
         .select('id, baslangic_at, bitis_at, merkez_lat, merkez_lng, yaricap_m, bolge_etiket, otomatik_mi')
         .eq('is_emri_id', dbId).order('baslangic_at', { ascending: true })
     ]);
-  } catch (err) { console.warn('focus fetch hata:', err); return; }
+  } catch (err) {
+    console.error('[focus] fetch hata:', err);
+    if (ctx.banner) {
+      ctx.banner.innerHTML += `<span style="color:#ef4444;margin-left:6px;font-size:11px;">⚠ Veri çekilemedi: ${(err?.message||err+'').slice(0,40)}</span>`;
+    }
+    return;
+  }
 
   const izler = izlerR?.data || [];
+  console.info('[focus] konum_izleri:', izler.length, 'nokta · duraksama:', (durakR?.data || []).length);
+
+  // Yetersiz veri uyarısı
+  if (izler.length < 2) {
+    console.warn('[focus] yeterli rota verisi yok:', izler.length, 'nokta');
+    if (ctx.banner) {
+      ctx.banner.innerHTML += `<span style="color:#f59e0b;margin-left:6px;font-size:11px;">⚠ Yeterli rota verisi yok (${izler.length} GPS noktası). Şoför hareket etmeye başlayınca rota dolacak.</span>`;
+    }
+    if (isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng))) {
+      try { map.setView([parseFloat(e.konum_lat), parseFloat(e.konum_lng)], 14); } catch {}
+    }
+    return;
+  }
+
   if (izler.length >= 2) {
     const rawLatlngs = izler.map(p => [p.lat, p.lng]);
     const halo = L.polyline(rawLatlngs, { color: '#fff', weight: 9, opacity: 0.9, lineCap: 'round' }).addTo(map);
@@ -5408,9 +5468,8 @@ async function _haritaFocusGir(ctx, jobId) {
         yeniLayers.forEach(l => layers.push(l));
       }).catch(()=>{});
     }
-  } else if (isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng))) {
-    try { map.setView([parseFloat(e.konum_lat), parseFloat(e.konum_lng)], 14); } catch {}
   }
+  // izler.length < 2 durumu yukarıda banner ile yönlendiriliyor + return ediliyor
 
   const duraksamalar = durakR?.data || [];
   duraksamalar.forEach(d => {
@@ -5470,6 +5529,9 @@ function _haritaFocusOpsDetay(id) {
 
 window._haritaFocusCikById = _haritaFocusCikById;
 window._haritaFocusOpsDetay = _haritaFocusOpsDetay;
+// Dashboard veya başka modüllerden de erişilebilsin diye direkt expose
+window._haritaFocusGir = _haritaFocusGir;
+window._haritaFocusCik = _haritaFocusCik;
 
 /** Filo haritasındaki popup butonu — "Rotayı Göster" tıklayınca odak moduna geç. */
 function _opsFleetRotaGoster(jobId) {
@@ -5915,10 +5977,26 @@ async function _fleetFullDrawSelected(id) {
         .select('id, baslangic_at, bitis_at, merkez_lat, merkez_lng, yaricap_m, bolge_etiket, otomatik_mi')
         .eq('is_emri_id', dbId).order('baslangic_at', { ascending: true })
     ]);
-  } catch (err) { console.warn('fleet-full select fetch hata:', err); return; }
+  } catch (err) {
+    console.error('[fleet-full] fetch hata:', err);
+    if (info && !info.classList.contains('hidden')) {
+      info.innerHTML += `<div class="row" style="color:#ef4444;font-size:10.5px;">⚠ Veri çekilemedi</div>`;
+    }
+    return;
+  }
 
   const izler = izlerR?.data || [];
-  if (izler.length >= 2) {
+  console.info('[fleet-full] konum_izleri:', izler.length, 'nokta · duraksama:', (durakR?.data||[]).length);
+
+  if (izler.length < 2) {
+    console.warn('[fleet-full] yeterli rota verisi yok:', izler.length);
+    if (info) {
+      info.innerHTML += `<div class="row" style="color:#f59e0b;font-size:10.5px;">⚠ Rota verisi yok (${izler.length} nokta)</div>`;
+    }
+    if (isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng))) {
+      _fleetFullMap.setView([parseFloat(e.konum_lat), parseFloat(e.konum_lng)], 14);
+    }
+  } else {
     const rawLatlngs = izler.map(p => [p.lat, p.lng]);
     const halo = L.polyline(rawLatlngs, { color: '#fff', weight: 9, opacity: 0.9, lineCap: 'round' }).addTo(_fleetFullMap);
     const main = L.polyline(rawLatlngs, { color: '#1a73e8', weight: 5, opacity: 1, lineCap: 'round', dashArray: '8,6' }).addTo(_fleetFullMap);
@@ -5940,8 +6018,6 @@ async function _fleetFullDrawSelected(id) {
         _fleetFullRouteLayers.push(h2, m2);
       }).catch(()=>{});
     }
-  } else if (isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng))) {
-    _fleetFullMap.setView([parseFloat(e.konum_lat), parseFloat(e.konum_lng)], 14);
   }
 
   const duraksamalar = durakR?.data || [];
