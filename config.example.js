@@ -10,4 +10,27 @@
 window.FILO_CONFIG = {
   SUPABASE_URL  : 'https://PROJE_ID.supabase.co',
   SUPABASE_ANON : 'eyJ...',
+
+  // ─────────────────────────────────────────────────────────────
+  // TRAFİK OVERLAY — opsiyonel
+  // ─────────────────────────────────────────────────────────────
+  // Filo haritalarında "🚦 Trafik" toggle'ı sadece bir anahtar
+  // doluysa aktif olur. Hangisini yazarsanız o kullanılır:
+  //
+  //   TOMTOM_KEY    — ÖNERİLEN. 2.500 transaction/gün ücretsiz.
+  //                   Türkiye trafiği iyi, sonrası $0.50 / 1.000.
+  //                   Anahtar: https://developer.tomtom.com/
+  //
+  //   HERE_KEY      — Alternatif. 250K transaction/ay ücretsiz.
+  //                   Anahtar: https://platform.here.com/
+  //
+  //   MAPBOX_TOKEN  — PAHALI. 200K yükleme/ay sonra $5 / 1.000.
+  //                   Yalnızca abonelik almak istiyorsanız.
+  //                   Anahtar: https://account.mapbox.com/access-tokens/
+  //
+  // Hiçbiri verilmezse "Trafik" butonu görünür ama disabled olur.
+  // ─────────────────────────────────────────────────────────────
+  TOMTOM_KEY   : '',
+  HERE_KEY     : '',
+  MAPBOX_TOKEN : '',
 };

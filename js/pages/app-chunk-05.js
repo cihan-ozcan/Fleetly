@@ -2048,7 +2048,10 @@ function opsBuildContainerCard(e, status) {
 /* ── FİLO HARİTASI ──────────────────────────────────────── */
 let _fleetMap = null;
 let _fleetMarkers = [];
+let _fleetCluster = null;          // Leaflet markerClusterGroup
 let _fleetRefreshTimer = null;
+let _fleetRealtimeChannel = null;  // Supabase realtime
+let _fleetTrafficLayer = null;     // Mapbox traffic tile (opsiyonel)
 
 async function opsRenderFleetMap() {
   // Init Leaflet map once
@@ -2059,6 +2062,18 @@ async function opsRenderFleetMap() {
       maxZoom: 18
     }).addTo(_fleetMap);
     L.control.attribution({ prefix: '© OpenStreetMap' }).addTo(_fleetMap);
+    // Cluster group — kalabalık haritada gruplandırır
+    if (typeof L.markerClusterGroup === 'function') {
+      _fleetCluster = L.markerClusterGroup({
+        maxClusterRadius: 60,
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        chunkedLoading: true
+      });
+      _fleetMap.addLayer(_fleetCluster);
+    }
+    // Realtime subscription — is_emirleri UPDATE event'lerinde haritayı tazele
+    _fleetRealtimeSubscribe();
   }
   setTimeout(() => _fleetMap.invalidateSize(), 80);
 
@@ -2066,10 +2081,14 @@ async function opsRenderFleetMap() {
   await opsLoadCloud();
 
   // Remove old markers (yapı: [{marker, jobId}])
-  _fleetMarkers.forEach(m => {
-    const lyr = m.marker || m;  // backward compat
-    try { _fleetMap.removeLayer(lyr); } catch {}
-  });
+  if (_fleetCluster) {
+    _fleetCluster.clearLayers();
+  } else {
+    _fleetMarkers.forEach(m => {
+      const lyr = m.marker || m;
+      try { _fleetMap.removeLayer(lyr); } catch {}
+    });
+  }
   _fleetMarkers = [];
 
   // Tamamlananları gösterme toggle (default: gizli — karmaşa olmasın)
@@ -2153,8 +2172,9 @@ async function opsRenderFleetMap() {
       </div>`;
 
     const marker = L.marker([lat, lng], { icon })
-      .addTo(_fleetMap)
       .bindPopup(popup, { maxWidth: 280 });
+    if (_fleetCluster) _fleetCluster.addLayer(marker);
+    else marker.addTo(_fleetMap);
 
     _fleetMarkers.push({ marker, jobId: e._dbId || e.id });
     bounds.push([lat, lng]);
@@ -4896,6 +4916,148 @@ function brandingHexInput() {
 }
 
 /* =============================================================================
+ * TRAFİK OVERLAY — Multi-provider (2026_05_06k güncellemesi)
+ * config.js → FILO_CONFIG'te hangi anahtar doluysa o sağlayıcı kullanılır.
+ * Öncelik: TomTom (en ucuz) > HERE > Mapbox.
+ * Hepsi boşsa toggle disabled olur.
+ *
+ * Sağlayıcı karşılaştırması (bkz. config.example.js):
+ *   • TomTom  — 2.5K/gün ücretsiz, sonrası $0.50/1K. Türkiye trafiği iyi.
+ *   • HERE    — 250K/ay ücretsiz.
+ *   • Mapbox  — 200K/ay sonrası $5/1K. Pahalı.
+ * ===========================================================================*/
+function _trafikSaglayici() {
+  const cfg = window.FILO_CONFIG || {};
+  if (cfg.TOMTOM_KEY)   return { name: 'tomtom',  key: cfg.TOMTOM_KEY };
+  if (cfg.HERE_KEY)     return { name: 'here',    key: cfg.HERE_KEY };
+  if (cfg.MAPBOX_TOKEN) return { name: 'mapbox',  key: cfg.MAPBOX_TOKEN };
+  return null;
+}
+
+function _trafikTileLayer() {
+  const s = _trafikSaglayici();
+  if (!s) return null;
+
+  if (s.name === 'tomtom') {
+    // TomTom Traffic Flow Tiles — ÖNERİLEN
+    // https://developer.tomtom.com/traffic-api/documentation/traffic-flow/flow-tiles
+    return L.tileLayer(
+      `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${s.key}`,
+      { maxZoom: 22, opacity: 0.75, attribution: '© TomTom traffic' }
+    );
+  }
+
+  if (s.name === 'here') {
+    // HERE Maps Traffic Flow — Legacy tile API (v3 hâlâ aktif)
+    // https://developer.here.com/documentation/map-tile/dev_guide/topics/example-traffic-tile.html
+    return L.tileLayer(
+      `https://1.traffic.maps.ls.hereapi.com/maptile/2.1/flowtile/newest/normal.day/{z}/{x}/{y}/256/png8?apiKey=${s.key}`,
+      { maxZoom: 20, opacity: 0.75, attribution: '© HERE traffic' }
+    );
+  }
+
+  if (s.name === 'mapbox') {
+    return L.tileLayer(
+      `https://api.mapbox.com/styles/v1/mapbox/traffic-day-v2/tiles/{z}/{x}/{y}?access_token=${s.key}`,
+      { maxZoom: 22, tileSize: 512, zoomOffset: -1, opacity: 0.85,
+        attribution: '© Mapbox traffic' }
+    );
+  }
+  return null;
+}
+
+function _trafikSaglayiciAdi() {
+  const s = _trafikSaglayici();
+  if (!s) return null;
+  return ({ tomtom: 'TomTom', here: 'HERE', mapbox: 'Mapbox' })[s.name];
+}
+/**
+ * Bir Leaflet haritasında trafik overlay'i aç/kapat.
+ * @param {L.Map} map
+ * @param {Object} store  ref tutucu — { layer: null | L.Layer }
+ * @returns true = açıldı, false = kapatıldı, null = token yok
+ */
+function _trafikToggle(map, store) {
+  if (!map) return null;
+  if (store.layer) {
+    try { map.removeLayer(store.layer); } catch {}
+    store.layer = null;
+    return false;
+  }
+  const lyr = _trafikTileLayer();
+  if (!lyr) return null;
+  lyr.addTo(map);
+  store.layer = lyr;
+  return true;
+}
+window._trafikToggleFleet = function () {
+  if (!_fleetMap) return;
+  if (_fleetTrafficLayer) {
+    try { _fleetMap.removeLayer(_fleetTrafficLayer); } catch {}
+    _fleetTrafficLayer = null;
+    document.getElementById('fleet-trafik-toggle')?.classList.remove('is-active');
+    return;
+  }
+  const lyr = _trafikTileLayer();
+  if (!lyr) {
+    if (typeof showToast === 'function') showToast('Trafik için anahtar yok. config.js → TOMTOM_KEY (önerilen, ücretsiz tier var) veya HERE_KEY ekleyin.', 'warning');
+    return;
+  }
+  lyr.addTo(_fleetMap);
+  _fleetTrafficLayer = lyr;
+  document.getElementById('fleet-trafik-toggle')?.classList.add('is-active');
+};
+window._trafikToggleFull = function () {
+  if (!_fleetFullMap) return;
+  if (_fleetFullTrafficLayer) {
+    try { _fleetFullMap.removeLayer(_fleetFullTrafficLayer); } catch {}
+    _fleetFullTrafficLayer = null;
+    document.getElementById('fleet-full-trafik')?.classList.remove('is-active');
+    return;
+  }
+  const lyr = _trafikTileLayer();
+  if (!lyr) {
+    if (typeof showToast === 'function') showToast('Trafik için anahtar yok. config.js → TOMTOM_KEY (önerilen, ücretsiz tier var) veya HERE_KEY ekleyin.', 'warning');
+    return;
+  }
+  lyr.addTo(_fleetFullMap);
+  _fleetFullTrafficLayer = lyr;
+  document.getElementById('fleet-full-trafik')?.classList.add('is-active');
+};
+
+/* =============================================================================
+ * REALTIME — operasyon filo haritası live updates (2026_05_06j)
+ * is_emirleri UPDATE event'lerinde haritayı tazele (polling ile birlikte;
+ * realtime kopsa polling fallback olarak çalışmaya devam eder).
+ * ===========================================================================*/
+function _fleetRealtimeSubscribe() {
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb || _fleetRealtimeChannel) return;
+  try {
+    let pendingTimer = null;
+    const debounce = () => {
+      if (pendingTimer) clearTimeout(pendingTimer);
+      pendingTimer = setTimeout(() => {
+        // Sadece harita sekmesi açıksa render et (gereksiz iş yapma)
+        const panel = document.getElementById('ops-panel-harita');
+        if (panel && !panel.classList.contains('hidden') && _fleetMap) {
+          opsRenderFleetMap().catch(() => {});
+        }
+      }, 800);
+    };
+    _fleetRealtimeChannel = sb
+      .channel('ops-fleet-live')
+      .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'is_emirleri' },
+          debounce)
+      .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'is_emirleri' },
+          debounce)
+      .subscribe();
+  } catch (err) { console.warn('[fleet] realtime kurulamadı:', err); }
+}
+
+/* =============================================================================
  * HARİTA ODAK MODU — paylaşılan helper (2026_05_06i)
  * Hem ops-fleet-map hem dashboard-map için: bir marker'a tıklanınca diğerleri
  * sönükleşir, seçilen sürücünün rotası (konum_izleri + OSRM snap) + duraksamalar
@@ -5097,9 +5259,13 @@ window._opsFleetRotaGoster = _opsFleetRotaGoster;
 let _fleetFullMap = null;
 let _fleetFullMarkers = [];
 let _fleetFullRouteLayers = [];
+let _fleetFullCluster = null;
 let _fleetFullRefreshTimer = null;
+let _fleetFullRealtimeChannel = null;
 let _fleetFullSelectedId = null;
+let _fleetFullSelectedSet = new Set();   // multi-select için
 let _fleetFullFilter = '';
+let _fleetFullTrafficLayer = null;
 
 function openFleetFullscreen() {
   const bg = document.getElementById('fleet-full-bg');
@@ -5108,8 +5274,10 @@ function openFleetFullscreen() {
   document.body.style.overflow = 'hidden';
   document.addEventListener('keydown', _fleetFullKey);
   _fleetFullRefresh();
+  // Realtime subscription — anlık güncellemeler. Polling fallback olarak 90sn'ye çıkar.
+  _fleetFullRealtimeSubscribe();
   if (_fleetFullRefreshTimer) clearInterval(_fleetFullRefreshTimer);
-  _fleetFullRefreshTimer = setInterval(_fleetFullRefresh, 30000);
+  _fleetFullRefreshTimer = setInterval(_fleetFullRefresh, 90000);
 }
 
 function closeFleetFullscreen() {
@@ -5118,7 +5286,40 @@ function closeFleetFullscreen() {
   document.body.style.overflow = '';
   document.removeEventListener('keydown', _fleetFullKey);
   if (_fleetFullRefreshTimer) { clearInterval(_fleetFullRefreshTimer); _fleetFullRefreshTimer = null; }
+  // Realtime unsubscribe — modal kapalıyken push almayalım
+  _fleetFullRealtimeUnsubscribe();
   _fleetFullSelectedId = null;
+  _fleetFullSelectedSet.clear();
+}
+
+function _fleetFullRealtimeSubscribe() {
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb || _fleetFullRealtimeChannel) return;
+  try {
+    let pending = null;
+    const debounce = () => {
+      if (pending) clearTimeout(pending);
+      pending = setTimeout(() => _fleetFullRefresh().catch(()=>{}), 800);
+    };
+    _fleetFullRealtimeChannel = sb
+      .channel('fleet-full-live')
+      .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'is_emirleri' },
+          debounce)
+      .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'konum_izleri' },
+          () => {
+            // Aktif odak modunda yeni konum noktası geldiyse rotayı tazele
+            if (_fleetFullSelectedId) _fleetFullDrawSelected(_fleetFullSelectedId);
+          })
+      .subscribe();
+  } catch (err) { console.warn('[fleet-full] realtime kurulamadı:', err); }
+}
+function _fleetFullRealtimeUnsubscribe() {
+  if (!_fleetFullRealtimeChannel) return;
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  try { if (sb) sb.removeChannel(_fleetFullRealtimeChannel); } catch {}
+  _fleetFullRealtimeChannel = null;
 }
 
 function _fleetFullKey(ev) {
@@ -5222,11 +5423,28 @@ function _fleetFullInitMap() {
     .setView([39.9, 32.8], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(_fleetFullMap);
   L.control.attribution({ prefix: '© OpenStreetMap' }).addTo(_fleetFullMap);
+  // Marker cluster — kalabalık haritada gruplandırır (2026_05_06j)
+  if (typeof L.markerClusterGroup === 'function') {
+    _fleetFullCluster = L.markerClusterGroup({
+      maxClusterRadius: 60,
+      showCoverageOnHover: false,
+      spiderfyOnMaxZoom: true,
+      chunkedLoading: true
+    });
+    _fleetFullMap.addLayer(_fleetFullCluster);
+  }
   setTimeout(() => _fleetFullMap.invalidateSize(), 80);
 }
 
 function _fleetFullClearMarkers() {
-  _fleetFullMarkers.forEach(m => { try { _fleetFullMap.removeLayer(m); } catch {} });
+  if (_fleetFullCluster) {
+    _fleetFullCluster.clearLayers();
+  } else {
+    _fleetFullMarkers.forEach(m => {
+      const lyr = m.marker || m;
+      try { _fleetFullMap.removeLayer(lyr); } catch {}
+    });
+  }
   _fleetFullMarkers = [];
 }
 function _fleetFullClearRouteLayers() {
@@ -5246,16 +5464,24 @@ function _fleetFullRenderMarkers() {
     const lat = parseFloat(e.konum_lat), lng = parseFloat(e.konum_lng);
     const id = e._dbId || e.id;
     const cls = ({ 'Yolda':'yolda', 'Fabrikada':'fabrikada', 'Bekliyor':'bekliyor', 'Boş Alındı':'bekliyor' }[e.durum]) || 'bekliyor';
-    const isSel = (_fleetFullSelectedId === id);
+    const isSel = (_fleetFullSelectedId === id) || _fleetFullSelectedSet.has(id);
     const icon = L.divIcon({
       className: '',
       html: `<div class="fleet-truck-icon ${cls}" style="${isSel?'transform:scale(1.3);box-shadow:0 0 0 3px rgba(249,115,22,.5);':''}">🚛</div>`,
       iconSize: [32, 32], iconAnchor: [16, 16]
     });
     const m = L.marker([lat, lng], { icon })
-      .addTo(_fleetFullMap)
-      .on('click', () => _fleetFullSelect(id));
-    _fleetFullMarkers.push(m);
+      .on('click', (ev) => {
+        // Shift veya Ctrl/Cmd basılı ise multi-select
+        if (ev.originalEvent && (ev.originalEvent.shiftKey || ev.originalEvent.ctrlKey || ev.originalEvent.metaKey)) {
+          _fleetFullToggleMulti(id);
+        } else {
+          _fleetFullSelect(id);
+        }
+      });
+    if (_fleetFullCluster) _fleetFullCluster.addLayer(m);
+    else m.addTo(_fleetFullMap);
+    _fleetFullMarkers.push({ marker: m, jobId: id });
     bounds.push([lat, lng]);
   });
   if (!_fleetFullSelectedId && bounds.length === 1) {
@@ -5267,10 +5493,134 @@ function _fleetFullRenderMarkers() {
 
 async function _fleetFullSelect(id) {
   _fleetFullSelectedId = id;
+  _fleetFullSelectedSet.clear();
+  _fleetFullSelectedSet.add(id);
   _fleetFullRenderList();
   _fleetFullRenderMarkers();
   await _fleetFullDrawSelected(id);
 }
+
+/**
+ * Shift/Ctrl+click ile multi-select. Aynı id ikinci kez tıklanırsa kaldırır.
+ * Çoklu seçim varsa her sürücüye ayrı renkli rota çizilir.
+ */
+async function _fleetFullToggleMulti(id) {
+  if (_fleetFullSelectedSet.has(id)) {
+    _fleetFullSelectedSet.delete(id);
+  } else {
+    _fleetFullSelectedSet.add(id);
+  }
+  if (_fleetFullSelectedSet.size === 0) {
+    _fleetFullSelectedId = null;
+    _fleetFullClearRouteLayers();
+    const info = document.getElementById('fleet-full-info');
+    if (info) info.classList.add('hidden');
+  } else if (_fleetFullSelectedSet.size === 1) {
+    _fleetFullSelectedId = Array.from(_fleetFullSelectedSet)[0];
+  } else {
+    // Multi mod
+    _fleetFullSelectedId = id;
+  }
+  _fleetFullRenderList();
+  _fleetFullRenderMarkers();
+  if (_fleetFullSelectedSet.size === 1) {
+    await _fleetFullDrawSelected(Array.from(_fleetFullSelectedSet)[0]);
+  } else if (_fleetFullSelectedSet.size > 1) {
+    await _fleetFullDrawMulti(Array.from(_fleetFullSelectedSet));
+  }
+}
+
+window._fleetFullToggleMulti = _fleetFullToggleMulti;
+
+// Renk paleti — her sürücüye farklı renk
+const _ROTA_RENKLERI = ['#1a73e8', '#ea4335', '#34a853', '#fbbc05', '#9c27b0', '#ff6f00', '#00acc1', '#e91e63'];
+
+async function _fleetFullDrawMulti(jobIds) {
+  if (!_fleetFullMap) return;
+  _fleetFullClearRouteLayers();
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb) return;
+
+  const allBounds = [];
+  // Info paneli — multi mod özet
+  const info = document.getElementById('fleet-full-info');
+  if (info) {
+    const liste = jobIds.map((id, idx) => {
+      const e = (isEmirleri || []).find(x => (x._dbId || x.id) === id);
+      if (!e) return '';
+      const renk = _ROTA_RENKLERI[idx % _ROTA_RENKLERI.length];
+      return `<div class="row" style="border-left:3px solid ${renk};padding-left:6px;">
+        <span class="k">🚛</span>
+        <span class="v">${(e.arac_plaka||'—')} · ${(e.sofor||'—').replace(/[<>]/g,'')}</span>
+        <button onclick="_fleetFullToggleMulti(${id})" title="Kaldır"
+          style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:12px;">✕</button>
+      </div>`;
+    }).join('');
+    info.innerHTML = `<h4>📍 ${jobIds.length} Sürücü Seçili</h4>${liste}
+      <div class="row" style="margin-top:6px;">
+        <button class="ops-btn ops-btn--quiet ops-btn--sm" onclick="_fleetFullClearMulti()" style="width:100%;">
+          ✕ Seçimi Temizle
+        </button>
+      </div>`;
+    info.classList.remove('hidden');
+  }
+
+  // Her sürücü için paralel fetch + farklı renkte polyline
+  await Promise.all(jobIds.map(async (id, idx) => {
+    const e = (isEmirleri || []).find(x => (x._dbId || x.id) === id);
+    if (!e) return;
+    const renk = _ROTA_RENKLERI[idx % _ROTA_RENKLERI.length];
+    const dbId = e._dbId || e.id;
+
+    // Yükle/teslim pin (renk-kodlu)
+    if (isFinite(e.yukle_lat) && isFinite(e.yukle_lng)) {
+      const m = L.circleMarker([e.yukle_lat, e.yukle_lng], {
+        radius: 6, color: renk, fillColor: renk, fillOpacity: 0.8, weight: 2
+      }).bindTooltip(`🟢 ${e.yukle_yeri || 'Yükleme'} (${e.arac_plaka || ''})`, { direction: 'top' })
+        .addTo(_fleetFullMap);
+      _fleetFullRouteLayers.push(m);
+    }
+    if (isFinite(e.teslim_lat) && isFinite(e.teslim_lng)) {
+      const m = L.circleMarker([e.teslim_lat, e.teslim_lng], {
+        radius: 6, color: renk, fillColor: renk, fillOpacity: 0.8, weight: 2
+      }).bindTooltip(`🔴 ${e.teslim_yeri || 'Teslim'} (${e.arac_plaka || ''})`, { direction: 'top' })
+        .addTo(_fleetFullMap);
+      _fleetFullRouteLayers.push(m);
+    }
+
+    // Konum izleri → polyline
+    try {
+      const { data } = await sb.from('konum_izleri')
+        .select('lat,lng').eq('is_emri_id', dbId)
+        .order('ts', { ascending: true }).limit(2000);
+      const izler = data || [];
+      if (izler.length >= 2) {
+        const latlngs = izler.map(p => [p.lat, p.lng]);
+        const halo = L.polyline(latlngs, { color: '#fff', weight: 7, opacity: 0.85, lineCap: 'round' }).addTo(_fleetFullMap);
+        const main = L.polyline(latlngs, { color: renk, weight: 4, opacity: 1, lineCap: 'round' })
+          .bindTooltip(`${e.arac_plaka || ''} · ${e.sofor || ''}`, { sticky: true })
+          .addTo(_fleetFullMap);
+        _fleetFullRouteLayers.push(halo, main);
+        latlngs.forEach(p => allBounds.push(p));
+      }
+    } catch (err) { console.warn('multi rota fetch hata:', err); }
+  }));
+
+  if (allBounds.length) {
+    try { _fleetFullMap.fitBounds(allBounds, { padding: [60, 60], maxZoom: 13 }); } catch {}
+  }
+}
+
+function _fleetFullClearMulti() {
+  _fleetFullSelectedSet.clear();
+  _fleetFullSelectedId = null;
+  _fleetFullClearRouteLayers();
+  const info = document.getElementById('fleet-full-info');
+  if (info) info.classList.add('hidden');
+  _fleetFullRenderList();
+  _fleetFullRenderMarkers();
+}
+window._fleetFullClearMulti = _fleetFullClearMulti;
 
 async function _fleetFullDrawSelected(id) {
   if (!_fleetFullMap) return;

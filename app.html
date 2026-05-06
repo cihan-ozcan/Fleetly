@@ -50,6 +50,10 @@
   <!-- Leaflet (filo haritası) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Marker cluster — kalabalık haritalarda araçları gruplandırır (2026_05_06j) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <!-- Gizli config — .gitignore'da, repoya GİTMEZ -->
@@ -2638,6 +2642,12 @@
         <div class="fleet-map-legend-item" style="margin-left:auto;">
           <span id="fleet-map-count" class="ops-mono" style="color:var(--ops-brand);font-weight:700;"></span>
         </div>
+        <button id="fleet-trafik-toggle" class="ops-btn ops-btn--quiet ops-btn--sm"
+                onclick="_trafikToggleFleet()"
+                title="Trafik yoğunluğu — config.js → TOMTOM_KEY (2.500/gün ücretsiz) ya da HERE_KEY (250K/ay ücretsiz) ekleyin"
+                style="position:relative;">
+          <span style="font-size:13px;">🚦</span> Trafik
+        </button>
         <button class="ops-btn ops-btn--quiet ops-btn--sm" onclick="opsRenderFleetMap()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Yenile
@@ -2872,6 +2882,9 @@
                oninput="_fleetFullFilterChange(this.value)" />
       </div>
       <div class="fleet-full-actions">
+        <button id="fleet-full-trafik" class="ops-btn ops-btn--quiet ops-btn--sm"
+                onclick="_trafikToggleFull()"
+                title="Trafik yoğunluğu — config.js → TOMTOM_KEY (önerilen, 2.500/gün ücretsiz)">🚦 Trafik</button>
         <button class="ops-btn ops-btn--quiet ops-btn--sm" onclick="_fleetFullRefresh()" title="Yenile">↻ Yenile</button>
         <button class="ops-btn ops-btn--quiet ops-btn--sm" id="fleet-full-detay" onclick="_fleetFullOpenDetay()" title="Seçili sürücünün ops drawer'ını aç">🗗 Ops Detay</button>
         <button class="ops-btn ops-btn--ghost ops-btn--sm" onclick="closeFleetFullscreen()" title="Kapat (Esc)">✕</button>
@@ -2882,6 +2895,9 @@
       <aside class="fleet-full-list">
         <div class="fleet-full-list-head">
           <span style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);font-weight:700;">Aktif Sürücüler</span>
+        </div>
+        <div class="fleet-full-list-hint">
+          💡 <kbd>Shift</kbd> + tıkla → birden fazla sürücüyü aynı haritada karşılaştır
         </div>
         <div id="fleet-full-list" class="fleet-full-list-body">Yükleniyor…</div>
       </aside>
@@ -2979,6 +2995,26 @@
   .fleet-full-info .row { display: flex; gap: 8px; font-size: 11.5px; margin-bottom: 4px; }
   .fleet-full-info .row .k { color: var(--text-muted); min-width: 70px; }
   .fleet-full-info .row .v { color: var(--text); font-weight: 600; flex: 1; }
+
+  /* Trafik toggle aktif görünümü */
+  #fleet-trafik-toggle.is-active,
+  #fleet-full-trafik.is-active {
+    background: rgba(239, 68, 68, .18) !important;
+    color: #ef4444 !important;
+    border-color: rgba(239, 68, 68, .35) !important;
+  }
+
+  /* Multi-select ipucu — fleet-full-list head altında küçük not */
+  .fleet-full-list-hint {
+    padding: 6px 14px; font-size: 10.5px; color: var(--text-muted);
+    border-bottom: 1px solid var(--border, #1e293b);
+    background: rgba(99,102,241,.05);
+  }
+  .fleet-full-list-hint kbd {
+    background: var(--surface, #0f172a); border: 1px solid var(--border);
+    border-radius: 3px; padding: 0 4px; font-family: monospace;
+    font-size: 10px; color: var(--text);
+  }
 </style>
 
 <!-- ── HIZLI MÜŞTERİ EKLE MODAL (iş emri formu açıkken üstüne biner) ─── -->
