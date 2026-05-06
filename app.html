@@ -299,6 +299,10 @@
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></svg>
         <span class="sidebar__item-label">Operasyon</span>
       </button>
+      <button class="sidebar__item" onclick="openFleetFullscreen();closeSidebar&&closeSidebar()" title="Tüm sürücüleri tek haritada izle (sürücüler arası tek tıkla geçiş)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 22s-7-7-7-12a7 7 0 0 1 14 0c0 5-7 12-7 12z"/><path d="M3 8l3 1M21 8l-3 1M3 14l3-1M21 14l-3-1"/></svg>
+        <span class="sidebar__item-label">Canlı Takip</span>
+      </button>
       <button class="sidebar__item" onclick="openFiloPage();closeSidebar&&closeSidebar()" title="Filo Yönetimi (Çekici / Dorse)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17h2l1-3h8l1 3h2"/><path d="M14 17V7H3v10"/><path d="M14 10h5l3 3v4h-3"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
         <span class="sidebar__item-label">Filo</span>
@@ -2628,6 +2632,10 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Yenile
         </button>
+        <button class="ops-btn ops-btn--primary ops-btn--sm" onclick="openFleetFullscreen()" title="Tam ekran canlı takip — sürücüler arası tek tıkla geçiş">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          Tam Ekran
+        </button>
       </div>
       <div id="ops-fleet-map"></div>
     </div>
@@ -2827,6 +2835,134 @@
 
   </div>
 </div>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     CANLI FİLO TAKİBİ — TAM EKRAN (2026_05_06h)
+     Sol panel: aktif sürücüler · Sağ ana alan: büyük harita + rota/duraksama
+     ───────────────────────────────────────────────────────────────────── -->
+<div id="fleet-full-bg" class="fleet-full-backdrop hidden"
+     onclick="if(event.target===this)closeFleetFullscreen()">
+  <div class="fleet-full-shell">
+    <!-- Üst bar -->
+    <div class="fleet-full-topbar">
+      <div class="fleet-full-title">
+        <span style="font-size:18px;">🗺️</span>
+        <span>Canlı Filo Takibi</span>
+        <span id="fleet-full-count" class="fleet-full-count"></span>
+      </div>
+      <div class="fleet-full-search">
+        <input id="fleet-full-search" type="text" placeholder="Ara: plaka, sürücü, müşteri…"
+               oninput="_fleetFullFilterChange(this.value)" />
+      </div>
+      <div class="fleet-full-actions">
+        <button class="ops-btn ops-btn--quiet ops-btn--sm" onclick="_fleetFullRefresh()" title="Yenile">↻ Yenile</button>
+        <button class="ops-btn ops-btn--quiet ops-btn--sm" id="fleet-full-detay" onclick="_fleetFullOpenDetay()" title="Seçili sürücünün ops drawer'ını aç">🗗 Ops Detay</button>
+        <button class="ops-btn ops-btn--ghost ops-btn--sm" onclick="closeFleetFullscreen()" title="Kapat (Esc)">✕</button>
+      </div>
+    </div>
+    <!-- İçerik: sol liste + harita -->
+    <div class="fleet-full-body">
+      <aside class="fleet-full-list">
+        <div class="fleet-full-list-head">
+          <span style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);font-weight:700;">Aktif Sürücüler</span>
+        </div>
+        <div id="fleet-full-list" class="fleet-full-list-body">Yükleniyor…</div>
+      </aside>
+      <main class="fleet-full-main">
+        <div id="fleet-full-map"></div>
+        <div id="fleet-full-info" class="fleet-full-info hidden"></div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Tam ekran filo takibi */
+  .fleet-full-backdrop {
+    position: fixed; inset: 0; z-index: 2500;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(2px);
+    display: flex; align-items: stretch; justify-content: center;
+  }
+  .fleet-full-backdrop.hidden { display: none; }
+  .fleet-full-shell {
+    width: 96vw; height: 94vh; margin: auto;
+    background: var(--surface, #0f172a);
+    color: var(--text, #f1f5f9);
+    border: 1px solid var(--border, #1e293b);
+    border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.4);
+  }
+  .fleet-full-topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border, #1e293b);
+    background: var(--surface2, var(--surface));
+  }
+  .fleet-full-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 700; color: var(--text);
+  }
+  .fleet-full-count {
+    font-family: var(--ops-font-mono, var(--font-mono));
+    background: rgba(249,115,22,.15); color: var(--accent, #f97316);
+    padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700;
+  }
+  .fleet-full-search { flex: 1; max-width: 320px; }
+  .fleet-full-search input {
+    width: 100%; padding: 8px 10px; font-size: 12px;
+    background: var(--surface, #0f172a); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text);
+  }
+  .fleet-full-actions { display: flex; gap: 6px; margin-left: auto; }
+  .fleet-full-body { flex: 1; display: flex; min-height: 0; }
+  .fleet-full-list {
+    width: 320px; flex-shrink: 0; overflow-y: auto;
+    border-right: 1px solid var(--border);
+    background: var(--surface, #0f172a);
+  }
+  .fleet-full-list-head { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .fleet-full-list-body { padding: 6px; }
+  .fleet-full-row {
+    padding: 10px 12px; border-radius: 8px; margin-bottom: 4px;
+    cursor: pointer; border: 1px solid transparent;
+    transition: background .12s, border-color .12s;
+  }
+  .fleet-full-row:hover { background: rgba(249,115,22,.06); }
+  .fleet-full-row.is-active {
+    background: rgba(249,115,22,.12);
+    border-color: var(--accent, #f97316);
+  }
+  .fleet-full-row .top {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+  }
+  .fleet-full-row .plate {
+    font-family: var(--ops-font-mono, var(--font-mono));
+    font-weight: 700; font-size: 12px; color: var(--text);
+  }
+  .fleet-full-row .name {
+    font-size: 11.5px; color: var(--text-muted, #94a3b8);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .fleet-full-row .meta {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    font-size: 10.5px; color: var(--text-muted, #94a3b8);
+  }
+  .fleet-full-row .pill-mini {
+    padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 10px;
+  }
+  .fleet-full-main { flex: 1; position: relative; min-width: 0; }
+  #fleet-full-map { width: 100%; height: 100%; }
+  .fleet-full-info {
+    position: absolute; top: 14px; right: 14px; z-index: 999;
+    width: 280px; padding: 12px; background: var(--surface, #0f172a);
+    border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.3);
+  }
+  .fleet-full-info.hidden { display: none; }
+  .fleet-full-info h4 { margin: 0 0 6px; font-size: 13px; }
+  .fleet-full-info .row { display: flex; gap: 8px; font-size: 11.5px; margin-bottom: 4px; }
+  .fleet-full-info .row .k { color: var(--text-muted); min-width: 70px; }
+  .fleet-full-info .row .v { color: var(--text); font-weight: 600; flex: 1; }
+</style>
 
 <!-- ── HIZLI MÜŞTERİ EKLE MODAL (iş emri formu açıkken üstüne biner) ─── -->
 <div id="ops-hizli-musteri-bg" class="srm-backdrop hidden"
