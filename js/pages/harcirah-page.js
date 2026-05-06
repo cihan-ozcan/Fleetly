@@ -47,7 +47,12 @@
     page.classList.remove('hidden');
     page.classList.add('open');
     document.body.style.overflow = 'hidden';
+    // PDF fontunu arka planda warm-cache (PDF basıldığında anında hazır olsun)
+    if (window.PdfFonts && !window.PdfFonts.isCached()) {
+      window.PdfFonts.preload();
+    }
     await refreshAll();
+    _harcStartRealtime();
     switchHarcirahTab(state.activeTab || 'tarifeler');
   }
 
@@ -57,6 +62,73 @@
     page.classList.remove('open');
     page.classList.add('hidden');
     document.body.style.overflow = '';
+    _harcStopRealtime();
+  }
+
+  // ════════════════════════════════════════════════════════
+  // REALTIME — harcirah_kayitlari + harcirah_haftalik
+  // ════════════════════════════════════════════════════════
+  let _harcRealtimeChannel = null;
+  let _harcRefreshDebounce = null;
+
+  function _harcDebouncedRefresh() {
+    // Kısa burst'leri tek refresh'e indirgemek için 500ms debounce
+    if (_harcRefreshDebounce) clearTimeout(_harcRefreshDebounce);
+    _harcRefreshDebounce = setTimeout(() => {
+      refreshAll().catch(() => {});
+    }, 500);
+  }
+
+  function _harcStartRealtime() {
+    if (_harcRealtimeChannel) return;
+    if (typeof getSB !== 'function') return;
+    const sb = getSB();
+    if (!sb) return;
+    try {
+      _harcRealtimeChannel = sb
+        .channel('harcirah-kayitlari-haftalik')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'harcirah_kayitlari' },
+            (payload) => {
+              // Kayıt değişti — listeyi tazele (debounced)
+              _harcDebouncedRefresh();
+              // Eğer onay/itiraz/ödeme aksiyonu varsa toast göster
+              if (payload.eventType === 'UPDATE' && payload.new && payload.old) {
+                const oldDurum = payload.old.durum;
+                const newDurum = payload.new.durum;
+                if (oldDurum !== newDurum && typeof toast === 'function') {
+                  const msg = ({
+                    sofor_onay:   `${payload.new.sofor_ad || 'Şoför'} bir kaydı onayladı`,
+                    sofor_itiraz: `${payload.new.sofor_ad || 'Şoför'} bir kaydı itiraz etti ⚠`
+                  })[newDurum];
+                  if (msg) toast(msg, newDurum === 'sofor_itiraz' ? 'warn' : 'info');
+                }
+              }
+            })
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'harcirah_haftalik' },
+            () => { _harcDebouncedRefresh(); })
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'harcirah_tarifeleri' },
+            () => { _harcDebouncedRefresh(); })
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('[Harcırah] Realtime hata — polling fallback devrede');
+          }
+        });
+    } catch (err) {
+      console.warn('[Harcırah] Realtime subscribe hata:', err);
+    }
+  }
+
+  function _harcStopRealtime() {
+    if (_harcRefreshDebounce) { clearTimeout(_harcRefreshDebounce); _harcRefreshDebounce = null; }
+    if (!_harcRealtimeChannel) return;
+    try {
+      const sb = getSB();
+      sb?.removeChannel?.(_harcRealtimeChannel);
+    } catch (_) {}
+    _harcRealtimeChannel = null;
   }
 
   function switchHarcirahTab(name, btn) {
@@ -88,6 +160,27 @@
     if (state.activeTab === 'tarifeler') openHarcirahTarifeModal();
     else if (state.activeTab === 'kayitlar') openHarcirahKayitModal();
     else if (state.activeTab === 'haftalik') openHarcirahHaftaKapatModal(null);
+  }
+
+  // Şoför eşleştirmeyi yenile (NULL sofor_user_id'leri davet'ten doldur)
+  async function harcSoforEslestir() {
+    if (!confirm('Şoför davetlerini mevcut iş emirleri ve harcırah kayıtlarıyla eşleştir?\n\nBu işlem güvenli — yalnızca eksik bağlantılar doldurulur.')) return;
+    try {
+      const res = await window.HarcirahAPI.soforMatchYenile();
+      const ie = res?.isemri_guncellenen || 0;
+      const hk = res?.harcirah_guncellenen || 0;
+      if (typeof toast === 'function') {
+        if (ie === 0 && hk === 0) {
+          toast('Eşleştirilecek kayıt yok — tüm bağlantılar zaten kurulu', 'info');
+        } else {
+          toast(`✓ ${ie} iş emri · ${hk} harcırah kaydı eşleştirildi`, 'success');
+        }
+      }
+      await refreshAll();
+    } catch (err) {
+      console.error(err);
+      if (typeof toast === 'function') toast('Eşleştirme hatası: ' + err.message, 'error');
+    }
   }
 
   // ════════════════════════════════════════════════════════
@@ -1435,8 +1528,16 @@
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth();
 
-    // Türkçe karakter desteği için character map (jsPDF default font Latin'e dönüştürür)
-    const tr = s => String(s == null ? '' : s)
+    // Türkçe destekli Roboto fontunu yükle (lazy, cache'li)
+    let useRoboto = false;
+    if (window.PdfFonts) {
+      if (typeof toast === 'function' && !window.PdfFonts.isCached()) toast('PDF hazırlanıyor…', 'info');
+      useRoboto = await window.PdfFonts.load(doc);
+    }
+    const FONT = useRoboto ? 'Roboto' : 'helvetica';
+
+    // Roboto yüklenmezse latin-fallback (eski davranış)
+    const safe = useRoboto ? (s) => String(s == null ? '' : s) : (s) => String(s == null ? '' : s)
       .replace(/ı/g, 'i').replace(/İ/g, 'I')
       .replace(/ş/g, 's').replace(/Ş/g, 'S')
       .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
@@ -1449,46 +1550,49 @@
     doc.rect(0, 0, pageW, 18, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(15);
-    doc.setFont('helvetica', 'bold');
-    doc.text(tr('FLEETLY · HARCIRAH BORDROSU'), 10, 12);
+    doc.setFont(FONT, 'bold');
+    doc.text(safe('FLEETLY · HARCIRAH BORDROSU'), 10, 12);
 
     doc.setTextColor(60, 60, 60);
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(FONT, 'normal');
     let y = 28;
-    doc.text(tr('Sofor:'), 10, y);
-    doc.setFont('helvetica', 'bold');
-    doc.text(tr(h.sofor_ad || '-'), 30, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(tr('Hafta:'), pageW - 70, y);
-    doc.setFont('helvetica', 'bold');
+    doc.text(safe('Şoför:'), 10, y);
+    doc.setFont(FONT, 'bold');
+    doc.text(safe(h.sofor_ad || '-'), 30, y);
+    doc.setFont(FONT, 'normal');
+    doc.text(safe('Hafta:'), pageW - 70, y);
+    doc.setFont(FONT, 'bold');
     doc.text(`${h.hafta_yili} / H${h.hafta_no}`, pageW - 50, y);
 
     y += 6;
     const tarihTxt = (h.baslangic_tarih && h.bitis_tarih)
-      ? new Date(h.baslangic_tarih).toLocaleDateString('tr-TR') + ' - ' + new Date(h.bitis_tarih).toLocaleDateString('tr-TR')
+      ? new Date(h.baslangic_tarih).toLocaleDateString('tr-TR') + ' – ' + new Date(h.bitis_tarih).toLocaleDateString('tr-TR')
       : '-';
-    doc.setFont('helvetica', 'normal');
-    doc.text(tr('Tarih Araligi:'), 10, y);
-    doc.text(tr(tarihTxt), 40, y);
+    doc.setFont(FONT, 'normal');
+    doc.text(safe('Tarih Aralığı:'), 10, y);
+    doc.text(safe(tarihTxt), 40, y);
 
     y += 6;
-    doc.text(tr(`Kapatildi: ${h.kapatildi_at ? new Date(h.kapatildi_at).toLocaleString('tr-TR') : '-'}`), 10, y);
-    doc.text(tr(`Durum: ${h.durum === 'odendi' ? 'Odendi' : (h.durum === 'iptal' ? 'Iptal' : 'Kapali · Odeme bekliyor')}`), pageW - 80, y);
+    doc.text(safe(`Kapatıldı: ${h.kapatildi_at ? new Date(h.kapatildi_at).toLocaleString('tr-TR') : '-'}`), 10, y);
+    const durumTxt = h.durum === 'odendi' ? 'Ödendi'
+                    : h.durum === 'iptal' ? 'İptal'
+                    : 'Kapalı · Ödeme bekliyor';
+    doc.text(safe(`Durum: ${durumTxt}`), pageW - 80, y);
 
     // TABLO
     y += 8;
-    const head = [['#', tr('Tarih'), tr('Plaka'), tr('Tarife'), tr('Manuel'), tr('Ek'), tr('Avans'), tr('Net (TL)')]];
+    const head = [['#', safe('Tarih'), safe('Plaka'), safe('Tarife'), safe('Manuel'), safe('Ek'), safe('Avans'), safe('Net (₺)')]];
     const body = kayitlar.map((k, i) => {
       const tarih = k.is_tarihi ? new Date(k.is_tarihi).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' }) : '-';
       return [
         String(i + 1),
         tarih,
-        tr(k.arac_plaka || '-'),
+        safe(k.arac_plaka || '-'),
         k.hesaplanan_tutar != null ? _fmtTutar(k.hesaplanan_tutar) : '-',
         k.manuel_tutar != null ? _fmtTutar(k.manuel_tutar) : '-',
         k.ek_masraflar > 0 ? '+' + _fmtTutar(k.ek_masraflar) : '-',
-        k.avans_dusum > 0 ? '-' + _fmtTutar(k.avans_dusum) : '-',
+        k.avans_dusum > 0 ? '−' + _fmtTutar(k.avans_dusum) : '-',
         _fmtTutar(k.net_tutar || 0)
       ];
     });
@@ -1496,8 +1600,9 @@
     if (doc.autoTable) {
       doc.autoTable({
         head, body, startY: y,
-        styles: { fontSize: 9, font: 'helvetica' },
-        headStyles: { fillColor: [248, 250, 252], textColor: [50, 50, 50], fontStyle: 'bold' },
+        styles: { fontSize: 9, font: FONT },
+        headStyles: { fillColor: [248, 250, 252], textColor: [50, 50, 50], fontStyle: 'bold', font: FONT },
+        bodyStyles: { font: FONT },
         columnStyles: {
           0: { halign: 'right', cellWidth: 8 },
           7: { halign: 'right', fontStyle: 'bold' }
@@ -1506,11 +1611,10 @@
       });
       y = doc.lastAutoTable.finalY + 6;
     } else {
-      // autoTable yoksa basit liste
       doc.setFontSize(9);
       kayitlar.forEach((k, i) => {
         if (y > 270) { doc.addPage(); y = 20; }
-        doc.text(`${i+1}. ${k.is_tarihi || '-'} · ${tr(k.arac_plaka || '-')} · ${_fmtTutar(k.net_tutar)} TL`, 10, y);
+        doc.text(`${i+1}. ${k.is_tarihi || '-'} · ${safe(k.arac_plaka || '-')} · ${_fmtTutar(k.net_tutar)} ₺`, 10, y);
         y += 5;
       });
       y += 4;
@@ -1525,36 +1629,42 @@
 
     doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
-    doc.text(tr('Brut Toplam'), pageW - 88, y + 6);
-    doc.text(_fmtTutar(h.toplam_brut) + ' TL', pageW - 12, y + 6, { align: 'right' });
+    doc.setFont(FONT, 'normal');
+    doc.text(safe('Brüt Toplam'), pageW - 88, y + 6);
+    doc.text(_fmtTutar(h.toplam_brut) + ' ₺', pageW - 12, y + 6, { align: 'right' });
 
-    doc.text(tr('Avans Dusum'), pageW - 88, y + 12);
-    doc.text('- ' + _fmtTutar(h.toplam_avans) + ' TL', pageW - 12, y + 12, { align: 'right' });
+    doc.text(safe('Avans Düşüm'), pageW - 88, y + 12);
+    doc.text('− ' + _fmtTutar(h.toplam_avans) + ' ₺', pageW - 12, y + 12, { align: 'right' });
 
     doc.setLineWidth(0.2);
     doc.line(pageW - 88, y + 16, pageW - 12, y + 16);
 
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(FONT, 'bold');
     doc.setFontSize(12);
     doc.setTextColor(34, 197, 94);
-    doc.text(tr('NET ODENECEK'), pageW - 88, y + 23);
-    doc.text(_fmtTutar(h.toplam_net) + ' TL', pageW - 12, y + 23, { align: 'right' });
+    doc.text(safe('NET ÖDENECEK'), pageW - 88, y + 23);
+    doc.text(_fmtTutar(h.toplam_net) + ' ₺', pageW - 12, y + 23, { align: 'right' });
 
     if (h.notlar) {
       y += 36;
-      doc.setFont('helvetica', 'italic');
+      doc.setFont(FONT, 'normal');
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
-      doc.text(tr('Not: ') + tr(h.notlar), 10, y, { maxWidth: pageW - 20 });
+      doc.text(safe('Not: ') + safe(h.notlar), 10, y, { maxWidth: pageW - 20 });
     }
 
     // FOOTER
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
-    doc.setFont('helvetica', 'normal');
-    doc.text(tr(`Olusturuldu: ${new Date().toLocaleString('tr-TR')} · fleetly.fit`), 10, 290);
+    doc.setFont(FONT, 'normal');
+    doc.text(safe(`Oluşturuldu: ${new Date().toLocaleString('tr-TR')} · fleetly.fit`), 10, 290);
 
-    const filename = `harcirah-${tr(h.sofor_ad || 'sofor').toLowerCase().replace(/\s+/g, '-')}-${h.hafta_yili}-h${h.hafta_no}.pdf`;
+    // Dosya adı için ASCII normalize (filesystem güvenli)
+    const asciiName = String(h.sofor_ad || 'sofor').toLowerCase()
+      .replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g')
+      .replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const filename = `harcirah-${asciiName}-${h.hafta_yili}-h${h.hafta_no}.pdf`;
     doc.save(filename);
 
     if (typeof toast === 'function') toast('PDF indirildi', 'success');
@@ -1588,4 +1698,5 @@
   window.closeHarcirahHaftaOdeModal = closeHarcirahHaftaOdeModal;
   window.harcHaftaOdeOnayla         = harcHaftaOdeOnayla;
   window.harcHaftaPdfIndir          = harcHaftaPdfIndir;
+  window.harcSoforEslestir          = harcSoforEslestir;
 })();
