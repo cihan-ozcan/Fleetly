@@ -1467,6 +1467,72 @@
             <div style="text-align:center;color:var(--muted);padding:20px 12px;font-size:11.5px;">Yükleniyor…</div>
           </div>
         </div>
+
+        <!-- Bekleme Eşikleri & Müşteri Tarifesi kartı (Migration 2026_05_06r) -->
+        <div style="margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);">⏱ Fabrika Bekleme Ayarları</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">
+                Şoföre bekleme harcırahı eşiği ve müşteri firmaya tahakkuk eşiği/saat ücreti.
+                Eşik dolduğunda otomatik hesaplama yapılır. Şoför sadece kendi eşiğini görür.
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+            <!-- Şoför eşiği -->
+            <div>
+              <label style="display:block;font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;">
+                🚛 Şoför Bekleme Eşiği
+              </label>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <input id="harc-bekleme-sofor-saat" type="number" min="1" step="1" placeholder="7"
+                       style="width:65px;padding:6px 8px;background:var(--bg-sunk);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-weight:700;text-align:center;" />
+                <span style="font-size:11.5px;color:var(--text2);">saat sonra harcırah verilir</span>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-top:4px;">
+                Tutar: <b id="harc-bekleme-sofor-tutar-info" style="color:var(--text2);">—</b>
+                <span style="opacity:.7;">(Ek Hizmetler → "bekleme")</span>
+              </div>
+            </div>
+
+            <!-- Müşteri eşiği -->
+            <div>
+              <label style="display:block;font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;">
+                📋 Müşteri Tahakkuk Eşiği
+              </label>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <input id="harc-bekleme-musteri-saat" type="number" min="1" step="1" placeholder="6"
+                       style="width:65px;padding:6px 8px;background:var(--bg-sunk);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-weight:700;text-align:center;" />
+                <span style="font-size:11.5px;color:var(--text2);">saat sonra fatura kesilir</span>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-top:4px;">
+                İş emrinin <code style="font-family:var(--font-mono);">musteri_bekleme_borc_tl</code> alanına yazılır
+              </div>
+            </div>
+
+            <!-- Müşteri saatlik tutar -->
+            <div>
+              <label style="display:block;font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;">
+                💵 Müşteri Saatlik Ücret (₺)
+              </label>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <input id="harc-bekleme-musteri-tl" type="number" min="0" step="1" placeholder="150"
+                       style="width:90px;padding:6px 8px;background:var(--bg-sunk);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-weight:700;text-align:center;" />
+                <span style="font-size:11.5px;color:var(--text2);">TL/saat</span>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-top:4px;">
+                Eşik üstü kısım × bu oran
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+            <button onclick="harcBeklemeAyarlariYukle()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:6px 12px;font-size:11.5px;cursor:pointer;">↻ Sıfırla</button>
+            <button onclick="harcBeklemeAyarlariKaydet()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">Kaydet</button>
+          </div>
+        </div>
       </div>
 
       <!-- SEKME 2: Kayıtlar -->

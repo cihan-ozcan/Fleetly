@@ -209,6 +209,10 @@
     harcRenderTarifeler();
     harcRenderEkHizmetler();
     harcRenderKayitlar();
+    // Bekleme ayarları (Migration 2026_05_06r) — sessiz yükle, hata olursa toast
+    if (typeof window.HarcirahAPI.beklemeAyarlariGetir === 'function') {
+      try { await harcBeklemeAyarlariYukle(); } catch (e) { console.warn('[bekleme] yükleme:', e); }
+    }
   }
 
   function _updateCounts() {
@@ -1094,6 +1098,76 @@
     }
   }
 
+  // ════════════════════════════════════════════════════════
+  // BEKLEME AYARLARI (Migration 2026_05_06r + 2026_05_06s)
+  // ════════════════════════════════════════════════════════
+  // Tarifeler sekmesinin altındaki "⏱ Fabrika Bekleme Ayarları" kartı.
+  // Mevcut değerleri form'a doldur ve kullanıcı düzelttiğinde RPC ile kaydet.
+
+  /** Form alanlarını mevcut firma ayarları + ek hizmet 'bekleme' tarifesinden doldur. */
+  async function harcBeklemeAyarlariYukle() {
+    const elSofor   = _$('harc-bekleme-sofor-saat');
+    const elMusteri = _$('harc-bekleme-musteri-saat');
+    const elTl      = _$('harc-bekleme-musteri-tl');
+    const elTutarInfo = _$('harc-bekleme-sofor-tutar-info');
+    if (!elSofor || !elMusteri || !elTl) return;
+
+    try {
+      const a = await window.HarcirahAPI.beklemeAyarlariGetir();
+      // Eşikleri saat olarak göster (dakika → saat). Tam bölünmezse dakika kalır.
+      elSofor.value   = Math.round((a.soforEsikDk || 420) / 60);
+      elMusteri.value = Math.round((a.musteriEsikDk || 360) / 60);
+      elTl.value      = Number(a.musteriSaatTl || 0);
+
+      if (elTutarInfo) {
+        elTutarInfo.textContent = a.soforSabitTl > 0
+          ? a.soforSabitTl.toFixed(0) + ' ₺ sabit'
+          : '— (Ek Hizmetler\'de "bekleme" kaydı eklenmedi)';
+      }
+    } catch (err) {
+      console.error('[bekleme] yükleme hata:', err);
+      if (typeof toast === 'function') toast('Bekleme ayarları yüklenemedi: ' + err.message, 'error');
+    }
+  }
+
+  /** Form'daki değerleri RPC ile kaydet. */
+  async function harcBeklemeAyarlariKaydet() {
+    const elSofor   = _$('harc-bekleme-sofor-saat');
+    const elMusteri = _$('harc-bekleme-musteri-saat');
+    const elTl      = _$('harc-bekleme-musteri-tl');
+    if (!elSofor || !elMusteri || !elTl) return;
+
+    const soforSaat   = parseInt(elSofor.value, 10);
+    const musteriSaat = parseInt(elMusteri.value, 10);
+    const musteriTl   = parseFloat(elTl.value);
+
+    if (!Number.isFinite(soforSaat) || soforSaat < 1) {
+      if (typeof toast === 'function') toast('Şoför eşiği en az 1 saat olmalı', 'warning');
+      return;
+    }
+    if (!Number.isFinite(musteriSaat) || musteriSaat < 1) {
+      if (typeof toast === 'function') toast('Müşteri eşiği en az 1 saat olmalı', 'warning');
+      return;
+    }
+    if (!Number.isFinite(musteriTl) || musteriTl < 0) {
+      if (typeof toast === 'function') toast('Müşteri saatlik ücret negatif olamaz', 'warning');
+      return;
+    }
+
+    try {
+      await window.HarcirahAPI.beklemeAyarlariKaydet({
+        soforEsikDk:   soforSaat * 60,
+        musteriEsikDk: musteriSaat * 60,
+        musteriSaatTl: musteriTl
+      });
+      if (typeof toast === 'function') toast('✓ Bekleme ayarları kaydedildi', 'success');
+      // Mobile uygulamadaki şoförler bir sonraki iş emri reload'unda yeni eşiği görür.
+    } catch (err) {
+      console.error('[bekleme] kaydetme hata:', err);
+      if (typeof toast === 'function') toast('Kayıt başarısız: ' + (err.message || err), 'error');
+    }
+  }
+
   // ESC ile modal kapat
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -1134,6 +1208,9 @@
   window.harcEkHizmetSeed           = harcEkHizmetSeed;
   window.harcOtoBaslik              = harcOtoBaslik;
   window.harcOtoBaslikUret          = harcOtoBaslikUret;
+  // Bekleme ayarları (Migration 2026_05_06r + 2026_05_06s)
+  window.harcBeklemeAyarlariYukle   = harcBeklemeAyarlariYukle;
+  window.harcBeklemeAyarlariKaydet  = harcBeklemeAyarlariKaydet;
   // ════════════════════════════════════════════════════════
   // HAFTALIK ÖZET sekmesi
   // ════════════════════════════════════════════════════════

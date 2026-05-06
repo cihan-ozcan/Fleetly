@@ -15,7 +15,9 @@
       "PowerShell($env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; & \"C:\\\\Users\\\\cihan\\\\Desktop\\\\Fleetly-Android\\\\gradlew.bat\" -p \"C:\\\\Users\\\\cihan\\\\Desktop\\\\Fleetly-Android\" :app:compileDebugKotlin --no-daemon -q 2>&1 | Select-Object -Last 80)",
       "Bash(xxd)",
       "Bash(node --check js/pages/limanlar-page.js)",
-      "Bash(node --check js/pages/app-chunk-05.js)"
+      "Bash(node --check js/pages/app-chunk-05.js)",
+      "Bash(node --check js/integrations/harcirah-api.js)",
+      "Bash(node --check js/pages/harcirah-page.js)"
     ]
   }
 }
