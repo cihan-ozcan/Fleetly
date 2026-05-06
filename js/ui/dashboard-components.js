@@ -339,6 +339,19 @@
       : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
     L.tileLayer(tileUrl, { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
 
+    // Marker cluster — kalabalık dashboard haritasında gruplandırır (2026_05_06j)
+    if (typeof L.markerClusterGroup === 'function') {
+      UI._dashCluster = L.markerClusterGroup({
+        maxClusterRadius: 50,
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        chunkedLoading: true
+      });
+      map.addLayer(UI._dashCluster);
+    } else {
+      UI._dashCluster = null;
+    }
+
     // İlk fetch + periyodik yenileme + realtime
     UI.refreshLiveDriverMap();
     // İlk yenilemede firmaId/auth henüz yüklenmemiş olabilir; ilk 60 sn'de
@@ -504,16 +517,21 @@
         });
         marker.bindTooltip(tooltipHtml, { direction: 'top', offset: [0, -8], opacity: 0.95 });
         marker.bindPopup(popupHtml, { maxWidth: 260, closeButton: true });
-        marker.addTo(map);
+        // Cluster grubu varsa ona ekle, yoksa direkt haritaya
+        if (UI._dashCluster) UI._dashCluster.addLayer(marker);
+        else marker.addTo(map);
         UI._liveMarkers[e.id] = marker;
       }
       bounds.push([lat, lng]);
     });
 
-    // Artık aktif olmayan markerları kaldır
+    // Artık aktif olmayan markerları kaldır (cluster varsa cluster'dan kaldır)
     Object.keys(UI._liveMarkers).forEach(function (id) {
       if (!seen[id]) {
-        try { map.removeLayer(UI._liveMarkers[id]); } catch (e) {}
+        try {
+          if (UI._dashCluster) UI._dashCluster.removeLayer(UI._liveMarkers[id]);
+          else map.removeLayer(UI._liveMarkers[id]);
+        } catch (e) {}
         delete UI._liveMarkers[id];
       }
     });
