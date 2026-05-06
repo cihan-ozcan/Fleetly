@@ -1720,3 +1720,15 @@
   }
   #operasyon-page .ops-appbar__search { width: 180px; }
 }
+
+/* =============================================================================
+ * 24 saat datetime-local override (TR'de AM/PM yok)
+ * datetime-local input'unun AM/PM alanını WebKit/Chrome'da gizler. Sistem locale'i
+ * İngilizce olsa bile bu fix ile 24 saat formatı zorlanır.
+ * ===========================================================================*/
+input[type="datetime-local"].ops-time-24h::-webkit-datetime-edit-ampm-field {
+  display: none !important;
+}
+input[type="datetime-local"].ops-time-24h::-webkit-datetime-edit-hour-field {
+  /* Saat alanı 0-23 arası gösterilir; ampm yokken WebKit otomatik 24h moduna geçer */
+}

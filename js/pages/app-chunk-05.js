@@ -728,6 +728,8 @@ function opsRowToObj(r) {
     yakit_litre      : r.yakit_litre   != null ? parseFloat(r.yakit_litre)  : null,
     yakit_tutar      : r.yakit_tutar   != null ? parseFloat(r.yakit_tutar)  : null,
     diger_masraf     : r.diger_masraf  != null ? parseFloat(r.diger_masraf) : null,
+    /* ── Canlı hız (2026_05_06d) ── */
+    konum_hiz           : r.konum_hiz           != null ? parseFloat(r.konum_hiz) : null,
     /* ── POD (Teslim Belgesi) ── */
     teslim_alan_ad      : r.teslim_alan_ad      || null,
     teslim_not_musteri  : r.teslim_not_musteri   || null,
@@ -1655,7 +1657,15 @@ function opsRenderTable() {
       <td style="font-size:12px;">${e.teslim_yeri || '<span style="color:var(--text-dim);">—</span>'}</td>
       <td style="font-size:11.5px;color:var(--ops-success);">${e.bos_donus || '<span style="color:var(--text-dim);">—</span>'}</td>
       <td>${opsDurumBadge(e.durum, durumSuffix ? { suffix: durumSuffix } : null)}</td>
-      <td><span class="col-time">${opsFmtZaman(e.yola_zaman)}</span>${e.yola_zaman&&e.durum==='Yolda'?`<span class="col-time__sub ${yolaSubCls}">${opsRelTime(e.yola_zaman)} önce</span>`:''}</td>
+      <td><span class="col-time">${opsFmtZaman(e.yola_zaman)}</span>${e.yola_zaman&&e.durum==='Yolda'?`<span class="col-time__sub ${yolaSubCls}">${opsRelTime(e.yola_zaman)} önce</span>`:''}${(() => {
+        // Canlı hız (2026_05_06d) — yalnızca Yolda iken anlamlı
+        if (e.durum !== 'Yolda' || e.konum_hiz == null) return '';
+        const v = Math.max(0, Math.round(e.konum_hiz));
+        const ageMs = e.konum_zaman ? Date.now() - new Date(e.konum_zaman).getTime() : null;
+        const fresh = ageMs != null && ageMs < 5 * 60 * 1000;  // 5dk altı = canlı
+        const color = !fresh ? 'var(--text-dim)' : (v < 5 ? '#ef4444' : v < 30 ? '#f59e0b' : '#22c55e');
+        return `<span class="col-time__sub" style="color:${color};font-weight:700;font-family:var(--ops-font-mono);" title="${fresh?'Anlık':'Son ölçülen'} hız">🚗 ${v} km/sa</span>`;
+      })()}</td>
       <td>${kmHtml}</td>
       <td><span class="col-mono" style="font-size:11.5px;color:var(--text-primary);">${opsFmtZaman(e.fabrika_giris)}</span></td>
       <td><span class="col-mono" style="font-size:11.5px;color:var(--text-primary);">${opsFmtZaman(e.fabrika_cikis)}</span></td>
@@ -1790,6 +1800,16 @@ function opsBuildContainerCard(e, status) {
   else if (status === 'teslim') statusPill = `<span class="ops-pill ops-pill--solid-success">✓ POD</span>`;
   else if (status === 'fabrikada') statusPill = `<span class="ops-pill ops-pill--purple">Fabrikada</span>`;
 
+  // Canlı hız pill (Kanban — 2026_05_06d) — yalnızca Yolda iken
+  let hizPill = '';
+  if (e.durum === 'Yolda' && e.konum_hiz != null) {
+    const v = Math.max(0, Math.round(e.konum_hiz));
+    const ageMs = e.konum_zaman ? Date.now() - new Date(e.konum_zaman).getTime() : null;
+    const fresh = ageMs != null && ageMs < 5 * 60 * 1000;
+    const color = !fresh ? 'rgba(148,163,184,.3)' : (v < 5 ? 'rgba(239,68,68,.85)' : v < 30 ? 'rgba(245,158,11,.85)' : 'rgba(34,197,94,.85)');
+    hizPill = `<span class="ops-pill ops-pill--mono" title="${fresh?'Anlık':'Son ölçülen'} hız" style="background:${color};color:#fff;border-color:transparent;">🚗 ${v}</span>`;
+  }
+
   // Gümrük tel mühür pill (Kanban kartında — 2026_05_06b)
   let gumrukPill = '';
   if (e.gumruk_muhur_gerekli) {
@@ -1876,6 +1896,7 @@ function opsBuildContainerCard(e, status) {
         ${tipPill}
         ${dbPill}
         ${gumrukPill}
+        ${hizPill}
         ${podBadge}
         <span class="ops-card__head-spacer"></span>
         ${harcirahPill}
