@@ -622,8 +622,14 @@
           </button>
         </div>
       </div>
-      <div class="card__body card__body--flush">
+      <div class="card__body card__body--flush" style="position:relative;">
         <div id="dashboard-map" class="dash-map"></div>
+        <!-- Odak modu banner — bir araç seçilince görünür olur -->
+        <div id="dashboard-focus-banner"
+             style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);
+                    z-index:1000;background:var(--surface,#0f172a);border:1px solid var(--border,#1e293b);
+                    border-radius:8px;padding:6px 10px;gap:8px;align-items:center;font-size:12px;
+                    box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:90%;flex-wrap:wrap;"></div>
       </div>
     </div>
 
@@ -2624,7 +2630,11 @@
         <div class="fleet-map-legend-item"><span class="fleet-dot" style="background:#5B9DF9;"></span>Yolda</div>
         <div class="fleet-map-legend-item"><span class="fleet-dot" style="background:#9F7AEA;"></span>Fabrikada</div>
         <div class="fleet-map-legend-item"><span class="fleet-dot" style="background:#7A8299;"></span>Bekliyor</div>
-        <div class="fleet-map-legend-item"><span class="fleet-dot" style="background:#4ADE80;"></span>Teslim Edildi</div>
+        <label class="fleet-map-legend-item" style="cursor:pointer;user-select:none;gap:4px;">
+          <input type="checkbox" id="fleet-show-completed" onchange="opsRenderFleetMap()"
+                 style="margin:0;cursor:pointer;" />
+          <span class="fleet-dot" style="background:#4ADE80;"></span>Tamamlananları göster
+        </label>
         <div class="fleet-map-legend-item" style="margin-left:auto;">
           <span id="fleet-map-count" class="ops-mono" style="color:var(--ops-brand);font-weight:700;"></span>
         </div>
@@ -2637,7 +2647,14 @@
           Tam Ekran
         </button>
       </div>
-      <div id="ops-fleet-map"></div>
+      <div id="ops-fleet-map" style="position:relative;">
+        <!-- Odak modu üst banner — aktifse görünür olur (JS yönetir) -->
+        <div id="ops-fleet-focus-banner"
+             style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);
+                    z-index:1000;background:var(--surface,#0f172a);border:1px solid var(--border,#1e293b);
+                    border-radius:8px;padding:6px 10px;gap:8px;align-items:center;font-size:12px;
+                    box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:90%;flex-wrap:wrap;"></div>
+      </div>
     </div>
   </div>
 
