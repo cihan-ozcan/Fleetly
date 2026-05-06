@@ -739,6 +739,17 @@ function opsRowToObj(r) {
     pod_onaylayan       : r.pod_onaylayan       || null,
     pod_onay_notu       : r.pod_onay_notu       || null,
     pod_durum           : r.pod_durum           || null,
+    /* ── Boş alım ön-fazı (2026_05_06b) ── */
+    bos_alindi_zaman    : r.bos_alindi_zaman    || null,
+    bos_alim_konteyner  : r.bos_alim_konteyner  || null,
+    bos_alim_yer        : r.bos_alim_yer        || null,
+    /* ── Gümrük tel mühür (2026_05_06b) ── */
+    gumruk_muhur_gerekli: r.gumruk_muhur_gerekli === true,
+    gumruk_yetkili_ad   : r.gumruk_yetkili_ad   || '',
+    gumruk_yetkili_tel  : r.gumruk_yetkili_tel  || '',
+    gumruk_muhur_no     : r.gumruk_muhur_no     || null,
+    gumruk_muhur_zaman  : r.gumruk_muhur_zaman  || null,
+    gumruk_muhur_foto   : r.gumruk_muhur_foto   || null,
   };
 }
 
@@ -786,6 +797,15 @@ async function opsObjToRow(obj, isEdit) {
     bitis_km      : (obj.bitis_km     != null ? obj.bitis_km     : null),
     yakit_litre   : (obj.yakit_litre  != null ? obj.yakit_litre  : null),
     yakit_tutar   : (obj.yakit_tutar  != null ? obj.yakit_tutar  : null),
+    /* ── Gümrük tel mühür (2026_05_06b) ── */
+    gumruk_muhur_gerekli : !!obj.gumruk_muhur_gerekli,
+    gumruk_yetkili_ad    : obj.gumruk_yetkili_ad   || null,
+    gumruk_yetkili_tel   : obj.gumruk_yetkili_tel  || null,
+    /* Mühür no/zaman/foto şoför tarafında doldurulur — yöneticinin kayıt formundan
+       gelmez ama edit modunda mevcut değerler korunsun: */
+    ...(isEdit && obj.gumruk_muhur_no   != null ? { gumruk_muhur_no:    obj.gumruk_muhur_no    } : {}),
+    ...(isEdit && obj.gumruk_muhur_zaman!= null ? { gumruk_muhur_zaman: obj.gumruk_muhur_zaman } : {}),
+    ...(isEdit && obj.gumruk_muhur_foto != null ? { gumruk_muhur_foto:  obj.gumruk_muhur_foto  } : {}),
   };
 
   // Filo (Çekici/Dorse) FK'leri — yalnızca migration uygulanmışsa payload'a ekle.
@@ -1473,7 +1493,7 @@ function opsRenderTable() {
   document.getElementById('ops-table-count').textContent = sorted.length + ' kayıt';
   const tbody = document.getElementById('ops-table-body');
   if (!sorted.length) {
-    tbody.innerHTML = `<tr><td colspan="18"><div class="ops-empty" style="padding:36px 12px;">
+    tbody.innerHTML = `<tr><td colspan="19"><div class="ops-empty" style="padding:36px 12px;">
       <div class="ops-empty__icon">+</div>
       <div class="ops-empty__title">Aktif iş emri yok</div>
       <div class="ops-empty__msg">Yeni bir konteyner sevkiyatı için iş emri oluştur.</div>
@@ -1536,6 +1556,20 @@ function opsRenderTable() {
       <td>${kontHtml}</td>
       <td><span class="ops-pill ops-pill--neutral ops-pill--mono">${e.kont_tip || '—'}</span></td>
       <td><span class="ops-pill ops-pill--${dbTone}">${dbLabel}</span></td>
+      <td>${(() => {
+        // Gümrük tel mühür durumu (2026_05_06b):
+        //   • Gerekli ve takılmış → yeşil ✓ pill (mühür no tooltip'te)
+        //   • Gerekli ama eksik → sarı 🔒 pill
+        //   • Gerekli değil → tire
+        if (!e.gumruk_muhur_gerekli) return '<span style="color:var(--text-dim);">—</span>';
+        const tamam = !!(e.gumruk_muhur_no && e.gumruk_muhur_foto);
+        if (tamam) {
+          const no = (e.gumruk_muhur_no || '').replace(/"/g,'&quot;');
+          return `<span class="ops-pill" style="background:rgba(34,197,94,.12);color:#15803d;border:1px solid rgba(34,197,94,.30);" title="Mühür: ${no}">🔒 ✓</span>`;
+        }
+        const tip = (e.gumruk_yetkili_ad || '') + (e.gumruk_yetkili_tel ? ' · ' + e.gumruk_yetkili_tel : '');
+        return `<span class="ops-pill" style="background:rgba(245,158,11,.12);color:#b45309;border:1px solid rgba(245,158,11,.30);" title="${tip.replace(/"/g,'&quot;') || 'Gerekli'}">🔒 Gerekli</span>`;
+      })()}</td>
       <td style="font-size:12px;">${e.yukle_yeri || '<span style="color:var(--text-dim);">—</span>'}</td>
       <td style="font-size:12px;">${e.teslim_yeri || '<span style="color:var(--text-dim);">—</span>'}</td>
       <td style="font-size:11.5px;color:var(--ops-success);">${e.bos_donus || '<span style="color:var(--text-dim);">—</span>'}</td>
@@ -1675,6 +1709,18 @@ function opsBuildContainerCard(e, status) {
   else if (status === 'teslim') statusPill = `<span class="ops-pill ops-pill--solid-success">✓ POD</span>`;
   else if (status === 'fabrikada') statusPill = `<span class="ops-pill ops-pill--purple">Fabrikada</span>`;
 
+  // Gümrük tel mühür pill (Kanban kartında — 2026_05_06b)
+  let gumrukPill = '';
+  if (e.gumruk_muhur_gerekli) {
+    const tamam = !!(e.gumruk_muhur_no && e.gumruk_muhur_foto);
+    if (tamam) {
+      gumrukPill = `<span class="ops-pill" title="Mühür: ${escAttr(e.gumruk_muhur_no)}" style="background:rgba(34,197,94,.12);color:#15803d;border:1px solid rgba(34,197,94,.30);">🔒✓</span>`;
+    } else {
+      const t = (e.gumruk_yetkili_ad || '') + (e.gumruk_yetkili_tel ? ' · ' + e.gumruk_yetkili_tel : '');
+      gumrukPill = `<span class="ops-pill" title="${escAttr(t || 'Gümrük tel mühür gerekli')}" style="background:rgba(245,158,11,.12);color:#b45309;border:1px solid rgba(245,158,11,.30);">🔒</span>`;
+    }
+  }
+
   const podBadge = (typeof podKanbanBadgeHtml === 'function') ? podKanbanBadgeHtml(e) : '';
 
   /* driver satırı (avatar + isim + telefon + canlı dot) */
@@ -1748,6 +1794,7 @@ function opsBuildContainerCard(e, status) {
         ${dorsePill}
         ${tipPill}
         ${dbPill}
+        ${gumrukPill}
         ${podBadge}
         <span class="ops-card__head-spacer"></span>
         ${harcirahPill}
@@ -1974,6 +2021,16 @@ function openOpsIsEmriModal(duzenlemeObj) {
     const el = document.getElementById('ops-m-' + k);
     if (el) el.value = v || '';
   });
+  // Gümrük tel mühür (2026_05_06b)
+  const gChk = document.getElementById('ops-m-gumruk-gerekli');
+  const gDet = document.getElementById('ops-m-gumruk-detay');
+  const gAd  = document.getElementById('ops-m-gumruk-yetkili-ad');
+  const gTel = document.getElementById('ops-m-gumruk-yetkili-tel');
+  const gerekli = !!d.gumruk_muhur_gerekli;
+  if (gChk) gChk.checked = gerekli;
+  if (gDet) gDet.style.display = gerekli ? 'grid' : 'none';
+  if (gAd)  gAd.value  = d.gumruk_yetkili_ad  || '';
+  if (gTel) gTel.value = d.gumruk_yetkili_tel || '';
   // Preview badge'leri güncelle
   ['yukle','teslim'].forEach(kind => {
     const inp = document.getElementById(`ops-m-${kind}-konum`);
@@ -2384,6 +2441,14 @@ function saveOpsIsEmri() {
     e.bos_donus    = document.getElementById('ops-m-bos-donus').value.trim();
     e.boslama_zaman= document.getElementById('ops-m-boslama-zaman').value;
     e.notlar       = document.getElementById('ops-m-notlar').value.trim();
+    // Gümrük tel mühür (2026_05_06b migration)
+    e.gumruk_muhur_gerekli = !!document.getElementById('ops-m-gumruk-gerekli')?.checked;
+    e.gumruk_yetkili_ad    = e.gumruk_muhur_gerekli
+      ? (document.getElementById('ops-m-gumruk-yetkili-ad')?.value.trim() || null)
+      : null;
+    e.gumruk_yetkili_tel   = e.gumruk_muhur_gerekli
+      ? (document.getElementById('ops-m-gumruk-yetkili-tel')?.value.trim() || null)
+      : null;
     // Km sayacı + yakıt cache
     const _bk = parseFloat(document.getElementById('ops-m-bas-km')?.value);
     const _bi = parseFloat(document.getElementById('ops-m-bit-km')?.value);
@@ -2437,6 +2502,14 @@ function saveOpsIsEmri() {
     bos_donus      : document.getElementById('ops-m-bos-donus').value.trim(),
     boslama_zaman  : document.getElementById('ops-m-boslama-zaman').value,
     notlar         : document.getElementById('ops-m-notlar').value.trim(),
+    /* ── Gümrük tel mühür (2026_05_06b) ── */
+    gumruk_muhur_gerekli : !!document.getElementById('ops-m-gumruk-gerekli')?.checked,
+    gumruk_yetkili_ad    : (document.getElementById('ops-m-gumruk-gerekli')?.checked
+                              ? (document.getElementById('ops-m-gumruk-yetkili-ad')?.value.trim() || null)
+                              : null),
+    gumruk_yetkili_tel   : (document.getElementById('ops-m-gumruk-gerekli')?.checked
+                              ? (document.getElementById('ops-m-gumruk-yetkili-tel')?.value.trim() || null)
+                              : null),
     yukle_konum_url : (() => { const v=document.getElementById('ops-m-yukle-konum')?.value.trim(); return v||null; })(),
     teslim_konum_url: (() => { const v=document.getElementById('ops-m-teslim-konum')?.value.trim(); return v||null; })(),
     yukle_lat      : (() => { const p=parseKonumUrl(document.getElementById('ops-m-yukle-konum')?.value||''); return p?.lat||null; })(),

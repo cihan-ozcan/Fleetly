@@ -2589,6 +2589,7 @@
           <th>Konteyner No</th>
           <th>Tip</th>
           <th>D/B</th>
+          <th title="Gümrük tel mühür (kolcu) gerekli mi?">🔒 Gümrük</th>
           <th>Alım</th>
           <th>Teslim</th>
           <th>Boş Dönüş</th>
@@ -3012,9 +3013,31 @@
             <input id="ops-m-bit-km" class="srm-inp" type="number" min="0" step="1" placeholder="154312" oninput="_opsKmAutoHint()" />
           </div>
           <div class="srm-group full" id="ops-km-hint" style="display:none;font-size:11px;color:var(--ops-info);background:rgba(91,157,249,.08);border:1px solid rgba(91,157,249,.25);border-radius:6px;padding:8px 12px;"></div>
+
+          <!-- ═══ Gümrük tel mühür (kolcu) — 2026_05_06b migration ═══ -->
+          <div class="srm-group full" style="border-top:1px dashed var(--border);padding-top:14px;margin-top:6px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="ops-m-gumruk-gerekli"
+                onchange="document.getElementById('ops-m-gumruk-detay').style.display = this.checked ? 'grid' : 'none';"
+                style="width:16px;height:16px;cursor:pointer;" />
+              <span style="text-transform:none;font-weight:600;letter-spacing:0;">🔒 Gümrük tel mühür gerekli</span>
+              <span style="font-size:10px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">— şoför takmadan teslim edemez</span>
+            </label>
+          </div>
+          <div id="ops-m-gumruk-detay" class="srm-grid" style="display:none;grid-template-columns:1fr 1fr;gap:12px;grid-column:1/-1;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:12px;">
+            <div class="srm-group">
+              <label>Yetkili Adı</label>
+              <input id="ops-m-gumruk-yetkili-ad" class="srm-inp" placeholder="Ahmet Yılmaz" />
+            </div>
+            <div class="srm-group">
+              <label>Yetkili Telefon</label>
+              <input id="ops-m-gumruk-yetkili-tel" class="srm-inp" type="tel" placeholder="0532 123 45 67" />
+            </div>
+          </div>
+
           <div class="srm-group full">
             <label>Notlar / Özel Talimatlar</label>
-            <textarea id="ops-m-notlar" class="srm-inp" rows="2" placeholder="Gümrükçü iletişim, özel dikkat edilecekler..."></textarea>
+            <textarea id="ops-m-notlar" class="srm-inp" rows="2" placeholder="Özel dikkat edilecekler..."></textarea>
           </div>
         </div>
       </div>
