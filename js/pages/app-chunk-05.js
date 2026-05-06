@@ -5237,6 +5237,152 @@ window._filoTrafikToggleDash = function () {
 };
 
 /* =============================================================================
+ * YOĞUNLUK ISI HARİTASI — Leaflet.heat tabanlı (2026-05-06)
+ * -----------------------------------------------------------------------------
+ * Aynı veri kaynağı (filo_trafik_grid) ama farklı görselleme:
+ *   • "Filo Trafik" → her hücre renkli rectangle (yeşil/sarı/kırmızı)
+ *   • "Yoğunluk Isı" → blur'lu sıcak nokta (yavaş bölgeler kırmızı)
+ *
+ * Heat formülü: yoğunluk = max(0, 1 - kmh / 60)
+ *   • kmh = 0   → yoğunluk = 1.0 (tam sıcak — durmuş)
+ *   • kmh = 30  → yoğunluk = 0.5 (orta — yarı sıcak)
+ *   • kmh = 60+ → yoğunluk = 0   (akıcı — gizli)
+ *
+ * Örnek sayısı az olan hücreleri filtreler (ornek >= 2) — gürültüyü engellemek için.
+ * ===========================================================================*/
+async function _yogunlukYukle(map, layerStore) {
+  if (!map || typeof L.heatLayer !== 'function') {
+    if (typeof L.heatLayer !== 'function') {
+      console.warn('[yogunluk] Leaflet.heat yüklü değil');
+    }
+    return;
+  }
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb) return;
+
+  const b = map.getBounds();
+  const params = {
+    p_lat_min: b.getSouth(), p_lng_min: b.getWest(),
+    p_lat_max: b.getNorth(), p_lng_max: b.getEast()
+  };
+  let rows;
+  try {
+    const { data, error } = await sb.rpc('filo_trafik_bbox', params);
+    if (error) throw error;
+    rows = data || [];
+  } catch (err) {
+    console.warn('[yogunluk] yüklenemedi:', err);
+    return;
+  }
+
+  // Eski heat layer'ı kaldır
+  if (layerStore.layer) {
+    try { map.removeLayer(layerStore.layer); } catch {}
+    layerStore.layer = null;
+  }
+
+  // Heat point'leri üret: [lat, lng, intensity]
+  const points = [];
+  rows.forEach(r => {
+    if (r.kisa_ornek == null || r.kisa_ornek < 2) return;
+    const kmh = Number(r.kisa_ort_hiz);
+    if (!isFinite(kmh)) return;
+    // Yavaş = sıcak. 60+ km/sa free-flow (= gizli).
+    const intensity = Math.max(0, 1 - (kmh / 60));
+    if (intensity < 0.05) return;   // çok akıcı — heat'e dahil etme
+    points.push([r.merkez_lat, r.merkez_lng, intensity]);
+  });
+
+  if (points.length === 0) {
+    layerStore.lastUpdate = Date.now();
+    return;   // gösterecek veri yok ama sessiz
+  }
+
+  layerStore.layer = L.heatLayer(points, {
+    radius: 28,
+    blur: 38,
+    maxZoom: 17,
+    minOpacity: 0.35,
+    // Klasik heat gradient — yeşil (düşük) → sarı → turuncu → kırmızı (yüksek)
+    gradient: {
+      0.2: '#22c55e',
+      0.4: '#eab308',
+      0.6: '#f97316',
+      0.85: '#ef4444',
+      1.0: '#b91c1c'
+    }
+  }).addTo(map);
+  layerStore.lastUpdate = Date.now();
+}
+
+function _yogunlukKaldir(map, layerStore) {
+  if (layerStore.layer) {
+    try { map.removeLayer(layerStore.layer); } catch {}
+    layerStore.layer = null;
+  }
+}
+
+// Her harita için ayrı store
+const _yogunlukStore = {
+  fleet:     { layer: null, refreshTimer: null, moveHandler: null },
+  fleetFull: { layer: null, refreshTimer: null, moveHandler: null },
+  dashboard: { layer: null, refreshTimer: null, moveHandler: null }
+};
+
+/**
+ * Yoğunluk ısı haritası toggle — bir map için aç/kapat.
+ *   • İlk açılışta yükle
+ *   • Map move/zoom event'lerinde tazele (görünür alanı yeniden çek)
+ *   • 90sn polling (filo_trafik_grid trigger ile zaten realtime; polling yedek)
+ */
+function _yogunlukToggle(mapKey, map, btnId) {
+  const store = _yogunlukStore[mapKey];
+  if (!store) return;
+  const btn = btnId ? document.getElementById(btnId) : null;
+  if (typeof L.heatLayer !== 'function') {
+    if (typeof showToast === 'function') {
+      showToast('Yoğunluk haritası eklentisi yüklenemedi (Leaflet.heat).', 'warning');
+    }
+    return;
+  }
+  if (store.layer || store.refreshTimer) {
+    // Aktif → kapat
+    _yogunlukKaldir(map, store);
+    if (store.refreshTimer) { clearInterval(store.refreshTimer); store.refreshTimer = null; }
+    if (store.moveHandler) {
+      try { map.off('moveend zoomend', store.moveHandler); } catch {}
+      store.moveHandler = null;
+    }
+    btn?.classList.remove('is-active');
+    return;
+  }
+  // Aç
+  btn?.classList.add('is-active');
+  _yogunlukYukle(map, store);
+  store.moveHandler = () => _yogunlukYukle(map, store);
+  map.on('moveend zoomend', store.moveHandler);
+  store.refreshTimer = setInterval(() => {
+    if (store.layer) _yogunlukYukle(map, store);
+  }, 90000);
+}
+
+window._yogunlukToggleFleet = function () {
+  _yogunlukToggle('fleet', _fleetMap, 'fleet-yogunluk-toggle');
+};
+window._yogunlukToggleFull = function () {
+  _yogunlukToggle('fleetFull', _fleetFullMap, 'fleet-full-yogunluk');
+};
+window._yogunlukToggleDash = function () {
+  // Dashboard map FleetlyUI._dashMap'te tutulur (dashboard-components.js IIFE)
+  const dashMap = (typeof FleetlyUI !== 'undefined') ? FleetlyUI._dashMap : null;
+  if (!dashMap) {
+    if (typeof showToast === 'function') showToast('Harita henüz hazır değil.', 'warning');
+    return;
+  }
+  _yogunlukToggle('dashboard', dashMap, 'dash-yogunluk-toggle');
+};
+
+/* =============================================================================
  * TRAFİK OVERLAY — Multi-provider (2026_05_06k güncellemesi)
  * config.js → FILO_CONFIG'te hangi anahtar doluysa o sağlayıcı kullanılır.
  * Öncelik: TomTom (en ucuz) > HERE > Mapbox.

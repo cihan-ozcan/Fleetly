@@ -57,6 +57,9 @@
   <!-- Leaflet.draw — polygon çizimi (Limanlar Phase 2 — 2026_05_06l) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <!-- Leaflet.heat — yoğunluk ısı haritası (filo_trafik_grid verisinden, 2026-05-06) -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <!-- Gizli config — .gitignore'da, repoya GİTMEZ -->
@@ -627,6 +630,11 @@
         </div>
         <div class="row">
           <span class="live-pill"><span class="dot dot--pulse"></span>Canlı</span>
+          <button id="dash-yogunluk-toggle" class="btn--ghost btn--sm"
+                  onclick="_yogunlukToggleDash()"
+                  title="Yoğunluk Isı Haritası — yavaş bölgeleri sıcak nokta olarak gösterir">
+            🔥 Yoğunluk
+          </button>
           <button class="btn--ghost btn--sm" onclick="openOperasyonPage()">
             Tam ekran
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -2655,6 +2663,12 @@
                 style="position:relative;">
           <span style="font-size:13px;">🟢</span> Filo Trafik
         </button>
+        <button id="fleet-yogunluk-toggle" class="ops-btn ops-btn--quiet ops-btn--sm"
+                onclick="_yogunlukToggleFleet()"
+                title="Yoğunluk Isı Haritası — yavaş bölgeleri sıcak nokta olarak gösterir (filo_trafik_grid)"
+                style="position:relative;">
+          <span style="font-size:13px;">🔥</span> Yoğunluk
+        </button>
         <button id="fleet-trafik-toggle" class="ops-btn ops-btn--quiet ops-btn--sm"
                 onclick="_trafikToggleFleet()"
                 title="Genel Trafik (BYOK) — config.js → TOMTOM_KEY ekleyin (2.500/gün ücretsiz)"
@@ -2898,6 +2912,9 @@
         <button id="fleet-full-filo-trafik" class="ops-btn ops-btn--quiet ops-btn--sm"
                 onclick="_filoTrafikToggleFull()"
                 title="Filo İçi Trafik — kendi GPS verilerimizden ücretsiz">🟢 Filo</button>
+        <button id="fleet-full-yogunluk" class="ops-btn ops-btn--quiet ops-btn--sm"
+                onclick="_yogunlukToggleFull()"
+                title="Yoğunluk Isı Haritası — yavaş bölgeleri sıcak nokta olarak gösterir">🔥 Yoğunluk</button>
         <button id="fleet-full-trafik" class="ops-btn ops-btn--quiet ops-btn--sm"
                 onclick="_trafikToggleFull()"
                 title="Genel Trafik (BYOK) — config.js → TOMTOM_KEY">🚦 Genel</button>
@@ -3018,6 +3035,15 @@
     background: rgba(239, 68, 68, .18) !important;
     color: #ef4444 !important;
     border-color: rgba(239, 68, 68, .35) !important;
+  }
+
+  /* Yoğunluk ısı haritası toggle aktif görünümü — turuncu (heat) */
+  #fleet-yogunluk-toggle.is-active,
+  #fleet-full-yogunluk.is-active,
+  #dash-yogunluk-toggle.is-active {
+    background: rgba(249, 115, 22, .18) !important;
+    color: #f97316 !important;
+    border-color: rgba(249, 115, 22, .40) !important;
   }
 
   /* Multi-select ipucu — fleet-full-list head altında küçük not */
