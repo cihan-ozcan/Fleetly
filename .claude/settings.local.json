@@ -17,7 +17,8 @@
       "Bash(node --check js/pages/limanlar-page.js)",
       "Bash(node --check js/pages/app-chunk-05.js)",
       "Bash(node --check js/integrations/harcirah-api.js)",
-      "Bash(node --check js/pages/harcirah-page.js)"
+      "Bash(node --check js/pages/harcirah-page.js)",
+      "Bash(node --check js/pages/app-chunk-02.js)"
     ]
   }
 }

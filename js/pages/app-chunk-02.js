@@ -6038,6 +6038,13 @@ async function soforDavetOlustur() {
     const sb = getSB();
     // REFACTOR 2026-04-22: Önce v2 RPC'yi dene (telefon-first dedup).
     //   v2 yoksa (migration deploy öncesi) v1'e fallback.
+    //
+    // 2026-05-07: currentFirmaId yüklenemediyse (loadFirmaId race condition)
+    // tekrar yükleme dene → sonra RPC. RPC'nin kendisi de NULL'ı tolere eder
+    // (auth.uid() fallback) ama biz yine de doğru değerle gönderelim.
+    if (!currentFirmaId) {
+      try { await loadFirmaId(); } catch (_) {}
+    }
     let data, error;
     ({ data, error } = await sb.rpc('sofor_davet_olustur_v2', {
       p_firma_id: currentFirmaId,
