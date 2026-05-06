@@ -3087,24 +3087,133 @@ function opsCokluPanelGuncelle() {
   rowsEl.querySelectorAll('[data-coklu-row]').forEach(r => {
     const k = r.getAttribute('data-coklu-konteyner') || '';
     eski[k] = {
-      plaka: r.querySelector('[data-coklu-plaka]')?.value || '',
-      sofor: r.querySelector('[data-coklu-sofor]')?.value || '',
-      tel:   r.querySelector('[data-coklu-tel]')?.value   || ''
+      plaka:    r.querySelector('[data-coklu-plaka]')?.value    || '',
+      sofor:    r.querySelector('[data-coklu-sofor]')?.value    || '',
+      tel:      r.querySelector('[data-coklu-tel]')?.value      || '',
+      cekiciId: r.querySelector('[data-coklu-cekici-id]')?.value || ''
     };
   });
 
+  // HTML escape için ufak yardımcı (input value attribute'una koyarken)
+  const escVal = (s) => String(s || '').replace(/"/g, '&quot;');
+
   rowsEl.innerHTML = knts.map((k, i) => {
     const v = eski[k] || {};
-    const ke = (k + '').replace(/[<>"']/g, '');
+    const ke = String(k).replace(/[<>"']/g, '');
     return `
-      <div data-coklu-row data-coklu-konteyner="${ke}"
+      <div data-coklu-row data-coklu-konteyner="${ke}" data-coklu-row-idx="${i}"
            style="display:grid;grid-template-columns:1.4fr 1fr 1.4fr 1.2fr;gap:6px;margin-bottom:6px;align-items:center;padding:8px;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.18);border-radius:6px;">
         <div style="font-family:var(--ops-font-mono);font-size:12px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i+1}. ${ke}</div>
-        <input type="text" data-coklu-plaka class="srm-inp" placeholder="34 EE 5314" value="${(v.plaka+'').replace(/"/g,'&quot;')}" style="font-family:var(--ops-font-mono);font-weight:600;font-size:12px;padding:6px 8px;" />
-        <input type="text" data-coklu-sofor class="srm-inp" placeholder="Şoför adı" value="${(v.sofor+'').replace(/"/g,'&quot;')}" style="font-size:12px;padding:6px 8px;" />
-        <input type="tel"  data-coklu-tel   class="srm-inp" placeholder="0500 000 00 00" value="${(v.tel+'').replace(/"/g,'&quot;')}" style="font-size:12px;padding:6px 8px;" />
+
+        <!-- Plaka — autocomplete'li (üstteki Çekici Ara pattern'i) -->
+        <div style="position:relative;">
+          <input type="text" data-coklu-plaka data-coklu-row-idx="${i}" class="srm-inp"
+                 placeholder="34 EE 5314" autocomplete="off"
+                 value="${escVal(v.plaka)}"
+                 oninput="opsCokluAracAra(${i}, this.value)"
+                 onfocus="opsCokluAracAra(${i}, this.value)"
+                 onblur="setTimeout(()=>{const d=document.getElementById('ops-coklu-arac-dd-${i}');if(d) d.style.display='none';}, 200)"
+                 style="font-family:var(--ops-font-mono);font-weight:600;font-size:12px;padding:6px 8px;width:100%;" />
+          <input type="hidden" data-coklu-cekici-id value="${escVal(v.cekiciId)}" />
+          <div id="ops-coklu-arac-dd-${i}"
+               style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;border-radius:6px;max-height:200px;overflow-y:auto;margin-top:2px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 20px rgba(0,0,0,.18);"></div>
+        </div>
+
+        <input type="text" data-coklu-sofor class="srm-inp" placeholder="Şoför adı"
+               value="${escVal(v.sofor)}"
+               style="font-size:12px;padding:6px 8px;" />
+        <input type="tel"  data-coklu-tel   class="srm-inp" placeholder="0500 000 00 00"
+               value="${escVal(v.tel)}"
+               style="font-size:12px;padding:6px 8px;" />
       </div>`;
   }).join('');
+}
+
+/**
+ * Çoklu konteyner satırlarındaki "Plaka" input'u için autocomplete dropdown.
+ * Üstteki "Çekici Ara" pattern'inin satır-bazlı versiyonu.
+ *
+ * @param {number} rowIdx — satır index (0-based)
+ * @param {string} q      — arama terimi
+ */
+function opsCokluAracAra(rowIdx, q) {
+  const dd = document.getElementById('ops-coklu-arac-dd-' + rowIdx);
+  if (!dd) return;
+  const query = (q || '').toLowerCase().trim();
+  const cekiciler = (typeof vehicles !== 'undefined' ? vehicles : []).filter(v => {
+    const k = v.kind || 'cekici';
+    return k === 'cekici' || k === 'tek_parca';
+  });
+  const list = cekiciler.filter(v =>
+    !query ||
+    (v.plaka  || '').toLowerCase().includes(query) ||
+    (v.sofor  || '').toLowerCase().includes(query) ||
+    (v.marka  || '').toLowerCase().includes(query) ||
+    (v.model  || '').toLowerCase().includes(query)
+  ).slice(0, 30);   // performans için maks 30 sonuç
+
+  if (!list.length) {
+    dd.style.display = 'none';
+    return;
+  }
+  const tipIcon = { 'cekici': '🚛', 'tek_parca': '🚐' };
+  dd.style.display = 'block';
+  dd.innerHTML = list.map(v => {
+    const k = v.kind || 'cekici';
+    const ico = tipIcon[k] || '🚛';
+    const esc = (s) => String(s || '').replace(/'/g, "\\'");
+    return `
+      <div onclick="opsCokluAracSec(${rowIdx}, '${esc(v.id)}', '${esc(v.plaka)}', '${esc(v.sofor)}', '${esc(v.telefon)}')"
+           style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;"
+           onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <span style="font-size:14px;flex-shrink:0">${ico}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--ops-font-mono);font-weight:700;color:var(--accent);font-size:12px;">${v.plaka}</div>
+          ${v.sofor ? `<div style="font-size:10px;color:var(--muted);">👤 ${v.sofor}${v.telefon ? ' · ' + v.telefon : ''}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/** Çoklu satır plaka dropdown'undan seçim — plaka + şoför + telefon + cekiciId doldurur. */
+function opsCokluAracSec(rowIdx, cekiciId, plaka, sofor, tel) {
+  const row = document.querySelector(`[data-coklu-row][data-coklu-row-idx="${rowIdx}"]`);
+  if (!row) return;
+  const plakaEl = row.querySelector('[data-coklu-plaka]');
+  const soforEl = row.querySelector('[data-coklu-sofor]');
+  const telEl   = row.querySelector('[data-coklu-tel]');
+  const cekIdEl = row.querySelector('[data-coklu-cekici-id]');
+  if (plakaEl) plakaEl.value = plaka || '';
+  if (soforEl) soforEl.value = sofor || '';
+  if (telEl)   telEl.value   = tel   || '';
+  if (cekIdEl) cekIdEl.value = cekiciId || '';
+  const dd = document.getElementById('ops-coklu-arac-dd-' + rowIdx);
+  if (dd) dd.style.display = 'none';
+}
+
+window.opsCokluAracAra = opsCokluAracAra;
+window.opsCokluAracSec = opsCokluAracSec;
+
+/**
+ * Üstteki "Çekici Ara"da bir araç seçildiğinde, çoklu konteyner panelindeki BOŞ
+ * (henüz manuel doldurulmamış) satırlara aynı çekici/şoför/telefonu default
+ * olarak yansıt. Kullanıcı zaten doldurduğu satırlara dokunma.
+ *
+ * Çağrı yeri: opsAracSec sonu (genişletme).
+ */
+function _opsCokluSatirlariniUstUstteAtaCekici(plaka, sofor, tel, cekiciId) {
+  const rowsEl = document.getElementById('ops-coklu-rows');
+  if (!rowsEl) return;
+  rowsEl.querySelectorAll('[data-coklu-row]').forEach(r => {
+    const plakaEl = r.querySelector('[data-coklu-plaka]');
+    const soforEl = r.querySelector('[data-coklu-sofor]');
+    const telEl   = r.querySelector('[data-coklu-tel]');
+    const cekIdEl = r.querySelector('[data-coklu-cekici-id]');
+    if (plakaEl && !plakaEl.value && plaka)  plakaEl.value = plaka;
+    if (soforEl && !soforEl.value && sofor)  soforEl.value = sofor;
+    if (telEl   && !telEl.value   && tel)    telEl.value   = tel;
+    if (cekIdEl && !cekIdEl.value && cekiciId) cekIdEl.value = cekiciId;
+  });
 }
 
 /** Çoklu satırlardan obj listesi üretir; tek satır varsa boş döner. */
@@ -3117,9 +3226,10 @@ function _opsCokluRowsRead() {
   rowsEl.querySelectorAll('[data-coklu-row]').forEach(r => {
     result.push({
       konteyner: r.getAttribute('data-coklu-konteyner') || '',
-      plaka:     (r.querySelector('[data-coklu-plaka]')?.value || '').trim(),
-      sofor:     (r.querySelector('[data-coklu-sofor]')?.value || '').trim(),
-      tel:       (r.querySelector('[data-coklu-tel]')?.value   || '').trim()
+      plaka:     (r.querySelector('[data-coklu-plaka]')?.value     || '').trim(),
+      sofor:     (r.querySelector('[data-coklu-sofor]')?.value     || '').trim(),
+      tel:       (r.querySelector('[data-coklu-tel]')?.value       || '').trim(),
+      cekiciId:  (r.querySelector('[data-coklu-cekici-id]')?.value || '').trim()
     });
   });
   return result;
@@ -4598,6 +4708,9 @@ async function opsAracSec(cekiciId, plaka, sofor, tel) {
   if (telEl   && !telEl.value   && tel)   telEl.value   = tel;
   const dd = document.getElementById('ops-arac-dropdown');
   if (dd) dd.style.display = 'none';
+  // Çoklu konteyner panelindeki BOŞ satırlara default doldur — kullanıcı her
+  // satırı tek tek aratmasın diye. Manuel girilmiş satırlara dokunmaz.
+  _opsCokluSatirlariniUstUstteAtaCekici(plaka, sofor, tel, cekiciId);
   // Çekiciye atanmış birincil dorseyi otomatik öner (hidden = boş kalır;
   // kullanıcı dorse alanına focus edince listede üstte görür)
   if (cekiciId) opsDorseSugest(cekiciId);
