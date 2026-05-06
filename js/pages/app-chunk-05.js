@@ -4874,6 +4874,307 @@ function brandingHexInput() {
     brandingPreview();
   }
 }
+
+/* =============================================================================
+ * TAM EKRAN CANLI FİLO TAKİBİ — 2026_05_06h
+ * Dashboard fleet haritası küçük geliyor, sürücüler arası geçiş drawer açıp
+ * kapatmayı gerektiriyordu. Bu modal:
+ *   • Sol panel: aktif sürücü listesi (durum + plaka + şoför + canlı hız + son güncelleme)
+ *   • Sağ harita: tüm sürücü marker'ları (renk kodlu) + seçilen sürücünün rotası (OSRM snap)
+ *     + duraksamaları mor halka + yükle/teslim pinleri
+ *   • Klavye: ESC kapat, ↑↓ sürücü değiştir
+ *   • Realtime: 30sn'de bir cloud yenilenir (mevcut polling pattern reuse)
+ * ===========================================================================*/
+let _fleetFullMap = null;
+let _fleetFullMarkers = [];
+let _fleetFullRouteLayers = [];
+let _fleetFullRefreshTimer = null;
+let _fleetFullSelectedId = null;
+let _fleetFullFilter = '';
+
+function openFleetFullscreen() {
+  const bg = document.getElementById('fleet-full-bg');
+  if (!bg) return;
+  bg.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', _fleetFullKey);
+  _fleetFullRefresh();
+  if (_fleetFullRefreshTimer) clearInterval(_fleetFullRefreshTimer);
+  _fleetFullRefreshTimer = setInterval(_fleetFullRefresh, 30000);
+}
+
+function closeFleetFullscreen() {
+  const bg = document.getElementById('fleet-full-bg');
+  if (bg) bg.classList.add('hidden');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', _fleetFullKey);
+  if (_fleetFullRefreshTimer) { clearInterval(_fleetFullRefreshTimer); _fleetFullRefreshTimer = null; }
+  _fleetFullSelectedId = null;
+}
+
+function _fleetFullKey(ev) {
+  if (ev.key === 'Escape') { closeFleetFullscreen(); return; }
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    const list = _fleetFullActiveList();
+    if (!list.length) return;
+    const idx = list.findIndex(e => (e._dbId || e.id) === _fleetFullSelectedId);
+    let next;
+    if (ev.key === 'ArrowDown') next = list[(idx + 1 + list.length) % list.length];
+    else                        next = list[(idx - 1 + list.length) % list.length];
+    if (next) _fleetFullSelect(next._dbId || next.id);
+    ev.preventDefault();
+  }
+}
+
+function _fleetFullFilterChange(v) {
+  _fleetFullFilter = (v || '').trim().toLowerCase();
+  _fleetFullRenderList();
+}
+
+function _fleetFullActiveList() {
+  const aktif = (isEmirleri || []).filter(e =>
+    e.durum && e.durum !== 'İptal' && e.durum !== 'Teslim Edildi'
+  );
+  if (!_fleetFullFilter) return aktif;
+  const f = _fleetFullFilter;
+  return aktif.filter(e =>
+    [e.arac_plaka, e.sofor, e.musteri_adi, e.konteyner_no, e.yukle_yeri, e.teslim_yeri]
+      .filter(Boolean).join(' ').toLowerCase().includes(f)
+  );
+}
+
+async function _fleetFullRefresh() {
+  try { await opsLoadCloud(); } catch {}
+  _fleetFullRenderList();
+  _fleetFullInitMap();
+  _fleetFullRenderMarkers();
+  if (_fleetFullSelectedId) _fleetFullDrawSelected(_fleetFullSelectedId);
+}
+
+function _fleetFullRenderList() {
+  const host = document.getElementById('fleet-full-list');
+  const cnt  = document.getElementById('fleet-full-count');
+  if (!host) return;
+  const list = _fleetFullActiveList();
+  if (cnt) cnt.textContent = list.length + ' aktif';
+  if (!list.length) {
+    host.innerHTML = '<div style="padding:30px 12px;text-align:center;color:var(--text-muted);font-size:12px;">Aktif sürücü yok.</div>';
+    return;
+  }
+  list.sort((a, b) => {
+    const aFresh = a.konum_zaman ? Date.parse(a.konum_zaman) : 0;
+    const bFresh = b.konum_zaman ? Date.parse(b.konum_zaman) : 0;
+    return bFresh - aFresh;
+  });
+  host.innerHTML = list.map(e => _fleetFullRowHtml(e)).join('');
+}
+
+function _fleetFullRowHtml(e) {
+  const id = e._dbId || e.id;
+  const sel = (_fleetFullSelectedId === id) ? 'is-active' : '';
+  const durumColors = {
+    'Yolda':       '#5B9DF9',
+    'Fabrikada':   '#9F7AEA',
+    'Boş Alındı':  '#F59E0B',
+    'Bekliyor':    '#7A8299'
+  };
+  const durColor = durumColors[e.durum] || '#7A8299';
+  let hizPill = '';
+  if (e.durum === 'Yolda' && e.konum_hiz != null) {
+    const v = Math.max(0, Math.round(e.konum_hiz));
+    hizPill = `<span class="pill-mini" style="background:rgba(34,197,94,.18);color:#22c55e;">🚗 ${v}</span>`;
+  }
+  let ageStr = '—';
+  if (e.konum_zaman) {
+    const sec = Math.round((Date.now() - Date.parse(e.konum_zaman)) / 1000);
+    ageStr = sec < 60 ? `${sec}s` : sec < 3600 ? `${Math.round(sec/60)}dk` : `${Math.round(sec/3600)}sa`;
+  }
+  return `
+    <div class="fleet-full-row ${sel}" onclick="_fleetFullSelect(${id})">
+      <div class="top">
+        <span class="pill-mini" style="background:${durColor}22;color:${durColor};">${e.durum || '—'}</span>
+        <span class="plate">${(e.arac_plaka || '—').replace(/[<>]/g,'')}</span>
+        ${hizPill}
+      </div>
+      <div class="name">👤 ${(e.sofor || 'Atanmadı').replace(/[<>]/g,'')}</div>
+      <div class="meta">
+        <span>📦 ${((e.konteyner_no || '').split('\\n')[0] || '—').replace(/[<>]/g,'')}</span>
+        <span style="margin-left:auto;">📡 ${ageStr}</span>
+      </div>
+    </div>`;
+}
+
+function _fleetFullInitMap() {
+  if (_fleetFullMap) {
+    setTimeout(() => _fleetFullMap.invalidateSize(), 60);
+    return;
+  }
+  _fleetFullMap = L.map('fleet-full-map', { zoomControl: true, attributionControl: false })
+    .setView([39.9, 32.8], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(_fleetFullMap);
+  L.control.attribution({ prefix: '© OpenStreetMap' }).addTo(_fleetFullMap);
+  setTimeout(() => _fleetFullMap.invalidateSize(), 80);
+}
+
+function _fleetFullClearMarkers() {
+  _fleetFullMarkers.forEach(m => { try { _fleetFullMap.removeLayer(m); } catch {} });
+  _fleetFullMarkers = [];
+}
+function _fleetFullClearRouteLayers() {
+  _fleetFullRouteLayers.forEach(l => { try { _fleetFullMap.removeLayer(l); } catch {} });
+  _fleetFullRouteLayers = [];
+}
+
+function _fleetFullRenderMarkers() {
+  if (!_fleetFullMap) return;
+  _fleetFullClearMarkers();
+
+  const list = _fleetFullActiveList().filter(e =>
+    isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng))
+  );
+  const bounds = [];
+  list.forEach(e => {
+    const lat = parseFloat(e.konum_lat), lng = parseFloat(e.konum_lng);
+    const id = e._dbId || e.id;
+    const cls = ({ 'Yolda':'yolda', 'Fabrikada':'fabrikada', 'Bekliyor':'bekliyor', 'Boş Alındı':'bekliyor' }[e.durum]) || 'bekliyor';
+    const isSel = (_fleetFullSelectedId === id);
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="fleet-truck-icon ${cls}" style="${isSel?'transform:scale(1.3);box-shadow:0 0 0 3px rgba(249,115,22,.5);':''}">🚛</div>`,
+      iconSize: [32, 32], iconAnchor: [16, 16]
+    });
+    const m = L.marker([lat, lng], { icon })
+      .addTo(_fleetFullMap)
+      .on('click', () => _fleetFullSelect(id));
+    _fleetFullMarkers.push(m);
+    bounds.push([lat, lng]);
+  });
+  if (!_fleetFullSelectedId && bounds.length === 1) {
+    _fleetFullMap.setView(bounds[0], 12);
+  } else if (!_fleetFullSelectedId && bounds.length > 1) {
+    _fleetFullMap.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+  }
+}
+
+async function _fleetFullSelect(id) {
+  _fleetFullSelectedId = id;
+  _fleetFullRenderList();
+  _fleetFullRenderMarkers();
+  await _fleetFullDrawSelected(id);
+}
+
+async function _fleetFullDrawSelected(id) {
+  if (!_fleetFullMap) return;
+  _fleetFullClearRouteLayers();
+
+  const e = (isEmirleri || []).find(x => (x._dbId || x.id) === id);
+  if (!e) return;
+  const dbId = e._dbId || e.id;
+
+  const info = document.getElementById('fleet-full-info');
+  if (info) {
+    const durum = e.durum || '—';
+    const plaka = e.arac_plaka || '—';
+    const sofor = e.sofor || 'Atanmadı';
+    const tel   = e.sofor_tel || '';
+    const hizSatir = (e.durum === 'Yolda' && e.konum_hiz != null)
+      ? `<div class="row"><span class="k">Hız</span><span class="v">${Math.round(e.konum_hiz)} km/sa</span></div>`
+      : '';
+    info.innerHTML = `
+      <h4>🚛 ${plaka}</h4>
+      <div class="row"><span class="k">Durum</span><span class="v">${durum}</span></div>
+      <div class="row"><span class="k">Sürücü</span><span class="v">${sofor}${tel?` · ${tel}`:''}</span></div>
+      <div class="row"><span class="k">Müşteri</span><span class="v">${e.musteri_adi || '—'}</span></div>
+      <div class="row"><span class="k">Konteyner</span><span class="v">${(e.konteyner_no||'—').split('\n')[0]}</span></div>
+      <div class="row"><span class="k">Rota</span><span class="v">${e.yukle_yeri||'—'} → ${e.teslim_yeri||'—'}</span></div>
+      ${hizSatir}`;
+    info.classList.remove('hidden');
+  }
+
+  if (isFinite(e.yukle_lat) && isFinite(e.yukle_lng)) {
+    const m = L.circleMarker([e.yukle_lat, e.yukle_lng], {
+      radius: 7, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.85, weight: 2
+    }).bindTooltip('🟢 ' + (e.yukle_yeri || 'Yükleme'), { direction: 'top' }).addTo(_fleetFullMap);
+    _fleetFullRouteLayers.push(m);
+  }
+  if (isFinite(e.teslim_lat) && isFinite(e.teslim_lng)) {
+    const m = L.circleMarker([e.teslim_lat, e.teslim_lng], {
+      radius: 7, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.85, weight: 2
+    }).bindTooltip('🔴 ' + (e.teslim_yeri || 'Teslim'), { direction: 'top' }).addTo(_fleetFullMap);
+    _fleetFullRouteLayers.push(m);
+  }
+
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb) return;
+  let izlerR, durakR;
+  try {
+    [izlerR, durakR] = await Promise.all([
+      sb.from('konum_izleri')
+        .select('lat,lng,ts,hiz').eq('is_emri_id', dbId)
+        .order('ts', { ascending: true }).limit(2000),
+      sb.from('surucu_duraksamalar')
+        .select('id, baslangic_at, bitis_at, merkez_lat, merkez_lng, yaricap_m, bolge_etiket, otomatik_mi')
+        .eq('is_emri_id', dbId).order('baslangic_at', { ascending: true })
+    ]);
+  } catch (err) { console.warn('fleet-full select fetch hata:', err); return; }
+
+  const izler = izlerR?.data || [];
+  if (izler.length >= 2) {
+    const rawLatlngs = izler.map(p => [p.lat, p.lng]);
+    const halo = L.polyline(rawLatlngs, { color: '#fff', weight: 9, opacity: 0.9, lineCap: 'round' }).addTo(_fleetFullMap);
+    const main = L.polyline(rawLatlngs, { color: '#1a73e8', weight: 5, opacity: 1, lineCap: 'round', dashArray: '8,6' }).addTo(_fleetFullMap);
+    _fleetFullRouteLayers.push(halo, main);
+    _fleetFullMap.fitBounds(main.getBounds(), { padding: [60, 60] });
+
+    if (typeof _opsOsrmMatch === 'function') {
+      _opsOsrmMatch(rawLatlngs).then(snapped => {
+        if (!snapped || _fleetFullSelectedId !== id) return;
+        _fleetFullRouteLayers = _fleetFullRouteLayers.filter(layer => {
+          if (layer instanceof L.Polyline) {
+            try { _fleetFullMap.removeLayer(layer); } catch {}
+            return false;
+          }
+          return true;
+        });
+        const h2 = L.polyline(snapped, { color: '#fff', weight: 9, opacity: 0.9, lineCap: 'round' }).addTo(_fleetFullMap);
+        const m2 = L.polyline(snapped, { color: '#1a73e8', weight: 5, opacity: 1, lineCap: 'round' }).addTo(_fleetFullMap);
+        _fleetFullRouteLayers.push(h2, m2);
+      }).catch(()=>{});
+    }
+  } else if (isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng))) {
+    _fleetFullMap.setView([parseFloat(e.konum_lat), parseFloat(e.konum_lng)], 14);
+  }
+
+  const duraksamalar = durakR?.data || [];
+  duraksamalar.forEach(d => {
+    if (d.merkez_lat == null) return;
+    const aktif = !d.bitis_at;
+    const renk = aktif ? '#f59e0b' : '#a855f7';
+    const ms = (d.bitis_at ? new Date(d.bitis_at) : new Date()) - new Date(d.baslangic_at);
+    const sureDk = Math.max(1, Math.round(ms / 60000));
+    const c = L.circle([d.merkez_lat, d.merkez_lng], {
+      radius: Math.max(d.yaricap_m || 50, 30),
+      color: renk, weight: 2, opacity: 0.9, fillColor: renk, fillOpacity: 0.18
+    }).bindTooltip(`🅿️ ${d.bolge_etiket || 'Bilinmeyen'} · ${sureDk} dk${aktif?' (aktif)':''}`,
+                   { direction: 'top', sticky: true })
+     .addTo(_fleetFullMap);
+    _fleetFullRouteLayers.push(c);
+  });
+}
+
+function _fleetFullOpenDetay() {
+  if (!_fleetFullSelectedId) return;
+  closeFleetFullscreen();
+  setTimeout(() => openOpsDrawer(_fleetFullSelectedId), 100);
+}
+
+window.openFleetFullscreen = openFleetFullscreen;
+window.closeFleetFullscreen = closeFleetFullscreen;
+window._fleetFullSelect = _fleetFullSelect;
+window._fleetFullRefresh = _fleetFullRefresh;
+window._fleetFullOpenDetay = _fleetFullOpenDetay;
+window._fleetFullFilterChange = _fleetFullFilterChange;
+
 async function saveBranding() {
   const firma      = document.getElementById('branding-firma').value.trim();
   const logo_url   = document.getElementById('branding-logo').value.trim() || null;
@@ -4897,3 +5198,4 @@ async function saveBranding() {
     }
   } catch { showToast('Bağlantı hatası', 'error'); }
 }
+
