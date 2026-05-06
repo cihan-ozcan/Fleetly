@@ -4916,6 +4916,141 @@ function brandingHexInput() {
 }
 
 /* =============================================================================
+ * FİLO TRAFİK RENDER — Migration 2026_05_06k
+ * Kendi GPS verilerimizden grid bazlı yoğunluk haritası.
+ * Renk algoritması: kisa_ort_hiz / beklenen_hiz oranı
+ *   • > 80%   → 🟢 yeşil (akıcı)
+ *   • 40-80%  → 🟡 sarı  (yavaşlama)
+ *   • < 40%   → 🔴 kırmızı (yoğun trafik)
+ * beklenen_hiz null ise sabit 50 km/sa varsayılır (yeni hücre).
+ * ===========================================================================*/
+function _filoTrafikRenkVeOpacity(kmh, beklenen, ornek, yasDk) {
+  const ref = (beklenen != null && beklenen > 5) ? beklenen : 50;
+  const oran = kmh / ref;
+  let color;
+  if (oran >= 0.8)      color = '#22c55e';   // yeşil
+  else if (oran >= 0.4) color = '#f59e0b';   // sarı
+  else                  color = '#ef4444';   // kırmızı
+  // Güven: örnek sayısı + yaş düşükse opacity düşür
+  let opacity = 0.55;
+  if (ornek < 3) opacity = 0.30;
+  else if (ornek >= 10) opacity = 0.70;
+  if (yasDk > 15) opacity *= 0.6;
+  return { color, opacity };
+}
+
+async function _filoTrafikYukle(map, layerStore) {
+  if (!map) return;
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb) return;
+
+  const b = map.getBounds();
+  const params = {
+    p_lat_min: b.getSouth(), p_lng_min: b.getWest(),
+    p_lat_max: b.getNorth(), p_lng_max: b.getEast()
+  };
+  let rows;
+  try {
+    const { data, error } = await sb.rpc('filo_trafik_bbox', params);
+    if (error) throw error;
+    rows = data || [];
+  } catch (err) {
+    console.warn('[filo-trafik] yüklenemedi:', err);
+    return;
+  }
+
+  // Eski rectangle'ları temizle
+  if (layerStore.layer) {
+    try { map.removeLayer(layerStore.layer); } catch {}
+  }
+  const grup = L.layerGroup();
+  rows.forEach(r => {
+    const { color, opacity } = _filoTrafikRenkVeOpacity(
+      Number(r.kisa_ort_hiz), Number(r.beklenen_hiz), r.kisa_ornek, r.yas_dk
+    );
+    // Hücre ~100m: lat ±0.0005, lng ±0.0005
+    const bounds = [
+      [r.merkez_lat - 0.0005, r.merkez_lng - 0.0005],
+      [r.merkez_lat + 0.0005, r.merkez_lng + 0.0005]
+    ];
+    const rect = L.rectangle(bounds, {
+      color: color, weight: 0,
+      fillColor: color, fillOpacity: opacity, interactive: true
+    });
+    rect.bindTooltip(
+      `<b>${Math.round(r.kisa_ort_hiz)} km/sa</b>` +
+      (r.beklenen_hiz ? ` <span style="opacity:.7">/ beklenen ${Math.round(r.beklenen_hiz)}</span>` : '') +
+      `<br><span style="font-size:10px;opacity:.7;">${r.kisa_ornek} ölçüm · ${r.yas_dk}dk önce</span>`,
+      { direction: 'top', sticky: true, opacity: 0.95 }
+    );
+    grup.addLayer(rect);
+  });
+  grup.addTo(map);
+  layerStore.layer = grup;
+  layerStore.lastUpdate = Date.now();
+  if (typeof showToast === 'function' && rows.length === 0) {
+    // Sessiz — sadece debug
+  }
+}
+
+function _filoTrafikKaldir(map, layerStore) {
+  if (layerStore.layer) {
+    try { map.removeLayer(layerStore.layer); } catch {}
+    layerStore.layer = null;
+  }
+}
+
+// 3 harita için store'lar
+const _filoTrafikStore = {
+  fleet:     { layer: null, refreshTimer: null, moveHandler: null },
+  fleetFull: { layer: null, refreshTimer: null, moveHandler: null },
+  dashboard: { layer: null, refreshTimer: null, moveHandler: null }
+};
+
+/**
+ * Filo trafik toggle — bir map için aç/kapat. Aç olduğunda:
+ *   • İlk yüklemeyi yapar
+ *   • Map move/zoom event'lerinde tazeler
+ *   • 60sn'de bir polling
+ */
+function _filoTrafikToggle(mapKey, map, btnId) {
+  const store = _filoTrafikStore[mapKey];
+  if (!store) return;
+  const btn = btnId ? document.getElementById(btnId) : null;
+  if (store.layer || store.refreshTimer) {
+    // Aktif → kapat
+    _filoTrafikKaldir(map, store);
+    if (store.refreshTimer) { clearInterval(store.refreshTimer); store.refreshTimer = null; }
+    if (store.moveHandler) {
+      try { map.off('moveend zoomend', store.moveHandler); } catch {}
+      store.moveHandler = null;
+    }
+    btn?.classList.remove('is-active');
+    return;
+  }
+  // Aç
+  btn?.classList.add('is-active');
+  _filoTrafikYukle(map, store);
+  store.moveHandler = () => _filoTrafikYukle(map, store);
+  map.on('moveend zoomend', store.moveHandler);
+  store.refreshTimer = setInterval(() => {
+    if (store.layer) _filoTrafikYukle(map, store);
+  }, 60000);
+}
+
+window._filoTrafikToggleFleet = function () {
+  _filoTrafikToggle('fleet', _fleetMap, 'fleet-filo-trafik');
+};
+window._filoTrafikToggleFull = function () {
+  _filoTrafikToggle('fleetFull', _fleetFullMap, 'fleet-full-filo-trafik');
+};
+window._filoTrafikToggleDash = function () {
+  if (typeof UI !== 'undefined' && UI._dashMap) {
+    _filoTrafikToggle('dashboard', UI._dashMap, 'dash-filo-trafik');
+  }
+};
+
+/* =============================================================================
  * TRAFİK OVERLAY — Multi-provider (2026_05_06k güncellemesi)
  * config.js → FILO_CONFIG'te hangi anahtar doluysa o sağlayıcı kullanılır.
  * Öncelik: TomTom (en ucuz) > HERE > Mapbox.

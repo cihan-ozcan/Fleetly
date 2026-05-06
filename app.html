@@ -2642,11 +2642,17 @@
         <div class="fleet-map-legend-item" style="margin-left:auto;">
           <span id="fleet-map-count" class="ops-mono" style="color:var(--ops-brand);font-weight:700;"></span>
         </div>
+        <button id="fleet-filo-trafik" class="ops-btn ops-btn--quiet ops-btn--sm"
+                onclick="_filoTrafikToggleFleet()"
+                title="Filo İçi Trafik — kendi GPS verilerimizden ücretsiz, kendi rotalarımızda yoğunluk göstergesi"
+                style="position:relative;">
+          <span style="font-size:13px;">🟢</span> Filo Trafik
+        </button>
         <button id="fleet-trafik-toggle" class="ops-btn ops-btn--quiet ops-btn--sm"
                 onclick="_trafikToggleFleet()"
-                title="Trafik yoğunluğu — config.js → TOMTOM_KEY (2.500/gün ücretsiz) ya da HERE_KEY (250K/ay ücretsiz) ekleyin"
+                title="Genel Trafik (BYOK) — config.js → TOMTOM_KEY ekleyin (2.500/gün ücretsiz)"
                 style="position:relative;">
-          <span style="font-size:13px;">🚦</span> Trafik
+          <span style="font-size:13px;">🚦</span> Genel
         </button>
         <button class="ops-btn ops-btn--quiet ops-btn--sm" onclick="opsRenderFleetMap()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -2882,9 +2888,12 @@
                oninput="_fleetFullFilterChange(this.value)" />
       </div>
       <div class="fleet-full-actions">
+        <button id="fleet-full-filo-trafik" class="ops-btn ops-btn--quiet ops-btn--sm"
+                onclick="_filoTrafikToggleFull()"
+                title="Filo İçi Trafik — kendi GPS verilerimizden ücretsiz">🟢 Filo</button>
         <button id="fleet-full-trafik" class="ops-btn ops-btn--quiet ops-btn--sm"
                 onclick="_trafikToggleFull()"
-                title="Trafik yoğunluğu — config.js → TOMTOM_KEY (önerilen, 2.500/gün ücretsiz)">🚦 Trafik</button>
+                title="Genel Trafik (BYOK) — config.js → TOMTOM_KEY">🚦 Genel</button>
         <button class="ops-btn ops-btn--quiet ops-btn--sm" onclick="_fleetFullRefresh()" title="Yenile">↻ Yenile</button>
         <button class="ops-btn ops-btn--quiet ops-btn--sm" id="fleet-full-detay" onclick="_fleetFullOpenDetay()" title="Seçili sürücünün ops drawer'ını aç">🗗 Ops Detay</button>
         <button class="ops-btn ops-btn--ghost ops-btn--sm" onclick="closeFleetFullscreen()" title="Kapat (Esc)">✕</button>
