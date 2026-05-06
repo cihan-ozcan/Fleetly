@@ -26,9 +26,21 @@
   let _limanMap = null;
   let _limanPolygons = [];          // {liman, layer}
   let _limanSeciliId = null;
-  let _limanCizimKatmani = null;    // Leaflet.draw'in geçici editable layer'ı
+  let _limanCizimKatmani = null;    // Leaflet.draw'in geçici editable layer'ı (yeni veya düzenleme)
   let _limanCizimAktif = false;
   let _limanList = [];
+  // Düzenleme modu: null = yeni liman çiziyoruz; uuid = mevcut limanı düzenliyoruz
+  let _limanDuzenleId = null;
+  // Mevcut polygon'un Leaflet.Edit handler'ı (düzenleme aktifken)
+  let _limanEditHandler = null;
+
+  // Global liman düzenleme/silme butonlarını gizlemek için config flag.
+  // Manuel ayar tamamlandıktan sonra config.js'te `LIMAN_GLOBAL_EDIT: false` yaparak
+  // pre-seed limanlarda düzenle/sil butonları gizlenir.
+  // Yine de RPC seviyesinde yetkili kullanıcı sql ile düzenleyebilir.
+  // Default: true (manuel ayar fazı). config.js'te explicit `false` verilmezse açık.
+  const _LIMAN_GLOBAL_EDIT_AKTIF =
+    !window.FILO_CONFIG || window.FILO_CONFIG.LIMAN_GLOBAL_EDIT !== false;
 
   const _LIMAN_RENK = {
     'liman':    '#1a73e8',
@@ -129,6 +141,24 @@
         const sel = (_limanSeciliId === l.id) ? 'is-active' : '';
         const emoji = _LIMAN_EMOJI[l.tip] || '📍';
         const renk = _LIMAN_RENK[l.tip] || '#7a8299';
+        // Düzenleme/silme butonları:
+        //   • Firma-özel limanlar (firma_id NOT NULL) → her zaman gösterilir
+        //   • Global limanlar (firma_id IS NULL) → CFG.LIMAN_GLOBAL_EDIT açıkken gösterilir
+        //     (manuel ayar tamamlanınca config.js'te kapatabilirsiniz)
+        const dzGoster = l.firma_id != null || _LIMAN_GLOBAL_EDIT_AKTIF;
+        const aksBtns = dzGoster ? `
+          <div class="liman-row-acts" style="display:flex;gap:4px;margin-top:6px;">
+            <button title="Düzenle"
+                    onclick="event.stopPropagation();_limanDuzenleBaslat('${l.id}');"
+                    style="padding:3px 8px;font-size:11px;border:1px solid var(--border2);background:var(--surface3);color:var(--text);border-radius:4px;cursor:pointer;">
+              ✎ Düzenle
+            </button>
+            <button title="Sil"
+                    onclick="event.stopPropagation();_limanSil('${l.id}', '${_esc(l.ad).replace(/'/g, "\\'")}');"
+                    style="padding:3px 8px;font-size:11px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.08);color:#ef4444;border-radius:4px;cursor:pointer;">
+              🗑 Sil
+            </button>
+          </div>` : '';
         return `
           <div class="liman-row ${sel}" onclick="_limanSec('${l.id}')">
             <div class="top">
@@ -143,6 +173,7 @@
               </span>
               ${ortDk ? `<span class="pill" style="background:rgba(34,197,94,.10);color:#22c55e;">⏱ ${ortDk} dk ort.</span>` : ''}
             </div>
+            ${aksBtns}
           </div>`;
       }).join('');
     }
@@ -248,13 +279,22 @@
   }
 
   function _limanCizimIptal() {
+    // Edit handler aktifse kapat
+    if (_limanEditHandler) {
+      try { _limanEditHandler.disable(); } catch {}
+      _limanEditHandler = null;
+    }
     if (_limanCizimKatmani && _limanMap) {
       try { _limanMap.removeLayer(_limanCizimKatmani); } catch {}
     }
     _limanCizimKatmani = null;
     _limanCizimAktif = false;
-    document.getElementById('limanlar-yeni-btn').textContent = '+ Yeni Liman Çiz';
-    document.getElementById('limanlar-yeni-btn').removeAttribute('disabled');
+    _limanDuzenleId = null;
+    const btn = document.getElementById('limanlar-yeni-btn');
+    if (btn) {
+      btn.textContent = '+ Yeni Liman Çiz';
+      btn.removeAttribute('disabled');
+    }
   }
 
   function limanFormKapat() {
@@ -265,7 +305,92 @@
       const el = document.getElementById('liman-form-' + k);
       if (el) el.value = '';
     });
+    const baslik = document.getElementById('limanlar-form-baslik');
+    if (baslik) baslik.textContent = 'Yeni Liman';
+    // Liste polygon'larını yeniden çiz (silinen edit layer'ı yerine geri gelsin)
+    _limanPolygonlariCiz();
   }
+
+  // ────────────────────────────────────────────────────────────
+  // DÜZENLE: mevcut limanı edit moduna al, formu doldur
+  // ────────────────────────────────────────────────────────────
+  window._limanDuzenleBaslat = function (id) {
+    if (typeof L === 'undefined' || !L.Edit || !L.Edit.Poly) {
+      alert('Düzenleme için Leaflet.draw eklenti yüklenmeli.');
+      return;
+    }
+    // Önceki çizim/edit varsa iptal et
+    if (_limanCizimAktif || _limanDuzenleId) _limanCizimIptal();
+
+    const liman = _limanList.find(l => l.id === id);
+    if (!liman) return;
+    const item  = _limanPolygons.find(p => p.liman.id === id);
+    if (!item) { alert('Polygon bulunamadı'); return; }
+
+    _limanDuzenleId = id;
+    _limanCizimAktif = true;
+
+    // Mevcut polygon layer'ını edit'e al. L.geoJSON bir LayerGroup döner; içindeki
+    // tek bir polygon layer var. Onu çekip kendisini editable yapacağız.
+    let polyLayer = null;
+    item.layer.eachLayer(l => { if (!polyLayer) polyLayer = l; });
+    if (!polyLayer || !polyLayer.editing) {
+      alert('Bu polygon düzenlenemiyor (Leaflet.draw yüklü değil).');
+      _limanDuzenleId = null;
+      _limanCizimAktif = false;
+      return;
+    }
+    _limanCizimKatmani = polyLayer;
+    _limanEditHandler = polyLayer.editing;
+    try { _limanEditHandler.enable(); } catch (err) {
+      alert('Edit modu açılamadı: ' + (err?.message || err));
+      _limanDuzenleId = null;
+      _limanCizimAktif = false;
+      return;
+    }
+
+    // Form panel'i doldur
+    document.getElementById('limanlar-form-panel').classList.remove('hidden');
+    document.getElementById('limanlar-form-baslik').textContent = '✎ ' + (liman.ad || 'Liman');
+    document.getElementById('liman-form-ad').value = liman.ad || '';
+    const tipSel = document.getElementById('liman-form-tip');
+    if (tipSel) tipSel.value = liman.tip || 'liman';
+    const ozelSel = document.getElementById('liman-form-firma-ozel');
+    if (ozelSel) {
+      ozelSel.value = liman.firma_id ? 'true' : 'false';
+      ozelSel.disabled = true;   // düzenlemede görünürlük değişmesin
+    }
+    document.getElementById('liman-form-notlar').value = liman.notlar || '';
+
+    // "Yeni Liman Çiz" butonunu disable et (çakışmasın)
+    const btn = document.getElementById('limanlar-yeni-btn');
+    if (btn) {
+      btn.textContent = 'Düzenleme aktif';
+      btn.setAttribute('disabled', 'true');
+    }
+
+    // Haritayı bu polygon'a odakla
+    try { _limanMap.fitBounds(polyLayer.getBounds(), { padding: [60, 60] }); } catch {}
+  };
+
+  // ────────────────────────────────────────────────────────────
+  // SİL: onay sonrası liman_sil RPC
+  // ────────────────────────────────────────────────────────────
+  window._limanSil = async function (id, ad) {
+    const sb = (typeof getSB === 'function') ? getSB() : null;
+    if (!sb) { alert('Supabase yok.'); return; }
+    if (!confirm(`"${ad}" limanını silmek istediğinize emin misiniz?\n\nBu liman ile ilgili tüm ziyaret geçmişi ve yoğunluk verisi de silinecek.`)) {
+      return;
+    }
+    try {
+      const { error } = await sb.rpc('liman_sil', { p_id: id });
+      if (error) throw error;
+      if (typeof showToast === 'function') showToast(`✓ "${ad}" silindi`, 'success');
+      await limanlarYukle();
+    } catch (err) {
+      alert('Silme hatası: ' + (err?.message || err));
+    }
+  };
 
   async function limanFormKaydet() {
     if (!_limanCizimKatmani) {
@@ -285,15 +410,32 @@
     const sb = (typeof getSB === 'function') ? getSB() : null;
     if (!sb) { alert('Supabase yok.'); return; }
     try {
-      const { data, error } = await sb.rpc('liman_olustur', {
-        p_ad: ad,
-        p_tip: tip,
-        p_poligon_geojson: geoStr,
-        p_firma_ozel: ozel,
-        p_notlar: notlar
-      });
-      if (error) throw error;
-      if (typeof showToast === 'function') showToast(`✓ "${ad}" eklendi`, 'success');
+      if (_limanDuzenleId) {
+        // ── DÜZENLEME MODU — liman_guncelle ──
+        const { error } = await sb.rpc('liman_guncelle', {
+          p_id: _limanDuzenleId,
+          p_ad: ad,
+          p_tip: tip,
+          p_poligon_geojson: geoStr,
+          p_notlar: notlar
+        });
+        if (error) throw error;
+        if (typeof showToast === 'function') showToast(`✓ "${ad}" güncellendi`, 'success');
+      } else {
+        // ── YENİ LİMAN — liman_olustur ──
+        const { error } = await sb.rpc('liman_olustur', {
+          p_ad: ad,
+          p_tip: tip,
+          p_poligon_geojson: geoStr,
+          p_firma_ozel: ozel,
+          p_notlar: notlar
+        });
+        if (error) throw error;
+        if (typeof showToast === 'function') showToast(`✓ "${ad}" eklendi`, 'success');
+      }
+      // Form temizle + reload
+      const ozelSel = document.getElementById('liman-form-firma-ozel');
+      if (ozelSel) ozelSel.disabled = false;
       limanFormKapat();
       await limanlarYukle();
     } catch (err) {

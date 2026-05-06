@@ -33,4 +33,19 @@ window.FILO_CONFIG = {
   TOMTOM_KEY   : '',
   HERE_KEY     : '',
   MAPBOX_TOKEN : '',
+
+  // ─────────────────────────────────────────────────────────────
+  // LİMAN GLOBAL DÜZENLEME — geçici flag
+  // ─────────────────────────────────────────────────────────────
+  // Pre-seed limanlar (Kumport, Marport, Mardaş, Galataport ...) global
+  // (firma_id IS NULL) olarak yüklenir. Polygon'ları kabaca dikdörtgen.
+  // Manuel ayar fazında (sahip kullanıcı sınırları düzeltirken) bu flag
+  // true kalır → "Limanlar" sayfasında ✎ Düzenle ve 🗑 Sil butonları
+  // global limanlarda da gözükür. Sınırlar bittikten sonra `false`
+  // yaparak butonları gizleyin → kaza sonucu yanlış düzenlemeleri önler.
+  //
+  // NOT: false yapsanız da yetkili (sahip/yonetici) RPC üzerinden
+  // doğrudan SQL ile düzenleyebilir — bu sadece UI gizliliği.
+  // ─────────────────────────────────────────────────────────────
+  LIMAN_GLOBAL_EDIT : true,
 };
