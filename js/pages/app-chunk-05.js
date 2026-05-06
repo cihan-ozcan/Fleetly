@@ -2065,20 +2065,35 @@ async function opsRenderFleetMap() {
   // Harita açıldığında güncel konum verisini cloud'dan çek
   await opsLoadCloud();
 
-  // Remove old markers
-  _fleetMarkers.forEach(m => _fleetMap.removeLayer(m));
+  // Remove old markers (yapı: [{marker, jobId}])
+  _fleetMarkers.forEach(m => {
+    const lyr = m.marker || m;  // backward compat
+    try { _fleetMap.removeLayer(lyr); } catch {}
+  });
   _fleetMarkers = [];
 
-  // Only vehicles with valid coordinates
-  const withLoc = isEmirleri.filter(e =>
-    e.durum !== 'İptal' &&
-    isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng))
-  );
+  // Tamamlananları gösterme toggle (default: gizli — karmaşa olmasın)
+  const showCompleted = !!document.getElementById('fleet-show-completed')?.checked;
+
+  // Only vehicles with valid coordinates + filtre
+  const withLoc = isEmirleri.filter(e => {
+    if (e.durum === 'İptal') return false;
+    if (!showCompleted && e.durum === 'Teslim Edildi') return false;
+    return isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng));
+  });
 
   // Update count badge
-  const aktifKonum = withLoc.filter(e => !['Teslim Edildi'].includes(e.durum)).length;
+  const aktifKonum = withLoc.filter(e => e.durum !== 'Teslim Edildi').length;
+  const tamamSayim = withLoc.filter(e => e.durum === 'Teslim Edildi').length;
   const countEl = document.getElementById('fleet-map-count');
-  if (countEl) countEl.textContent = aktifKonum + ' aktif araç';
+  if (countEl) {
+    countEl.textContent = showCompleted
+      ? `${aktifKonum} aktif · ${tamamSayim} tamamlanan`
+      : `${aktifKonum} aktif`;
+  }
+
+  // Önceki odak modunu temizle (yeniden render varsa)
+  if (typeof _haritaFocusCikById === 'function') _haritaFocusCikById('fleet');
 
   if (!withLoc.length) {
     // Show TR center, nothing else
@@ -2130,13 +2145,18 @@ async function opsRenderFleetMap() {
       <div class="fleet-popup-row">🏢 ${e.musteri_adi || '—'}</div>
       <div class="fleet-popup-row">📍 ${opsDurumLabel(e.durum)}${ageStr?' · '+ageStr:''}</div>
       ${etaLine}
-      <button class="fleet-popup-btn" onclick="_fleetMap.closePopup();openOpsDrawer(${e.id})">Detay →</button>`;
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button class="fleet-popup-btn" style="background:#1a73e8;flex:1;"
+          onclick="_fleetMap.closePopup();_opsFleetRotaGoster(${e.id})">🛣️ Rotayı Göster</button>
+        <button class="fleet-popup-btn" style="background:transparent;border:1px solid #ccc;color:inherit;flex:1;"
+          onclick="_fleetMap.closePopup();openOpsDrawer(${e.id})">Detay →</button>
+      </div>`;
 
     const marker = L.marker([lat, lng], { icon })
       .addTo(_fleetMap)
-      .bindPopup(popup, { maxWidth: 240 });
+      .bindPopup(popup, { maxWidth: 280 });
 
-    _fleetMarkers.push(marker);
+    _fleetMarkers.push({ marker, jobId: e._dbId || e.id });
     bounds.push([lat, lng]);
   });
 
@@ -4874,6 +4894,195 @@ function brandingHexInput() {
     brandingPreview();
   }
 }
+
+/* =============================================================================
+ * HARİTA ODAK MODU — paylaşılan helper (2026_05_06i)
+ * Hem ops-fleet-map hem dashboard-map için: bir marker'a tıklanınca diğerleri
+ * sönükleşir, seçilen sürücünün rotası (konum_izleri + OSRM snap) + duraksamalar
+ * + yükle/teslim pinleri çizilir, üstte küçük "Tümünü Göster" çubuğu açılır.
+ *
+ * Kullanım:
+ *   const ctx = { id: 'fleet', map, allMarkers: [{marker, jobId}], banner: HTMLEl }
+ *   await _haritaFocusGir(ctx, jobId)  // odak moduna gir
+ *   _haritaFocusCik(ctx)               // odak modundan çık
+ * ===========================================================================*/
+const _focusModu = {};   // ctxId → { layers, originalOpacities, jobId }
+
+async function _haritaFocusGir(ctx, jobId) {
+  const map = ctx.map;
+  if (!map) return;
+  // Önceki odak modu varsa temizle
+  _haritaFocusCik(ctx);
+
+  const e = (isEmirleri || []).find(x => (x._dbId || x.id) === jobId);
+  if (!e) return;
+  const dbId = e._dbId || e.id;
+
+  // Diğer marker'ları sönükleştir; seçileni vurgula
+  const layers = [];
+  const originals = new Map();
+  (ctx.allMarkers || []).forEach(({ marker, jobId: jId }) => {
+    if (!marker) return;
+    if (jId === jobId) {
+      // Seçili marker: en üstte, kalın halo
+      try { marker.setZIndexOffset(1000); } catch {}
+    } else {
+      // Diğerleri sönüklesin
+      const el = marker.getElement && marker.getElement();
+      if (el) {
+        originals.set(marker, el.style.opacity || '');
+        el.style.opacity = '0.18';
+        el.style.transition = 'opacity .2s';
+      }
+    }
+  });
+
+  _focusModu[ctx.id] = { layers, originals, jobId, ctx };
+
+  // Yükleme / teslim pinleri
+  if (isFinite(e.yukle_lat) && isFinite(e.yukle_lng)) {
+    const m = L.circleMarker([e.yukle_lat, e.yukle_lng], {
+      radius: 8, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.9, weight: 2
+    }).bindTooltip('🟢 ' + (e.yukle_yeri || 'Yükleme'), { direction: 'top' }).addTo(map);
+    layers.push(m);
+  }
+  if (isFinite(e.teslim_lat) && isFinite(e.teslim_lng)) {
+    const m = L.circleMarker([e.teslim_lat, e.teslim_lng], {
+      radius: 8, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.9, weight: 2
+    }).bindTooltip('🔴 ' + (e.teslim_yeri || 'Teslim'), { direction: 'top' }).addTo(map);
+    layers.push(m);
+  }
+
+  // Üst banner
+  if (ctx.banner) {
+    const plaka = e.arac_plaka || '#' + dbId;
+    const sofor = e.sofor || 'Sürücü';
+    ctx.banner.innerHTML =
+      `<span style="display:inline-flex;align-items:center;gap:6px;">` +
+        `<span style="font-size:14px;">🛣️</span>` +
+        `<b>${plaka}</b><span style="opacity:.7;">·</span>` +
+        `<span>${sofor}</span><span style="opacity:.7;">·</span>` +
+        `<span style="opacity:.7;">${e.durum || ''}</span>` +
+      `</span>` +
+      `<button class="ops-btn ops-btn--quiet ops-btn--sm" onclick="_haritaFocusCikById('${ctx.id}')">✕ Tümünü Göster</button>` +
+      `<button class="ops-btn ops-btn--primary ops-btn--sm" onclick="_haritaFocusOpsDetay('${ctx.id}')">Operasyon Detay →</button>`;
+    ctx.banner.style.display = 'flex';
+  }
+
+  // Konum izleri + duraksamalar
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb) return;
+  let izlerR, durakR;
+  try {
+    [izlerR, durakR] = await Promise.all([
+      sb.from('konum_izleri').select('lat,lng,ts,hiz').eq('is_emri_id', dbId).order('ts', { ascending: true }).limit(2000),
+      sb.from('surucu_duraksamalar')
+        .select('id, baslangic_at, bitis_at, merkez_lat, merkez_lng, yaricap_m, bolge_etiket, otomatik_mi')
+        .eq('is_emri_id', dbId).order('baslangic_at', { ascending: true })
+    ]);
+  } catch (err) { console.warn('focus fetch hata:', err); return; }
+
+  const izler = izlerR?.data || [];
+  if (izler.length >= 2) {
+    const rawLatlngs = izler.map(p => [p.lat, p.lng]);
+    const halo = L.polyline(rawLatlngs, { color: '#fff', weight: 9, opacity: 0.9, lineCap: 'round' }).addTo(map);
+    const main = L.polyline(rawLatlngs, { color: '#1a73e8', weight: 5, opacity: 1, lineCap: 'round', dashArray: '8,6' }).addTo(map);
+    layers.push(halo, main);
+    try { map.fitBounds(main.getBounds(), { padding: [60, 60], maxZoom: 14 }); } catch {}
+    if (typeof _opsOsrmMatch === 'function') {
+      _opsOsrmMatch(rawLatlngs).then(snapped => {
+        if (!snapped || _focusModu[ctx.id]?.jobId !== jobId) return;
+        // Halo + dashed main'i kaldır, snap solid çiz
+        const yeniLayers = layers.filter(l => {
+          if (l instanceof L.Polyline) {
+            try { map.removeLayer(l); } catch {}
+            return false;
+          }
+          return true;
+        });
+        const h2 = L.polyline(snapped, { color: '#fff', weight: 9, opacity: 0.9, lineCap: 'round' }).addTo(map);
+        const m2 = L.polyline(snapped, { color: '#1a73e8', weight: 5, opacity: 1, lineCap: 'round' }).addTo(map);
+        yeniLayers.push(h2, m2);
+        // layers referansını güncelle
+        layers.length = 0;
+        yeniLayers.forEach(l => layers.push(l));
+      }).catch(()=>{});
+    }
+  } else if (isFinite(parseFloat(e.konum_lat)) && isFinite(parseFloat(e.konum_lng))) {
+    try { map.setView([parseFloat(e.konum_lat), parseFloat(e.konum_lng)], 14); } catch {}
+  }
+
+  const duraksamalar = durakR?.data || [];
+  duraksamalar.forEach(d => {
+    if (d.merkez_lat == null) return;
+    const aktif = !d.bitis_at;
+    const renk = aktif ? '#f59e0b' : '#a855f7';
+    const ms = (d.bitis_at ? new Date(d.bitis_at) : new Date()) - new Date(d.baslangic_at);
+    const sureDk = Math.max(1, Math.round(ms / 60000));
+    const c = L.circle([d.merkez_lat, d.merkez_lng], {
+      radius: Math.max(d.yaricap_m || 50, 30),
+      color: renk, weight: 2, opacity: 0.9, fillColor: renk, fillOpacity: 0.18
+    }).bindTooltip(`🅿️ ${d.bolge_etiket || 'Bilinmeyen'} · ${sureDk} dk${aktif?' (aktif)':''}`,
+                   { direction: 'top', sticky: true })
+     .addTo(map);
+    layers.push(c);
+  });
+}
+
+function _haritaFocusCik(ctx) {
+  const f = _focusModu[ctx.id];
+  if (!f) return;
+  // Layers temizle
+  (f.layers || []).forEach(l => { try { ctx.map.removeLayer(l); } catch {} });
+  // Marker opacity'lerini geri yükle
+  (f.originals || new Map()).forEach((orig, marker) => {
+    const el = marker.getElement && marker.getElement();
+    if (el) el.style.opacity = orig || '';
+  });
+  // Z-index sıfırla
+  (ctx.allMarkers || []).forEach(({ marker }) => {
+    try { marker.setZIndexOffset && marker.setZIndexOffset(0); } catch {}
+  });
+  // Banner gizle
+  if (ctx.banner) ctx.banner.style.display = 'none';
+  delete _focusModu[ctx.id];
+}
+
+function _haritaFocusCikById(id) {
+  const f = _focusModu[id];
+  if (f) _haritaFocusCik(f.ctx);
+}
+
+function _haritaFocusOpsDetay(id) {
+  const f = _focusModu[id];
+  if (!f) return;
+  const jobId = f.jobId;
+  // Filo haritasından ise sadece drawer'a git; dashboard'dan ise önce operasyon page sonra drawer
+  if (id === 'dashboard') {
+    if (typeof openOperasyonPage === 'function') {
+      openOperasyonPage();
+      setTimeout(() => { if (typeof openOpsDrawer === 'function') openOpsDrawer(jobId); }, 600);
+    }
+  } else {
+    if (typeof openOpsDrawer === 'function') openOpsDrawer(jobId);
+  }
+}
+
+window._haritaFocusCikById = _haritaFocusCikById;
+window._haritaFocusOpsDetay = _haritaFocusOpsDetay;
+
+/** Filo haritasındaki popup butonu — "Rotayı Göster" tıklayınca odak moduna geç. */
+function _opsFleetRotaGoster(jobId) {
+  const banner = document.getElementById('ops-fleet-focus-banner');
+  const ctx = {
+    id: 'fleet',
+    map: _fleetMap,
+    allMarkers: _fleetMarkers,   // [{marker, jobId}]
+    banner: banner
+  };
+  _haritaFocusGir(ctx, jobId);
+}
+window._opsFleetRotaGoster = _opsFleetRotaGoster;
 
 /* =============================================================================
  * TAM EKRAN CANLI FİLO TAKİBİ — 2026_05_06h

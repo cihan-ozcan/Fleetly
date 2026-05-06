@@ -459,6 +459,7 @@
       const ageMin = _ageMinutes(e.konum_zaman);
       const color  = _liveColor(e.durum, ageMin);
 
+      // Hover tooltip — kısa info
       const tooltipHtml =
         '<div style="font:600 12px/1.4 system-ui,sans-serif;min-width:160px">' +
           '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
@@ -469,7 +470,24 @@
           '<div style="color:#7889A1;font-weight:500">' + _esc(plaka) + ' • ' + _esc(e.durum) + '</div>' +
           (e.musteri_adi ? '<div style="margin-top:2px">' + _esc(e.musteri_adi) + '</div>' : '') +
           '<div style="margin-top:4px;color:#7889A1;font-size:11px">' + _ageLabel(ageMin) + '</div>' +
-          '<div style="margin-top:4px;color:#1f6feb;font-size:11px">▶ Detayı aç</div>' +
+        '</div>';
+
+      // Click popup — 2 buton: "Rotayı Göster" (focus modu) + "Detayı aç" (operasyon page)
+      const popupHtml =
+        '<div style="font:600 12px/1.4 system-ui,sans-serif;min-width:200px;">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">' +
+            '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + color + '"></span>' +
+            '<b>' + _esc(drvName) + '</b>' +
+          '</div>' +
+          '<div style="color:#7889A1;font-weight:500;margin-bottom:2px;">' + _esc(plaka) + ' • ' + _esc(e.durum) + '</div>' +
+          (e.musteri_adi ? '<div style="font-size:11px;color:#7889A1;margin-bottom:2px;">' + _esc(e.musteri_adi) + '</div>' : '') +
+          '<div style="font-size:11px;color:#7889A1;margin-bottom:8px;">' + _ageLabel(ageMin) + '</div>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<button style="flex:1;background:#1a73e8;color:#fff;border:none;border-radius:6px;padding:6px 8px;font-size:11px;font-weight:700;cursor:pointer;" ' +
+              'onclick="UI._dashFocusGoster(' + e.id + ')">🛣️ Rotayı Göster</button>' +
+            '<button style="flex:1;background:transparent;color:inherit;border:1px solid #ccc;border-radius:6px;padding:6px 8px;font-size:11px;font-weight:700;cursor:pointer;" ' +
+              'onclick="UI._dashFocusDetay(' + e.id + ')">Detay →</button>' +
+          '</div>' +
         '</div>';
 
       const existing = UI._liveMarkers[e.id];
@@ -477,6 +495,7 @@
         existing.setLatLng([lat, lng]);
         existing.setIcon(_liveDivIcon(color, e.durum));
         existing.bindTooltip(tooltipHtml, { direction: 'top', offset: [0, -8], opacity: 0.95 });
+        existing.bindPopup(popupHtml, { maxWidth: 260, closeButton: true });
       } else {
         const marker = L.marker([lat, lng], {
           icon: _liveDivIcon(color, e.durum),
@@ -484,14 +503,7 @@
           title: drvName + ' — ' + plaka
         });
         marker.bindTooltip(tooltipHtml, { direction: 'top', offset: [0, -8], opacity: 0.95 });
-        marker.on('click', function () {
-          if (typeof openOperasyonPage === 'function') {
-            openOperasyonPage();
-            setTimeout(function () {
-              if (typeof openOpsDrawer === 'function') openOpsDrawer(e.id);
-            }, 600);
-          }
-        });
+        marker.bindPopup(popupHtml, { maxWidth: 260, closeButton: true });
         marker.addTo(map);
         UI._liveMarkers[e.id] = marker;
       }
@@ -526,6 +538,32 @@
       iconAnchor: [7, 7],
     });
   }
+
+  // Dashboard map odak modu — popup butonu "Rotayı Göster" tıklayınca:
+  // app-chunk-05.js'teki _haritaFocusGir helper'ı çağrılır. Diğer marker'lar
+  // sönükleşir, seçilen aracın rotası + duraksamaları + yükle/teslim pinleri
+  // çizilir, üstte "Tümünü Göster" banner'ı belirir.
+  UI._dashFocusGoster = function (jobId) {
+    const map = UI._dashMap;
+    if (!map || typeof _haritaFocusGir !== 'function') return;
+    map.closePopup();
+    // _liveMarkers map { jobId → marker }; ortak helper [{marker, jobId}] format ister
+    const all = Object.entries(UI._liveMarkers || {}).map(function (entry) {
+      return { marker: entry[1], jobId: parseInt(entry[0], 10) };
+    });
+    const banner = document.getElementById('dashboard-focus-banner');
+    _haritaFocusGir({ id: 'dashboard', map: map, allMarkers: all, banner: banner }, jobId);
+  };
+
+  UI._dashFocusDetay = function (jobId) {
+    if (UI._dashMap) UI._dashMap.closePopup();
+    if (typeof openOperasyonPage === 'function') {
+      openOperasyonPage();
+      setTimeout(function () {
+        if (typeof openOpsDrawer === 'function') openOpsDrawer(jobId);
+      }, 600);
+    }
+  };
 
   UI._subscribeLiveDrivers = function () {
     const sb = (typeof getSB === 'function') ? getSB() : null;
