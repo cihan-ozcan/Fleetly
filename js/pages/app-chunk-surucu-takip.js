@@ -276,12 +276,41 @@ function surucuTakipRenderHarita() {
   const aktifIs = _ST.isEmirleri.find(ie => ['Yolda','Fabrikada'].includes(ie.durum));
   const bounds = [];
 
-  // 24 saat iz (noktalı, mat)
+  // 24 saat iz — Google Maps stili (beyaz halo + canlı mavi)
+  // Önce ham GPS izi (dashed, "yükleniyor" sinyali), sonra OSRM snap ile değiştirilir.
   if (_ST.konumIzleri.length) {
-    const latlngs = _ST.konumIzleri.map(p => [p.lat, p.lng]);
-    const trail = L.polyline(latlngs, { color: '#a78bfa', weight: 3, opacity: .55, dashArray: '5,6' }).addTo(_ST.map);
-    _ST.layers.push(trail);
-    bounds.push(...latlngs);
+    const rawLatlngs = _ST.konumIzleri.map(p => [p.lat, p.lng]);
+    const drawTrail = (pts, dashed) => {
+      const halo = L.polyline(pts, {
+        color: '#ffffff', weight: 9, opacity: 0.95,
+        lineCap: 'round', lineJoin: 'round'
+      }).addTo(_ST.map);
+      const main = L.polyline(pts, {
+        color: '#1a73e8', weight: 5, opacity: 1,
+        lineCap: 'round', lineJoin: 'round',
+        ...(dashed ? { dashArray: '8,6' } : {})
+      }).addTo(_ST.map);
+      _ST.layers.push(halo, main);
+      return main;
+    };
+    drawTrail(rawLatlngs, true);
+    bounds.push(...rawLatlngs);
+
+    // OSRM snap (chunk-05.js'te tanımlı _opsOsrmMatch global olarak erişilebilir)
+    if (typeof _opsOsrmMatch === 'function') {
+      _opsOsrmMatch(rawLatlngs).then(snapped => {
+        if (!snapped) return;
+        // Önceki polyline'ları çıkar (marker'lar kalsın)
+        _ST.layers = _ST.layers.filter(layer => {
+          if (layer instanceof L.Polyline) {
+            try { _ST.map.removeLayer(layer); } catch {}
+            return false;
+          }
+          return true;
+        });
+        drawTrail(snapped, false);
+      });
+    }
   }
 
   // Aktif rotayı çiz (yükle → teslim)
