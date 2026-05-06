@@ -1,18 +1,24 @@
 /**
  * Fleetly — accept-driver-invite Edge Function
  *
- * Anonymous sign-in olmadan şoför davet kabulü:
- *  1) Davet kodu + PIN doğrula (sofor_davet_dogrula_v3 RPC, service_role ile)
- *  2) Sürücüye özel sentetik email ile gerçek auth.user yarat (varsa onu kullan)
- *  3) Magic-link OTP üret → client `verifyEmailOtp` ile session açar
+ * Anonymous sign-in olmadan şoför davet kabulü (password-based, 2026-05-07 refactor):
+ *  1) Davet kodu + PIN doğrula (sofor_davet_dogrula_v3 RPC, secret/service_role ile)
+ *  2) Sürücüye özel sentetik email + RANDOM password ile auth.user yarat veya güncelle
+ *  3) Client {email, password} ile signInWithEmail çağırarak session açar
  *  4) suruculer.auth_user_id'yi bağla, davetin kullanildi_at'ını güncelle
+ *
+ * MAGIC-LINK YAKLAŞIMINDAN GEÇİŞ NEDENİ:
+ *  • magic-link OTP, Supabase auth URL configuration + key rotation'a duyarlı
+ *  • "Token has expired or is invalid" hataları yaşandı (2026-05-07)
+ *  • Password-based daha sağlam, deterministik, time skew etkilenmez.
+ *  • Password tek kullanımlık — kayıt sonrası tekrar davet kabulünde yenilenir
  *
  * Çağrı:
  *   POST /functions/v1/accept-driver-invite
  *   { "kod": "ABCD1234", "pin": "1234" }
  *
  * Cevap (başarılı):
- *   { "ok": true, "email": "...", "otp": "123456", "surucu_id": "uuid", "firma_id": "uuid" }
+ *   { "ok": true, "email": "...", "password": "...", "surucu_id": "uuid", "firma_id": "uuid" }
  *
  * Cevap (hata):
  *   { "ok": false, "hata": "PIN_HATALI" | "BULUNAMADI" | "KILITLI" | "SURESI_DOLDU"
@@ -25,8 +31,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
-const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+// Yeni Supabase API Keys sistemi: SUPABASE_SECRET_KEY öncelikli (sb_secret_...).
+// Geriye uyum: SUPABASE_SERVICE_ROLE_KEY (eski JWT, deprecated ama hâlâ çalışıyor).
+const SERVICE_ROLE_KEY =
+  Deno.env.get("SUPABASE_SECRET_KEY") ??
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Sürücü için kullanılan iç email domain — gerçek bir domain değil,
 // Supabase auth'un email gerektirmesi için sentetik. Asla mail gönderilmez.
@@ -106,10 +116,19 @@ serve(async (req: Request) => {
     // Format: surucu-{surucu_id}@driver.fleetly.local (UUID benzersizliği yeterli)
     const email = `surucu-${davet.surucu_id}@${INTERNAL_EMAIL_DOMAIN}`.toLowerCase();
 
-    // ── 5) Auth user oluştur (yoksa) ──
+    // ── 5) Tek kullanımlık random password — sentetik, sadece bu oturum için ──
+    // Kullanıcı bunu hiç görmez; mobile signInWithEmail ile session açar açmaz
+    // password JWT olarak hatırlanır. Tekrar davet kabulünde yeni password üretilir.
+    //
+    // NOT: bcrypt password ≤ 72 karakter (Supabase auth bunu zorunlu kılıyor).
+    // Tek UUID 36 karakter + 122 bit entropy → güvenli + limit altında.
+    const password = "fl-" + crypto.randomUUID();   // 39 karakter
+
+    // ── 6) Auth user — yoksa yarat, varsa password yenile ──
     if (!authUserId) {
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email,
+        password,
         email_confirm: true,
         user_metadata: {
           surucu_id : davet.surucu_id,
@@ -120,9 +139,8 @@ serve(async (req: Request) => {
         },
       });
       if (createErr) {
-        // Email zaten varsa: aynı sürücü için tekrar davet — listele
+        // Email zaten varsa: aynı sürücü için tekrar davet — listele + password güncelle
         if (/already.*registered|duplicate|exists/i.test(createErr.message)) {
-          // listUsers → email filter (admin API tek tek getirme)
           const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
           const found = list?.users.find(u => (u.email ?? "").toLowerCase() === email);
           authUserId = found?.id ?? null;
@@ -130,12 +148,32 @@ serve(async (req: Request) => {
             console.error("[accept-invite] user var ama bulunamadı:", email);
             return json(500, { ok: false, hata: "INTERNAL", detay: "AUTH_USER_NOT_FOUND" });
           }
+          // Mevcut user'ın password'ünü yeni random ile güncelle
+          const { error: pwErr } = await admin.auth.admin.updateUserById(authUserId, {
+            password,
+            email_confirm: true,
+          });
+          if (pwErr) {
+            console.error("[accept-invite] password update hata:", pwErr);
+            return json(500, { ok: false, hata: "INTERNAL", detay: pwErr.message });
+          }
         } else {
           console.error("[accept-invite] createUser hata:", createErr);
           return json(500, { ok: false, hata: "INTERNAL", detay: createErr.message });
         }
       } else {
         authUserId = created.user?.id ?? null;
+      }
+    } else {
+      // Sürücü zaten auth_user_id'li — password'ünü yeni random ile güncelle.
+      // (Aynı cihazdan tekrar davet → yeni session)
+      const { error: pwErr } = await admin.auth.admin.updateUserById(authUserId, {
+        password,
+        email_confirm: true,
+      });
+      if (pwErr) {
+        console.error("[accept-invite] password yenileme hata:", pwErr);
+        return json(500, { ok: false, hata: "INTERNAL", detay: pwErr.message });
       }
     }
 
@@ -179,20 +217,11 @@ serve(async (req: Request) => {
       // Devam et — auth_user_id zaten bağlı, kritik değil
     }
 
-    // ── 8) Magic-link OTP üret — client verifyEmailOtp ile session açacak ──
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type : "magiclink",
-      email,
-    });
-    if (linkErr || !linkData?.properties?.email_otp) {
-      console.error("[accept-invite] generateLink hata:", linkErr);
-      return json(500, { ok: false, hata: "INTERNAL", detay: linkErr?.message ?? "OTP_YOK" });
-    }
-
+    // ── 8) Response — client signInWithEmail({email, password}) ile session açar ──
     return json(200, {
       ok        : true,
       email,
-      otp       : linkData.properties.email_otp,
+      password,
       surucu_id : davet.surucu_id,
       firma_id  : davet.firma_id,
     });
