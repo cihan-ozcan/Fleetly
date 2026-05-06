@@ -145,6 +145,87 @@ async function crmSaveMusteriCloud(obj, isEdit) {
   } catch(err) { console.error('Müşteri buluta kaydedilemedi:', err); }
 }
 
+/* =============================================================================
+ * HIZLI MÜŞTERİ EKLE — iş emri formundan tam müşteri kaydı oluşturmadan ekle.
+ * Akış:
+ *   • opsHizliMusteriAc()  → modalı göster
+ *   • opsHizliMusteriKapat() → kapat
+ *   • opsHizliMusteriKaydet() → minimal alanları al, INSERT, listeye ekle, dropdown'a yansıt
+ *
+ * Tam müşteri profil (sektor/email/adres/vade/notlar vs.) sonradan müşteri sayfasından
+ * tamamlanır; bu modal sadece "iş hızlı çıkmalı" senaryosuna hizmet eder.
+ * ===========================================================================*/
+function opsHizliMusteriAc() {
+  const bg = document.getElementById('ops-hizli-musteri-bg');
+  if (!bg) return;
+  // Alanları temizle
+  ['firma','tel','yetkili','vkn'].forEach(k => {
+    const el = document.getElementById('ops-hizli-musteri-' + k);
+    if (el) el.value = '';
+  });
+  const err = document.getElementById('ops-hizli-musteri-err');
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+  bg.classList.remove('hidden');
+  setTimeout(() => document.getElementById('ops-hizli-musteri-firma')?.focus(), 30);
+}
+
+function opsHizliMusteriKapat() {
+  const bg = document.getElementById('ops-hizli-musteri-bg');
+  if (bg) bg.classList.add('hidden');
+}
+
+async function opsHizliMusteriKaydet() {
+  const firma   = (document.getElementById('ops-hizli-musteri-firma')?.value || '').trim();
+  const tel     = (document.getElementById('ops-hizli-musteri-tel')?.value   || '').trim();
+  const yetkili = (document.getElementById('ops-hizli-musteri-yetkili')?.value || '').trim();
+  const vkn     = (document.getElementById('ops-hizli-musteri-vkn')?.value   || '').trim();
+  const errEl   = document.getElementById('ops-hizli-musteri-err');
+  const btn     = document.getElementById('ops-hizli-musteri-kaydet');
+
+  function showErr(msg) {
+    if (errEl) { errEl.style.display = 'block'; errEl.textContent = msg; }
+  }
+  if (!firma) return showErr('Firma adı boş olamaz.');
+  if (!tel)   return showErr('Telefon boş olamaz.');
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Kaydediliyor…'; }
+  try {
+    const obj = {
+      // id Supabase tarafından atanır (bigint identity)
+      firma, yetkili, tel, vkn,
+      sektor: 'Diğer',
+      email: '', adres: '', vade: 30, durum: 'Aktif', notlar: ''
+    };
+    if (isLocalMode() || !_authToken) {
+      // Local mode: geçici id
+      obj.id = (crmMusteriler.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1) || 1;
+    } else {
+      await crmSaveMusteriCloud(obj, false);
+      if (!obj.id) throw new Error('Kayıt başarısız (HTTP)');
+    }
+    crmMusteriler.unshift(obj);
+    crmSaveLocal();
+
+    // İş emri formundaki dropdown'ı tazele ve yeni müşteriyi seç
+    if (typeof _opsPopulateMusteriSelect === 'function') _opsPopulateMusteriSelect();
+    const sel = document.getElementById('ops-m-musteri');
+    if (sel) sel.value = String(obj.id);
+
+    // Müşteri ana sayfasındaki sayım/listesi açıksa tazele
+    try { if (typeof updateMusteriStat === 'function') updateMusteriStat(); } catch (_) {}
+    try { if (typeof renderMusteriler === 'function') renderMusteriler(); } catch (_) {}
+
+    if (typeof showToast === 'function') {
+      showToast(`Müşteri eklendi: ${firma}`, 'success');
+    }
+    opsHizliMusteriKapat();
+  } catch (e) {
+    showErr('Hata: ' + (e?.message || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Kaydet ve Seç'; }
+  }
+}
+
 async function crmDeleteMusteriCloud(id) {
   if (isLocalMode() || !_authToken) return;
   try {
@@ -741,6 +822,8 @@ function opsRowToObj(r) {
     pod_onaylayan       : r.pod_onaylayan       || null,
     pod_onay_notu       : r.pod_onay_notu       || null,
     pod_durum           : r.pod_durum           || null,
+    /* ── Çoklu konteyner grup id (2026_05_06f) ── */
+    grup_id             : r.grup_id             || null,
     /* ── Boş alım ön-fazı (2026_05_06b) ── */
     bos_alindi_zaman    : r.bos_alindi_zaman    || null,
     bos_alim_konteyner  : r.bos_alim_konteyner  || null,
@@ -799,6 +882,8 @@ async function opsObjToRow(obj, isEdit) {
     bitis_km      : (obj.bitis_km     != null ? obj.bitis_km     : null),
     yakit_litre   : (obj.yakit_litre  != null ? obj.yakit_litre  : null),
     yakit_tutar   : (obj.yakit_tutar  != null ? obj.yakit_tutar  : null),
+    /* ── Çoklu konteyner grup id (2026_05_06f) ── */
+    ...(obj.grup_id ? { grup_id: obj.grup_id } : {}),
     /* ── Gümrük tel mühür (2026_05_06b) ── */
     gumruk_muhur_gerekli : !!obj.gumruk_muhur_gerekli,
     gumruk_yetkili_ad    : obj.gumruk_yetkili_ad   || null,
@@ -1360,6 +1445,53 @@ async function opsGuzergahYukle() {
     _opsGuzergahLayers.push(m1, m2);
 
     _opsGuzergahMap.fitBounds(mainLine.getBounds(), { padding: [20, 20] });
+
+    // 🅿️ Duraksamaları haritaya çiz — mor halka + tooltip
+    // (Migration 2026_05_06g — surucu_duraksamalar tablosu)
+    sb.from('surucu_duraksamalar')
+      .select('id, baslangic_at, bitis_at, merkez_lat, merkez_lng, yaricap_m, bolge_etiket, otomatik_mi')
+      .eq('is_emri_id', dbId)
+      .order('baslangic_at', { ascending: true })
+      .then(({ data: duraksamalar }) => {
+        if (!duraksamalar || !duraksamalar.length) return;
+        duraksamalar.forEach(d => {
+          if (d.merkez_lat == null || d.merkez_lng == null) return;
+          const sureMs = (d.bitis_at ? new Date(d.bitis_at) : new Date()) - new Date(d.baslangic_at);
+          const sureDk = Math.max(1, Math.round(sureMs / 60000));
+          const aktif = !d.bitis_at;
+          const renk = aktif ? '#f59e0b' : '#a855f7';   // aktif sarı, geçmiş mor
+          // İçi dolu yumuşak halka
+          const halo = L.circle([d.merkez_lat, d.merkez_lng], {
+            radius: Math.max(d.yaricap_m || 50, 30),
+            color: renk, weight: 2, opacity: 0.9,
+            fillColor: renk, fillOpacity: 0.18
+          }).addTo(_opsGuzergahMap);
+          const baslaT = new Date(d.baslangic_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+          const bitisT = d.bitis_at ? new Date(d.bitis_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : 'devam ediyor';
+          halo.bindTooltip(
+            `<b>🅿️ ${d.bolge_etiket || 'Bilinmeyen bölge'}</b><br>` +
+            `${baslaT} → ${bitisT} <b>(${sureDk} dk)</b>` +
+            (aktif ? '<br><i style="color:#f59e0b">aktif</i>' : '') +
+            (d.otomatik_mi ? '<br><span style="color:var(--muted);font-size:10px;">otomatik algı</span>' : '<br><span style="color:var(--muted);font-size:10px;">şoför manuel</span>'),
+            { direction: 'top', sticky: true }
+          );
+          _opsGuzergahLayers.push(halo);
+        });
+        // Stat satırına duraksama sayısı ekle
+        const dCount = duraksamalar.length;
+        const dToplamDk = duraksamalar.reduce((s, d) => {
+          const ms = (d.bitis_at ? new Date(d.bitis_at) : new Date()) - new Date(d.baslangic_at);
+          return s + Math.round(ms / 60000);
+        }, 0);
+        if (statsEl && dCount > 0) {
+          const ek = document.createElement('span');
+          ek.title = 'Bu işte algılanan/manuel duraksamalar';
+          ek.style.cssText = 'background:rgba(168,85,247,.10);border:1px solid rgba(168,85,247,.30);color:#a855f7;padding:3px 10px;border-radius:5px;font-weight:700;';
+          ek.textContent = `🅿️ ${dCount} duraksama · ${dToplamDk} dk`;
+          statsEl.appendChild(ek);
+        }
+      })
+      .catch(err => console.warn('Duraksama yüklenemedi:', err));
 
     // Arka planda OSRM Match çağır → yola snap edilmiş polyline ile değiştir.
     // Başarısız olursa (rate limit / network / az nokta) ham çizim kalır.
@@ -2144,6 +2276,9 @@ function openOpsIsEmriModal(duzenlemeObj) {
   // Adım 1'e dön ve kaydedilmiş alanlardan kontTip segmented'i senkronize et
   opsStepperGoto(1);
   _opsKontTipSyncSegmented();
+  // Çoklu konteyner panelini textarea içeriğine göre güncelle (edit modunda gizli kalsın çünkü
+  // edit tek satıra etki eder; yeni kayıtta birden fazla konteyner girince görünür olacak)
+  if (typeof opsCokluPanelGuncelle === 'function') opsCokluPanelGuncelle();
   setTimeout(() => { try { _opsKmAutoHint(); } catch(e) {} }, 50);
 }
 
@@ -2517,7 +2652,17 @@ function saveOpsIsEmri() {
   const aracPlaka = document.getElementById('ops-m-arac').value;
   const cekiciId  = document.getElementById('ops-m-cekici-id')?.value || null;
   const dorseId   = document.getElementById('ops-m-dorse-id')?.value  || null;
-  if (!musteriId || !aracPlaka) { showToast('Müşteri ve araç zorunlu', 'error'); return; }
+
+  // Çoklu konteyner / çoklu şoför kontrol — yeni kayıtta etkin (edit modunda tek satır mantığı korunur)
+  const cokluRows = (_opsDuzenlemeId === null) ? _opsCokluRowsRead() : [];
+  const isCoklu = cokluRows.length > 1;
+
+  if (!musteriId) { showToast('Müşteri zorunlu', 'error'); return; }
+  if (!isCoklu && !aracPlaka) { showToast('Araç zorunlu', 'error'); return; }
+  if (isCoklu) {
+    const eksik = cokluRows.filter(r => !r.plaka).length;
+    if (eksik > 0) { showToast(`Çoklu atamada ${eksik} satırda plaka eksik`, 'error'); return; }
+  }
 
   const musteriObj = typeof crmMusteriler !== 'undefined' ? crmMusteriler.find(m => m.id == musteriId) : null;
 
@@ -2580,6 +2725,82 @@ function saveOpsIsEmri() {
     opsRenderStats(); opsRenderTable(); opsRenderKanban(); opsRenderArsiv();
     logActivity(`📝 İş emri güncellendi — <strong>${e.konteyner_no || e.arac_plaka}</strong>`);
     showToast('İş emri güncellendi ✓');
+    return;
+  }
+
+  // ──────────────── ÇOKLU MOD: N is_emirleri kaydı + ortak grup_id ────────────────
+  if (isCoklu) {
+    const grupId = _opsYeniGrupId();
+    const ortakKontTip   = document.getElementById('ops-m-kont-tip')?.value || '';
+    const ortakKontDurum = document.getElementById('ops-m-kont-durum')?.value || 'Dolu';
+    const ortakReferans  = document.getElementById('ops-m-referans')?.value.trim().toUpperCase() || '';
+    const ortakMuhur     = document.getElementById('ops-m-muhur')?.value.trim() || '';
+    const ortakYukle     = document.getElementById('ops-m-yukle')?.value.trim() || '';
+    const ortakTeslim    = document.getElementById('ops-m-teslim')?.value.trim() || '';
+    const ortakBosDonus  = document.getElementById('ops-m-bos-donus')?.value.trim() || '';
+    const ortakBoslama   = document.getElementById('ops-m-boslama-zaman')?.value || null;
+    const ortakNotlar    = document.getElementById('ops-m-notlar')?.value.trim() || '';
+    const ortakYukleUrl  = document.getElementById('ops-m-yukle-konum')?.value.trim()  || '';
+    const ortakTeslimUrl = document.getElementById('ops-m-teslim-konum')?.value.trim() || '';
+    const ortakGumGer    = !!document.getElementById('ops-m-gumruk-gerekli')?.checked;
+    const ortakGumAd     = ortakGumGer ? (document.getElementById('ops-m-gumruk-yetkili-ad')?.value.trim()  || null) : null;
+    const ortakGumTel    = ortakGumGer ? (document.getElementById('ops-m-gumruk-yetkili-tel')?.value.trim() || null) : null;
+    const yk = parseKonumUrl(ortakYukleUrl);
+    const tk = parseKonumUrl(ortakTeslimUrl);
+
+    const olusturulanlar = [];
+    cokluRows.forEach(row => {
+      const obj = {
+        id            : opsNextId(),
+        grup_id       : grupId,
+        musteri_id    : parseInt(musteriId),
+        musteri_adi   : musteriObj ? musteriObj.firma : '',
+        arac_plaka    : row.plaka,
+        // cekici_id/dorse_id satır bazında çözmek için filo lookup gerek; şimdilik
+        // sadece plaka snapshot'ı yazılıyor — düzenle modunda bağlanır.
+        cekici_id     : null,
+        dorse_id      : null,
+        sofor         : row.sofor,
+        sofor_tel     : row.tel,
+        sofor_user_id : null,
+        konteyner_no  : row.konteyner,
+        kont_tip      : ortakKontTip,
+        kont_durum    : ortakKontDurum,
+        referans_no   : ortakReferans,
+        muhur_no      : ortakMuhur,
+        yukle_yeri    : ortakYukle,
+        teslim_yeri   : ortakTeslim,
+        bos_donus     : ortakBosDonus,
+        boslama_zaman : ortakBoslama,
+        notlar        : ortakNotlar,
+        yukle_konum_url : ortakYukleUrl  || null,
+        teslim_konum_url: ortakTeslimUrl || null,
+        yukle_lat       : yk?.lat || null,
+        yukle_lng       : yk?.lng || null,
+        teslim_lat      : tk?.lat || null,
+        teslim_lng      : tk?.lng || null,
+        gumruk_muhur_gerekli: ortakGumGer,
+        gumruk_yetkili_ad   : ortakGumAd,
+        gumruk_yetkili_tel  : ortakGumTel,
+        durum         : 'Bekliyor',
+        atama_zamani  : new Date().toISOString(),
+        yola_zaman    : null,
+        fabrika_giris : null,
+        fabrika_cikis : null,
+        teslim_zamani : null,
+        fotograflar   : '[]',
+      };
+      isEmirleri.push(obj);
+      olusturulanlar.push(obj);
+    });
+    opsSaveLocal();
+    // Hepsini paralel buluta gönder
+    Promise.all(olusturulanlar.map(o => opsSaveCloud(o).catch(()=>{}))).then(() => opsSaveLocal());
+    closeOpsIsEmriModal();
+    opsRenderStats(); opsRenderTable(); opsRenderKanban();
+    updateOpsStatCard();
+    logActivity(`📦 ${olusturulanlar.length} iş emri grubu oluşturuldu — <strong>${musteriObj?.firma || 'Müşteri'}</strong> · grup ${grupId.slice(0,8)}`);
+    showToast(`${olusturulanlar.length} iş emri oluşturuldu (grup) ✓`);
     return;
   }
 
@@ -2649,6 +2870,83 @@ function saveOpsIsEmri() {
   updateOpsStatCard();
   logActivity(`📦 İş emri oluşturuldu — <strong>${obj.konteyner_no || obj.arac_plaka}</strong> · ${obj.musteri_adi}`);
   showToast('İş emri oluşturuldu ✓');
+}
+
+/* =============================================================================
+ * ÇOKLU KONTEYNER / ÇOKLU ŞOFÖR PANEL — 2026_05_06f migration (grup_id)
+ * Form'a 1'den fazla konteyner girilirse Step 2'de her konteynere ayrı satır
+ * (plaka + şoför + telefon) açılır. Kaydetme aşamasında N tane is_emirleri
+ * satırı oluşturulur, hepsine ortak grup_id atanır.
+ * ===========================================================================*/
+function _opsKonteynerSatirlari() {
+  const txt = document.getElementById('ops-m-konteyner')?.value || '';
+  return txt.split('\n').map(s => s.trim()).filter(Boolean);
+}
+
+function opsCokluPanelGuncelle() {
+  const sec = document.getElementById('ops-coklu-atama-section');
+  const rowsEl = document.getElementById('ops-coklu-rows');
+  const cntEl = document.getElementById('ops-coklu-count');
+  if (!sec || !rowsEl) return;
+
+  const knts = _opsKonteynerSatirlari();
+  const n = knts.length;
+  if (n <= 1) {
+    sec.style.display = 'none';
+    rowsEl.innerHTML = '';
+    return;
+  }
+  sec.style.display = '';
+  if (cntEl) cntEl.textContent = String(n);
+
+  // Mevcut input'ları koru (kullanıcı doldurmuş olabilir)
+  const eski = {};
+  rowsEl.querySelectorAll('[data-coklu-row]').forEach(r => {
+    const k = r.getAttribute('data-coklu-konteyner') || '';
+    eski[k] = {
+      plaka: r.querySelector('[data-coklu-plaka]')?.value || '',
+      sofor: r.querySelector('[data-coklu-sofor]')?.value || '',
+      tel:   r.querySelector('[data-coklu-tel]')?.value   || ''
+    };
+  });
+
+  rowsEl.innerHTML = knts.map((k, i) => {
+    const v = eski[k] || {};
+    const ke = (k + '').replace(/[<>"']/g, '');
+    return `
+      <div data-coklu-row data-coklu-konteyner="${ke}"
+           style="display:grid;grid-template-columns:1.4fr 1fr 1.4fr 1.2fr;gap:6px;margin-bottom:6px;align-items:center;padding:8px;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.18);border-radius:6px;">
+        <div style="font-family:var(--ops-font-mono);font-size:12px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i+1}. ${ke}</div>
+        <input type="text" data-coklu-plaka class="srm-inp" placeholder="34 EE 5314" value="${(v.plaka+'').replace(/"/g,'&quot;')}" style="font-family:var(--ops-font-mono);font-weight:600;font-size:12px;padding:6px 8px;" />
+        <input type="text" data-coklu-sofor class="srm-inp" placeholder="Şoför adı" value="${(v.sofor+'').replace(/"/g,'&quot;')}" style="font-size:12px;padding:6px 8px;" />
+        <input type="tel"  data-coklu-tel   class="srm-inp" placeholder="0500 000 00 00" value="${(v.tel+'').replace(/"/g,'&quot;')}" style="font-size:12px;padding:6px 8px;" />
+      </div>`;
+  }).join('');
+}
+
+/** Çoklu satırlardan obj listesi üretir; tek satır varsa boş döner. */
+function _opsCokluRowsRead() {
+  const rowsEl = document.getElementById('ops-coklu-rows');
+  if (!rowsEl) return [];
+  const knts = _opsKonteynerSatirlari();
+  if (knts.length <= 1) return [];
+  const result = [];
+  rowsEl.querySelectorAll('[data-coklu-row]').forEach(r => {
+    result.push({
+      konteyner: r.getAttribute('data-coklu-konteyner') || '',
+      plaka:     (r.querySelector('[data-coklu-plaka]')?.value || '').trim(),
+      sofor:     (r.querySelector('[data-coklu-sofor]')?.value || '').trim(),
+      tel:       (r.querySelector('[data-coklu-tel]')?.value   || '').trim()
+    });
+  });
+  return result;
+}
+
+/** Çoklu mod aktifse N is_emirleri kaydı için bir grup_id (UUID) üret. */
+function _opsYeniGrupId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  // Fallback: zaman + random
+  return 'grp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
 }
 
 /* ── SİL ─────────────────────────────────────────────────── */
@@ -2803,6 +3101,9 @@ function _opsDrawerRender(e) {
 
   // 📊 Aynı güzergahta geçmiş seferler (sürücü karşılaştırması)
   opsBenzerSeferleriYukle().catch(()=>{});
+
+  // 💸 Şoför masraf bildirimleri (2026_05_06e)
+  opsDrawerMasrafYukle().catch(()=>{});
 
   // ── Zaman çizelgesi (km bilgisiyle zenginleştirilmiş) ──
   const milestones = [
@@ -3464,6 +3765,143 @@ async function _opsYakitGpsKarsilastirmaYukle(e) {
    Her satır: tarih, sürücü, plaka, beyan km, GPS km, süre, yakıt(L).
    GPS km'ye göre artan sıralama → en kestirme rotalı sürücü en üstte,
    en uzun yol kullanan en altta. Aktif iş emri (e) hariç tutulur. */
+/* =============================================================================
+ * ŞOFÖR MASRAF BİLDİRİMLERİ — drawer içi panel (2026_05_06e migration)
+ * Aktif iş emrine bağlı şoför masraflarını listeler. Yönetici onaylar/reddeder;
+ * onay sonrası DB trigger otomatik harcırah ek_masraflar'a ekler.
+ * ===========================================================================*/
+const _MASRAF_KAT_META = {
+  'Park':        { emoji: '🅿️', label: 'Park' },
+  'Otoyol':      { emoji: '🛣️', label: 'Otoyol/HGS' },
+  'YakitCepten': { emoji: '⛽', label: 'Yakıt (cepten)' },
+  'Yemek':       { emoji: '🍽️', label: 'Mola/Yemek' },
+  'AcilTamir':   { emoji: '🔧', label: 'Acil Tamir' },
+  'Diger':       { emoji: '📦', label: 'Diğer' }
+};
+
+async function opsDrawerMasrafYukle() {
+  const body  = document.getElementById('ops-drawer-masraf-body');
+  const cnt   = document.getElementById('ops-drawer-masraf-count');
+  const btn   = document.getElementById('ops-drawer-masraf-refresh');
+  if (!body) return;
+  if (!opsDrawerActiveId) return;
+  const e = opsById(opsDrawerActiveId);
+  if (!e) return;
+  const dbId = e._dbId || e.id;
+
+  if (btn) { btn.disabled = true; btn.textContent = '↻ Yükleniyor…'; }
+  body.innerHTML = `<div style="font-size:11px;color:var(--muted);">Yükleniyor…</div>`;
+
+  try {
+    const sb = getSB();
+    if (!sb) throw new Error('Supabase istemcisi yok');
+    const { data, error } = await sb
+      .from('masraflar')
+      .select('id, kategori, tutar, makbuz_url, aciklama, durum, tarih, onay_at, onay_not, red_neden, sofor_user_id')
+      .eq('is_emri_id', dbId)
+      .order('tarih', { ascending: false });
+    if (error) throw error;
+
+    const rows = data || [];
+    if (cnt) {
+      cnt.textContent = rows.length || '';
+      cnt.style.display = rows.length ? '' : 'none';
+    }
+    if (!rows.length) {
+      body.innerHTML = `<div style="font-size:11px;color:var(--muted);padding:6px 0;">Bu işe bağlı şoför masraf bildirimi yok.</div>`;
+      return;
+    }
+
+    body.innerHTML = rows.map(m => {
+      const meta = _MASRAF_KAT_META[m.kategori] || { emoji: '📦', label: m.kategori || '—' };
+      const tutarStr = (Number(m.tutar) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+      const dur = m.durum;
+      const durColor = dur === 'beklemede' ? '#f59e0b'
+                     : dur === 'onayli'    ? '#22c55e'
+                     : dur === 'odendi'    ? '#0ea5e9'
+                     : dur === 'red'       ? '#ef4444' : 'var(--muted)';
+      const durLabel = dur === 'beklemede' ? '🕐 Onay bekliyor'
+                     : dur === 'onayli'    ? '✓ Onaylı (harcırah ek)'
+                     : dur === 'odendi'    ? '💵 Ödendi'
+                     : dur === 'red'       ? '✕ Reddedildi' : dur;
+      const tarihStr = m.tarih ? new Date(m.tarih).toLocaleDateString('tr-TR') : '—';
+      const aciklamaSatir = m.aciklama
+        ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${(m.aciklama+'').replace(/[<>]/g,'')}</div>` : '';
+      const redSatir = (dur === 'red' && m.red_neden)
+        ? `<div style="font-size:11px;color:#ef4444;margin-top:2px;">Red nedeni: ${(m.red_neden+'').replace(/[<>]/g,'')}</div>` : '';
+      const onayNotSatir = (dur === 'onayli' && m.onay_not)
+        ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">Not: ${(m.onay_not+'').replace(/[<>]/g,'')}</div>` : '';
+      const aksiyonlar = (dur === 'beklemede') ? `
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button onclick="opsMasrafOnayla('${m.id}')"
+            style="background:#22c55e;color:#fff;border:none;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">✓ Onayla</button>
+          <button onclick="opsMasrafReddet('${m.id}')"
+            style="background:transparent;color:#ef4444;border:1px solid rgba(239,68,68,.5);border-radius:5px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">✕ Reddet</button>
+        </div>` : '';
+      const fotoLink = m.makbuz_url
+        ? `<a href="${m.makbuz_url}" target="_blank" rel="noopener" title="Makbuz" style="font-size:11px;color:var(--accent);text-decoration:none;">📎 makbuz</a>`
+        : '';
+
+      return `
+      <div style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--surface2,var(--surface));">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;">
+            <span style="font-size:16px;">${meta.emoji}</span>
+            <span>${meta.label}</span>
+            <span style="font-family:var(--font-mono);font-weight:700;">${tutarStr} ₺</span>
+          </div>
+          <span style="font-size:10.5px;color:${durColor};font-weight:700;">${durLabel}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+          <span style="font-size:11px;color:var(--muted);">${tarihStr}</span>
+          ${fotoLink}
+        </div>
+        ${aciklamaSatir}
+        ${onayNotSatir}
+        ${redSatir}
+        ${aksiyonlar}
+      </div>`;
+    }).join('');
+  } catch (err) {
+    console.error('Drawer masraf yükleme hatası:', err);
+    body.innerHTML = `<div style="font-size:11px;color:#ef4444;">Yüklenemedi: ${(err?.message || err)}</div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Yenile'; }
+  }
+}
+
+async function opsMasrafOnayla(id) {
+  if (!id) return;
+  const not = prompt('Onay notu (opsiyonel):', '') || null;
+  try {
+    const sb = getSB();
+    const { error } = await sb.rpc('masraf_onayla', { p_id: id, p_not: not });
+    if (error) throw error;
+    if (typeof showToast === 'function') showToast('Masraf onaylandı — harcırah güncellendi ✓', 'success');
+    opsDrawerMasrafYukle().catch(()=>{});
+  } catch (e) {
+    alert('Onay hatası: ' + (e?.message || e));
+  }
+}
+
+async function opsMasrafReddet(id) {
+  if (!id) return;
+  const neden = prompt('Red nedeni (zorunlu):', '');
+  if (!neden || !neden.trim()) {
+    alert('Red nedeni boş olamaz.');
+    return;
+  }
+  try {
+    const sb = getSB();
+    const { error } = await sb.rpc('masraf_reddet', { p_id: id, p_neden: neden.trim() });
+    if (error) throw error;
+    if (typeof showToast === 'function') showToast('Masraf reddedildi', 'warning');
+    opsDrawerMasrafYukle().catch(()=>{});
+  } catch (e) {
+    alert('Red hatası: ' + (e?.message || e));
+  }
+}
+
 async function opsBenzerSeferleriYukle() {
   const body  = document.getElementById('ops-drawer-karsilastirma-body');
   const cnt   = document.getElementById('ops-drawer-karsilastirma-count');

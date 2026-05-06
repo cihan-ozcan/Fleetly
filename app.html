@@ -2739,6 +2739,18 @@
       <div id="ops-drawer-harcirah-body"></div>
     </div>
 
+    <!-- Şoför Masraf Bildirimleri — 2026_05_06e -->
+    <div class="drawer-section" id="ops-drawer-masraf-section" data-drawer-tab="detaylar">
+      <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>💸 Şoför Masrafları
+          <span id="ops-drawer-masraf-count" style="font-family:var(--font-mono);font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:99px;margin-left:4px;display:none;"></span>
+        </span>
+        <button id="ops-drawer-masraf-refresh" onclick="opsDrawerMasrafYukle()"
+                style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:2px 8px;font-size:10.5px;cursor:pointer;">↻ Yenile</button>
+      </div>
+      <div id="ops-drawer-masraf-body" style="font-size:12px;color:var(--muted);">—</div>
+    </div>
+
     <!-- Sürücü Karşılaştırma — aynı yükle/teslim çiftine yapılmış geçmiş seferler -->
     <div class="drawer-section" id="ops-drawer-karsilastirma-section" data-drawer-tab="detaylar">
       <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between;">
@@ -2816,6 +2828,47 @@
   </div>
 </div>
 
+<!-- ── HIZLI MÜŞTERİ EKLE MODAL (iş emri formu açıkken üstüne biner) ─── -->
+<div id="ops-hizli-musteri-bg" class="srm-backdrop hidden"
+     onclick="if(event.target===this)opsHizliMusteriKapat()"
+     style="z-index:2000;background:rgba(0,0,0,.55);">
+  <div class="srm-modal" style="max-width:480px;">
+    <div class="srm-header">
+      <div class="srm-title"><span>+</span> Hızlı Müşteri Ekle</div>
+      <button class="srm-close" type="button" onclick="opsHizliMusteriKapat()">✕</button>
+    </div>
+    <div class="srm-body" style="padding:16px;">
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 14px;">
+        Tam müşteri kaydını sonra tamamlayabilirsiniz. Şimdi sadece firma adı ve telefon yeterli.
+      </p>
+      <div class="srm-grid">
+        <div class="srm-group full">
+          <label>Firma Adı *</label>
+          <input id="ops-hizli-musteri-firma" class="srm-inp" placeholder="ABC Lojistik A.Ş." />
+        </div>
+        <div class="srm-group">
+          <label>Telefon *</label>
+          <input id="ops-hizli-musteri-tel" class="srm-inp" type="tel" placeholder="0532 123 45 67" />
+        </div>
+        <div class="srm-group">
+          <label>Yetkili (opsiyonel)</label>
+          <input id="ops-hizli-musteri-yetkili" class="srm-inp" placeholder="Ahmet Yılmaz" />
+        </div>
+        <div class="srm-group full">
+          <label>Vergi No (opsiyonel)</label>
+          <input id="ops-hizli-musteri-vkn" class="srm-inp" placeholder="1234567890" />
+        </div>
+      </div>
+      <div id="ops-hizli-musteri-err" style="display:none;color:#ef4444;font-size:12px;margin-top:8px;"></div>
+    </div>
+    <div class="srm-footer" style="padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);">
+      <button class="ops-btn ops-btn--ghost" type="button" onclick="opsHizliMusteriKapat()">İptal</button>
+      <button class="ops-btn ops-btn--primary" type="button" id="ops-hizli-musteri-kaydet"
+              onclick="opsHizliMusteriKaydet()">Kaydet ve Seç</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── OPS İŞ EMRİ MODAL ──────────────────────── -->
 <div id="ops-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)opsModalDismiss()">
   <div class="srm-modal">
@@ -2862,7 +2915,10 @@
         <p class="ops-step__intro">Hangi müşteri için sevkiyat yapılıyor ve konteyner numaraları neler?</p>
         <div class="srm-grid">
           <div class="srm-group">
-            <label>Müşteri *</label>
+            <label style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Müşteri *</span>
+              <button type="button" onclick="opsHizliMusteriAc()" style="background:transparent;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;text-transform:none;letter-spacing:0;padding:0;">+ Yeni Müşteri</button>
+            </label>
             <select id="ops-m-musteri" class="srm-inp"></select>
           </div>
           <div class="srm-group">
@@ -2877,7 +2933,7 @@
               <span>Konteyner No(lar) *</span>
               <span style="font-size:10px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">Birden fazlaysa her birini yeni satıra yazın</span>
             </label>
-            <textarea id="ops-m-konteyner" class="srm-inp" rows="3" placeholder="ABCU1234567&#10;HLBU3981430&#10;SEKU1484480" style="font-family:var(--ops-font-mono);font-weight:600;letter-spacing:.05em;"></textarea>
+            <textarea id="ops-m-konteyner" class="srm-inp" rows="3" placeholder="ABCU1234567&#10;HLBU3981430&#10;SEKU1484480" style="font-family:var(--ops-font-mono);font-weight:600;letter-spacing:.05em;" oninput="opsCokluPanelGuncelle()"></textarea>
           </div>
         </div>
         <div class="ops-step__error" id="ops-step1-err"></div>
@@ -2915,6 +2971,17 @@
             <label>Sürücü Telefon</label>
             <input id="ops-m-sofor-tel" class="srm-inp" placeholder="0500 000 00 00" type="tel" />
           </div>
+          <!-- Çoklu konteyner atama paneli — Step 1'de >1 konteyner girilirse görünür -->
+          <div class="srm-group full" id="ops-coklu-atama-section" style="display:none;border-top:1px dashed var(--border);padding-top:14px;margin-top:6px;">
+            <div style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:6px;">
+              📦 <span id="ops-coklu-count">0</span> konteyner girdiniz — her birine ayrı şoför/araç atayın
+            </div>
+            <p style="font-size:10.5px;color:var(--text-muted);margin:0 0 10px;">
+              Yukarıdaki "Çekici Ara" ile birlikte tek atama da yapabilirsiniz; çoklu giriş için aşağıdaki tabloyu doldurun.
+            </p>
+            <div id="ops-coklu-rows"></div>
+          </div>
+
           <div class="srm-group full">
             <label>Konteyner Tipi</label>
             <div class="ops-step__kont-tip" id="ops-m-kont-tip-segmented">
