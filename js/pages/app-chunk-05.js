@@ -2479,8 +2479,14 @@ function _opsStepperValidate(step) {
   if (step === 1) {
     const m = document.getElementById('ops-m-musteri')?.value;
     const k = (document.getElementById('ops-m-konteyner')?.value || '').trim();
+    const durum = document.getElementById('ops-m-kont-durum')?.value || 'Dolu';
     if (!m) { _opsStepperShowErr(1, 'Müşteri seçimi zorunlu.'); return false; }
-    if (!k) { _opsStepperShowErr(1, 'En az bir konteyner numarası girin.'); return false; }
+    // Konteyner no: SADECE Dolu alımda zorunlu. Boş alımda şoför sahada
+    // konteyneri alıp fotoğraf çektiğinde operasyon no'yu sonradan günceller.
+    if (durum !== 'Boş' && !k) {
+      _opsStepperShowErr(1, 'En az bir konteyner numarası girin.');
+      return false;
+    }
     return true;
   }
   if (step === 2) {
@@ -2488,9 +2494,61 @@ function _opsStepperValidate(step) {
     if (!arac) { _opsStepperShowErr(2, 'Çekici seçimi zorunlu.'); return false; }
     return true;
   }
-  // Adım 3 ve 4 zorunlu alan içermez
+  if (step === 3) {
+    // Boş alımda referans no ZORUNLU — şoför konteyneri bu referansla teslim alır.
+    const durum = document.getElementById('ops-m-kont-durum')?.value || 'Dolu';
+    const ref   = (document.getElementById('ops-m-referans')?.value || '').trim();
+    if (durum === 'Boş' && !ref) {
+      _opsStepperShowErr(3, 'Boş alımda referans numarası zorunludur (şoför konteyneri bu numarayla teslim alacak).');
+      return false;
+    }
+    return true;
+  }
+  // Adım 4 zorunlu alan içermez
   return true;
 }
+
+/**
+ * Konteyner Durumu (Dolu / Boş) değiştiğinde Step 1 ve Step 3 form etiketlerini
+ * ve zorunlulukları dinamik olarak güncelle.
+ *   • Boş alım  → konteyner no opsiyonel + referans no ZORUNLU
+ *   • Dolu alım → konteyner no zorunlu + referans no opsiyonel
+ */
+function opsKontDurumChanged() {
+  const durum = document.getElementById('ops-m-kont-durum')?.value || 'Dolu';
+  const isBos = (durum === 'Boş');
+
+  // Step 1: konteyner no label + hint
+  const kLabel = document.getElementById('ops-m-konteyner-label');
+  const kHint  = document.getElementById('ops-m-konteyner-hint');
+  if (kLabel) {
+    kLabel.textContent = isBos
+      ? 'Konteyner No(lar)'
+      : 'Konteyner No(lar) *';
+  }
+  if (kHint) {
+    kHint.textContent = isBos
+      ? '⓵ Şoför konteyneri sahada alıp fotoğrafladığında siz buraya yazarsınız (opsiyonel)'
+      : 'Birden fazlaysa her birini yeni satıra yazın';
+  }
+
+  // Step 3: referans no label + hint
+  const rLabel = document.getElementById('ops-m-referans-label');
+  const rHint  = document.getElementById('ops-m-referans-hint');
+  if (rLabel) {
+    rLabel.textContent = isBos ? 'Referans No *' : 'Referans No';
+  }
+  if (rHint) {
+    rHint.style.display = isBos ? 'block' : 'none';
+  }
+
+  // Aktif error mesajlarını temizle (durum değişikliği eski hata bağlamını geçersiz kılar)
+  const e1 = document.getElementById('ops-step1-err');
+  if (e1) { e1.style.display = 'none'; e1.textContent = ''; }
+  const e3 = document.getElementById('ops-step3-err');
+  if (e3) { e3.style.display = 'none'; e3.textContent = ''; }
+}
+window.opsKontDurumChanged = opsKontDurumChanged;
 
 /* Konteyner tipi segmented seçici */
 function opsKontTipSec(btn) {
@@ -3089,6 +3147,51 @@ function deleteOpsIsEmri(id) {
   showToast('İş emri silindi');
 }
 
+/**
+ * Drawer'da Konteyner No(lar) hızlı düzenleme — özellikle boş alım senaryosu için.
+ * İş emri oluşturulurken boş alımda konteyner_no opsiyonel; şoför sahada konteyneri
+ * alıp fotoğrafladıktan sonra operasyon buradan numarayı yazar/günceller.
+ *
+ * UI: prompt() ile basit. Birden fazla numara için yeni satır kullanın.
+ */
+async function opsKonteynerNoEdit(id) {
+  const e = opsById(id);
+  if (!e) return;
+  const mevcut = (e.konteyner_no || '').replace(/\n/g, ', ');
+  const yeniRaw = prompt(
+    'Konteyner numara(lar)ını girin. Birden fazla için virgül veya yeni satır kullanın:\n\n' +
+    'Örn: ABCU1234567, HLBU3981430',
+    mevcut
+  );
+  if (yeniRaw === null) return;   // iptal
+  // Normalleştir: virgül → newline, boşlukları kırp, büyük harf
+  const yeniDeger = yeniRaw
+    .split(/[,\n]/)
+    .map(s => s.trim().toUpperCase())
+    .filter(Boolean)
+    .join('\n');
+
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb) { showToast?.('Supabase yok', 'error'); return; }
+  try {
+    const { error } = await sb.from('is_emirleri')
+      .update({ konteyner_no: yeniDeger || null })
+      .eq('id', e._dbId ?? e.id);
+    if (error) throw error;
+    if (typeof showToast === 'function') showToast('✓ Konteyner numarası güncellendi', 'success');
+    // Veriyi tazele + drawer'ı yeniden render et (opsLoadCloud → DB'den çek)
+    if (typeof opsLoadCloud === 'function') {
+      await opsLoadCloud();
+    }
+    const refreshed = opsById(id);
+    if (refreshed) _opsDrawerRender(refreshed);
+  } catch (err) {
+    console.error('konteyner_no update hata:', err);
+    alert('Güncellenemedi: ' + (err?.message || err));
+  }
+}
+window.opsKonteynerNoEdit = opsKonteynerNoEdit;
+
 /* ── DRAWER ──────────────────────────────────────────────── */
 function openOpsDrawer(id) {
   const e = opsById(id);
@@ -3180,12 +3283,22 @@ function _opsDrawerRender(e) {
     ? `<div class="detail-row"><span class="detail-key">Km Aralığı</span><span class="detail-val" style="font-family:var(--font-mono);">${e.baslangic_km ?? '?'} → ${e.bitis_km ?? '?'}${(e.baslangic_km != null && e.bitis_km != null) ? ` <span style="color:var(--blue);">(${(e.bitis_km - e.baslangic_km).toLocaleString('tr-TR')} km)</span>` : ''}</span></div>`
     : '';
 
+  // Konteyner No satırı — boş alımda şoför sahada doldurur, bu yüzden yanına
+  // hızlı düzenle butonu ekledik. Operasyon konteyner numarasını sonradan
+  // güncelleyebilir (özellikle boş alım senaryosu için).
+  const kontNoVal = (e.konteyner_no || '').replace(/\n/g, ' · ');
+  const kontNoDisplay = kontNoVal
+    || `<span style="color:var(--muted);font-style:italic;">— henüz girilmedi —</span>`;
+  const kontNoEditBtn = `<button onclick="opsKonteynerNoEdit(${eId})"
+       title="Konteyner numarasını düzenle"
+       style="background:transparent;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:0 4px;margin-left:6px;">✏</button>`;
+
   document.getElementById('ops-drawer-detaylar').innerHTML = [
     ['Müşteri',           e.musteri_adi || '—'],
     ['Araç',              e.arac_plaka  || '—'],
     ['Sürücü',            (e.sofor || '—') + soforBagliHtml],
     ['Sürücü Tel',        e.sofor_tel   || '—'],
-    ['Konteyner No(lar)', (e.konteyner_no || '—').replace(/\n/g, ' · ')],
+    ['Konteyner No(lar)', kontNoDisplay + kontNoEditBtn],
     ['Konteyner Tipi',    e.kont_tip    || '—'],
     ['Dolu / Boş',        e.kont_durum  || '—'],
     ['Referans No',       e.referans_no || '—'],
