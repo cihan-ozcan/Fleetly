@@ -1480,13 +1480,14 @@ async function opsGuzergahYukle() {
       .then(({ data: duraksamalar }) => {
         if (!duraksamalar || !duraksamalar.length) return;
         duraksamalar.forEach(d => {
-          if (d.merkez_lat == null || d.merkez_lng == null) return;
+          const dLat = parseFloat(d.merkez_lat), dLng = parseFloat(d.merkez_lng);
+          if (!Number.isFinite(dLat) || !Number.isFinite(dLng)) return;
           const sureMs = (d.bitis_at ? new Date(d.bitis_at) : new Date()) - new Date(d.baslangic_at);
           const sureDk = Math.max(1, Math.round(sureMs / 60000));
           const aktif = !d.bitis_at;
           const renk = aktif ? '#f59e0b' : '#a855f7';   // aktif sarı, geçmiş mor
           // İçi dolu yumuşak halka
-          const halo = L.circle([d.merkez_lat, d.merkez_lng], {
+          const halo = L.circle([dLat, dLng], {
             radius: Math.max(d.yaricap_m || 50, 30),
             color: renk, weight: 2, opacity: 0.9,
             fillColor: renk, fillOpacity: 0.18
@@ -5377,14 +5378,20 @@ async function _haritaFocusGir(ctx, jobId) {
   _focusModu[ctx.id] = { layers, originals, jobId, ctx };
 
   // Yükleme / teslim pinleri
-  if (isFinite(e.yukle_lat) && isFinite(e.yukle_lng)) {
-    const m = L.circleMarker([e.yukle_lat, e.yukle_lng], {
+  // NOT: isFinite(null) === true (Number(null)=0). Ayrıca typeof null === 'object'
+  // olduğu için Leaflet'in L.latLng([null,null]) çağrısı SESSİZCE null döner →
+  // _latlng=null → _project patlar ve addTo throw eder → fonksiyon halt olur.
+  // O yüzden parseFloat + Number.isFinite ile sağlam doğrulama yapıyoruz.
+  const yLat = parseFloat(e.yukle_lat), yLng = parseFloat(e.yukle_lng);
+  if (Number.isFinite(yLat) && Number.isFinite(yLng)) {
+    const m = L.circleMarker([yLat, yLng], {
       radius: 8, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.9, weight: 2
     }).bindTooltip('🟢 ' + (e.yukle_yeri || 'Yükleme'), { direction: 'top' }).addTo(map);
     layers.push(m);
   }
-  if (isFinite(e.teslim_lat) && isFinite(e.teslim_lng)) {
-    const m = L.circleMarker([e.teslim_lat, e.teslim_lng], {
+  const tLat = parseFloat(e.teslim_lat), tLng = parseFloat(e.teslim_lng);
+  if (Number.isFinite(tLat) && Number.isFinite(tLng)) {
+    const m = L.circleMarker([tLat, tLng], {
       radius: 8, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.9, weight: 2
     }).bindTooltip('🔴 ' + (e.teslim_yeri || 'Teslim'), { direction: 'top' }).addTo(map);
     layers.push(m);
@@ -5473,12 +5480,13 @@ async function _haritaFocusGir(ctx, jobId) {
 
   const duraksamalar = durakR?.data || [];
   duraksamalar.forEach(d => {
-    if (d.merkez_lat == null) return;
+    const dLat = parseFloat(d.merkez_lat), dLng = parseFloat(d.merkez_lng);
+    if (!Number.isFinite(dLat) || !Number.isFinite(dLng)) return;
     const aktif = !d.bitis_at;
     const renk = aktif ? '#f59e0b' : '#a855f7';
     const ms = (d.bitis_at ? new Date(d.bitis_at) : new Date()) - new Date(d.baslangic_at);
     const sureDk = Math.max(1, Math.round(ms / 60000));
-    const c = L.circle([d.merkez_lat, d.merkez_lng], {
+    const c = L.circle([dLat, dLng], {
       radius: Math.max(d.yaricap_m || 50, 30),
       color: renk, weight: 2, opacity: 0.9, fillColor: renk, fillOpacity: 0.18
     }).bindTooltip(`🅿️ ${d.bolge_etiket || 'Bilinmeyen'} · ${sureDk} dk${aktif?' (aktif)':''}`,
@@ -5874,16 +5882,18 @@ async function _fleetFullDrawMulti(jobIds) {
     const renk = _ROTA_RENKLERI[idx % _ROTA_RENKLERI.length];
     const dbId = e._dbId || e.id;
 
-    // Yükle/teslim pin (renk-kodlu)
-    if (isFinite(e.yukle_lat) && isFinite(e.yukle_lng)) {
-      const m = L.circleMarker([e.yukle_lat, e.yukle_lng], {
+    // Yükle/teslim pin (renk-kodlu) — null-safe (bkz. _haritaFocusGir notu)
+    const myLat = parseFloat(e.yukle_lat), myLng = parseFloat(e.yukle_lng);
+    if (Number.isFinite(myLat) && Number.isFinite(myLng)) {
+      const m = L.circleMarker([myLat, myLng], {
         radius: 6, color: renk, fillColor: renk, fillOpacity: 0.8, weight: 2
       }).bindTooltip(`🟢 ${e.yukle_yeri || 'Yükleme'} (${e.arac_plaka || ''})`, { direction: 'top' })
         .addTo(_fleetFullMap);
       _fleetFullRouteLayers.push(m);
     }
-    if (isFinite(e.teslim_lat) && isFinite(e.teslim_lng)) {
-      const m = L.circleMarker([e.teslim_lat, e.teslim_lng], {
+    const mtLat = parseFloat(e.teslim_lat), mtLng = parseFloat(e.teslim_lng);
+    if (Number.isFinite(mtLat) && Number.isFinite(mtLng)) {
+      const m = L.circleMarker([mtLat, mtLng], {
         radius: 6, color: renk, fillColor: renk, fillOpacity: 0.8, weight: 2
       }).bindTooltip(`🔴 ${e.teslim_yeri || 'Teslim'} (${e.arac_plaka || ''})`, { direction: 'top' })
         .addTo(_fleetFullMap);
@@ -5952,14 +5962,17 @@ async function _fleetFullDrawSelected(id) {
     info.classList.remove('hidden');
   }
 
-  if (isFinite(e.yukle_lat) && isFinite(e.yukle_lng)) {
-    const m = L.circleMarker([e.yukle_lat, e.yukle_lng], {
+  // null-safe finite check (isFinite(null) === true bug'a karşı — bkz. _haritaFocusGir)
+  const yLat2 = parseFloat(e.yukle_lat), yLng2 = parseFloat(e.yukle_lng);
+  if (Number.isFinite(yLat2) && Number.isFinite(yLng2)) {
+    const m = L.circleMarker([yLat2, yLng2], {
       radius: 7, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.85, weight: 2
     }).bindTooltip('🟢 ' + (e.yukle_yeri || 'Yükleme'), { direction: 'top' }).addTo(_fleetFullMap);
     _fleetFullRouteLayers.push(m);
   }
-  if (isFinite(e.teslim_lat) && isFinite(e.teslim_lng)) {
-    const m = L.circleMarker([e.teslim_lat, e.teslim_lng], {
+  const tLat2 = parseFloat(e.teslim_lat), tLng2 = parseFloat(e.teslim_lng);
+  if (Number.isFinite(tLat2) && Number.isFinite(tLng2)) {
+    const m = L.circleMarker([tLat2, tLng2], {
       radius: 7, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.85, weight: 2
     }).bindTooltip('🔴 ' + (e.teslim_yeri || 'Teslim'), { direction: 'top' }).addTo(_fleetFullMap);
     _fleetFullRouteLayers.push(m);
@@ -6022,12 +6035,13 @@ async function _fleetFullDrawSelected(id) {
 
   const duraksamalar = durakR?.data || [];
   duraksamalar.forEach(d => {
-    if (d.merkez_lat == null) return;
+    const dLat = parseFloat(d.merkez_lat), dLng = parseFloat(d.merkez_lng);
+    if (!Number.isFinite(dLat) || !Number.isFinite(dLng)) return;
     const aktif = !d.bitis_at;
     const renk = aktif ? '#f59e0b' : '#a855f7';
     const ms = (d.bitis_at ? new Date(d.bitis_at) : new Date()) - new Date(d.baslangic_at);
     const sureDk = Math.max(1, Math.round(ms / 60000));
-    const c = L.circle([d.merkez_lat, d.merkez_lng], {
+    const c = L.circle([dLat, dLng], {
       radius: Math.max(d.yaricap_m || 50, 30),
       color: renk, weight: 2, opacity: 0.9, fillColor: renk, fillOpacity: 0.18
     }).bindTooltip(`🅿️ ${d.bolge_etiket || 'Bilinmeyen'} · ${sureDk} dk${aktif?' (aktif)':''}`,
