@@ -1186,6 +1186,63 @@ async function opsKanbanDrop(ev, hedefDurum) {
 let _opsGuzergahMap = null;
 let _opsGuzergahLayers = []; // polyline + markerlar
 
+/**
+ * Google Polyline 5-precision decoder. OSRM `geometries=polyline` çıktısı bu format.
+ * Algoritmanın referansı: developers.google.com/maps/documentation/utilities/polylinealgorithm
+ */
+function _opsDecodePolyline(str) {
+  const coords = [];
+  let lat = 0, lng = 0, i = 0;
+  while (i < str.length) {
+    let result = 0, shift = 0, b;
+    do { b = str.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+    result = 0; shift = 0;
+    do { b = str.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+    coords.push([lat / 1e5, lng / 1e5]);
+  }
+  return coords;
+}
+
+/**
+ * Ham GPS izini (latlngs) OSRM Match servisi ile gerçek yollara "snap" eder.
+ * Google Maps'in gösterdiği gibi yolları takip eden polyline döner.
+ * Başarısızlıkta null — caller fallback olarak ham izi kullanmalı.
+ *
+ * Kısıtlar:
+ *  • Public OSRM router 100 nokta/istek limit'i var → 90'a downsample ediyoruz
+ *  • Rate limit bazen 429 döner → null fallback
+ *  • Çok dağılan/kaybolan GPS noktalarında matchings split olur, hepsini birleştiririz
+ */
+async function _opsOsrmMatch(latlngs) {
+  if (!latlngs || latlngs.length < 2) return null;
+  const max = 90;
+  let pts = latlngs;
+  if (pts.length > max) {
+    const step = Math.ceil(pts.length / max);
+    pts = latlngs.filter((_, i) => i % step === 0 || i === latlngs.length - 1);
+  }
+  const coords = pts.map(p => `${p[1]},${p[0]}`).join(';');
+  const radiuses = pts.map(() => '25').join(';');
+  const url = `https://router.project-osrm.org/match/v1/driving/${coords}` +
+              `?overview=full&geometries=polyline&radiuses=${radiuses}&tidy=true`;
+  try {
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.code !== 'Ok' || !Array.isArray(data.matchings) || !data.matchings.length) return null;
+    const all = [];
+    data.matchings.forEach(m => {
+      if (typeof m.geometry === 'string') all.push(..._opsDecodePolyline(m.geometry));
+    });
+    return all.length >= 2 ? all : null;
+  } catch (e) {
+    console.warn('[OSRM match] başarısız:', e?.message || e);
+    return null;
+  }
+}
+
 function _opsGuzergahHaritaInit() {
   const el = document.getElementById('ops-drawer-guzergah-map');
   if (!el || _opsGuzergahMap) return _opsGuzergahMap;
@@ -1273,11 +1330,19 @@ async function opsGuzergahYukle() {
     setTimeout(() => _opsGuzergahMap.invalidateSize(), 60);
     _opsGuzergahHaritaTemizle();
 
-    const latlngs = izler.map(p => [p.lat, p.lng]);
-    const polyline = L.polyline(latlngs, { color: '#38bdf8', weight: 4, opacity: .9 }).addTo(_opsGuzergahMap);
-    _opsGuzergahLayers.push(polyline);
+    const rawLatlngs = izler.map(p => [p.lat, p.lng]);
 
-    // Başlangıç markeri (yeşil)
+    // İlk render: ham GPS izi (snap'i beklerken görsün)
+    const drawTrail = (pts, opts) => {
+      // Google Maps stili: beyaz dış halo + canlı mavi iç çizgi
+      const halo = L.polyline(pts, { color: '#ffffff', weight: 9, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }).addTo(_opsGuzergahMap);
+      const main = L.polyline(pts, { color: '#1a73e8', weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round', ...(opts || {}) }).addTo(_opsGuzergahMap);
+      _opsGuzergahLayers.push(halo, main);
+      return main;
+    };
+    let mainLine = drawTrail(rawLatlngs, { dashArray: '8,6' /* snap gelene kadar dashed */ });
+
+    // Başlangıç (yeşil) ve son (kırmızı) markerlar
     const startIcon = L.divIcon({
       className: 'ops-marker-start',
       html: '<div style="width:14px;height:14px;border-radius:50%;background:#22c55e;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3);"></div>',
@@ -1288,11 +1353,27 @@ async function opsGuzergahYukle() {
       html: '<div style="width:14px;height:14px;border-radius:50%;background:#ef4444;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3);"></div>',
       iconSize: [14, 14], iconAnchor: [7, 7]
     });
-    const m1 = L.marker(latlngs[0], { icon: startIcon, title: 'Başlangıç: ' + baslaStr }).addTo(_opsGuzergahMap);
-    const m2 = L.marker(latlngs[latlngs.length-1], { icon: endIcon, title: 'Son nokta: ' + bitirStr }).addTo(_opsGuzergahMap);
+    const m1 = L.marker(rawLatlngs[0], { icon: startIcon, title: 'Başlangıç: ' + baslaStr }).addTo(_opsGuzergahMap);
+    const m2 = L.marker(rawLatlngs[rawLatlngs.length-1], { icon: endIcon, title: 'Son nokta: ' + bitirStr }).addTo(_opsGuzergahMap);
     _opsGuzergahLayers.push(m1, m2);
 
-    _opsGuzergahMap.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+    _opsGuzergahMap.fitBounds(mainLine.getBounds(), { padding: [20, 20] });
+
+    // Arka planda OSRM Match çağır → yola snap edilmiş polyline ile değiştir.
+    // Başarısız olursa (rate limit / network / az nokta) ham çizim kalır.
+    _opsOsrmMatch(rawLatlngs).then(snapped => {
+      if (!snapped) return;
+      // Önceki halo + main'i temizle (markerlar kalsın)
+      _opsGuzergahLayers = _opsGuzergahLayers.filter(layer => {
+        if (layer instanceof L.Polyline) {
+          try { _opsGuzergahMap.removeLayer(layer); } catch {}
+          return false;
+        }
+        return true;
+      });
+      const snappedLine = drawTrail(snapped, {});  // dashArray yok = solid
+      _opsGuzergahMap.fitBounds(snappedLine.getBounds(), { padding: [20, 20] });
+    });
   } catch (err) {
     console.error('Güzergah yükleme hatası:', err);
     if (statsEl) statsEl.innerHTML = '';
