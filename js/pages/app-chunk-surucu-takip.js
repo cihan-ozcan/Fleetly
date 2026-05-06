@@ -314,36 +314,45 @@ function surucuTakipRenderHarita() {
   }
 
   // Aktif rotayı çiz (yükle → teslim)
+  // NOT: isFinite(null) === true + typeof null === 'object' → L.latLng([null,null])
+  // sessizce null döner ve _project patlar. parseFloat + Number.isFinite ile guard.
   if (aktifIs) {
-    if (isFinite(aktifIs.yukle_lat) && isFinite(aktifIs.teslim_lat)) {
+    const aYL = parseFloat(aktifIs.yukle_lat),  aYG = parseFloat(aktifIs.yukle_lng);
+    const aTL = parseFloat(aktifIs.teslim_lat), aTG = parseFloat(aktifIs.teslim_lng);
+    const aKL = parseFloat(aktifIs.konum_lat),  aKG = parseFloat(aktifIs.konum_lng);
+    const yukleOk  = Number.isFinite(aYL) && Number.isFinite(aYG);
+    const teslimOk = Number.isFinite(aTL) && Number.isFinite(aTG);
+    const konumOk  = Number.isFinite(aKL) && Number.isFinite(aKG);
+
+    if (yukleOk && teslimOk) {
       const route = L.polyline(
-        [[aktifIs.yukle_lat, aktifIs.yukle_lng], [aktifIs.teslim_lat, aktifIs.teslim_lng]],
+        [[aYL, aYG], [aTL, aTG]],
         { color: '#38bdf8', weight: 4, opacity: .85 }
       ).addTo(_ST.map);
       _ST.layers.push(route);
-      bounds.push([aktifIs.yukle_lat, aktifIs.yukle_lng], [aktifIs.teslim_lat, aktifIs.teslim_lng]);
+      bounds.push([aYL, aYG], [aTL, aTG]);
     }
     // Yükle (yeşil)
-    if (isFinite(aktifIs.yukle_lat)) {
-      const m = L.marker([aktifIs.yukle_lat, aktifIs.yukle_lng], {
+    if (yukleOk) {
+      const m = L.marker([aYL, aYG], {
         icon: _stIcon('#22c55e', 'Y'), title: 'Yükleme: ' + (aktifIs.yukle_yeri || '')
       }).addTo(_ST.map);
       _ST.layers.push(m);
     }
     // Teslim (kırmızı)
-    if (isFinite(aktifIs.teslim_lat)) {
-      const m = L.marker([aktifIs.teslim_lat, aktifIs.teslim_lng], {
+    if (teslimOk) {
+      const m = L.marker([aTL, aTG], {
         icon: _stIcon('#ef4444', 'T'), title: 'Teslim: ' + (aktifIs.teslim_yeri || '')
       }).addTo(_ST.map);
       _ST.layers.push(m);
     }
     // Son canlı konum (mavi puls)
-    if (isFinite(aktifIs.konum_lat)) {
-      const m = L.marker([aktifIs.konum_lat, aktifIs.konum_lng], {
+    if (konumOk) {
+      const m = L.marker([aKL, aKG], {
         icon: _stIcon('#38bdf8', '●', true), title: 'Son konum: ' + _stRelTime(aktifIs.konum_zaman)
       }).addTo(_ST.map);
       _ST.layers.push(m);
-      bounds.push([aktifIs.konum_lat, aktifIs.konum_lng]);
+      bounds.push([aKL, aKG]);
     }
   }
 

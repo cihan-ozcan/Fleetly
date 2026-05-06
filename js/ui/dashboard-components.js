@@ -501,9 +501,9 @@
           '<div style="font-size:11px;color:#7889A1;margin-bottom:8px;">' + _ageLabel(ageMin) + '</div>' +
           '<div style="display:flex;gap:6px;">' +
             '<button style="flex:1;background:#1a73e8;color:#fff;border:none;border-radius:6px;padding:6px 8px;font-size:11px;font-weight:700;cursor:pointer;" ' +
-              'onclick="UI._dashFocusGoster(' + e.id + ')">🛣️ Rotayı Göster</button>' +
+              'onclick="FleetlyUI._dashFocusGoster(' + e.id + ')">🛣️ Rotayı Göster</button>' +
             '<button style="flex:1;background:transparent;color:inherit;border:1px solid #ccc;border-radius:6px;padding:6px 8px;font-size:11px;font-weight:700;cursor:pointer;" ' +
-              'onclick="UI._dashFocusDetay(' + e.id + ')">Detay →</button>' +
+              'onclick="FleetlyUI._dashFocusDetay(' + e.id + ')">Detay →</button>' +
           '</div>' +
         '</div>';
 
