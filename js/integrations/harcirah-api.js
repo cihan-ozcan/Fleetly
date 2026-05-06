@@ -709,6 +709,43 @@
   }
 
   // ════════════════════════════════════════════════════════
+  // BEKLEME AYARLARI (Migration 2026_05_06r + 2026_05_06s)
+  // ════════════════════════════════════════════════════════
+  // Firmaların fabrika bekleme eşikleri + müşteri saatlik ücreti.
+  // RPC bekleme_ayarlari_getir / bekleme_ayarlari_kaydet (yetki kontrollü).
+
+  async function beklemeAyarlariGetir() {
+    const sb = (typeof getSB === 'function') ? getSB() : null;
+    if (!sb) throw new Error('Supabase yok');
+    const { data, error } = await sb.rpc('bekleme_ayarlari_getir');
+    if (error) throw error;
+    const row = (data || [])[0] || {};
+    return {
+      musteriEsikDk:  Number(row.musteri_esik_dk)  || 360,
+      soforEsikDk:    Number(row.sofor_esik_dk)    || 420,
+      musteriSaatTl:  Number(row.musteri_saat_tl)  || 0,
+      soforSabitTl:   Number(row.sofor_sabit_tl)   || 0
+    };
+  }
+
+  /**
+   * @param {Object} payload — sadece NULL olmayan alanlar gönderilir
+   * @param {number} [payload.soforEsikDk]
+   * @param {number} [payload.musteriEsikDk]
+   * @param {number} [payload.musteriSaatTl]
+   */
+  async function beklemeAyarlariKaydet(payload) {
+    const sb = (typeof getSB === 'function') ? getSB() : null;
+    if (!sb) throw new Error('Supabase yok');
+    const params = {};
+    if (Number.isFinite(payload?.soforEsikDk))   params.p_sofor_esik_dk   = Math.round(payload.soforEsikDk);
+    if (Number.isFinite(payload?.musteriEsikDk)) params.p_musteri_esik_dk = Math.round(payload.musteriEsikDk);
+    if (Number.isFinite(payload?.musteriSaatTl)) params.p_musteri_saat_tl = payload.musteriSaatTl;
+    const { error } = await sb.rpc('bekleme_ayarlari_kaydet', params);
+    if (error) throw error;
+  }
+
+  // ════════════════════════════════════════════════════════
   // Export
   // ════════════════════════════════════════════════════════
   window.HarcirahAPI = {
@@ -718,6 +755,8 @@
     tarifeList, tarifeCreate, tarifeUpdate, tarifeDelete, tarifeMatch,
     // Ek Hizmet
     ekHizmetList, ekHizmetCreate, ekHizmetUpdate, ekHizmetDelete, ekHizmetSeed,
+    // Bekleme ayarları
+    beklemeAyarlariGetir, beklemeAyarlariKaydet,
     // Kayıt
     kayitList, kayitCreate, kayitUpdate, kayitDelete, kayitForIsEmri, isEmriHesapla,
     kayitSoforOnay, kayitOpsOnay, kayitOdendi, kayitItiraz,
