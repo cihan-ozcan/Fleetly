@@ -1293,14 +1293,21 @@ function _opsDecodePolyline(str) {
 }
 
 /**
- * Ham GPS izini (latlngs) OSRM Match servisi ile gerçek yollara "snap" eder.
+ * Ham GPS izini (latlngs) OSRM ile gerçek yollara "snap" eder.
  * Google Maps'in gösterdiği gibi yolları takip eden polyline döner.
  * Başarısızlıkta null — caller fallback olarak ham izi kullanmalı.
  *
+ * Strateji (2026-05-06: regression fix sonrası):
+ *  1) Match denenir (ardışık GPS noktalarını yola yapıştırır) — radius=50m
+ *     (önceki 25m Türkiye GPS hatası altında "NoMatch" döndürüyordu).
+ *  2) Match başarısız → Trip API (route) ile başla→ara→bitir noktaları
+ *     sırayla takip eden bir araç rotası — en az hatla yolu izler.
+ *  3) İkisi de başarısız → null (raw polyline kalır).
+ *
  * Kısıtlar:
- *  • Public OSRM router 100 nokta/istek limit'i var → 90'a downsample ediyoruz
- *  • Rate limit bazen 429 döner → null fallback
- *  • Çok dağılan/kaybolan GPS noktalarında matchings split olur, hepsini birleştiririz
+ *  • Public OSRM router 100 nokta/istek limit'i var → 90'a downsample
+ *  • Rate limit 429 → null fallback
+ *  • Çok dağılan GPS noktalarında matchings split olur, hepsini birleştiririz
  */
 async function _opsOsrmMatch(latlngs) {
   if (!latlngs || latlngs.length < 2) {
@@ -1313,23 +1320,43 @@ async function _opsOsrmMatch(latlngs) {
     const step = Math.ceil(pts.length / max);
     pts = latlngs.filter((_, i) => i % step === 0 || i === latlngs.length - 1);
   }
+  // 1) MATCH dene — radius=50m (kentsel GPS hatası 30-50m arası)
+  const matched = await _opsOsrmTryMatch(pts, 50);
+  if (matched) return matched;
+
+  // 2) MATCH fail → ROUTE fallback. GPS noktaları çok seyrek olduğunda
+  //    (ör. uzun bekleme aralarında 1 nokta) match çalışmaz; ama route 2 nokta
+  //    arası optimal yol bulur. Pencereyi 8 ara waypoint'e indirgeyip
+  //    sırayla yolu takip eden polyline kuruyoruz.
+  const wpMax = 8;   // OSRM route en fazla 25 alt-yapı destekler ama hızlı tutalım
+  let wp = pts;
+  if (wp.length > wpMax) {
+    const step = Math.ceil(wp.length / wpMax);
+    wp = pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
+  }
+  const routed = await _opsOsrmTryRoute(wp);
+  if (routed) return routed;
+
+  return null;
+}
+
+async function _opsOsrmTryMatch(pts, radiusM) {
   const coords = pts.map(p => `${p[1]},${p[0]}`).join(';');
-  const radiuses = pts.map(() => '25').join(';');
+  const radiuses = pts.map(() => String(radiusM)).join(';');
   const url = `https://router.project-osrm.org/match/v1/driving/${coords}` +
               `?overview=full&geometries=polyline&radiuses=${radiuses}&tidy=true`;
   try {
-    // 5 saniye timeout — public OSRM bazen yavaş veya rate-limit verir
     const ctrl = new AbortController();
     const timeoutId = setTimeout(() => ctrl.abort(), 5000);
     const res = await fetch(url, { method: 'GET', signal: ctrl.signal });
     clearTimeout(timeoutId);
     if (!res.ok) {
-      console.warn('[OSRM] HTTP', res.status, '— ham polyline kalıyor');
+      console.warn('[OSRM] match HTTP', res.status);
       return null;
     }
     const data = await res.json();
     if (data.code !== 'Ok' || !Array.isArray(data.matchings) || !data.matchings.length) {
-      console.warn('[OSRM] eşleşme yok (code=' + data.code + ') — ham polyline kalıyor');
+      console.warn('[OSRM] match no result (code=' + data.code + ')');
       return null;
     }
     const all = [];
@@ -1337,16 +1364,46 @@ async function _opsOsrmMatch(latlngs) {
       if (typeof m.geometry === 'string') all.push(..._opsDecodePolyline(m.geometry));
     });
     if (all.length >= 2) {
-      console.info('[OSRM] ✓ snap başarılı, ' + all.length + ' nokta');
+      console.info('[OSRM] ✓ match başarılı, ' + all.length + ' nokta (radius=' + radiusM + 'm)');
       return all;
     }
     return null;
   } catch (e) {
-    if (e.name === 'AbortError') {
-      console.warn('[OSRM] timeout (5sn) — ham polyline kalıyor');
-    } else {
-      console.warn('[OSRM] hata:', e?.message || e);
+    if (e.name === 'AbortError') console.warn('[OSRM] match timeout');
+    else console.warn('[OSRM] match hata:', e?.message || e);
+    return null;
+  }
+}
+
+async function _opsOsrmTryRoute(pts) {
+  const coords = pts.map(p => `${p[1]},${p[0]}`).join(';');
+  const url = `https://router.project-osrm.org/route/v1/driving/${coords}` +
+              `?overview=full&geometries=polyline&continue_straight=false`;
+  try {
+    const ctrl = new AbortController();
+    const timeoutId = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(url, { method: 'GET', signal: ctrl.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      console.warn('[OSRM] route HTTP', res.status);
+      return null;
     }
+    const data = await res.json();
+    if (data.code !== 'Ok' || !Array.isArray(data.routes) || !data.routes.length) {
+      console.warn('[OSRM] route no result (code=' + data.code + ')');
+      return null;
+    }
+    const geom = data.routes[0]?.geometry;
+    if (typeof geom !== 'string') return null;
+    const decoded = _opsDecodePolyline(geom);
+    if (decoded.length >= 2) {
+      console.info('[OSRM] ✓ route fallback başarılı, ' + decoded.length + ' nokta');
+      return decoded;
+    }
+    return null;
+  } catch (e) {
+    if (e.name === 'AbortError') console.warn('[OSRM] route timeout');
+    else console.warn('[OSRM] route hata:', e?.message || e);
     return null;
   }
 }
