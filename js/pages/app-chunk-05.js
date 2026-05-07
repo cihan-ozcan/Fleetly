@@ -1300,12 +1300,19 @@ function _opsDecodePolyline(str) {
  * Google Maps'in gösterdiği gibi yolları takip eden polyline döner.
  * Başarısızlıkta null — caller fallback olarak ham izi kullanmalı.
  *
- * Strateji (2026-05-06: regression fix sonrası):
+ * Strateji (2026-05-07: yaya/uydurma rota fix):
  *  1) Match denenir (ardışık GPS noktalarını yola yapıştırır) — radius=50m
- *     (önceki 25m Türkiye GPS hatası altında "NoMatch" döndürüyordu).
- *  2) Match başarısız → Trip API (route) ile başla→ara→bitir noktaları
- *     sırayla takip eden bir araç rotası — en az hatla yolu izler.
- *  3) İkisi de başarısız → null (raw polyline kalır).
+ *  2) Match çıktısı VALİDE edilir:
+ *     • OSRM matching confidence >= 0.5 olmalı (düşük güven → reddet)
+ *     • Match çıktısı ham GPS'ten ORTALAMA <= 75m sapmalı (yüksek sapma →
+ *       OSRM noktaları başka yola attı, gerçeği gizler → reddet)
+ *  3) Doğrulama fail → null (caller ham GPS'i göstersin)
+ *
+ * NOT (2026-05-07): Eski "route fallback" KALDIRILDI. Yaya/patika senaryolarında
+ * match fail olunca, route API "iki nokta arası araba ile en kısa rota"yı
+ * uyduruyordu — gerçek izi tamamen yok sayıp yanlış bir polyline çıkarıyordu.
+ * Artık match güvenilirse onu, değilse ham GPS'i gösteriyoruz (caller bunu
+ * zaten dashed line olarak çiziyor).
  *
  * Kısıtlar:
  *  • Public OSRM router 100 nokta/istek limit'i var → 90'a downsample
@@ -1323,26 +1330,70 @@ async function _opsOsrmMatch(latlngs) {
     const step = Math.ceil(pts.length / max);
     pts = latlngs.filter((_, i) => i % step === 0 || i === latlngs.length - 1);
   }
-  // 1) MATCH dene — radius=50m (kentsel GPS hatası 30-50m arası)
+
+  // MATCH dene — radius=50m (kentsel GPS hatası 30-50m arası)
   const matched = await _opsOsrmTryMatch(pts, 50);
-  if (matched) return matched;
-
-  // 2) MATCH fail → ROUTE fallback. GPS noktaları çok seyrek olduğunda
-  //    (ör. uzun bekleme aralarında 1 nokta) match çalışmaz; ama route 2 nokta
-  //    arası optimal yol bulur. Pencereyi 8 ara waypoint'e indirgeyip
-  //    sırayla yolu takip eden polyline kuruyoruz.
-  const wpMax = 8;   // OSRM route en fazla 25 alt-yapı destekler ama hızlı tutalım
-  let wp = pts;
-  if (wp.length > wpMax) {
-    const step = Math.ceil(wp.length / wpMax);
-    wp = pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
+  if (!matched) {
+    console.info('[OSRM] match fail → ham GPS göster (route fallback artık yok)');
+    return null;
   }
-  const routed = await _opsOsrmTryRoute(wp);
-  if (routed) return routed;
 
-  return null;
+  // VALİDASYON 1: confidence eşiği (her matching parçasının ortalama confidence'ı)
+  if (typeof matched.confidence === 'number' && matched.confidence < 0.5) {
+    console.info('[OSRM] düşük güven (' + matched.confidence.toFixed(2) + ') → ham GPS göster');
+    return null;
+  }
+
+  // VALİDASYON 2: sapma kontrolü — match çıktısı ham GPS'ten ortalama 75m'den
+  // fazla sapıyorsa OSRM "yanlış yola attı" demek (yaya, patika, yan yol vs).
+  const sapma = _opsOsrmOrtSapma(pts, matched.coords);
+  if (sapma > 75) {
+    console.info('[OSRM] yüksek sapma (' + sapma.toFixed(0) + 'm > 75m) → ham GPS göster');
+    return null;
+  }
+
+  console.info('[OSRM] ✓ match kabul (sapma=' + sapma.toFixed(0) + 'm, confidence=' +
+    (matched.confidence != null ? matched.confidence.toFixed(2) : 'N/A') + ')');
+  return matched.coords;
 }
 
+/**
+ * OSRM çıktısı (snap edilmiş polyline) ile orijinal ham GPS noktaları arasında
+ * ORTALAMA sapma metresi hesaplar. Her ham nokta için snap polyline'ında en
+ * yakın segmente nokta-doğru mesafesi alır, ortalama döner.
+ *
+ * Performans: O(N×M). 90 ham × 200 snap = 18000 hesap; modern JS'de < 5ms.
+ */
+function _opsOsrmOrtSapma(rawPts, snapPts) {
+  if (!rawPts?.length || !snapPts?.length) return 0;
+  let toplam = 0;
+  for (const p of rawPts) {
+    let minD = Infinity;
+    // Her ham nokta için snap polyline'ındaki en yakın noktayı bul
+    // (segment-bazlı daha doğru ama nokta-bazlı yeterince iyi yaklaşıyor)
+    for (const s of snapPts) {
+      const d = _opsHaversineM(p[0], p[1], s[0], s[1]);
+      if (d < minD) minD = d;
+    }
+    toplam += minD;
+  }
+  return toplam / rawPts.length;
+}
+
+/** İki lat/lng noktası arası mesafe (metre). */
+function _opsHaversineM(la1, ln1, la2, ln2) {
+  const R = 6371000, r = x => x * Math.PI / 180;
+  const dLa = r(la2 - la1), dLn = r(ln2 - ln1);
+  const a = Math.sin(dLa / 2) ** 2 +
+            Math.cos(r(la1)) * Math.cos(r(la2)) * Math.sin(dLn / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * OSRM /match çağrısı. Dönüş: { coords, confidence } veya null.
+ * confidence — tüm matching parçalarının uzunluk-ağırlıklı ortalama güven skoru
+ * (0..1). Caller bu skoru bir eşik (0.5) ile validate eder.
+ */
 async function _opsOsrmTryMatch(pts, radiusM) {
   const coords = pts.map(p => `${p[1]},${p[0]}`).join(';');
   const radiuses = pts.map(() => String(radiusM)).join(';');
@@ -1363,12 +1414,18 @@ async function _opsOsrmTryMatch(pts, radiusM) {
       return null;
     }
     const all = [];
+    let confSum = 0, confW = 0;  // distance-weighted confidence avg
     data.matchings.forEach(m => {
       if (typeof m.geometry === 'string') all.push(..._opsDecodePolyline(m.geometry));
+      const c = (typeof m.confidence === 'number') ? m.confidence : null;
+      const d = (typeof m.distance   === 'number' && m.distance > 0) ? m.distance : 1;
+      if (c != null) { confSum += c * d; confW += d; }
     });
     if (all.length >= 2) {
-      console.info('[OSRM] ✓ match başarılı, ' + all.length + ' nokta (radius=' + radiusM + 'm)');
-      return all;
+      const confidence = confW > 0 ? (confSum / confW) : null;
+      console.info('[OSRM] ✓ match başarılı, ' + all.length + ' nokta (radius=' + radiusM +
+        'm, confidence=' + (confidence != null ? confidence.toFixed(2) : 'N/A') + ')');
+      return { coords: all, confidence };
     }
     return null;
   } catch (e) {
@@ -1378,6 +1435,17 @@ async function _opsOsrmTryMatch(pts, radiusM) {
   }
 }
 
+/**
+ * @deprecated 2026-05-07 — _opsOsrmMatch artık bunu fallback olarak çağırmıyor.
+ *
+ * Eski davranış: match fail olursa /route/v1/driving ile "iki nokta arası en
+ * kısa araç yolu" çiziyorduk. Bu, yaya/patika/yan-yol senaryolarında gerçek
+ * izi tamamen yok sayan UYDURMA bir polyline üretiyordu (ör. yaya üst geçit
+ * geçişi → araç yolundan U-dönüşü). Şimdi match fail → ham GPS gösterilir.
+ *
+ * Fonksiyon, manuel rota planlama (örn. "iki adresten optimal araç güzergahı")
+ * gibi gelecekte gelebilecek senaryolar için tutuluyor.
+ */
 async function _opsOsrmTryRoute(pts) {
   const coords = pts.map(p => `${p[1]},${p[0]}`).join(';');
   const url = `https://router.project-osrm.org/route/v1/driving/${coords}` +
