@@ -793,8 +793,9 @@ function opsRowToObj(r) {
     boslama_zaman : r.boslama_zaman || null,
     durum         : r.durum         || 'Bekliyor',
     atama_zamani  : r.atama_zamani  || null,
-    // Planlama (2026-05-07j) — şoförün ne zaman alım noktasında olması gerektiği
-    planlanan_zaman: r.planlanan_zaman || null,
+    // Planlama (2026-05-07j+k) — alım ve müşteri randevu saatleri
+    planlanan_zaman         : r.planlanan_zaman         || null,
+    planlanan_teslim_zamani : r.planlanan_teslim_zamani || null,
     talep_grup_no : r.talep_grup_no || null,
     yola_zaman    : r.yola_zaman    || null,
     fabrika_giris : r.fabrika_giris || null,
@@ -873,8 +874,9 @@ async function opsObjToRow(obj, isEdit) {
     boslama_zaman : obj.boslama_zaman || null,
     durum         : obj.durum         || 'Bekliyor',
     atama_zamani  : obj.atama_zamani  || null,
-    // Planlama (2026-05-07j)
-    planlanan_zaman: obj.planlanan_zaman || null,
+    // Planlama (2026-05-07j+k)
+    planlanan_zaman         : obj.planlanan_zaman         || null,
+    planlanan_teslim_zamani : obj.planlanan_teslim_zamani || null,
     talep_grup_no : obj.talep_grup_no || null,
     yola_zaman    : obj.yola_zaman    || null,
     fabrika_giris : obj.fabrika_giris || null,
@@ -1939,11 +1941,11 @@ function opsRenderTable() {
       }
     }
 
-    // Planlanan zaman hücresi (2026-05-07j) — bugün/yarın/geç renkleri
-    const planlananHtml = (() => {
-      if (!e.planlanan_zaman) return '<span style="color:var(--text-dim);font-size:11px;">—</span>';
-      const dt = new Date(e.planlanan_zaman);
-      if (isNaN(dt)) return '<span style="color:var(--text-dim);font-size:11px;">—</span>';
+    // Planlanan zaman hücresi (2026-05-07j+k) — alım + teslim ayrı, bugün/yarın/geç renkleri
+    const _planCellLine = (iso, ico) => {
+      if (!iso) return '';
+      const dt = new Date(iso);
+      if (isNaN(dt)) return '';
       const pad = n => String(n).padStart(2, '0');
       const tarih = `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}`;
       const saat  = `${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
@@ -1952,16 +1954,22 @@ function opsRenderTable() {
       const isToday = dt.toDateString() === now.toDateString();
       const isTomorrow = dt.toDateString() === new Date(now.getTime() + 86400000).toDateString();
       let color = 'var(--text-primary)';
-      let subTxt = '';
-      if (isPast && (e.durum === 'Bekliyor')) {
-        color = 'var(--ops-danger,#ef4444)'; subTxt = 'GEÇ';
+      let suffix = '';
+      // Geç rozeti SADECE iş başlamamış durumlarında
+      if (isPast && (e.durum === 'Bekliyor' || e.durum === 'Boş Alındı')) {
+        color = 'var(--ops-danger,#ef4444)'; suffix = ' GEÇ';
       } else if (isToday) {
-        color = 'var(--ops-warning,#f59e0b)'; subTxt = 'Bugün';
+        color = 'var(--ops-warning,#f59e0b)'; suffix = ' Bugün';
       } else if (isTomorrow) {
-        color = 'var(--ops-success,#22c55e)'; subTxt = 'Yarın';
+        color = 'var(--ops-success,#22c55e)'; suffix = ' Yarın';
       }
-      return `<div class="col-mono" style="font-size:11.5px;color:${color};font-weight:600;">${tarih} ${saat}</div>${subTxt?`<div style="font-size:9.5px;color:${color};font-weight:700;">${subTxt}</div>`:''}`;
-    })();
+      return `<div class="col-mono" style="font-size:11px;color:${color};font-weight:600;">${ico} ${tarih} ${saat}<span style="font-size:9px;font-weight:700;">${suffix}</span></div>`;
+    };
+    const planAlimLine   = _planCellLine(e.planlanan_zaman,         '📥');
+    const planTeslimLine = _planCellLine(e.planlanan_teslim_zamani, '🏭');
+    const planlananHtml = (planAlimLine || planTeslimLine)
+      ? (planAlimLine + planTeslimLine)
+      : '<span style="color:var(--text-dim);font-size:11px;">—</span>';
 
     return `
     <tr class="${rowCls}">
@@ -2528,21 +2536,19 @@ function openOpsIsEmriModal(duzenlemeObj) {
   _opsPlanTarihler = [];
   const planTekRadio = document.querySelector('#ops-modal-bg input[name="ops-m-tekrar"][value="tek"]');
   if (planTekRadio) planTekRadio.checked = true;
+  // ISO timestamp → datetime-local format (YYYY-MM-DDTHH:MM)
+  const _isoToDatetimeLocal = (iso) => {
+    if (!iso) return '';
+    const dt = new Date(iso);
+    if (isNaN(dt)) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  };
   const planZamanInp = document.getElementById('ops-m-planlanan-zaman');
-  if (planZamanInp) {
-    if (d.planlanan_zaman) {
-      // ISO timestamp → datetime-local format (YYYY-MM-DDTHH:MM)
-      const dt = new Date(d.planlanan_zaman);
-      if (!isNaN(dt)) {
-        const pad = n => String(n).padStart(2, '0');
-        planZamanInp.value = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-      } else {
-        planZamanInp.value = '';
-      }
-    } else {
-      planZamanInp.value = '';
-    }
-  }
+  if (planZamanInp) planZamanInp.value = _isoToDatetimeLocal(d.planlanan_zaman);
+  // 2026-05-07k: yeni "müşteri randevu" alanı
+  const planTeslimInp = document.getElementById('ops-m-planlanan-teslim-zamani');
+  if (planTeslimInp) planTeslimInp.value = _isoToDatetimeLocal(d.planlanan_teslim_zamani);
   // Çoklu paneli temizle, gizle
   const planCokluEl = document.getElementById('ops-plan-coklu');
   const planTekEl   = document.getElementById('ops-plan-tek');
@@ -2860,58 +2866,100 @@ function _opsPlanTarihSil(tarih) {
   _opsPlanTarihListesiRender();
 }
 
-/** Tarih chip listesini DOM'a yaz. */
+/**
+ * Tarih satır listesini DOM'a yaz. Her satırda hesaplanmış alım+teslim
+ * zamanları gösterilir (2026-05-07k — ön-planlama senaryosu için).
+ */
 function _opsPlanTarihListesiRender() {
   const wrap = document.getElementById('ops-plan-tarih-listesi');
   if (!wrap) return;
   if (_opsPlanTarihler.length === 0) {
     wrap.innerHTML = `<span style="font-size:11px;color:var(--text-muted);font-style:italic;">
-      Tarih eklemek için yukarıdaki seçiciyi kullanın
+      Müşterinin istediği tarihleri ekleyin (her tarih için 1 iş emri)
     </span>`;
     return;
   }
+  // Ortak ayarlar
+  const teslimSaat   = document.getElementById('ops-m-plan-saat')?.value         || '09:00';
+  const alimOffsetV  = document.getElementById('ops-m-plan-alim-offset')?.value  || '-1';
+  const alimSaat     = document.getElementById('ops-m-plan-alim-saat')?.value    || '17:00';
+  const offsetGun    = (alimOffsetV === 'none') ? null : parseInt(alimOffsetV, 10);
+
   wrap.innerHTML = _opsPlanTarihler.map(t => {
-    // dd.mm.yyyy gösterimi (Türkçe okuma)
     const [yyyy, mm, dd] = t.split('-');
-    const human = `${dd}.${mm}.${yyyy}`;
-    return `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.35);color:var(--purple);font-size:11.5px;font-weight:600;padding:4px 8px;border-radius:6px;">
-      📅 ${human}
+    const teslimHuman = `${dd}.${mm}.${yyyy}`;
+    let alimHumanFull = '';
+    if (offsetGun !== null) {
+      // randevu tarihi + offset gün → alım tarihi (offset negatif = öncesi)
+      const teslimDate = new Date(`${t}T${teslimSaat}`);
+      const alimDate = new Date(teslimDate);
+      alimDate.setDate(alimDate.getDate() + offsetGun);
+      const pad = n => String(n).padStart(2, '0');
+      const adStr = `${pad(alimDate.getDate())}.${pad(alimDate.getMonth()+1)}.${alimDate.getFullYear()}`;
+      alimHumanFull = `📥 ${adStr} ${alimSaat}  →  `;
+    }
+    return `<div style="display:flex;align-items:center;gap:8px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:6px;padding:6px 10px;">
+      <span style="flex:1;font-size:11.5px;color:var(--text);">
+        ${alimHumanFull}<span style="color:var(--purple);font-weight:600;">🏭 ${teslimHuman} ${teslimSaat}</span>
+      </span>
       <button type="button" onclick="_opsPlanTarihSil('${t}')" title="Sil"
               style="background:transparent;border:none;color:var(--purple);cursor:pointer;font-size:13px;line-height:1;padding:0;">✕</button>
-    </span>`;
+    </div>`;
   }).join('');
 }
 
 /**
  * Planlama formunun ÇIKTISI — saveOpsIsEmri tarafından çağrılır.
- * Dönüş:
- *   { mod: 'tek',   tarihler: [iso] }            → 1 iş emri (tek tarih)
- *   { mod: 'coklu', tarihler: [iso, iso, ...] }  → N iş emri (her tarih için)
- *   { mod: 'yok' }                                → planlama girilmedi
  *
- * Doğrulama: çoklu modda en az 2 tarih + saat zorunlu.
+ * Dönüş (2026-05-07k zenginleştirilmiş — alım + teslim ayrı):
+ *   Tek mod:
+ *     { mod: 'tek', items: [{ alim: iso|null, teslim: iso|null }] }
+ *   Çoklu mod:
+ *     { mod: 'coklu', items: [{ alim: iso|null, teslim: iso }, ...] }
+ *   Planlama girilmedi:
+ *     { mod: 'yok' }
+ *
  * Hata varsa { hata: 'mesaj' } döner.
  */
 function _opsPlanlamaCikti() {
   const mod = document.querySelector('#ops-modal-bg input[name="ops-m-tekrar"]:checked')?.value || 'tek';
 
   if (mod === 'tek') {
-    const v = document.getElementById('ops-m-planlanan-zaman')?.value;
-    if (!v) return { mod: 'yok' }; // boş bırakıldı, planlama yok
-    // datetime-local input → ISO timestamp (yerel saatle, browser TZ'sinde)
-    return { mod: 'tek', tarihler: [new Date(v).toISOString()] };
+    const vAlim   = document.getElementById('ops-m-planlanan-zaman')?.value;
+    const vTeslim = document.getElementById('ops-m-planlanan-teslim-zamani')?.value;
+    if (!vAlim && !vTeslim) return { mod: 'yok' }; // ikisi de boşsa planlama yok
+    return {
+      mod: 'tek',
+      items: [{
+        alim:   vAlim   ? new Date(vAlim).toISOString()   : null,
+        teslim: vTeslim ? new Date(vTeslim).toISOString() : null,
+      }]
+    };
   }
 
   if (mod === 'coklu') {
     if (_opsPlanTarihler.length < 1) {
       return { hata: 'Birden fazla tarihte: en az 1 tarih ekleyin (veya "Bir kez"e geçin)' };
     }
-    const saat = document.getElementById('ops-m-plan-saat')?.value || '09:00';
-    const tarihler = _opsPlanTarihler.map(t => {
-      // YYYY-MM-DD + HH:MM → yerel timestamp → ISO
-      return new Date(`${t}T${saat}`).toISOString();
+    const teslimSaat  = document.getElementById('ops-m-plan-saat')?.value         || '09:00';
+    const alimOffsetV = document.getElementById('ops-m-plan-alim-offset')?.value  || '-1';
+    const alimSaat    = document.getElementById('ops-m-plan-alim-saat')?.value    || '17:00';
+    const offsetGun   = (alimOffsetV === 'none') ? null : parseInt(alimOffsetV, 10);
+
+    const items = _opsPlanTarihler.map(t => {
+      const teslimDt = new Date(`${t}T${teslimSaat}`);
+      let alimIso = null;
+      if (offsetGun !== null) {
+        const alimDt = new Date(teslimDt);
+        alimDt.setDate(alimDt.getDate() + offsetGun);
+        // alımı kendi saatine ayarla (offsetGun=0 olsa bile alım saati farklı olabilir)
+        const [ah, am] = alimSaat.split(':').map(Number);
+        alimDt.setHours(ah, am, 0, 0);
+        alimIso = alimDt.toISOString();
+      }
+      return { alim: alimIso, teslim: teslimDt.toISOString() };
     });
-    return { mod: 'coklu', tarihler };
+    return { mod: 'coklu', items };
   }
 
   return { mod: 'yok' };
@@ -3183,8 +3231,9 @@ function saveOpsIsEmri() {
     if (eksik > 0) { showToast(`Çoklu atamada ${eksik} satırda plaka eksik`, 'error'); return; }
   }
 
-  // ── Planlama çıktısı (2026-05-07j) ──
+  // ── Planlama çıktısı (2026-05-07j+k) ──
   // plan.mod: 'tek' (1 tarih) | 'coklu' (N tarih) | 'yok' (planlama yok)
+  // plan.items: her biri { alim, teslim } (ikisi opsiyonel) — ön-planlama senaryosu
   const plan = _opsPlanlamaCikti();
   if (plan.hata) { showToast(plan.hata, 'error'); return; }
   // Çoklu konteyner + birden fazla tarih kombinasyonunu engelle (1. fazda destek yok).
@@ -3192,8 +3241,10 @@ function saveOpsIsEmri() {
     showToast('Çoklu konteyner ile "Birden fazla tarihte" aynı anda kullanılamaz. Önce tarih sayısını 1\'e indirin veya konteyner sayısını 1\'e indirin.', 'error');
     return;
   }
-  // İlk planlanan_zaman (tek mod) — hem edit hem çoklu konteyner branch'inde kullanılır.
-  const planlanan_zaman_tek = (plan.mod === 'tek' && plan.tarihler[0]) ? plan.tarihler[0] : null;
+  // İlk plan (tek mod) — hem edit hem çoklu konteyner branch'inde kullanılır.
+  const ilkPlan = (plan.mod === 'tek' && plan.items && plan.items[0]) ? plan.items[0] : { alim: null, teslim: null };
+  const planlanan_zaman_tek         = ilkPlan.alim;
+  const planlanan_teslim_zamani_tek = ilkPlan.teslim;
 
   const musteriObj = typeof crmMusteriler !== 'undefined' ? crmMusteriler.find(m => m.id == musteriId) : null;
 
@@ -3218,9 +3269,10 @@ function saveOpsIsEmri() {
     e.teslim_yeri  = document.getElementById('ops-m-teslim').value.trim();
     e.bos_donus    = document.getElementById('ops-m-bos-donus').value.trim();
     e.boslama_zaman= document.getElementById('ops-m-boslama-zaman').value;
-    // Planlanan başlangıç zamanı (2026-05-07j) — düzenlemede tek tarih.
+    // Planlanan zamanlar (2026-05-07j+k) — düzenlemede tek tarih, alım+teslim.
     // talep_grup_no edit modunda dokunulmaz (orijinal seriden gelir, korunur).
-    e.planlanan_zaman = planlanan_zaman_tek;
+    e.planlanan_zaman         = planlanan_zaman_tek;
+    e.planlanan_teslim_zamani = planlanan_teslim_zamani_tek;
     e.notlar       = document.getElementById('ops-m-notlar').value.trim();
     // Gümrük tel mühür (2026_05_06b migration)
     e.gumruk_muhur_gerekli = !!document.getElementById('ops-m-gumruk-gerekli')?.checked;
@@ -3321,9 +3373,10 @@ function saveOpsIsEmri() {
         gumruk_yetkili_tel  : ortakGumTel,
         durum         : 'Bekliyor',
         atama_zamani  : new Date().toISOString(),
-        // Planlanan başlangıç zamanı (2026-05-07j) — çoklu konteynerde tüm
-        // satırlar AYNI ANDA paralel sevkiyatta olduğu için ortak değer.
-        planlanan_zaman: planlanan_zaman_tek,
+        // Planlanan zamanlar (2026-05-07j+k) — çoklu konteynerde tüm satırlar
+        // AYNI ANDA paralel sevkiyatta olduğu için ortak değerler.
+        planlanan_zaman         : planlanan_zaman_tek,
+        planlanan_teslim_zamani : planlanan_teslim_zamani_tek,
         // talep_grup_no: çoklu konteyner formu "aynı gün paralel" akışı; bu
         // grup_id'ye karşılık gelir, talep serisi DEĞİL → null bırakılır.
         talep_grup_no : null,
@@ -3347,18 +3400,20 @@ function saveOpsIsEmri() {
     return;
   }
 
-  // ── Planlama: Birden fazla tarihte (2026-05-07j) ──
-  // N adet iş emri yarat, hepsi aynı talep_grup_no, sadece planlanan_zaman farklı.
+  // ── Planlama: Birden fazla tarihte (2026-05-07j+k) ──
+  // N adet iş emri yarat, hepsi aynı talep_grup_no.
+  // Her satırda farklı alım+teslim zamanı (ön-planlama: bir gün öncesi alım, sabah teslim).
   // Diğer tüm alanlar (müşteri, yük, rota, şoför, araç) ortak.
-  if (plan.mod === 'coklu' && plan.tarihler.length >= 1) {
+  if (plan.mod === 'coklu' && plan.items && plan.items.length >= 1) {
     const talepGrupNo = _opsTalepGrupNoUret();
     const ortakBase = _opsBuildYeniIsEmriObj({ musteriId, aracPlaka, cekiciId, dorseId, musteriObj });
     const olusturulanlar = [];
-    plan.tarihler.forEach(iso => {
+    plan.items.forEach(it => {
       const o = Object.assign({}, ortakBase, {
-        id              : opsNextId(),
-        planlanan_zaman : iso,
-        talep_grup_no   : talepGrupNo,
+        id                       : opsNextId(),
+        planlanan_zaman          : it.alim,    // alım (opsiyonel — null olabilir)
+        planlanan_teslim_zamani  : it.teslim,  // randevu (genelde dolu)
+        talep_grup_no            : talepGrupNo,
       });
       isEmirleri.push(o);
       olusturulanlar.push(o);
@@ -3393,9 +3448,10 @@ function saveOpsIsEmri() {
     teslim_yeri    : document.getElementById('ops-m-teslim').value.trim(),
     bos_donus      : document.getElementById('ops-m-bos-donus').value.trim(),
     boslama_zaman  : document.getElementById('ops-m-boslama-zaman').value,
-    // Planlanan başlangıç (2026-05-07j) — tek tarih, talep_grup_no NULL
-    planlanan_zaman: planlanan_zaman_tek,
-    talep_grup_no  : null,
+    // Planlanan zamanlar (2026-05-07j+k) — tek tarih (alım + teslim opsiyonel), talep_grup_no NULL
+    planlanan_zaman         : planlanan_zaman_tek,
+    planlanan_teslim_zamani : planlanan_teslim_zamani_tek,
+    talep_grup_no           : null,
     notlar         : document.getElementById('ops-m-notlar').value.trim(),
     /* ── Gümrük tel mühür (2026_05_06b) ── */
     gumruk_muhur_gerekli : !!document.getElementById('ops-m-gumruk-gerekli')?.checked,
@@ -3792,21 +3848,21 @@ function _opsDrawerRender(e) {
        title="Konteyner numarasını düzenle"
        style="background:transparent;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:0 4px;margin-left:6px;">✏</button>`;
 
-  // Planlanan zaman gösterimi (2026-05-07j) — yaklaştıkça renkli rozet
-  const planlananHtml = (() => {
-    if (!e.planlanan_zaman) return '<span style="color:var(--muted)">— belirtilmemiş —</span>';
-    const dt = new Date(e.planlanan_zaman);
-    if (isNaN(dt)) return '—';
+  // Planlanan zaman gösterimi (2026-05-07j+k) — alım ve teslim ayrı, yaklaştıkça renkli rozet
+  const _planFmt = (iso, durumGiriliyse) => {
+    if (!iso) return null;
+    const dt = new Date(iso);
+    if (isNaN(dt)) return null;
     const pad = n => String(n).padStart(2, '0');
     const human = `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}.${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-    // Bugün/yarın/geçti rozeti
     const now = new Date();
     const diffMs = dt.getTime() - now.getTime();
     const isPast = diffMs < 0;
     const isToday = dt.toDateString() === now.toDateString();
     const isTomorrow = dt.toDateString() === new Date(now.getTime() + 86400000).toDateString();
     let rozet = '';
-    if (isPast && (e.durum === 'Bekliyor')) {
+    // Geç rozeti SADECE iş henüz başlamamışsa anlamlı
+    if (isPast && (e.durum === 'Bekliyor' || e.durum === 'Boş Alındı')) {
       rozet = ` <span style="background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;margin-left:4px;">⚠ Geç</span>`;
     } else if (isToday) {
       rozet = ` <span style="background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;margin-left:4px;">📅 Bugün</span>`;
@@ -3814,14 +3870,17 @@ function _opsDrawerRender(e) {
       rozet = ` <span style="background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;margin-left:4px;">Yarın</span>`;
     }
     return `<span style="font-family:var(--font-mono);">${human}</span>${rozet}`;
-  })();
+  };
+  const planAlimHtml   = _planFmt(e.planlanan_zaman)         || '<span style="color:var(--muted)">— belirtilmemiş —</span>';
+  const planTeslimHtml = _planFmt(e.planlanan_teslim_zamani) || '<span style="color:var(--muted)">— belirtilmemiş —</span>';
 
   document.getElementById('ops-drawer-detaylar').innerHTML = [
     ['Müşteri',           e.musteri_adi || '—'],
     ['Araç',              e.arac_plaka  || '—'],
     ['Sürücü',            (e.sofor || '—') + soforBagliHtml],
     ['Sürücü Tel',        e.sofor_tel   || '—'],
-    ['📅 Planlanan',       planlananHtml],
+    ['📥 Planlanan Alım',  planAlimHtml],
+    ['🏭 Müşteri Randevusu', planTeslimHtml],
     ['Konteyner No(lar)', kontNoDisplay + kontNoEditBtn],
     ['Konteyner Tipi',    e.kont_tip    || '—'],
     ['Dolu / Boş',        e.kont_durum  || '—'],

@@ -3432,37 +3432,58 @@
             </label>
           </div>
 
-          <!-- TEK MOD: tek tarih+saat -->
+          <!-- TEK MOD: alım + randevu (her ikisi opsiyonel ve bağımsız) -->
           <div id="ops-plan-tek" class="srm-grid">
             <div class="srm-group">
-              <label>Planlanan Tarih + Saat</label>
+              <label>📥 Alım Zamanı <span style="font-size:9px;color:var(--text-muted);font-weight:500;letter-spacing:.4px;text-transform:none;">(opsiyonel)</span></label>
               <input id="ops-m-planlanan-zaman" class="srm-inp ops-time-24h" type="datetime-local" lang="tr-TR" />
+              <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Şoför limandan/depodan ne zaman alacak</div>
+            </div>
+            <div class="srm-group">
+              <label>🏭 Müşteri Randevusu <span style="font-size:9px;color:var(--text-muted);font-weight:500;letter-spacing:.4px;text-transform:none;">(opsiyonel)</span></label>
+              <input id="ops-m-planlanan-teslim-zamani" class="srm-inp ops-time-24h" type="datetime-local" lang="tr-TR" />
+              <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Müşteri firmasında olunması beklenen saat</div>
             </div>
           </div>
 
-          <!-- ÇOKLU MOD: ortak saat + tarih listesi -->
+          <!-- ÇOKLU MOD: müşteri randevu tarihleri + alım offset -->
           <div id="ops-plan-coklu" style="display:none;">
             <div class="srm-grid" style="margin-bottom:10px;">
               <div class="srm-group">
-                <label>Ortak Saat (her gün için)</label>
-                <input id="ops-m-plan-saat" class="srm-inp ops-time-24h" type="time" lang="tr-TR" value="09:00" />
+                <label>🏭 Müşteri Randevu Saati (her gün için)</label>
+                <input id="ops-m-plan-saat" class="srm-inp ops-time-24h" type="time" lang="tr-TR" value="09:00"
+                       onchange="_opsPlanTarihListesiRender()" />
               </div>
               <div class="srm-group">
-                <label>Tarih Ekle</label>
+                <label>📥 Alım Zamanlaması</label>
+                <select id="ops-m-plan-alim-offset" class="srm-inp" onchange="_opsPlanTarihListesiRender()">
+                  <option value="-1">Bir gün öncesi</option>
+                  <option value="0">Aynı gün</option>
+                  <option value="-2">İki gün öncesi</option>
+                  <option value="none">Alım planı yok</option>
+                </select>
+              </div>
+              <div class="srm-group">
+                <label>📥 Alım Saati</label>
+                <input id="ops-m-plan-alim-saat" class="srm-inp ops-time-24h" type="time" lang="tr-TR" value="17:00"
+                       onchange="_opsPlanTarihListesiRender()" />
+              </div>
+              <div class="srm-group">
+                <label>Müşteri Randevu Tarihi Ekle</label>
                 <input id="ops-m-plan-tarih-ekle" class="srm-inp" type="date" lang="tr-TR"
                        onchange="_opsPlanTarihEkle()" />
               </div>
             </div>
-            <div id="ops-plan-tarih-listesi" style="display:flex;flex-wrap:wrap;gap:6px;min-height:30px;">
+            <div id="ops-plan-tarih-listesi" style="display:flex;flex-direction:column;gap:6px;min-height:30px;">
               <!-- _opsPlanTarihEkle() / _opsPlanTarihSil() yönetir -->
               <span style="font-size:11px;color:var(--text-muted);font-style:italic;">
-                Tarih eklemek için yukarıdaki seçiciyi kullanın
+                Müşterinin istediği tarihleri ekleyin (her tarih için 1 iş emri)
               </span>
             </div>
             <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;">
-              ℹ Submit edildiğinde her tarih için ayrı bir iş emri yaratılır
-              (aynı müşteri/yük/rota/şoför). Hepsi ortak bir <b>talep numarası</b>
-              ile bağlanır — drawer'da seri olarak görünür.
+              ℹ Her randevu tarihi için ayrı bir iş emri yaratılır (aynı müşteri/yük/rota/şoför).
+              Alım zamanlaması "Bir gün öncesi 17:00" seçilirse şoför randevudan bir gün önceden
+              alır. Hepsi ortak bir <b>talep numarası</b> ile bağlanır.
             </div>
           </div>
         </div>
