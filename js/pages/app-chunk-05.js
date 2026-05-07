@@ -5069,8 +5069,21 @@ function opsFotoEkle(isEmriId, inputEl) {
 }
 
 /* ── TAMAMLANAN İŞ EMRİNDEN OTOMATİK SEFER OLUŞTUR ──────── */
+//
+// 2026-05-07i: Bu mantık DB tarafına TAŞINDI (trg_isemri_otomatik_sefer trigger'ı).
+//   Artık is_emirleri.durum='Teslim Edildi'ye geçtiğinde DB seferler INSERT yapar.
+//   Yakıt litre/tutar yakit_girisleri'nden km aralığı SUM ile otomatik dolar.
+//   Kaynak ne olursa olsun (web operasyon / mobile şoför POD / RPC) çalışır —
+//   önceden sadece bu JS fonksiyonu çağrılıyordu, mobile teslimleri sefer'e geçmiyordu.
+//
+// Bu fonksiyon NO-OP olarak bırakıldı (geri uyumluluk için silinmedi).
+// loadSeferData() v_sefer_detay view'undan çekerken yeni sefer otomatik gelir.
 function opsAutoCreateSefer(e) {
-  // Aynı iş emrinden daha önce sefer oluşturulmuş mu?
+  // Trigger devraldı — frontend sefer satırı oluşturmasın.
+  // Çift kayıt UNIQUE INDEX seferler_ops_id_uq ile zaten engellenir; bu sadece
+  // network çağrısını da atlayalım, console temiz kalsın diye.
+  return;
+  // (Aşağıdaki kod artık çalışmaz — referans için tutuluyor, ileride silinebilir.)
   const mevcutSefer = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
   if (mevcutSefer) return; // zaten var
 

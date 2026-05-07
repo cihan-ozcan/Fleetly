@@ -8107,7 +8107,9 @@ async function loadSeferData() {
   if (!_authToken) { updateSeferStat(); return; }
 
   try {
-    const res = await fetch(sbUrl('seferler?select=*&order=tarih.desc'), { headers: sbHeaders() });
+    // 2026_05_07i: v_sefer_detay view kullan — seferler + masraf toplamı + iş emri özeti.
+    // (Önceki: seferler?select=*; masraf entegrasyonu için view'a geçildi.)
+    const res = await fetch(sbUrl('v_sefer_detay?select=*&order=tarih.desc'), { headers: sbHeaders() });
     if (!res.ok) throw new Error('Seferler yüklenemedi: ' + res.status);
     const rows = await res.json();
     seferData = rows.map(r => ({
@@ -8127,6 +8129,12 @@ async function loadSeferData() {
       ucret   : r.ucret   || 0,
       not     : r.notlar  || '',
       _opsId  : r.ops_id  || null,
+      // ── 2026_05_07i: view'dan zenginleştirilmiş alanlar ──
+      masraf_toplam_tl: (r.masraf_toplam_tl !== null && r.masraf_toplam_tl !== undefined) ? +r.masraf_toplam_tl : 0,
+      masraf_adet     : r.masraf_adet || 0,
+      referans_no     : r.referans_no || '',
+      musteri_adi     : r.musteri_adi || '',
+      firma_isemri_no : r.firma_isemri_no || null,
     }));
     localStorage.setItem('filo_sefer', JSON.stringify(seferData));
   } catch (err) {
@@ -8178,6 +8186,166 @@ async function deleteSeferEntryCloud(id) {
   try {
     await fetch(sbUrl('seferler?id=eq.' + id), { method: 'DELETE', headers: sbHeaders() });
   } catch (err) { console.error('Sefer buluttan silinemedi:', err); }
+}
+
+/* =========================================================================
+   SEFER → BAĞLI MASRAFLAR YÖNETİMİ (2026_05_07i)
+   - Sefer satırındaki "Masraf" hücresinden açılır
+   - Sadece bu sefer'in iş emrine (is_emri_id=opsId) bağlı masrafları gösterir
+   - Ekleme: masraflar tablosuna durum='onayli', is_emri_id=opsId ile insert
+   - Silme: kayıt sahibi (operasyon kullanıcısı) → DELETE; mobile şoförün
+            beklemede masrafları için ayrı onay akışı (bu modalda gösterilmez)
+   ========================================================================= */
+let _seferMasrafActiveOpsId = null;
+
+async function openSeferMasrafModal(opsId) {
+  if (!opsId) { showToast('Bu sefer iş emrine bağlı değil — masraf eklenemiyor.', 'warning'); return; }
+  _seferMasrafActiveOpsId = opsId;
+
+  // Başlık + özet
+  const sefer = seferData.find(s => String(s._opsId) === String(opsId));
+  const baslikEl = document.getElementById('sefer-masraf-baslik');
+  if (baslikEl) baslikEl.textContent = `💰 Sefer Masrafları — Ops #${opsId}${sefer?.plaka ? ' · ' + sefer.plaka : ''}`;
+  const ozetEl = document.getElementById('sefer-masraf-ozet');
+  if (ozetEl) {
+    const segments = [];
+    if (sefer?.tarih)    segments.push(`📅 ${fmtDate(sefer.tarih)}`);
+    if (sefer?.kalkis && sefer?.varis) segments.push(`📍 ${sefer.kalkis} → ${sefer.varis}`);
+    if (sefer?.km > 0)   segments.push(`🛣 ${sefer.km.toLocaleString('tr-TR')} km`);
+    if (sefer?.musteri_adi) segments.push(`🏢 ${sefer.musteri_adi}`);
+    ozetEl.textContent = segments.join(' · ');
+  }
+
+  // Form sıfırla
+  document.getElementById('sefer-masraf-tarih').value = sefer?.tarih || new Date().toISOString().slice(0,10);
+  document.getElementById('sefer-masraf-kategori').value = '';
+  document.getElementById('sefer-masraf-tutar').value = '';
+  document.getElementById('sefer-masraf-aciklama').value = '';
+
+  // Modal aç + masrafları çek
+  document.getElementById('sefer-masraf-backdrop').classList.remove('hidden');
+  await _loadSeferMasraflari(opsId);
+}
+
+function closeSeferMasrafModal() {
+  document.getElementById('sefer-masraf-backdrop').classList.add('hidden');
+  _seferMasrafActiveOpsId = null;
+}
+function closeSeferMasrafModalBackdrop(e) {
+  if (e.target.id === 'sefer-masraf-backdrop') closeSeferMasrafModal();
+}
+
+async function _loadSeferMasraflari(opsId) {
+  const tbody = document.getElementById('sefer-masraf-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--muted)">Yükleniyor…</td></tr>`;
+
+  try {
+    // Sadece onayli/odendi (beklemede şoför masraflarını burada GÖSTERME — onay akışı ayrı yer)
+    const url = sbUrl(`masraflar?is_emri_id=eq.${opsId}&durum=in.(onayli,odendi)&select=*&order=tarih.desc`);
+    const res = await fetch(url, { headers: sbHeaders() });
+    if (!res.ok) throw new Error('Masraflar yüklenemedi: ' + res.status);
+    const rows = await res.json();
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--muted)">Henüz bağlı masraf yok.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(m => {
+      const ikon = (typeof MASRAF_ICONS !== 'undefined' ? (MASRAF_ICONS[m.kategori] || '📋') : '📋');
+      const kaynak = m.sofor_user_id
+        ? '<span style="font-size:10px;background:rgba(34,197,94,.15);color:#22c55e;border-radius:4px;padding:2px 6px;">📱 Şoför</span>'
+        : '<span style="font-size:10px;background:rgba(167,139,250,.15);color:#a78bfa;border-radius:4px;padding:2px 6px;">🏢 Ofis</span>';
+      return `<tr>
+        <td>${m.tarih ? fmtDate(m.tarih) : '—'}</td>
+        <td><span style="background:var(--surface3);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-size:11px;">${ikon} ${m.kategori || '—'}</span></td>
+        <td style="font-family:var(--font-mono);color:#f59e0b;font-weight:700;">₺${(+m.tutar||0).toLocaleString('tr-TR',{minimumFractionDigits:0})}</td>
+        <td style="color:var(--text2);font-size:11.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(m.aciklama||'').replace(/"/g,'&quot;')}">${m.aciklama || '—'}</td>
+        <td>${kaynak}</td>
+        <td><button class="srm-del-btn" onclick="deleteSeferMasraf('${m.id}')" title="Sil">✕</button></td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    console.error('Sefer masrafları yüklenemedi:', err);
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--red)">Yüklenemedi: ${err.message}</td></tr>`;
+  }
+}
+
+async function saveSeferMasrafYeni() {
+  const opsId = _seferMasrafActiveOpsId;
+  if (!opsId) { showToast('Sefer kimliği yok', 'error'); return; }
+
+  const tarih    = document.getElementById('sefer-masraf-tarih').value;
+  const kategori = document.getElementById('sefer-masraf-kategori').value;
+  const tutar    = parseFloat(document.getElementById('sefer-masraf-tutar').value) || 0;
+  const aciklama = document.getElementById('sefer-masraf-aciklama').value.trim();
+
+  if (!tarih || !kategori || tutar <= 0) {
+    showToast('Tarih, Kategori ve Tutar zorunlu.', 'error');
+    return;
+  }
+
+  if (isLocalMode() || !_authToken) {
+    showToast('Bulut bağlantısı gerekli (offline mod).', 'error');
+    return;
+  }
+
+  try {
+    const { data: { user } } = await getSB().auth.getUser();
+    if (!user) throw new Error('Oturum yok');
+
+    const row = {
+      id           : uid(),
+      user_id      : user.id,
+      firma_id     : currentFirmaId || null,
+      tarih,
+      is_emri_id   : opsId,
+      kategori,
+      tutar,
+      aciklama     : aciklama || null,
+      durum        : 'onayli',  // operasyon doğrudan girer → onayli (beklemede değil)
+    };
+
+    const res = await fetch(sbUrl('masraflar'), {
+      method : 'POST',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body   : JSON.stringify(row)
+    });
+    if (!res.ok) {
+      const e = await res.text();
+      throw new Error(e);
+    }
+
+    showToast('Masraf eklendi ✓', 'success');
+    // Form sıfırla
+    document.getElementById('sefer-masraf-kategori').value = '';
+    document.getElementById('sefer-masraf-tutar').value = '';
+    document.getElementById('sefer-masraf-aciklama').value = '';
+    // Listeyi yenile
+    await _loadSeferMasraflari(opsId);
+    // Sefer tablosunu da güncelle (masraf_toplam değişti) — view'dan tekrar çek
+    await loadSeferData();
+    renderSeferTable();
+    renderSeferStats();
+  } catch (err) {
+    console.error('Sefer masrafı eklenemedi:', err);
+    showToast('Eklenemedi: ' + (err.message || 'bilinmeyen'), 'error');
+  }
+}
+
+async function deleteSeferMasraf(masrafId) {
+  if (!confirm('Bu masraf kaydını silmek istiyor musunuz?')) return;
+  try {
+    const res = await fetch(sbUrl('masraflar?id=eq.' + masrafId), { method: 'DELETE', headers: sbHeaders() });
+    if (!res.ok) throw new Error(await res.text());
+    showToast('Masraf silindi.', 'success');
+    if (_seferMasrafActiveOpsId) await _loadSeferMasraflari(_seferMasrafActiveOpsId);
+    await loadSeferData();
+    renderSeferTable();
+    renderSeferStats();
+  } catch (err) {
+    console.error('Masraf silinemedi:', err);
+    showToast('Silinemedi: ' + (err.message || 'bilinmeyen'), 'error');
+  }
 }
 
 function openSeferModal() {
@@ -8291,15 +8459,39 @@ function renderSeferTable() {
   if(!tbody) return;
   const sorted = [...seferData].sort((a,b)=>b.tarih.localeCompare(a.tarih));
   if(sorted.length===0){
-    tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--muted)">Henüz sefer kaydı yok. ➕ Yeni Sefer sekmesinden ekleyin.</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--muted)">Henüz sefer kaydı yok. İş emri "Teslim Edildi" durumuna geçince otomatik oluşur, ya da ➕ Yeni Sefer sekmesinden manuel ekleyin.</td></tr>`;
     return;
   }
   tbody.innerHTML = sorted.map(s=>{
-    // Ops bağlantısı varsa ilgili iş emrini bul (müşteri adı için)
-    const bagliOps = s._opsId ? isEmirleri.find(e => String(e._dbId||e.id) === String(s._opsId)) : null;
-    const musteriAdi = bagliOps?.musteri_adi || '';
-    const kmStr  = s.km   > 0 ? s.km.toLocaleString('tr-TR')+' km' : '—';
+    // Ops bağlantısı varsa ilgili iş emrini bul (müşteri adı için).
+    // 2026_05_07i: view zaten s.musteri_adi getiriyor — fallback olarak isEmirleri lookup.
+    const musteriAdi = s.musteri_adi
+      || (s._opsId ? isEmirleri.find(e => String(e._dbId||e.id) === String(s._opsId))?.musteri_adi : '')
+      || '';
+    const kmStr   = s.km   > 0 ? s.km.toLocaleString('tr-TR')+' km' : '—';
     const ucretStr = s.ucret > 0 ? '₺'+s.ucret.toLocaleString('tr-TR',{minimumFractionDigits:0}) : '—';
+
+    // Yakıt — tutar ana, litre tooltip'te
+    const yakitTutar = (s.yakit_tutar != null) ? +s.yakit_tutar : 0;
+    const yakitLitre = (s.yakit_litre != null) ? +s.yakit_litre : 0;
+    const yakitStr = yakitTutar > 0
+      ? `<span title="${yakitLitre.toLocaleString('tr-TR',{maximumFractionDigits:1})} L" style="font-family:var(--font-mono);color:#22d3ee;font-weight:600;">₺${yakitTutar.toLocaleString('tr-TR',{maximumFractionDigits:0})}</span>`
+      : '<span style="color:var(--muted)">—</span>';
+
+    // Masraf — toplam + adet rozeti, tıklayınca yönetim modal'ı açılır (Ops bağlı sefer için)
+    const masrafTutar = +(s.masraf_toplam_tl || 0);
+    const masrafAdet  = +(s.masraf_adet || 0);
+    const masrafStr = masrafTutar > 0
+      ? `<span onclick="${s._opsId ? `openSeferMasrafModal(${s._opsId})` : ''}"
+              style="font-family:var(--font-mono);color:#f59e0b;font-weight:600;${s._opsId?'cursor:pointer;text-decoration:underline dotted;':''}"
+              title="${masrafAdet} kayıt — yönetmek için tıkla">
+           ₺${masrafTutar.toLocaleString('tr-TR',{maximumFractionDigits:0})}
+           <span style="font-size:10px;background:rgba(245,158,11,.18);border-radius:8px;padding:1px 5px;margin-left:3px;">${masrafAdet}</span>
+         </span>`
+      : (s._opsId
+          ? `<span onclick="openSeferMasrafModal(${s._opsId})" style="cursor:pointer;color:var(--muted);font-size:11px;text-decoration:underline dotted;" title="Masraf ekle">+ ekle</span>`
+          : '<span style="color:var(--muted)">—</span>');
+
     return `
     <tr>
       <td>${fmtDate(s.tarih)}</td>
@@ -8312,6 +8504,8 @@ function renderSeferTable() {
         ${musteriAdi ? `<div style="font-weight:600;color:var(--text);margin-bottom:1px;">${musteriAdi}</div>` : ''}
         <div style="color:var(--muted)">${s.yuk||'—'}</div>
       </td>
+      <td>${yakitStr}</td>
+      <td>${masrafStr}</td>
       <td style="font-family:var(--font-mono);color:var(--green);font-weight:700">${ucretStr}</td>
       <td>
         ${s._opsId
@@ -8327,16 +8521,25 @@ function renderSeferTable() {
 function renderSeferStats() {
   const el = document.getElementById('sefer-stats-row');
   if(!el) return;
-  const toplamSefer = seferData.length;
-  const toplamKm    = seferData.reduce((a,s)=>a+(s.km||0),0);
-  const toplamUcret = seferData.reduce((a,s)=>a+(s.ucret||0),0);
+  const toplamSefer  = seferData.length;
+  const toplamKm     = seferData.reduce((a,s)=>a+(s.km||0),0);
+  const toplamUcret  = seferData.reduce((a,s)=>a+(s.ucret||0),0);
+  // 2026_05_07i: yakıt ve masraf toplamı view'dan zenginleştirilmiş seferData ile gelir
+  const toplamYakit  = seferData.reduce((a,s)=>a+(+s.yakit_tutar||0),0);
+  const toplamMasraf = seferData.reduce((a,s)=>a+(+s.masraf_toplam_tl||0),0);
+  const netKar       = toplamUcret - toplamYakit - toplamMasraf;
   const buAy = new Date().toISOString().slice(0,7);
   const buAySeferler = seferData.filter(s=>s.tarih&&s.tarih.startsWith(buAy));
   const buAyUcret = buAySeferler.reduce((a,s)=>a+(s.ucret||0),0);
+  // Net kâr renk: pozitif yeşil, negatif kırmızı, sıfır gri
+  const netRenk = netKar > 0 ? '#22c55e' : (netKar < 0 ? '#ef4444' : 'var(--muted)');
   el.innerHTML = [
     {val:toplamSefer, lbl:'Toplam Sefer', color:'var(--purple)'},
     {val:toplamKm.toLocaleString('tr')+' km', lbl:'Toplam Mesafe', color:'var(--blue)'},
     {val:'₺'+toplamUcret.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Toplam Ciro', color:'var(--green)'},
+    {val:'₺'+toplamYakit.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Toplam Yakıt', color:'#22d3ee'},
+    {val:'₺'+toplamMasraf.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Toplam Masraf', color:'#f59e0b'},
+    {val:(netKar>=0?'+':'')+'₺'+netKar.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Net Kâr', color:netRenk},
     {val:'₺'+buAyUcret.toLocaleString('tr',{minimumFractionDigits:0}), lbl:'Bu Ay Ciro', color:'var(--accent)'},
   ].map(s=>`<div class="srm-stat"><div class="srm-stat-val" style="color:${s.color}">${s.val}</div><div class="srm-stat-lbl">${s.lbl}</div></div>`).join('');
 }

@@ -857,78 +857,18 @@
           <table class="tbl" id="recent-trips-table">
             <thead>
               <tr>
-                <th>Sefer</th>
+                <th>Tarih</th>
                 <th>Plaka</th>
                 <th>Güzergah</th>
-                <th style="width:140px">İlerleme</th>
-                <th>Durum</th>
+                <th>Yakıt</th>
+                <th>Masraf</th>
+                <th>Ücret</th>
               </tr>
             </thead>
             <tbody>
-              <!-- Faz 4'te canlı veriyle dolacak — şimdilik mock -->
-              <tr>
-                <td class="tbl__num fw-6">SF-2401</td>
-                <td class="tbl__num">34 ABC 123</td>
-                <td><span class="muted">İSTANBUL</span> → <b>ANKARA</b></td>
-                <td>
-                  <div class="row" style="gap:8px">
-                    <div class="bar" style="flex:1"><div class="bar__fill bar__fill--success" style="width:78%"></div></div>
-                    <span class="mono muted" style="font-size:11px;width:32px">78%</span>
-                  </div>
-                </td>
-                <td><span class="status-pill status-pill--success"><span class="dot"></span>Yolda</span></td>
-              </tr>
-              <tr>
-                <td class="tbl__num fw-6">SF-2400</td>
-                <td class="tbl__num">06 XYZ 789</td>
-                <td><span class="muted">İZMİR</span> → <b>BURSA</b></td>
-                <td>
-                  <div class="row" style="gap:8px">
-                    <div class="bar" style="flex:1"><div class="bar__fill bar__fill--success" style="width:100%"></div></div>
-                    <span class="mono muted" style="font-size:11px;width:32px">100%</span>
-                  </div>
-                </td>
-                <td><span class="status-pill status-pill--success"><span class="dot"></span>Teslim</span></td>
-              </tr>
-              <tr>
-                <td class="tbl__num fw-6">SF-2399</td>
-                <td class="tbl__num">35 DEF 456</td>
-                <td><span class="muted">ANTALYA</span> → <b>İSTANBUL</b></td>
-                <td>
-                  <div class="row" style="gap:8px">
-                    <div class="bar" style="flex:1"><div class="bar__fill bar__fill--warning" style="width:42%"></div></div>
-                    <span class="mono muted" style="font-size:11px;width:32px">42%</span>
-                  </div>
-                </td>
-                <td><span class="status-pill status-pill--warning"><span class="dot"></span>Gecikti</span></td>
-              </tr>
-              <tr>
-                <td class="tbl__num fw-6">SF-2398</td>
-                <td class="tbl__num">34 GHI 234</td>
-                <td><span class="muted">ANKARA</span> → <b>SAMSUN</b></td>
-                <td>
-                  <div class="row" style="gap:8px">
-                    <div class="bar" style="flex:1"><div class="bar__fill bar__fill--success" style="width:65%"></div></div>
-                    <span class="mono muted" style="font-size:11px;width:32px">65%</span>
-                  </div>
-                </td>
-                <td><span class="status-pill status-pill--info"><span class="dot"></span>Yükleme</span></td>
-              </tr>
-              <tr>
-                <td class="tbl__num fw-6">SF-2397</td>
-                <td class="tbl__num">06 JKL 567</td>
-                <td><span class="muted">ADANA</span> → <b>İZMİR</b></td>
-                <td>
-                  <div class="row" style="gap:8px">
-                    <div class="bar" style="flex:1"><div class="bar__fill bar__fill--success" style="width:100%"></div></div>
-                    <span class="mono muted" style="font-size:11px;width:32px">100%</span>
-                  </div>
-                </td>
-                <td><span class="status-pill status-pill--success"><span class="dot"></span>Teslim</span></td>
-              </tr>
               <tr style="opacity:.6">
-                <td colspan="5" class="muted" style="padding:14px;text-align:center;font-size:12px">
-                  Faz 4'te canlı sefer verisiyle dolacak
+                <td colspan="6" class="muted" style="padding:14px;text-align:center;font-size:12px">
+                  Henüz sefer kaydı yok — iş emri "Teslim Edildi" olunca buraya gelir.
                 </td>
               </tr>
             </tbody>
@@ -4785,7 +4725,10 @@
               <tr>
                 <th>Tarih</th><th>Araç</th><th>Sürücü</th>
                 <th>Kalkış</th><th>Varış</th><th>Km</th>
-                <th>Yük / Müşteri</th><th>Ücret (TL)</th><th>Notlar</th><th></th>
+                <th>Yük / Müşteri</th>
+                <th title="Yakıt: yakıt girişlerinden km aralığı toplamı">Yakıt</th>
+                <th title="Bağlı masraflar (onaylı/ödendi). Tıklayınca yönetim açılır.">Masraf</th>
+                <th>Ücret (TL)</th><th>Notlar</th><th></th>
               </tr>
             </thead>
             <tbody id="sefer-table-body"></tbody>
@@ -4822,6 +4765,64 @@
       <!-- Özet -->
       <div class="srm-panel" id="sefer-panel-ozet">
         <div id="sefer-ozet-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     SEFER → BAĞLI MASRAFLAR MODALİ (2026_05_07i)
+     Sefer satırındaki "Masraf" hücresine tıklanınca açılır.
+     Sadece bu sefer'in iş emrine (is_emri_id) bağlı masrafları gösterir,
+     ekleme/silme yapar. Mevcut "Masraf Modülü" ile karışmasın diye ayrı.
+     ========================================================= -->
+<div class="srm-backdrop hidden" id="sefer-masraf-backdrop" onclick="closeSeferMasrafModalBackdrop(event)" style="z-index:10050;">
+  <div class="srm-modal" style="max-width:680px;">
+    <div class="srm-header">
+      <div class="srm-title" id="sefer-masraf-baslik">💰 Bağlı Masraflar</div>
+      <button class="modal-close" onclick="closeSeferMasrafModal()" aria-label="Kapat">✕</button>
+    </div>
+    <div style="padding:16px;">
+      <!-- Üst bilgi -->
+      <div id="sefer-masraf-ozet" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--text2);"></div>
+
+      <!-- Mevcut masraflar listesi -->
+      <div style="overflow:auto;max-height:280px;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+        <table class="srm-table" style="margin:0;">
+          <thead>
+            <tr>
+              <th>Tarih</th><th>Kategori</th><th>Tutar</th><th>Açıklama</th><th>Kaynak</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="sefer-masraf-table-body">
+            <tr><td colspan="6" style="text-align:center;padding:18px;color:var(--muted)">Yükleniyor…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Yeni masraf ekleme formu -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;">
+        <div style="font-weight:700;font-size:13px;color:var(--accent);margin-bottom:10px;">➕ Yeni Masraf Ekle</div>
+        <div style="display:grid;grid-template-columns:130px 1fr 130px;gap:10px;margin-bottom:8px;">
+          <input type="date" id="sefer-masraf-tarih" class="srm-input" style="font-size:12px;">
+          <select id="sefer-masraf-kategori" class="srm-input" style="font-size:12px;">
+            <option value="">— Kategori —</option>
+            <option>Otoyol / Köprü</option>
+            <option>Lastik</option>
+            <option>Ceza</option>
+            <option>Hasar / Tamir</option>
+            <option>Yıkama</option>
+            <option>Konaklama</option>
+            <option>Yemek / Gündelik</option>
+            <option>Diğer</option>
+          </select>
+          <input type="number" id="sefer-masraf-tutar" class="srm-input" placeholder="Tutar (₺)" step="0.01" min="0" style="font-size:12px;">
+        </div>
+        <input type="text" id="sefer-masraf-aciklama" class="srm-input" placeholder="Açıklama (opsiyonel)" style="font-size:12px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button onclick="closeSeferMasrafModal()" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;">İptal</button>
+          <button onclick="saveSeferMasrafYeni()" style="background:linear-gradient(135deg,#22c55e,#10b981);border:none;color:#fff;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">💾 Kaydet</button>
+        </div>
       </div>
     </div>
   </div>
