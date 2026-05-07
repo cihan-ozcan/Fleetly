@@ -306,7 +306,7 @@ async function podTaslakPdfUret(opts) {
   let y = 38;
   pdf.setTextColor(20, 25, 50);
   pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11);
-  pdf.text(tr('İŞ EMRİ #' + (e.id || '?')), 14, y);
+  pdf.text(tr('İŞ EMRİ #' + (e.firma_isemri_no ?? e.id ?? '?')), 14, y);
   pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10);
   pdf.text(tr('Müşteri: ' + (e.musteri_adi || '—')), W - 14, y, { align: 'right' });
   y += 6;
@@ -776,7 +776,7 @@ async function podFinalPdfUret(opts) {
   let y = 38;
   pdf.setTextColor(20, 25, 50);
   pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11);
-  pdf.text(tr('İŞ EMRİ #' + (e.id || '?')), 14, y);
+  pdf.text(tr('İŞ EMRİ #' + (e.firma_isemri_no ?? e.id ?? '?')), 14, y);
   pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10);
   pdf.text(tr('Müşteri: ' + (e.musteri_adi || '—')), 14 + 60, y);
   y += 6;
