@@ -18,7 +18,11 @@
       "Bash(node --check js/pages/app-chunk-05.js)",
       "Bash(node --check js/integrations/harcirah-api.js)",
       "Bash(node --check js/pages/harcirah-page.js)",
-      "Bash(node --check js/pages/app-chunk-02.js)"
+      "Bash(node --check js/pages/app-chunk-02.js)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew :app:compileDebugKotlin --no-daemon -q)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" /c/Users/cihan/Desktop/Fleetly-Android/gradlew.bat -p /c/Users/cihan/Desktop/Fleetly-Android :app:compileDebugKotlin --no-daemon)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" /c/Users/cihan/Desktop/Fleetly-Android/gradlew.bat -p /c/Users/cihan/Desktop/Fleetly-Android :app:compileDebugKotlin --no-daemon --rerun-tasks)"
     ]
   }
 }

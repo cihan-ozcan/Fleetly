@@ -768,6 +768,9 @@ function opsRowToObj(r) {
   return {
     id            : r.id,
     _dbId         : r.id,
+    // Firma bazlı görünür numara (2026-05-07f migration). Backfill öncesi NULL
+    // kalan eski kayıtlar için UI tarafında `?? id` fallback'i yapılır.
+    firma_isemri_no: r.firma_isemri_no || null,
     firma_id      : r.firma_id      || null,
     musteri_id    : r.musteri_id    || null,
     musteri_adi   : r.musteri_adi   || '',
@@ -1196,7 +1199,7 @@ function opsRenderAlertBar() {
   const alerts = dikkat.filter(x => x.info.level === 'alert').length;
   const warns  = dikkat.filter(x => x.info.level === 'warn').length;
   const labelTxt = alerts ? `${alerts} ACİL` : `${warns} UYARI`;
-  const plate = top.e.arac_plaka || (top.e.konteyner_no || '').split('\n')[0] || `#${top.e.id}`;
+  const plate = top.e.arac_plaka || (top.e.konteyner_no || '').split('\n')[0] || `#${top.e.firma_isemri_no ?? top.e.id}`;
   const reason = top.info.reasons[0] || '';
   const escAttr = s => String(s).replace(/"/g,'&quot;');
 
@@ -1258,11 +1261,11 @@ async function opsKanbanDrop(ev, hedefDurum) {
   if (e.durum === hedefDurum) return;
   // Riskli geçişlerde onay iste
   if (hedefDurum === 'Teslim Edildi') {
-    if (!confirm(`#${e.id} (${e.arac_plaka || ''}) "Teslim Edildi" olarak işaretlensin mi? Bu işlem sefer kaydı oluşturur.`)) return;
+    if (!confirm(`#${e.firma_isemri_no ?? e.id} (${e.arac_plaka || ''}) "Teslim Edildi" olarak işaretlensin mi? Bu işlem sefer kaydı oluşturur.`)) return;
   }
   try {
     await opsGuncelleDurum(id, hedefDurum);
-    showToast(`#${e.id} → ${hedefDurum}`, 'success');
+    showToast(`#${e.firma_isemri_no ?? e.id} → ${hedefDurum}`, 'success');
   } catch (err) {
     console.error(err);
     showToast('Durum güncellenemedi: ' + (err?.message || 'hata'), 'error');
@@ -1848,7 +1851,7 @@ function opsRenderTable() {
 
     return `
     <tr class="${rowCls}">
-      <td><span class="col-mono col-plate">#${e.id}</span>${syncBadge}</td>
+      <td><span class="col-mono col-plate">#${e.firma_isemri_no ?? e.id}</span>${syncBadge}</td>
       <td>${e.musteri_adi || '—'}</td>
       <td><span class="col-plate">${e.arac_plaka || '—'}</span>${dorseSubHtml}</td>
       <td>${kontHtml}</td>
@@ -2289,7 +2292,7 @@ function opsRenderArsiv() {
     const kontHtml  = kontNolar.map(k => `<div style="font-family:var(--font-mono);font-weight:600;font-size:11.5px;">${k}</div>`).join('');
     return `
     <tr>
-      <td><span class="mono" style="color:var(--accent);">#${e.id}</span></td>
+      <td><span class="mono" style="color:var(--accent);">#${e.firma_isemri_no ?? e.id}</span></td>
       <td>${e.musteri_adi || '—'}</td>
       <td><span class="plate-cell">${e.arac_plaka || '—'}</span></td>
       <td>${kontHtml}</td>
@@ -2945,6 +2948,9 @@ function saveOpsIsEmri() {
         dorse_id      : null,
         sofor         : row.sofor,
         sofor_tel     : row.tel,
+        // sofor_user_id: DB trigger (2026_05_07e) surucu_id'den otomatik dolduracak.
+        // NULL bırakmak güvenli; trigger BEFORE INSERT'te suruculer.auth_user_id'i çeker.
+        // (Eskiden NULL hardcoded'di + trigger yoktu → şoför mobile'dan UPDATE yapamıyordu.)
         sofor_user_id : null,
         konteyner_no  : row.konteyner,
         kont_tip      : ortakKontTip,
@@ -3352,7 +3358,7 @@ function _opsDrawerRender(e) {
 
   document.getElementById('ops-drawer-title').textContent = e.konteyner_no
     ? e.konteyner_no.split('\n')[0] + (e.konteyner_no.split('\n').length > 1 ? ` +${e.konteyner_no.split('\n').length-1}` : '')
-    : ('İş Emri #' + e.id);
+    : ('İş Emri #' + (e.firma_isemri_no ?? e.id));
   document.getElementById('ops-drawer-sub').textContent =
     [e.arac_plaka, e.kont_tip, e.kont_durum, e.musteri_adi, e.sofor].filter(Boolean).join(' · ');
 
@@ -4984,7 +4990,7 @@ function opsWhatsappGonder() {
   const kontNo = (e.konteyner_no || '—').replace(/\n/g, ', ');
 
   const mesaj = [
-    `📦 *İŞ EMRİ #${e.id}*`,
+    `📦 *İŞ EMRİ #${e.firma_isemri_no ?? e.id}*`,
     `━━━━━━━━━━━━━━`,
     `📅 Tarih: ${tarih}`,
     `🚛 Araç: ${e.arac_plaka || '—'}`,

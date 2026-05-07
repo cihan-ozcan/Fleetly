@@ -881,7 +881,7 @@ function callDriver(){
 function whatsappDriver(){
   const p = isEmri?.sofor_whatsapp || isEmri?.sofor_tel;
   if(!p){ showToast(t('call_no_phone'),'error'); return; }
-  const kont = (isEmri.konteyner_no||'').split('\n')[0].trim() || ('#'+isEmri.id);
+  const kont = (isEmri.konteyner_no||'').split('\n')[0].trim() || ('#'+(isEmri.firma_isemri_no ?? isEmri.id));
   const msg = t('wa_prefill').replace('%s', kont);
   const num = normalizePhone(p).replace('+','');
   window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`,'_blank');
