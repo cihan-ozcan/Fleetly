@@ -763,7 +763,9 @@
     root.innerHTML = html;
   };
 
-  // Son Seferler — seferData üzerinden 5 satırlık tablo
+  // Son Seferler — seferData üzerinden son 5 sefer
+  // 2026_05_07i: kolonlar zenginleştirildi — Tarih · Plaka · Güzergah · Yakıt · Masraf · Ücret
+  // (eski mock kolonları "İlerleme/Durum" kaldırıldı — tamamlanan sefer her zaman %100/teslim olduğundan anlamsızdı)
   UI.populateRecentTrips = function (snapshot) {
     const table = document.getElementById('recent-trips-table');
     if (!table) return;
@@ -772,32 +774,23 @@
     const seferler = snapshot && snapshot.seferData;
     if (!Array.isArray(seferler) || seferler.length === 0) return;
 
-    function statusPill(s) {
-      const map = {
-        yolda:    ['success', 'Yolda'],
-        teslim:   ['success', 'Teslim'],
-        gecikme:  ['warning', 'Gecikme'],
-        gecikti:  ['danger',  'Gecikti'],
-        bekliyor: ['warning', 'Bekliyor'],
-        yukleme:  ['info',    'Yükleme'],
-        iptal:    ['danger',  'İptal'],
-      };
-      const key = String(s || '').toLowerCase();
-      const v = map[key] || ['info', s || '—'];
-      return '<span class="status-pill status-pill--' + v[0] + '"><span class="dot"></span>' + escapeHtml(v[1]) + '</span>';
+    function fmtTarih(d) {
+      if (!d) return '—';
+      // ISO veya dd-mm formatı geleblir; basit normalize
+      const s = String(d);
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        const p = s.split('T')[0].split('-');
+        return p[2] + '.' + p[1] + '.' + p[0].slice(2);
+      }
+      return s;
+    }
+    function fmtTl(n) {
+      const v = +n || 0;
+      if (v <= 0) return '—';
+      return '₺' + v.toLocaleString('tr-TR', { maximumFractionDigits: 0 });
     }
 
-    function progressBar(percent, status) {
-      const cls = String(status).toLowerCase() === 'gecikti' ? 'bar__fill--danger'
-                : String(status).toLowerCase() === 'teslim' ? 'bar__fill--success'
-                : 'bar__fill--success';
-      return '<div class="row" style="gap:8px">' +
-        '<div class="bar" style="flex:1"><div class="bar__fill ' + cls + '" style="width:' + percent + '%"></div></div>' +
-        '<span class="mono muted" style="font-size:11px;width:32px">' + percent + '%</span>' +
-      '</div>';
-    }
-
-    // Yeniden eskiye sırala (id veya tarih bazlı)
+    // Yeniden eskiye sırala
     const sorted = [].concat(seferler).sort(function (a, b) {
       const ad = new Date(a.tarih || a.created_at || 0).getTime();
       const bd = new Date(b.tarih || b.created_at || 0).getTime();
@@ -806,24 +799,31 @@
 
     let html = '';
     sorted.slice(0, 5).forEach(function (s) {
-      const ref = s.sefer_no || s.no || ('SF-' + (s.id || ''));
+      const tarih = fmtTarih(s.tarih);
       const plaka = s.plaka || s.plate || '—';
-      const from = s.kalkis || s.from || '';
-      const to   = s.varis || s.to || '';
-      const progress = (function () {
-        const st = String(s.durum || s.status || '').toLowerCase();
-        if (st === 'teslim') return 100;
-        if (st === 'iptal')  return 100;
-        const p = parseFloat(s.ilerleme || s.progress);
-        if (!isNaN(p)) return Math.max(0, Math.min(100, Math.round(p)));
-        return 50;
-      })();
+      const from  = s.kalkis || s.from || '';
+      const to    = s.varis  || s.to   || '';
+      const yakit  = fmtTl(s.yakit_tutar);
+      const masraf = fmtTl(s.masraf_toplam_tl);
+      const ucret  = fmtTl(s.ucret);
+      const masrafAdet = +(s.masraf_adet || 0);
+      const masrafCell = masraf === '—'
+        ? '<span class="muted">—</span>'
+        : '<span style="color:#f59e0b;font-weight:600">' + masraf + '</span>' +
+          (masrafAdet > 0 ? ' <span style="font-size:9px;background:rgba(245,158,11,.18);border-radius:7px;padding:1px 5px;color:#f59e0b;">' + masrafAdet + '</span>' : '');
+      const yakitCell = yakit === '—'
+        ? '<span class="muted">—</span>'
+        : '<span style="color:#22d3ee;font-weight:600">' + yakit + '</span>';
+      const ucretCell = ucret === '—'
+        ? '<span class="muted">—</span>'
+        : '<span style="color:#22c55e;font-weight:700">' + ucret + '</span>';
       html += '<tr>' +
-        '<td class="tbl__num fw-6">' + escapeHtml(ref) + '</td>' +
-        '<td class="tbl__num">' + escapeHtml(plaka) + '</td>' +
-        '<td><span class="muted">' + escapeHtml(from) + '</span> → <b>' + escapeHtml(to) + '</b></td>' +
-        '<td>' + progressBar(progress, s.durum || s.status) + '</td>' +
-        '<td>' + statusPill(s.durum || s.status) + '</td>' +
+        '<td class="muted" style="font-size:11.5px;white-space:nowrap;">' + escapeHtml(tarih) + '</td>' +
+        '<td class="tbl__num fw-6">' + escapeHtml(plaka) + '</td>' +
+        '<td style="font-size:11.5px;"><span class="muted">' + escapeHtml(from) + '</span> → <b>' + escapeHtml(to) + '</b></td>' +
+        '<td class="mono" style="font-size:11.5px;">' + yakitCell + '</td>' +
+        '<td class="mono" style="font-size:11.5px;">' + masrafCell + '</td>' +
+        '<td class="mono" style="font-size:12px;">' + ucretCell + '</td>' +
       '</tr>';
     });
     if (!html) return;
