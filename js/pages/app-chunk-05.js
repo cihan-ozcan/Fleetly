@@ -2562,6 +2562,9 @@ function openOpsIsEmriModal(duzenlemeObj) {
   }
   _opsPlanTarihListesiRender();
 
+  // Datetime input'larının altına ⚡ Şimdi + preset chip bar enjekte et (idempotent)
+  _opsInjectDatetimeQuickPicks();
+
   document.getElementById('ops-modal-bg').classList.remove('hidden');
   // Adım 1'e dön ve kaydedilmiş alanlardan kontTip segmented'i senkronize et
   opsStepperGoto(1);
@@ -2963,6 +2966,91 @@ function _opsPlanlamaCikti() {
   }
 
   return { mod: 'yok' };
+}
+
+/**
+ * 3 datetime-local input'unun altına "⚡ Şimdi" + preset chip bar'ı dinamik
+ * enjekte eder (2026-05-07 UX). Modal her açıldığında çağrılır; idempotent
+ * (zaten varsa tekrar eklemez).
+ */
+function _opsInjectDatetimeQuickPicks() {
+  // Hedef input ID'leri — bu 3'ü için chip bar:
+  //   • ops-m-boslama-zaman          → "Boşaltma/Yükleme Zamanı" (Step 3)
+  //   • ops-m-planlanan-zaman        → "Alım Zamanı" (Planlama tek mod)
+  //   • ops-m-planlanan-teslim-zamani→ "Müşteri Randevusu" (Planlama tek mod)
+  const targets = [
+    'ops-m-boslama-zaman',
+    'ops-m-planlanan-zaman',
+    'ops-m-planlanan-teslim-zamani'
+  ];
+  const chipBase = 'font-size:10.5px;padding:3px 9px;border-radius:5px;cursor:pointer;font-weight:600;';
+  const chipPurple = chipBase + 'background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.30);color:var(--purple);';
+  const chipNow = chipBase + 'background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#b45309;font-weight:700;';
+  const presets = [
+    { mod: 'now',          lbl: '⚡ Şimdi',    style: chipNow },
+    { mod: 'today-08',     lbl: 'Bugün 08:00', style: chipPurple },
+    { mod: 'today-09',     lbl: 'Bugün 09:00', style: chipPurple },
+    { mod: 'today-17',     lbl: 'Bugün 17:00', style: chipPurple },
+    { mod: 'tomorrow-08',  lbl: 'Yarın 08:00', style: chipPurple },
+    { mod: 'tomorrow-09',  lbl: 'Yarın 09:00', style: chipPurple },
+    { mod: 'tomorrow-17',  lbl: 'Yarın 17:00', style: chipPurple },
+  ];
+
+  targets.forEach(id => {
+    const inp = document.getElementById(id);
+    if (!inp) return;
+    const parent = inp.parentElement;
+    if (!parent) return;
+    // Idempotency — zaten enjekte edilmişse tekrar ekleme
+    if (parent.querySelector('[data-quickpicks-bar]')) return;
+
+    const bar = document.createElement('div');
+    bar.setAttribute('data-quickpicks-bar', '1');
+    bar.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;';
+    bar.innerHTML = presets.map(p =>
+      `<button type="button" data-mod="${p.mod}" style="${p.style}">${p.lbl}</button>`
+    ).join('');
+    bar.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-mod]');
+      if (!btn) return;
+      e.preventDefault();
+      _opsDatetimeQuickSet(id, btn.dataset.mod);
+    });
+    parent.appendChild(bar);
+  });
+}
+
+/**
+ * datetime-local input'una hızlı ön-set yapan yardımcı (2026-05-07 UX).
+ * Browser yerel timezone'unda (Türkiye = Europe/Istanbul) çalışır.
+ *
+ * @param {string} inputId — hedef input element ID
+ * @param {string} mod — 'now' | 'today-HH' | 'tomorrow-HH' | 'plus-N-HH'
+ *                        (HH: 08, 09, 17 vb. saat; N: gün sayısı)
+ */
+function _opsDatetimeQuickSet(inputId, mod) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  let target;
+
+  if (mod === 'now') {
+    target = new Date(now);
+    target.setSeconds(0, 0);
+  } else {
+    // 'today-HH' / 'tomorrow-HH' / 'plus-N-HH'
+    const m = mod.match(/^(today|tomorrow|plus-(\d+))-(\d{1,2})$/);
+    if (!m) return;
+    target = new Date(now);
+    if (m[1] === 'tomorrow') target.setDate(target.getDate() + 1);
+    else if (m[2]) target.setDate(target.getDate() + parseInt(m[2], 10));
+    // m[1] === 'today' → tarih değişmez
+    target.setHours(parseInt(m[3], 10), 0, 0, 0);
+  }
+  el.value = `${target.getFullYear()}-${pad(target.getMonth()+1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}`;
+  // change event tetikle — onchange listener'ı varsa (örn. _opsPlanTarihListesiRender) çalışsın
+  el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 /**
