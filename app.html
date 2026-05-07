@@ -2620,6 +2620,7 @@
       <table class="ops-table srm-table" id="ops-table">
         <thead><tr>
           <th>ID</th>
+          <th title="Planlanan başlangıç tarih+saat (şoför ne zaman alımda olmalı)">📅 Plan</th>
           <th>Müşteri</th>
           <th>Araç</th>
           <th>Konteyner No</th>
@@ -3409,6 +3410,63 @@
             <input id="ops-m-muhur" class="srm-inp" placeholder="M-12345" style="font-family:var(--ops-font-mono);font-weight:600;" />
           </div>
         </div>
+
+        <!-- ─── PLANLAMA (2026-05-07j) ─────────────────────────
+             Şoförün alım noktasında olması istenen tarih+saat.
+             "Birden fazla tarihte" seçilirse aynı müşteri için N ayrı iş emri
+             yaratılır (talep_grup_no ile bağlanır). -->
+        <div style="margin-top:14px;padding:12px;border:1px dashed var(--border2);border-radius:8px;background:rgba(167,139,250,.04);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <span style="font-size:13px;font-weight:700;color:var(--purple);">📅 Planlama</span>
+            <span style="font-size:11px;color:var(--text-muted);font-weight:400;">— Şoför ne zaman alım noktasında olmalı?</span>
+          </div>
+
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="radio" name="ops-m-tekrar" value="tek" checked onchange="_opsPlanlamaModuChanged()"/>
+              <span>Bir kez</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="radio" name="ops-m-tekrar" value="coklu" onchange="_opsPlanlamaModuChanged()"/>
+              <span>Birden fazla tarihte</span>
+            </label>
+          </div>
+
+          <!-- TEK MOD: tek tarih+saat -->
+          <div id="ops-plan-tek" class="srm-grid">
+            <div class="srm-group">
+              <label>Planlanan Tarih + Saat</label>
+              <input id="ops-m-planlanan-zaman" class="srm-inp ops-time-24h" type="datetime-local" lang="tr-TR" />
+            </div>
+          </div>
+
+          <!-- ÇOKLU MOD: ortak saat + tarih listesi -->
+          <div id="ops-plan-coklu" style="display:none;">
+            <div class="srm-grid" style="margin-bottom:10px;">
+              <div class="srm-group">
+                <label>Ortak Saat (her gün için)</label>
+                <input id="ops-m-plan-saat" class="srm-inp ops-time-24h" type="time" lang="tr-TR" value="09:00" />
+              </div>
+              <div class="srm-group">
+                <label>Tarih Ekle</label>
+                <input id="ops-m-plan-tarih-ekle" class="srm-inp" type="date" lang="tr-TR"
+                       onchange="_opsPlanTarihEkle()" />
+              </div>
+            </div>
+            <div id="ops-plan-tarih-listesi" style="display:flex;flex-wrap:wrap;gap:6px;min-height:30px;">
+              <!-- _opsPlanTarihEkle() / _opsPlanTarihSil() yönetir -->
+              <span style="font-size:11px;color:var(--text-muted);font-style:italic;">
+                Tarih eklemek için yukarıdaki seçiciyi kullanın
+              </span>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;">
+              ℹ Submit edildiğinde her tarih için ayrı bir iş emri yaratılır
+              (aynı müşteri/yük/rota/şoför). Hepsi ortak bir <b>talep numarası</b>
+              ile bağlanır — drawer'da seri olarak görünür.
+            </div>
+          </div>
+        </div>
+
         <div class="ops-step__error" id="ops-step3-err"></div>
       </div>
 
