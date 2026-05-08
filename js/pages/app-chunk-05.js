@@ -2590,6 +2590,8 @@ function openOpsIsEmriModal(duzenlemeObj) {
     'teslim-konum' : d.teslim_konum_url || '',
     'bas-km'       : (d.baslangic_km != null ? d.baslangic_km : ''),
     'bit-km'       : (d.bitis_km     != null ? d.bitis_km     : ''),
+    'tahmini-km'      : (d.tahmini_km      != null ? d.tahmini_km      : ''),
+    'tahmini-sure-dk' : (d.tahmini_sure_dk != null ? d.tahmini_sure_dk : ''),
   };
   Object.entries(map).forEach(([k, v]) => {
     const el = document.getElementById('ops-m-' + k);
@@ -3208,6 +3210,8 @@ function _opsBuildYeniIsEmriObj({ musteriId, aracPlaka, cekiciId, dorseId, muste
     yukle_lng       : yk?.lng || null,
     teslim_lat      : tk?.lat || null,
     teslim_lng      : tk?.lng || null,
+    tahmini_km      : (() => { const v = parseFloat(document.getElementById('ops-m-tahmini-km')?.value); return isFinite(v) ? v : null; })(),
+    tahmini_sure_dk : (() => { const v = parseInt(document.getElementById('ops-m-tahmini-sure-dk')?.value, 10); return isFinite(v) ? v : null; })(),
     baslangic_km, bitis_km,
     yakit_litre, yakit_tutar,
     durum          : 'Bekliyor',
@@ -3385,6 +3389,93 @@ function opsKonumLinkPreview(inputEl, previewId) {
     badge.textContent = `✓ ${parsed.lat.toFixed(4)}, ${parsed.lng.toFixed(4)}`;
     badge.style.cssText = 'display:inline-block;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);border-radius:5px;font-size:10px;font-weight:700;padding:2px 7px;';
   }
+  // OSRM ön hesabı — her iki konum da geçerli koordinat vermişse tahmini km + harcırah
+  _opsHesaplaTahminiMesafe();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   OSRM ile tahmini km/süre + harcırah ön hesabı
+   - ops-m-yukle-konum + ops-m-teslim-konum input'larından koordinat alır
+   - OsrmHelper.route ile gerçek karayolu mesafesi çağırır (cache'li)
+   - harcirah_uzak_hesapla RPC ile tahmini harcırah çağırır (varsa)
+   - ops-m-mesafe-badge'a yazar, hidden input'lara değer set eder
+   ───────────────────────────────────────────────────────────────── */
+let _opsMesafeReqId = 0;  // race-condition guard (eski yanıt yeni cevabın üstüne yazmasın)
+async function _opsHesaplaTahminiMesafe() {
+  const grup    = document.getElementById('ops-m-mesafe-grup');
+  const badge   = document.getElementById('ops-m-mesafe-badge');
+  const inpKm   = document.getElementById('ops-m-tahmini-km');
+  const inpSure = document.getElementById('ops-m-tahmini-sure-dk');
+  if (!grup || !badge || typeof OsrmHelper === 'undefined') return;
+
+  const yk = parseKonumUrl(document.getElementById('ops-m-yukle-konum')?.value || '');
+  const tk = parseKonumUrl(document.getElementById('ops-m-teslim-konum')?.value || '');
+
+  if (!yk || !tk || !isFinite(yk.lat) || !isFinite(tk.lat)) {
+    grup.style.display = 'none';
+    if (inpKm)   inpKm.value = '';
+    if (inpSure) inpSure.value = '';
+    return;
+  }
+
+  grup.style.display = '';
+  badge.innerHTML = '📍 <em style="opacity:.7;">Mesafe hesaplanıyor…</em>';
+  const reqId = ++_opsMesafeReqId;
+
+  const r = await OsrmHelper.route(yk.lat, yk.lng, tk.lat, tk.lng);
+  if (reqId !== _opsMesafeReqId) return;  // başka istek başlatıldı, bu yanıt geçersiz
+  if (!r || r.km == null) {
+    badge.innerHTML = '⚠ Mesafe hesaplanamadı.';
+    if (inpKm)   inpKm.value = '';
+    if (inpSure) inpSure.value = '';
+    return;
+  }
+
+  if (inpKm)   inpKm.value   = String(r.km);
+  if (inpSure) inpSure.value = r.sureDk != null ? String(r.sureDk) : '';
+
+  const kmTxt   = OsrmHelper.formatKm(r.km);
+  const sureTxt = r.sureDk != null ? OsrmHelper.formatSure(r.sureDk) : '—';
+  const kaynakTxt = r.kaynak === 'osrm'
+    ? '<span style="font-size:10px;opacity:.6;">(OSRM)</span>'
+    : '<span style="font-size:10px;opacity:.6;color:#eab308;">(yaklaşık — kuş uçuşu × 1.3)</span>';
+
+  // Harcırah ön hesabı — opsiyonel (firma tarifesi yoksa sessizce atla)
+  let harcText = '';
+  try {
+    const firmaId = window.currentFirmaId;
+    const yukleYeri  = document.getElementById('ops-m-yukle')?.value.trim()  || null;
+    const teslimYeri = document.getElementById('ops-m-teslim')?.value.trim() || null;
+    if (firmaId && teslimYeri && window.sbUrl && window.sbHeaders) {
+      const res = await fetch(window.sbUrl('rpc/harcirah_uzak_hesapla'), {
+        method: 'POST',
+        headers: { ...window.sbHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          p_firma_id:    firmaId,
+          p_yukle_yeri:  yukleYeri,
+          p_teslim_yeri: teslimYeri,
+          p_yukle_lat:   yk.lat, p_yukle_lng:  yk.lng,
+          p_teslim_lat:  tk.lat, p_teslim_lng: tk.lng,
+          p_kont_durum:  document.getElementById('ops-m-kont-durum')?.value || null
+        })
+      });
+      if (reqId !== _opsMesafeReqId) return;
+      if (res.ok) {
+        const j = await res.json();
+        if (j && j.basari === true && j.tutar != null) {
+          const tutarTxt = Number(j.tutar).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
+          harcText = ` · 💰 Tahmini harcırah: <strong>${tutarTxt} ₺</strong> <span style="font-size:10px;opacity:.6;">(${j.il || '?'} / ${j.bolge || '?'})</span>`;
+        } else if (j && j.basari === false) {
+          harcText = ` · <span style="font-size:11px;opacity:.7;">⚠ ${j.sebep || 'Harcırah hesaplanamadı'}</span>`;
+        }
+      }
+    }
+  } catch (e) {
+    if (window.CFG && window.CFG.DEBUG) console.warn('[ops] harcırah ön hesabı:', e.message);
+  }
+  if (reqId !== _opsMesafeReqId) return;
+
+  badge.innerHTML = `📍 Tahmini: <strong>${kmTxt} km</strong> · ⏱ <strong>${sureTxt}</strong> ${kaynakTxt}${harcText}`;
 }
 
 function saveOpsIsEmri() {
@@ -3478,6 +3569,13 @@ function saveOpsIsEmri() {
     const tk = parseKonumUrl(teslimKonumUrl);
     if (yk) { e.yukle_lat  = yk.lat; e.yukle_lng  = yk.lng; }
     if (tk) { e.teslim_lat = tk.lat; e.teslim_lng = tk.lng; }
+    // Tahmini km/süre (OSRM badge'inden hidden input'a yazılan)
+    {
+      const _tk = parseFloat(document.getElementById('ops-m-tahmini-km')?.value);
+      const _ts = parseInt(document.getElementById('ops-m-tahmini-sure-dk')?.value, 10);
+      e.tahmini_km      = isFinite(_tk) ? _tk : null;
+      e.tahmini_sure_dk = isFinite(_ts) ? _ts : null;
+    }
     opsSaveLocal();
     opsSaveCloud(e);
     closeOpsIsEmriModal();
@@ -3541,6 +3639,8 @@ function saveOpsIsEmri() {
         yukle_lng       : yk?.lng || null,
         teslim_lat      : tk?.lat || null,
         teslim_lng      : tk?.lng || null,
+        tahmini_km      : (() => { const v = parseFloat(document.getElementById('ops-m-tahmini-km')?.value); return isFinite(v) ? v : null; })(),
+        tahmini_sure_dk : (() => { const v = parseInt(document.getElementById('ops-m-tahmini-sure-dk')?.value, 10); return isFinite(v) ? v : null; })(),
         gumruk_muhur_gerekli: ortakGumGer,
         gumruk_yetkili_ad   : ortakGumAd,
         gumruk_yetkili_tel  : ortakGumTel,
@@ -3640,6 +3740,8 @@ function saveOpsIsEmri() {
     yukle_lng      : (() => { const p=parseKonumUrl(document.getElementById('ops-m-yukle-konum')?.value||''); return p?.lng||null; })(),
     teslim_lat     : (() => { const p=parseKonumUrl(document.getElementById('ops-m-teslim-konum')?.value||''); return p?.lat||null; })(),
     teslim_lng     : (() => { const p=parseKonumUrl(document.getElementById('ops-m-teslim-konum')?.value||''); return p?.lng||null; })(),
+    tahmini_km     : (() => { const v=parseFloat(document.getElementById('ops-m-tahmini-km')?.value); return isFinite(v)?v:null; })(),
+    tahmini_sure_dk: (() => { const v=parseInt(document.getElementById('ops-m-tahmini-sure-dk')?.value, 10); return isFinite(v)?v:null; })(),
     baslangic_km   : (() => { const v=parseFloat(document.getElementById('ops-m-bas-km')?.value); return isFinite(v)?v:null; })(),
     bitis_km       : (() => { const v=parseFloat(document.getElementById('ops-m-bit-km')?.value); return isFinite(v)?v:null; })(),
     yakit_litre    : null,
