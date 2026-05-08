@@ -151,8 +151,10 @@
     if (btnEl) btnEl.style.display = (name === 'arsiv') ? 'none' : 'inline-flex';
 
     // Sekme açılırken o sekmeye özel render
-    if (name === 'haftalik') harcRenderHaftalik();
-    if (name === 'arsiv')    harcRenderArsiv();
+    if (name === 'haftalik')  harcRenderHaftalik();
+    if (name === 'arsiv')     harcRenderArsiv();
+    if (name === 'uzakiller') harcRenderUzakIller();
+    if (name === 'ayarlar')   harcKuralYukle();
   }
 
   // "+ Yeni" butonu sekmeye göre handler

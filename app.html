@@ -1356,6 +1356,96 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span id="harcirah-add-btn-label">Yeni Tarife</span>
       </button>
+      <button onclick="document.getElementById('harc-help-modal').classList.remove('hidden')" style="display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--muted);border:1px solid var(--border);cursor:pointer;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;transition:all .15s;" title="Modül kullanım kılavuzu">
+        💡 Nasıl Kullanılır?
+      </button>
+    </div>
+  </div>
+
+  <!-- KULLANIM KILAVUZU MODAL -->
+  <div id="harc-help-modal" class="srm-backdrop hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="srm-modal" style="max-width:760px;max-height:88vh;">
+      <div class="srm-modal-header" style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1;">
+        <div style="font-size:14px;font-weight:700;flex:1;">💡 Harcırah Modülü — Kullanım Kılavuzu</div>
+        <button onclick="document.getElementById('harc-help-modal').classList.add('hidden')" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">×</button>
+      </div>
+      <div class="srm-modal-body" style="padding:20px;overflow-y:auto;max-height:calc(88vh - 60px);">
+        <div style="font-size:13px;line-height:1.6;color:var(--text);">
+
+          <h3 style="margin:0 0 8px;font-size:14px;color:var(--accent);">🎯 Sorun ve Çözüm</h3>
+          <p style="margin:0 0 16px;">
+            Yakın bölgeler için sabit tarifeleriniz var (Çorlu 600 TL gibi) ve sorunsuz çalışıyor. Ama uzak iller için tarife yoksa şoför ile işveren pazarlığa giriyor — birisi 4.500 diyor diğeri 6.000. Bu modül o kavgayı bitirir: şeffaf, kalemli, otomatik hesap herkesin gözü önünde.
+          </p>
+
+          <h3 style="margin:18px 0 8px;font-size:14px;color:var(--accent);">📋 1. Tarifeler Sekmesi (mevcut yapı)</h3>
+          <p style="margin:0 0 12px;">
+            <strong>Yakın bölgeler için sabit tarifelerinizi tutar.</strong> Çorlu→600, Edirne→750 gibi mevcut listeniz buradadır. Bu tarifeler eşleşirse otomatik uygulanır — uzak il hesabı YAPILMAZ.
+          </p>
+          <ul style="margin:0 0 16px;padding-left:18px;">
+            <li>"+ Yeni Tarife" → Bölge isimlerini virgülle yazın → Tutar girin</li>
+            <li>Aynı tarifeye birden fazla bölge eklenebilir</li>
+            <li>Mevcut yapı korundu — hiçbir şey değişmedi</li>
+          </ul>
+
+          <h3 style="margin:18px 0 8px;font-size:14px;color:var(--accent);">🌍 2. Uzak İller Sekmesi (YENİ)</h3>
+          <p style="margin:0 0 12px;">
+            Sabit tarife eşleşmediğinde sistem buradaki <strong>TL/km × mesafe</strong> formülünü kullanır.
+          </p>
+          <p style="margin:0 0 8px;"><strong>İki seviyeli yapı:</strong></p>
+          <ul style="margin:0 0 12px;padding-left:18px;">
+            <li><strong>Bölge bazlı:</strong> 7 coğrafi bölge için TL/km — tüm o bölgedeki iller için varsayılan</li>
+            <li><strong>İl bazlı override:</strong> Aydın için ayrı TL/km belirleyebilirsiniz; Ege bölgesi tarifesini geçersiz kılar</li>
+          </ul>
+          <p style="margin:0 0 8px;"><strong>💡 Önerilen TL/km:</strong></p>
+          <p style="margin:0 0 16px;">
+            "Yakın tarifelerden öneri al" butonuna tıkladığınızda sistem mevcut yakın bölge tarifelerinizden ortalama TL/km hesaplayıp uzak bölgeler için tahmini değer önerir. Kabul ederseniz tek tıkla yazılır, beğenmezseniz manuel ayarlarsınız.
+          </p>
+          <p style="margin:0 0 16px;background:rgba(59,130,246,.08);padding:10px 14px;border-radius:8px;border-left:3px solid var(--blue);">
+            <strong>Örnek (Aydın):</strong> 645 km karayolu × 7 TL/km (Ege) = <strong>4.515 TL</strong><br>
+            Sektör pratiğindeki ~4.500 TL ile %99 örtüşüyor.
+          </p>
+
+          <h3 style="margin:18px 0 8px;font-size:14px;color:var(--accent);">⚙️ 3. Ayarlar Sekmesi (YENİ)</h3>
+          <ul style="margin:0 0 16px;padding-left:18px;">
+            <li><strong>Dolu dönüş %:</strong> Şoför dönüşte yük alırsa ana harcırahın bu yüzdesi eklenir (varsayılan: %50)</li>
+            <li><strong>Boş dönüş %:</strong> Genelde 0 — boş dönüş ana ücrete dahil</li>
+            <li><strong>500/900 km kademeleri:</strong> Uzun yolda yorgunluk + zaman maliyeti için ek %</li>
+            <li><strong>Konaklama:</strong> Şirketinizde uygulanmıyorsa kapalı bırakın. Açıksa "min km'den uzun işlere otomatik X TL eklenir"</li>
+            <li><strong>Minimum tutar:</strong> Hiçbir hesabın altına düşmeyeceği taban</li>
+          </ul>
+
+          <h3 style="margin:18px 0 8px;font-size:14px;color:var(--accent);">📱 Şoför Ne Görür?</h3>
+          <pre style="background:var(--surface3);padding:12px;border-radius:8px;font-size:11px;line-height:1.5;overflow-x:auto;font-family:var(--font-mono);">📍 Ambarlı → Aydın
+Mesafe: 645 km · Bölge: Ege
+
+📐 Otomatik hesap: Aydın / ege · 645 km · 7 TL/km
+
+Tarife              4.515,00 ₺
+─────────────────────────────
+Net                 4.515,00 ₺ net
+
+[✓ Onayla]  [⚠ İtiraz Et]</pre>
+          <p style="margin:8px 0 16px;">
+            İtiraz ederse "ben 5.500 TL istiyorum çünkü..." diyebilir. <strong>Yönetici + Operasyoncu push bildirim alır</strong>, audit log'da neden saklanır.
+          </p>
+
+          <h3 style="margin:18px 0 8px;font-size:14px;color:var(--accent);">💡 İlk Kurulum Sırası</h3>
+          <ol style="margin:0 0 16px;padding-left:18px;">
+            <li>SQL migration'ları çalıştırın (4 adet: c, d, e, f harfleriyle başlar)</li>
+            <li>Ayarlar sekmesinden dolu dönüş % ve minimum tutar değerlerini doğrulayın</li>
+            <li>Uzak İller sekmesinden "Önerilen TL/km" butonuna tıklayıp her bölge için kabul/düzenle yapın</li>
+            <li>Aydın gibi özel iller için il override ekleyin (opsiyonel)</li>
+            <li>1 hafta saha testi yapın — itirazları takip edin, kalibrasyonu güncelleyin</li>
+          </ol>
+
+          <h3 style="margin:18px 0 8px;font-size:14px;color:var(--red);">⚠️ Önemli Notlar</h3>
+          <ul style="margin:0 0 8px;padding-left:18px;">
+            <li>Mesafe için <strong>iş emrinin yukle/teslim koordinatları</strong> kullanılır (haversine × 1.3 yol katsayısı). Daha hassas mesafe için iş açarken konum seçimi önemli.</li>
+            <li>Yakıt UTTS ile ayrıca ödeniyorsa harcırahın içinde DEĞİL — kural seti TL/km değerleri "yıpranma + günlük + dönüş yorgunluğu" için</li>
+            <li>Çoklu adres dönüş işleri ayrı iş emri olarak girilmeli — kendi formülüyle hesaplanır</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1368,6 +1458,8 @@
       <!-- Sekme barı -->
       <div style="display:flex;gap:0;background:var(--surface3);border-radius:10px;padding:3px;margin-bottom:20px;width:fit-content;">
         <button class="srm-tab active" id="harc-tab-tarifeler"  onclick="switchHarcirahTab('tarifeler',this)">📋 Tarifeler <span id="harc-cnt-tarifeler" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
+        <button class="srm-tab"        id="harc-tab-uzakiller"  onclick="switchHarcirahTab('uzakiller',this)">🌍 Uzak İller <span id="harc-cnt-uzakiller" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
+        <button class="srm-tab"        id="harc-tab-ayarlar"    onclick="switchHarcirahTab('ayarlar',this)">⚙️ Ayarlar</button>
         <button class="srm-tab"        id="harc-tab-kayitlar"   onclick="switchHarcirahTab('kayitlar',this)">📑 Kayıtlar <span id="harc-cnt-kayitlar" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
         <button class="srm-tab"        id="harc-tab-haftalik"   onclick="switchHarcirahTab('haftalik',this)">📅 Haftalık Özet</button>
         <button class="srm-tab"        id="harc-tab-arsiv"      onclick="switchHarcirahTab('arsiv',this)">🗂 Arşiv</button>
@@ -1566,6 +1658,181 @@
             </tr></thead>
             <tbody id="harc-haftalik-tbody"></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- SEKME 5: UZAK İLLER (yeni — bölge & il bazlı km TL otomatik hesap) -->
+      <div id="harc-panel-uzakiller" class="srm-panel">
+        <!-- Bilgi kutusu -->
+        <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;">
+          <div style="font-size:18px;line-height:1;">💡</div>
+          <div style="flex:1;font-size:12px;line-height:1.5;color:var(--text);">
+            <strong>Uzak il tarifeleri otomatik hesap için.</strong> Şoför aldığı iş için sabit tarife (Tarifeler sekmesi) eşleşmediğinde sistem buradaki kuralları kullanır. <br>
+            <strong>Mantık:</strong> Mesafe (km) × bölge/il TL/km + ek kalemler (Ayarlar sekmesinden). Şeffaf hesap mobil uygulamada şoföre kalem kalem gösterilir.
+          </div>
+        </div>
+
+        <!-- Bölge bazlı tarifeler -->
+        <div style="margin-bottom:22px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;">🌍 Bölge Bazlı TL/km Tarifeleri</div>
+            <button class="srm-btn-sec" onclick="harcLoadBolgeOnerileri()" style="font-size:12px;">💡 Yakın tarifelerden öneri al</button>
+          </div>
+          <div class="srm-table-wrap">
+            <table class="srm-table" id="harc-bolge-tarife-table">
+              <thead><tr>
+                <th style="width:30%;">Bölge</th>
+                <th style="width:20%;">TL/km</th>
+                <th style="width:30%;">Önerilen</th>
+                <th style="width:20%;">Aktif</th>
+              </tr></thead>
+              <tbody id="harc-bolge-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- İl bazlı override -->
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);flex:1;">📍 İl Bazlı Özel Tarifeler <span style="font-weight:500;color:var(--muted);font-size:11px;">(bölge tarifesini geçersiz kılar)</span></div>
+            <button class="srm-btn-pri" onclick="openHarcIlTarifeModal()" style="font-size:12px;">+ İl Ekle</button>
+          </div>
+          <div class="srm-table-wrap">
+            <table class="srm-table" id="harc-il-tarife-table">
+              <thead><tr>
+                <th>İl</th>
+                <th>Tarife Tipi</th>
+                <th>Tutar</th>
+                <th>Aktif</th>
+                <th>Notlar</th>
+                <th style="width:80px;">İşlem</th>
+              </tr></thead>
+              <tbody id="harc-il-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Henüz il bazlı özel tarife yok.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEKME 6: AYARLAR (yeni — kural seti) -->
+      <div id="harc-panel-ayarlar" class="srm-panel">
+        <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;">
+          <div style="font-size:18px;">⚙️</div>
+          <div style="flex:1;font-size:12px;line-height:1.5;color:var(--text);">
+            Bu ayarlar <strong>otomatik hesabı</strong> şekillendirir. Sabit tarifelere (Tarifeler sekmesi) etkisi yoktur — onlar sabit tutarlardır.
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:760px;">
+          <!-- Dönüş ekleri -->
+          <div class="srm-card" style="padding:14px;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:10px;">🔄 Dönüş Ek Ücretleri</div>
+            <div class="srm-group">
+              <label>Dolu dönüş ek (%)</label>
+              <input id="harc-set-dolu-yuzde" class="srm-inp" type="number" min="0" max="200" step="5" placeholder="50" />
+              <div style="font-size:10px;color:var(--muted);margin-top:4px;">Şoför dönüşte yük alırsa ana harcırahın bu yüzdesi eklenir</div>
+            </div>
+            <div class="srm-group" style="margin-top:10px;">
+              <label>Boş dönüş ek (%)</label>
+              <input id="harc-set-bos-yuzde" class="srm-inp" type="number" min="0" max="100" step="5" placeholder="0" />
+              <div style="font-size:10px;color:var(--muted);margin-top:4px;">Genelde 0 — boş dönüş ana harcırahın içinde</div>
+            </div>
+          </div>
+
+          <!-- Mesafe kademeleri -->
+          <div class="srm-card" style="padding:14px;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📏 Mesafe Kademeleri</div>
+            <div class="srm-group">
+              <label>500 km üstü ek (%)</label>
+              <input id="harc-set-kademe-500" class="srm-inp" type="number" min="0" max="100" step="5" placeholder="0" />
+            </div>
+            <div class="srm-group" style="margin-top:10px;">
+              <label>900 km üstü ek (%)</label>
+              <input id="harc-set-kademe-900" class="srm-inp" type="number" min="0" max="100" step="5" placeholder="0" />
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:8px;">Uzun mesafede yorgunluk + zaman maliyeti için ek yüzde</div>
+          </div>
+
+          <!-- Konaklama -->
+          <div class="srm-card" style="padding:14px;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:10px;">🛏 Konaklama Ücreti</div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input id="harc-set-konaklama-aktif" type="checkbox" />
+              <span style="font-size:12px;">Konaklama ücreti aktif</span>
+            </label>
+            <div class="srm-group" style="margin-top:10px;">
+              <label>Min. mesafe (km)</label>
+              <input id="harc-set-konaklama-km" class="srm-inp" type="number" min="0" placeholder="900" />
+            </div>
+            <div class="srm-group" style="margin-top:10px;">
+              <label>Tutar (₺)</label>
+              <input id="harc-set-konaklama-tutar" class="srm-inp" type="number" min="0" placeholder="0" />
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:6px;">Bu mesafenin üstündeki işlere otomatik eklenir</div>
+          </div>
+
+          <!-- Minimum + diğerleri -->
+          <div class="srm-card" style="padding:14px;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:10px;">💰 Minimum Harcırah</div>
+            <div class="srm-group">
+              <label>Minimum tutar (₺)</label>
+              <input id="harc-set-minimum" class="srm-inp" type="number" min="0" placeholder="600" />
+              <div style="font-size:10px;color:var(--muted);margin-top:4px;">En kısa işlerin bile altına düşmeyeceği taban tutar</div>
+            </div>
+            <div class="srm-group" style="margin-top:14px;">
+              <label>Notlar (isteğe bağlı)</label>
+              <textarea id="harc-set-notlar" class="srm-inp" rows="3" placeholder="Şirket içi notlar..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px;">
+          <button class="srm-btn-pri" onclick="harcKuralKaydet()">💾 Ayarları Kaydet</button>
+          <button class="srm-btn-sec" onclick="harcKuralYukle()">↻ Yenile</button>
+        </div>
+      </div>
+
+      <!-- İl Tarife Modal (Uzak İller sekmesi için) -->
+      <div id="harc-il-modal-bg" class="srm-backdrop hidden" onclick="if(event.target===this)closeHarcIlTarifeModal()">
+        <div class="srm-modal" style="max-width:520px;">
+          <div class="srm-modal-header" style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);">
+            <div style="font-size:14px;font-weight:700;flex:1;" id="harc-il-modal-title">📍 İl Bazlı Tarife</div>
+            <button onclick="closeHarcIlTarifeModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">×</button>
+          </div>
+          <div class="srm-modal-body" style="padding:16px 18px;">
+            <input type="hidden" id="harc-il-eski-il" value="" />
+            <div class="srm-group">
+              <label>İl <span style="color:var(--red);">*</span></label>
+              <input id="harc-il-il" class="srm-inp" list="harc-il-list" placeholder="örn: Aydın" />
+              <datalist id="harc-il-list"></datalist>
+            </div>
+            <div class="srm-group" style="margin-top:12px;">
+              <label>Tarife Tipi</label>
+              <div style="display:flex;gap:14px;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                  <input type="radio" name="harc-il-tip" value="km_birim" checked onchange="harcIlTipSwitch()" /> TL/km (mesafe × birim)
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                  <input type="radio" name="harc-il-tip" value="sabit_tutar" onchange="harcIlTipSwitch()" /> Sabit tutar
+                </label>
+              </div>
+            </div>
+            <div class="srm-group" id="harc-il-km-grup" style="margin-top:12px;">
+              <label>TL/km</label>
+              <input id="harc-il-km" class="srm-inp" type="number" min="0" step="0.1" placeholder="7" />
+            </div>
+            <div class="srm-group" id="harc-il-sabit-grup" style="margin-top:12px;display:none;">
+              <label>Sabit Tutar (₺)</label>
+              <input id="harc-il-sabit" class="srm-inp" type="number" min="0" placeholder="4500" />
+            </div>
+            <div class="srm-group" style="margin-top:12px;">
+              <label>Notlar</label>
+              <input id="harc-il-notlar" class="srm-inp" placeholder="örn: yol şartları zor..." />
+            </div>
+          </div>
+          <div class="srm-modal-footer" style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;">
+            <button class="srm-btn-sec" onclick="closeHarcIlTarifeModal()">İptal</button>
+            <button class="srm-btn-pri" onclick="harcIlTarifeKaydet()">Kaydet</button>
+          </div>
         </div>
       </div>
 
@@ -6125,6 +6392,7 @@
 <script src="js/integrations/harcirah-api.js"></script>
 <script src="js/integrations/pdf-fonts.js"></script>
 <script src="js/pages/harcirah-page.js"></script>
+<script src="js/pages/harcirah-uzak-iller.js"></script>
 <!-- Şoför Koordinasyon Modülü — css/db/migrations/2026_05_05j__surucu_paylasimlari.sql -->
 <script src="js/integrations/surucu-paylasim-api.js"></script>
 <script src="js/pages/surucu-paylasim-page.js"></script>
