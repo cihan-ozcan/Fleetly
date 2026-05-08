@@ -1459,6 +1459,7 @@ Net                 4.515,00 ₺ net
       <div style="display:flex;gap:0;background:var(--surface3);border-radius:10px;padding:3px;margin-bottom:20px;width:fit-content;">
         <button class="srm-tab active" id="harc-tab-tarifeler"  onclick="switchHarcirahTab('tarifeler',this)">📋 Tarifeler <span id="harc-cnt-tarifeler" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
         <button class="srm-tab"        id="harc-tab-uzakiller"  onclick="switchHarcirahTab('uzakiller',this)">🌍 Uzak İller <span id="harc-cnt-uzakiller" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
+        <button class="srm-tab"        id="harc-tab-mesafe"     onclick="switchHarcirahTab('mesafe',this)">🧮 Mesafe Hesabı</button>
         <button class="srm-tab"        id="harc-tab-ayarlar"    onclick="switchHarcirahTab('ayarlar',this)">⚙️ Ayarlar</button>
         <button class="srm-tab"        id="harc-tab-kayitlar"   onclick="switchHarcirahTab('kayitlar',this)">📑 Kayıtlar <span id="harc-cnt-kayitlar" style="font-family:var(--font-mono);font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:99px;margin-left:4px;"></span></button>
         <button class="srm-tab"        id="harc-tab-haftalik"   onclick="switchHarcirahTab('haftalik',this)">📅 Haftalık Özet</button>
@@ -1709,6 +1710,52 @@ Net                 4.515,00 ₺ net
               </tr></thead>
               <tbody id="harc-il-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Henüz il bazlı özel tarife yok.</td></tr></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEKME 6½: MESAFE HESABI (standalone — OSRM + Nominatim) -->
+      <div id="harc-panel-mesafe" class="srm-panel">
+        <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;">
+          <div style="font-size:18px;line-height:1;">🧮</div>
+          <div style="flex:1;font-size:12px;line-height:1.5;color:var(--text);">
+            <strong>İki nokta arası gerçek karayolu mesafesi + tahmini harcırah.</strong>
+            Adres yazıp sonuçlardan birini seçin → <strong>OSRM</strong> ile km/süre hesaplanır, firma tarifeleriyle harcırah önerilir.
+            Sonucu "İl tarifesine ekle" veya "İş emri aç" ile aktarabilirsiniz.
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
+          <div class="srm-group">
+            <label>📍 Yükleme Adresi</label>
+            <div style="position:relative;">
+              <input id="harc-mesafe-yukle" class="srm-inp" placeholder="Ambarlı Liman, İstanbul..." autocomplete="off" />
+              <div id="harc-mesafe-yukle-sug"
+                   style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-top:2px;max-height:240px;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.18);"></div>
+            </div>
+            <div id="harc-mesafe-yukle-info" style="font-size:11px;color:var(--muted);margin-top:4px;">—</div>
+          </div>
+          <div class="srm-group">
+            <label>📍 Teslim Adresi</label>
+            <div style="position:relative;">
+              <input id="harc-mesafe-teslim" class="srm-inp" placeholder="ASTİM OSB, Aydın..." autocomplete="off" />
+              <div id="harc-mesafe-teslim-sug"
+                   style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-top:2px;max-height:240px;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.18);"></div>
+            </div>
+            <div id="harc-mesafe-teslim-info" style="font-size:11px;color:var(--muted);margin-top:4px;">—</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-bottom:18px;">
+          <button class="srm-btn-pri" onclick="harcMesafeHesapla()">🔍 Hesapla</button>
+          <button class="srm-btn-sec" onclick="harcMesafeTemizle()">↻ Temizle</button>
+        </div>
+
+        <div id="harc-mesafe-sonuc" style="display:none;background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(139,92,246,.10));border:1px solid rgba(59,130,246,.30);border-radius:10px;padding:18px;">
+          <div id="harc-mesafe-sonuc-icerik"></div>
+          <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="srm-btn-pri" id="harc-mesafe-btn-il-ekle" onclick="harcMesafeIlTarifeyeEkle()" style="display:none;">📌 İl tarifesine ekle</button>
+            <button class="srm-btn-sec" id="harc-mesafe-btn-isemri"  onclick="harcMesafeIsEmriAc()">🚛 İş emri aç</button>
           </div>
         </div>
       </div>
@@ -3666,6 +3713,15 @@ Net                 4.515,00 ₺ net
               <span id="ops-m-teslim-konum-preview"
                 style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;display:none;"></span>
             </div>
+          </div>
+          <!-- 📐 Tahmini km/süre/harcırah badge (OSRM ile canlı) -->
+          <div class="srm-group" id="ops-m-mesafe-grup" style="display:none;grid-column:1/-1;">
+            <div id="ops-m-mesafe-badge"
+                 style="background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(139,92,246,.10));border:1px solid rgba(59,130,246,.30);border-radius:8px;padding:10px 14px;font-size:13px;line-height:1.5;color:var(--text);">
+              📍 Tahmini hesaplanıyor…
+            </div>
+            <input type="hidden" id="ops-m-tahmini-km" />
+            <input type="hidden" id="ops-m-tahmini-sure-dk" />
           </div>
           <div class="srm-group">
             <label>Boş &amp; Dolu Dönüş Noktası</label>
@@ -6391,8 +6447,10 @@ Net                 4.515,00 ₺ net
 <!-- Harcırah sistemi — css/db/migrations/2026_05_05d__harcirah_sistemi.sql -->
 <script src="js/integrations/harcirah-api.js"></script>
 <script src="js/integrations/pdf-fonts.js"></script>
+<script src="js/integrations/osrm-helper.js"></script>
 <script src="js/pages/harcirah-page.js"></script>
 <script src="js/pages/harcirah-uzak-iller.js"></script>
+<script src="js/pages/harcirah-mesafe.js"></script>
 <!-- Şoför Koordinasyon Modülü — css/db/migrations/2026_05_05j__surucu_paylasimlari.sql -->
 <script src="js/integrations/surucu-paylasim-api.js"></script>
 <script src="js/pages/surucu-paylasim-page.js"></script>

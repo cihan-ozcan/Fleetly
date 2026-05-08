@@ -148,12 +148,13 @@
       })[name] || 'Yeni';
     }
     const btnEl = _$('harcirah-add-btn');
-    if (btnEl) btnEl.style.display = (name === 'arsiv') ? 'none' : 'inline-flex';
+    if (btnEl) btnEl.style.display = (name === 'arsiv' || name === 'mesafe') ? 'none' : 'inline-flex';
 
     // Sekme açılırken o sekmeye özel render
     if (name === 'haftalik')  harcRenderHaftalik();
     if (name === 'arsiv')     harcRenderArsiv();
     if (name === 'uzakiller') harcRenderUzakIller();
+    if (name === 'mesafe')    typeof harcRenderMesafe === 'function' && harcRenderMesafe();
     if (name === 'ayarlar')   harcKuralYukle();
   }
 
