@@ -80,15 +80,42 @@
       if (_looksLikeUrlOrCoord(q) && typeof window.parseKonumUrl === 'function') {
         const parsed = window.parseKonumUrl(q);
         if (parsed && parsed._shortLink) {
-          sug.innerHTML = `
-            <div style="padding:10px 12px;font-size:11px;line-height:1.45;color:var(--text);">
-              🔗 <strong>Kısa link tespit edildi.</strong><br>
-              <span style="opacity:.75;">
-                Google Maps kısa linkleri tarayıcıdan çözülemez (CORS).<br>
-                Linki yeni sekmede açın → açılan sayfanın adres çubuğundaki <em>uzun link</em>i yapıştırın.
-              </span>
-            </div>`;
-          sug.style.display = 'block';
+          // Kısa linki backend'e yolla (pg_net RPC) → uzun URL'i alıp yeniden parse et
+          sug.style.display = 'none';
+          if (info) info.textContent = '🔗 Kısa link çözümleniyor…';
+          const reqQ = q;
+          (async () => {
+            const longUrl = await window.OsrmHelper.resolveShortUrl(reqQ);
+            // Kullanıcı bu arada başka bir şey yazdıysa atla
+            if (inp.value.trim() !== reqQ) return;
+            if (!longUrl) {
+              sug.innerHTML = `
+                <div style="padding:10px 12px;font-size:11px;line-height:1.45;color:var(--text);">
+                  ⚠ <strong>Kısa link çözümlenemedi.</strong><br>
+                  <span style="opacity:.75;">Linki yeni sekmede açın → adres çubuğundaki uzun linki yapıştırın.</span>
+                </div>`;
+              sug.style.display = 'block';
+              if (info) info.textContent = '—';
+              return;
+            }
+            const reparsed = window.parseKonumUrl(longUrl);
+            if (!reparsed || !isFinite(reparsed.lat) || !isFinite(reparsed.lng)) {
+              sug.innerHTML = `
+                <div style="padding:10px 12px;font-size:11px;line-height:1.45;color:var(--text);">
+                  ⚠ <strong>Linkten koordinat çıkarılamadı.</strong>
+                  <span style="opacity:.7;">Düz adres yazıp listeden seçebilirsiniz.</span>
+                </div>`;
+              sug.style.display = 'block';
+              if (info) info.textContent = '—';
+              return;
+            }
+            if (info) info.textContent = `✓ ${reparsed.lat.toFixed(4)}, ${reparsed.lng.toFixed(4)} · adres çözümleniyor…`;
+            const reverse = await window.OsrmHelper.reverseGeocode(reparsed.lat, reparsed.lng);
+            if (inp.value.trim() !== reqQ) return;
+            const display = reverse?.display_name || `Koordinat ${reparsed.lat.toFixed(4)}, ${reparsed.lng.toFixed(4)}`;
+            _state[kind] = { display_name: display, lat: reparsed.lat, lng: reparsed.lng, raw: reverse?.raw || null };
+            if (info) info.textContent = `✓ ${reparsed.lat.toFixed(4)}, ${reparsed.lng.toFixed(4)}`;
+          })();
           return;
         }
         if (parsed && parsed._w3w) {
