@@ -1,10 +1,11 @@
 /* ════════════════════════════════════════════════════════════════
-   HARCIRAH — Uzak İller + Ayarlar sekmeleri (2026-05-08)
+   HARCIRAH — Uzak İller + Ayarlar sekmeleri (2026-05-08, REST pattern)
    ════════════════════════════════════════════════════════════════
-   Bağımlılıklar:
-     - getSB() — Supabase client
-     - toast() — bildirim helper
-     - harcirah-page.js — switchHarcirahTab fonksiyonu içinden tetiklenir
+   Bağımlılıklar (window):
+     - window.sbUrl(path)          — Supabase REST URL helper
+     - window.sbHeaders()          — Auth header builder (Bearer + apikey)
+     - window.currentFirmaId       — aktif firma_id (HarcirahAPI ile aynı)
+     - toast() — bildirim helper (varsa)
    ════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -19,8 +20,11 @@
     { kod: 'guneydogu',    ad: 'Güneydoğu' }
   ];
 
-  function getSB() { return window.supabase || window.sb || null; }
-
+  function _firmaId() { return window.currentFirmaId || null; }
+  function _toast(msg, kind) {
+    if (typeof window.toast === 'function') return window.toast(msg, kind);
+    if (kind === 'error') console.error(msg); else console.log(msg);
+  }
   function fmtNum(v, decimals) {
     if (v == null || isNaN(v)) return '—';
     return Number(v).toLocaleString('tr-TR', {
@@ -29,12 +33,46 @@
     });
   }
 
+  // ──────────────────────────────────────────────────────────
+  // Supabase REST helpers (HarcirahAPI ile aynı pattern)
+  // ──────────────────────────────────────────────────────────
+  async function _sb(method, path, body) {
+    if (!window.sbUrl || !window.sbHeaders) {
+      throw new Error('Supabase yardımcıları yüklü değil');
+    }
+    const opts = {
+      method,
+      headers: { ...window.sbHeaders(), 'Content-Type': 'application/json' }
+    };
+    // PostgREST: select() davranışı için representation
+    if (method === 'POST' || method === 'PATCH') {
+      opts.headers['Prefer'] = 'return=representation,resolution=merge-duplicates';
+    }
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    const res = await fetch(window.sbUrl(path), opts);
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${txt.slice(0, 200)}`);
+    }
+    if (res.status === 204) return null;
+    const ct = res.headers.get('content-type') || '';
+    return ct.includes('application/json') ? res.json() : null;
+  }
+
+  async function _rpc(name, params) {
+    return _sb('POST', `rpc/${name}`, params);
+  }
+
   // ════════════════════════════════════════════════════════════
   // UZAK İLLER SEKMESİ
   // ════════════════════════════════════════════════════════════
-  let _bolgeOnerileri = {};   // {kod: {onerilen_tl_km, hesap_notu}}
+  let _bolgeOnerileri = {};
 
   async function harcRenderUzakIller() {
+    if (!_firmaId()) {
+      console.warn('[harcirah-uzak-iller] firma_id yok, render iptal');
+      return;
+    }
     await Promise.all([
       _loadBolgeTarifeleri(),
       _loadIlTarifeleri(),
@@ -43,16 +81,14 @@
   }
 
   async function _loadBolgeTarifeleri() {
-    const sb = getSB();
-    if (!sb) return;
+    const firmaId = _firmaId();
+    if (!firmaId) return;
     let kayitlar = [];
     try {
-      const { data, error } = await sb.from('harcirah_bolge_tarife').select('*');
-      if (error) throw error;
-      kayitlar = data || [];
-    } catch (e) {
-      console.warn('Bölge tarifeleri yüklenemedi:', e);
-    }
+      kayitlar = await _sb('GET',
+        `harcirah_bolge_tarife?firma_id=eq.${firmaId}&select=*`) || [];
+    } catch (e) { console.warn('Bölge tarifeleri yüklenemedi:', e); }
+
     const map = {};
     kayitlar.forEach(k => { map[k.bolge] = k; });
 
@@ -61,7 +97,9 @@
     tbody.innerHTML = BOLGE_LISTE.map(b => {
       const k = map[b.kod];
       const oneri = _bolgeOnerileri[b.kod];
-      const oneriText = oneri ? `💡 ${fmtNum(oneri.onerilen_tl_km, 1)} TL/km` : '<span style="color:var(--muted);font-size:11px;">öneri için yukarıdaki butona tıkla</span>';
+      const oneriText = oneri
+        ? `💡 ${fmtNum(oneri.onerilen_tl_km, 1)} TL/km`
+        : '<span style="color:var(--muted);font-size:11px;">öneri için yukarıdaki butona tıkla</span>';
       const oneriTitle = oneri ? oneri.hesap_notu : '';
       return `<tr data-bolge="${b.kod}">
         <td style="font-weight:600;">${b.ad}</td>
@@ -87,60 +125,56 @@
   }
 
   async function harcLoadBolgeOnerileri() {
-    const sb = getSB();
-    if (!sb) return;
-    const firmaId = await _getFirmaId();
-    if (!firmaId) return;
+    const firmaId = _firmaId();
+    if (!firmaId) {
+      _toast('Firma bilgisi yüklenmemiş — sayfayı yenileyip tekrar deneyin', 'error');
+      return;
+    }
     try {
-      const { data, error } = await sb.rpc('harcirah_km_birim_oneri', {
-        p_firma_id: firmaId, p_bolge: null
-      });
-      if (error) throw error;
+      const data = await _rpc('harcirah_km_birim_oneri',
+        { p_firma_id: firmaId, p_bolge: null });
       _bolgeOnerileri = {};
       (data || []).forEach(r => { _bolgeOnerileri[r.bolge] = r; });
       await _loadBolgeTarifeleri();
-      if (typeof toast === 'function') toast('Öneriler yakın tarifelerden hesaplandı', 'success');
+      const adet = Object.keys(_bolgeOnerileri).length;
+      _toast(`✓ ${adet} bölge için öneri hesaplandı`, 'success');
     } catch (e) {
       console.error(e);
-      if (typeof toast === 'function') toast('Öneri alınamadı: ' + e.message, 'error');
+      _toast('Öneri alınamadı: ' + e.message, 'error');
     }
   }
 
   async function harcBolgeTarifeKaydet(bolge) {
-    const sb = getSB();
-    if (!sb) return;
-    const firmaId = await _getFirmaId();
+    const firmaId = _firmaId();
     if (!firmaId) return;
     const inp = document.getElementById('bolge-km-' + bolge);
-    const val = parseFloat((inp.value || '').replace(',', '.'));
+    const val = parseFloat((inp?.value || '').replace(',', '.'));
     if (!val || val <= 0) {
       // Boş bırakıldıysa kaydı sil
       try {
-        await sb.from('harcirah_bolge_tarife').delete()
-          .eq('firma_id', firmaId).eq('bolge', bolge);
+        await _sb('DELETE',
+          `harcirah_bolge_tarife?firma_id=eq.${firmaId}&bolge=eq.${bolge}`);
       } catch {}
       return;
     }
     try {
-      const { error } = await sb.from('harcirah_bolge_tarife').upsert({
+      await _sb('POST', 'harcirah_bolge_tarife', {
         firma_id: firmaId, bolge, km_birim: val, aktif_mi: true
       });
-      if (error) throw error;
-      if (typeof toast === 'function') toast(`✓ ${BOLGE_LISTE.find(b => b.kod === bolge)?.ad} tarife kaydedildi`, 'success');
+      _toast(`✓ ${BOLGE_LISTE.find(b => b.kod === bolge)?.ad} = ${val} TL/km`, 'success');
       _loadBolgeTarifeleri();
     } catch (e) {
-      if (typeof toast === 'function') toast('Kaydedilemedi: ' + e.message, 'error');
+      _toast('Kaydedilemedi: ' + e.message, 'error');
     }
   }
 
   async function harcBolgeTarifeAktif(bolge, aktif) {
-    const sb = getSB();
-    if (!sb) return;
-    const firmaId = await _getFirmaId();
+    const firmaId = _firmaId();
     if (!firmaId) return;
     try {
-      await sb.from('harcirah_bolge_tarife').update({ aktif_mi: aktif })
-        .eq('firma_id', firmaId).eq('bolge', bolge);
+      await _sb('PATCH',
+        `harcirah_bolge_tarife?firma_id=eq.${firmaId}&bolge=eq.${bolge}`,
+        { aktif_mi: aktif });
       _loadBolgeTarifeleri();
     } catch (e) { console.warn(e); }
   }
@@ -153,19 +187,19 @@
 
   // ────── İl bazlı tarifeler ──────
   async function _loadIlTarifeleri() {
-    const sb = getSB();
-    if (!sb) return;
+    const firmaId = _firmaId();
+    if (!firmaId) return;
     try {
-      const { data, error } = await sb.from('harcirah_il_tarife').select('*').order('il');
-      if (error) throw error;
+      const data = await _sb('GET',
+        `harcirah_il_tarife?firma_id=eq.${firmaId}&select=*&order=il.asc`) || [];
       const tbody = document.getElementById('harc-il-tbody');
       if (!tbody) return;
-      if (!data || data.length === 0) {
+      if (data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Henüz il bazlı özel tarife yok.</td></tr>';
         return;
       }
       tbody.innerHTML = data.map(r => {
-        const tip  = r.km_birim != null ? 'TL/km' : 'Sabit';
+        const tip   = r.km_birim != null ? 'TL/km' : 'Sabit';
         const tutar = r.km_birim != null
           ? fmtNum(r.km_birim, 1) + ' TL/km'
           : fmtNum(r.sabit_tutar, 0) + ' ₺';
@@ -187,14 +221,11 @@
   }
 
   async function _loadIlListesi() {
-    const sb = getSB();
-    if (!sb) return;
     try {
-      const { data, error } = await sb.from('tr_il_bolge').select('il, bolge').order('il');
-      if (error) throw error;
+      const data = await _sb('GET', 'tr_il_bolge?select=il,bolge&order=il.asc') || [];
       const dl = document.getElementById('harc-il-list');
       if (dl) {
-        dl.innerHTML = (data || []).map(r =>
+        dl.innerHTML = data.map(r =>
           `<option value="${r.il}">${r.il} (${BOLGE_LISTE.find(b => b.kod === r.bolge)?.ad || r.bolge})</option>`
         ).join('');
       }
@@ -202,29 +233,35 @@
   }
 
   function openHarcIlTarifeModal(eskiIl) {
+    const firmaId = _firmaId();
+    if (!firmaId) { _toast('Firma bilgisi yüklenmemiş', 'error'); return; }
+
     document.getElementById('harc-il-eski-il').value = eskiIl || '';
     document.getElementById('harc-il-modal-title').textContent =
       eskiIl ? `📍 ${eskiIl} — Tarife Düzenle` : '📍 Yeni İl Tarifesi';
+
     if (eskiIl) {
-      // Mevcut kaydı yükle
       (async () => {
-        const sb = getSB();
-        const firmaId = await _getFirmaId();
-        const { data } = await sb.from('harcirah_il_tarife').select('*')
-          .eq('firma_id', firmaId).eq('il', eskiIl).maybeSingle();
-        if (data) {
-          document.getElementById('harc-il-il').value = data.il;
-          document.getElementById('harc-il-il').disabled = true;
-          if (data.km_birim != null) {
-            document.querySelector('input[name="harc-il-tip"][value="km_birim"]').checked = true;
-            document.getElementById('harc-il-km').value = data.km_birim;
-          } else {
-            document.querySelector('input[name="harc-il-tip"][value="sabit_tutar"]').checked = true;
-            document.getElementById('harc-il-sabit').value = data.sabit_tutar;
+        try {
+          const arr = await _sb('GET',
+            `harcirah_il_tarife?firma_id=eq.${firmaId}&il=eq.${encodeURIComponent(eskiIl)}&select=*`) || [];
+          const data = arr[0];
+          if (data) {
+            document.getElementById('harc-il-il').value = data.il;
+            document.getElementById('harc-il-il').disabled = true;
+            if (data.km_birim != null) {
+              document.querySelector('input[name="harc-il-tip"][value="km_birim"]').checked = true;
+              document.getElementById('harc-il-km').value = data.km_birim;
+              document.getElementById('harc-il-sabit').value = '';
+            } else {
+              document.querySelector('input[name="harc-il-tip"][value="sabit_tutar"]').checked = true;
+              document.getElementById('harc-il-sabit').value = data.sabit_tutar;
+              document.getElementById('harc-il-km').value = '';
+            }
+            document.getElementById('harc-il-notlar').value = data.notlar || '';
+            harcIlTipSwitch();
           }
-          document.getElementById('harc-il-notlar').value = data.notlar || '';
-          harcIlTipSwitch();
-        }
+        } catch (e) { console.warn(e); }
       })();
     } else {
       document.getElementById('harc-il-il').value = '';
@@ -244,50 +281,50 @@
 
   function harcIlTipSwitch() {
     const tip = document.querySelector('input[name="harc-il-tip"]:checked').value;
-    document.getElementById('harc-il-km-grup').style.display    = tip === 'km_birim' ? '' : 'none';
+    document.getElementById('harc-il-km-grup').style.display    = tip === 'km_birim'    ? '' : 'none';
     document.getElementById('harc-il-sabit-grup').style.display = tip === 'sabit_tutar' ? '' : 'none';
   }
 
   async function harcIlTarifeKaydet() {
-    const sb = getSB();
-    const firmaId = await _getFirmaId();
-    if (!sb || !firmaId) return;
+    const firmaId = _firmaId();
+    if (!firmaId) { _toast('Firma bilgisi yok', 'error'); return; }
     const il = document.getElementById('harc-il-il').value.trim();
-    if (!il) { if (typeof toast === 'function') toast('İl seçin', 'error'); return; }
+    if (!il) { _toast('İl seçin', 'error'); return; }
     const tip = document.querySelector('input[name="harc-il-tip"]:checked').value;
-    const payload = { firma_id: firmaId, il, aktif_mi: true,
-                      notlar: document.getElementById('harc-il-notlar').value.trim() || null,
-                      km_birim: null, sabit_tutar: null };
+    const payload = {
+      firma_id: firmaId, il, aktif_mi: true,
+      notlar: document.getElementById('harc-il-notlar').value.trim() || null,
+      km_birim: null, sabit_tutar: null
+    };
     if (tip === 'km_birim') {
       const v = parseFloat(document.getElementById('harc-il-km').value);
-      if (!v || v <= 0) { if (typeof toast === 'function') toast('Geçerli TL/km girin', 'error'); return; }
+      if (!v || v <= 0) { _toast('Geçerli TL/km girin', 'error'); return; }
       payload.km_birim = v;
     } else {
       const v = parseFloat(document.getElementById('harc-il-sabit').value);
-      if (!v || v <= 0) { if (typeof toast === 'function') toast('Geçerli sabit tutar girin', 'error'); return; }
+      if (!v || v <= 0) { _toast('Geçerli sabit tutar girin', 'error'); return; }
       payload.sabit_tutar = v;
     }
     try {
-      const { error } = await sb.from('harcirah_il_tarife').upsert(payload);
-      if (error) throw error;
-      if (typeof toast === 'function') toast(`✓ ${il} tarifesi kaydedildi`, 'success');
+      await _sb('POST', 'harcirah_il_tarife', payload);
+      _toast(`✓ ${il} kaydedildi`, 'success');
       closeHarcIlTarifeModal();
       _loadIlTarifeleri();
     } catch (e) {
-      if (typeof toast === 'function') toast('Kaydedilemedi: ' + e.message, 'error');
+      _toast('Kaydedilemedi: ' + e.message, 'error');
     }
   }
 
   async function harcIlTarifeSil(il) {
     if (!confirm(`${il} özel tarifesi silinsin mi? Sonrasında bölge tarifesi kullanılır.`)) return;
-    const sb = getSB();
-    const firmaId = await _getFirmaId();
+    const firmaId = _firmaId();
     try {
-      await sb.from('harcirah_il_tarife').delete().eq('firma_id', firmaId).eq('il', il);
-      if (typeof toast === 'function') toast(`✓ ${il} silindi`, 'success');
+      await _sb('DELETE',
+        `harcirah_il_tarife?firma_id=eq.${firmaId}&il=eq.${encodeURIComponent(il)}`);
+      _toast(`✓ ${il} silindi`, 'success');
       _loadIlTarifeleri();
     } catch (e) {
-      if (typeof toast === 'function') toast('Silinemedi: ' + e.message, 'error');
+      _toast('Silinemedi: ' + e.message, 'error');
     }
   }
 
@@ -295,66 +332,66 @@
   // AYARLAR SEKMESİ — kural seti
   // ════════════════════════════════════════════════════════════
   async function harcKuralYukle() {
-    const sb = getSB();
-    const firmaId = await _getFirmaId();
-    if (!sb || !firmaId) return;
+    const firmaId = _firmaId();
+    if (!firmaId) {
+      console.warn('[harcirah] firma_id yok, ayarlar yüklenemiyor');
+      return;
+    }
     try {
-      const { data } = await sb.from('harcirah_kural_seti').select('*')
-        .eq('firma_id', firmaId).maybeSingle();
-      const k = data || {};
-      document.getElementById('harc-set-dolu-yuzde').value      = k.dolu_donus_yuzde ?? 50;
-      document.getElementById('harc-set-bos-yuzde').value       = k.bos_donus_yuzde ?? 0;
-      document.getElementById('harc-set-minimum').value         = k.minimum_tutar ?? 600;
-      document.getElementById('harc-set-kademe-500').value      = k.kademe_500plus_yuzde ?? 0;
-      document.getElementById('harc-set-kademe-900').value      = k.kademe_900plus_yuzde ?? 0;
-      document.getElementById('harc-set-konaklama-aktif').checked = k.konaklama_aktif || false;
-      document.getElementById('harc-set-konaklama-km').value    = k.konaklama_min_km ?? 900;
-      document.getElementById('harc-set-konaklama-tutar').value = k.konaklama_tutar ?? 0;
-      document.getElementById('harc-set-notlar').value          = k.notlar || '';
+      const arr = await _sb('GET',
+        `harcirah_kural_seti?firma_id=eq.${firmaId}&select=*`) || [];
+      const k = arr[0] || {};
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      const setChk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+      set('harc-set-dolu-yuzde',      k.dolu_donus_yuzde     ?? 50);
+      set('harc-set-bos-yuzde',       k.bos_donus_yuzde      ?? 0);
+      set('harc-set-minimum',         k.minimum_tutar        ?? 600);
+      set('harc-set-kademe-500',      k.kademe_500plus_yuzde ?? 0);
+      set('harc-set-kademe-900',      k.kademe_900plus_yuzde ?? 0);
+      setChk('harc-set-konaklama-aktif', k.konaklama_aktif    || false);
+      set('harc-set-konaklama-km',    k.konaklama_min_km     ?? 900);
+      set('harc-set-konaklama-tutar', k.konaklama_tutar      ?? 0);
+      set('harc-set-notlar',          k.notlar               || '');
     } catch (e) {
       console.warn('Kural seti yüklenemedi:', e);
     }
   }
 
   async function harcKuralKaydet() {
-    const sb = getSB();
-    const firmaId = await _getFirmaId();
-    if (!sb || !firmaId) return;
+    const firmaId = _firmaId();
+    if (!firmaId) { _toast('Firma bilgisi yok', 'error'); return; }
+    const num = (id, dflt) => {
+      const el = document.getElementById(id);
+      const v = el ? parseFloat(el.value) : NaN;
+      return isNaN(v) ? dflt : v;
+    };
+    const intval = (id, dflt) => {
+      const el = document.getElementById(id);
+      const v = el ? parseInt(el.value, 10) : NaN;
+      return isNaN(v) ? dflt : v;
+    };
+    const chk = (id) => !!document.getElementById(id)?.checked;
+    const txt = (id) => document.getElementById(id)?.value?.trim() || null;
+
     const payload = {
-      firma_id: firmaId,
-      dolu_donus_yuzde:     parseFloat(document.getElementById('harc-set-dolu-yuzde').value)      || 0,
-      bos_donus_yuzde:      parseFloat(document.getElementById('harc-set-bos-yuzde').value)       || 0,
-      minimum_tutar:        parseFloat(document.getElementById('harc-set-minimum').value)         || 0,
-      kademe_500plus_yuzde: parseFloat(document.getElementById('harc-set-kademe-500').value)      || 0,
-      kademe_900plus_yuzde: parseFloat(document.getElementById('harc-set-kademe-900').value)      || 0,
-      konaklama_aktif:      document.getElementById('harc-set-konaklama-aktif').checked,
-      konaklama_min_km:     parseInt(document.getElementById('harc-set-konaklama-km').value, 10)  || 900,
-      konaklama_tutar:      parseFloat(document.getElementById('harc-set-konaklama-tutar').value) || 0,
-      notlar:               document.getElementById('harc-set-notlar').value.trim() || null
+      firma_id:             firmaId,
+      dolu_donus_yuzde:     num('harc-set-dolu-yuzde',    50),
+      bos_donus_yuzde:      num('harc-set-bos-yuzde',     0),
+      minimum_tutar:        num('harc-set-minimum',       600),
+      kademe_500plus_yuzde: num('harc-set-kademe-500',    0),
+      kademe_900plus_yuzde: num('harc-set-kademe-900',    0),
+      konaklama_aktif:      chk('harc-set-konaklama-aktif'),
+      konaklama_min_km:     intval('harc-set-konaklama-km',    900),
+      konaklama_tutar:      num('harc-set-konaklama-tutar',    0),
+      notlar:               txt('harc-set-notlar')
     };
     try {
-      const { error } = await sb.from('harcirah_kural_seti').upsert(payload);
-      if (error) throw error;
-      if (typeof toast === 'function') toast('✓ Ayarlar kaydedildi', 'success');
+      await _sb('POST', 'harcirah_kural_seti', payload);
+      _toast('✓ Ayarlar kaydedildi', 'success');
     } catch (e) {
-      if (typeof toast === 'function') toast('Kaydedilemedi: ' + e.message, 'error');
+      console.error(e);
+      _toast('Kaydedilemedi: ' + e.message, 'error');
     }
-  }
-
-  // ════════════════════════════════════════════════════════════
-  // Yardımcı: aktif firma_id
-  // ════════════════════════════════════════════════════════════
-  async function _getFirmaId() {
-    if (window.activeFirmaId) return window.activeFirmaId;
-    if (window.fleetlyFirmaId) return window.fleetlyFirmaId;
-    try {
-      const sb = getSB();
-      const u = (await sb.auth.getUser())?.data?.user;
-      if (!u) return null;
-      const { data } = await sb.from('firma_kullanicilar').select('firma_id')
-        .eq('user_id', u.id).limit(1).maybeSingle();
-      return data?.firma_id || null;
-    } catch { return null; }
   }
 
   // ════════════════════════════════════════════════════════════
