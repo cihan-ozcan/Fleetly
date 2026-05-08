@@ -1739,8 +1739,16 @@ function _renderFuelPendingItem(e) {
 }
 
 /** Şoför yakıt bildirimini onayla — detay alanlarını DB'ye yaz, durum='onayli'. */
+const _approveInFlight = new Set();
 async function approveFuelBildirimi(bildirimId) {
+  // Re-entrant guard — paralel tıklamalar tek isteğe inecek
+  if (_approveInFlight.has(bildirimId)) {
+    console.log('[approve] zaten uçuyor, atla:', bildirimId);
+    return;
+  }
+  _approveInFlight.add(bildirimId);
   console.log('[approve] başlıyor — bildirimId:', bildirimId);
+
   const aracEl  = document.getElementById('pf-arac-'  + bildirimId);
   const kmEl    = document.getElementById('pf-km-'    + bildirimId);
   const litreEl = document.getElementById('pf-litre-' + bildirimId);
@@ -1751,12 +1759,14 @@ async function approveFuelBildirimi(bildirimId) {
   const litre   = parseFloat(litreEl?.value);
   const fiyat   = parseFloat(fiyatEl?.value);
 
-  // Görünür hata gösterimi — toast + inline border + #pf-err-* satırı (toast bazen
-  // diğer modaller altında kalıyor; inline her durumda görünür)
+  // Görünür hata gösterimi
   const setErr = (msg, focusEl) => {
     if (errEl) {
       errEl.textContent = msg;
       errEl.style.display = 'block';
+      errEl.style.color = '#ef4444';
+      errEl.style.background = 'rgba(239,68,68,.08)';
+      errEl.style.border = '1px solid rgba(239,68,68,.25)';
     }
     if (focusEl) {
       focusEl.style.borderColor = '#ef4444';
@@ -1765,21 +1775,40 @@ async function approveFuelBildirimi(bildirimId) {
     if (typeof showToast === 'function') showToast(msg, 'error');
     console.warn('[approve] validation engelledi:', msg);
   };
-  // Validation öncesi tüm border'ları sıfırla
   [aracEl, kmEl, litreEl, fiyatEl].forEach(el => { if (el) el.style.borderColor = ''; });
   if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
 
-  if (!aracId)                          return setErr('Araç seçin', aracEl);
-  if (!isFinite(km) || km < 0)          return setErr('KM girin (sayı, ≥0)', kmEl);
-  if (!isFinite(litre) || litre <= 0)   return setErr('Litre girin (sayı, >0)', litreEl);
-  if (!isFinite(fiyat) || fiyat < 0)    return setErr('Tutar girin (sayı, ≥0)', fiyatEl);
+  // Onayla butonunu disable et — kullanıcı paralel basamasın
+  const onayBtn = document.querySelector(`button[onclick*="approveFuelBildirimi('${bildirimId}')"]`);
+  const oldBtnHtml = onayBtn?.innerHTML;
+  if (onayBtn) { onayBtn.disabled = true; onayBtn.innerHTML = '⏳ Onaylanıyor...'; }
+
+  const finishAndRelease = () => {
+    _approveInFlight.delete(bildirimId);
+    if (onayBtn) { onayBtn.disabled = false; onayBtn.innerHTML = oldBtnHtml || '✓ Onayla'; }
+  };
+
+  if (!aracId)                          { finishAndRelease(); return setErr('Araç seçin', aracEl); }
+  if (!isFinite(km) || km < 0)          { finishAndRelease(); return setErr('KM girin (sayı, ≥0)', kmEl); }
+  if (!isFinite(litre) || litre <= 0)   { finishAndRelease(); return setErr('Litre girin (sayı, >0)', litreEl); }
+  if (!isFinite(fiyat) || fiyat < 0)    { finishAndRelease(); return setErr('Tutar girin (sayı, ≥0)', fiyatEl); }
 
   const litreFiyat = litre > 0 ? +(fiyat / litre).toFixed(2) : 0;
+
+  // userId — getUser() yerine getSession() kullan (cache'li, asla askıda kalmaz).
+  // getUser() Supabase Auth API'sine HTTP atar; ağ aksaklığında await sonsuza
+  // kadar bekleyebilir → onayla "tepki vermiyor" sebebi.
   let userId = null;
   try {
-    const { data: { user } } = await getSB().auth.getUser();
-    userId = user?.id || null;
-  } catch (_) {}
+    const sb = getSB();
+    if (sb) {
+      const { data: { session } } = await sb.auth.getSession();
+      userId = session?.user?.id || null;
+    }
+  } catch (e) {
+    console.warn('[approve] session alınamadı, userId NULL ile devam:', e?.message);
+  }
+  console.log('[approve] userId:', userId, '— PATCH atılıyor');
 
   try {
     const res = await fetch(sbUrl(`yakit_girisleri?id=eq.${bildirimId}`), {
@@ -1805,6 +1834,8 @@ async function approveFuelBildirimi(bildirimId) {
   } catch (err) {
     console.error('[approve] hata:', err);
     setErr('Onay başarısız: ' + (err?.message || 'hata'), null);
+  } finally {
+    finishAndRelease();
   }
 }
 
