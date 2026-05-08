@@ -957,24 +957,29 @@ async function opsLoadCloud() {
 
 // ---- CLOUD UPSERT (yeni kayıt veya güncelleme) ----
 async function opsSaveCloud(obj) {
-  opsSaveLocal(); // önce yerel yedek
-  if (isLocalMode()) return;
-
-  // _authToken yoksa Supabase SDK'dan taze token al
-  if (!_authToken) {
-    try {
-      const { data: { session } } = await getSB().auth.getSession();
-      if (session?.access_token) _authToken = session.access_token;
-    } catch(e) {}
-  }
-  if (!_authToken) {
-    console.warn('opsSaveCloud: auth token yok, kayıt erteleniyor');
-    obj._syncPending = true;
-    opsSaveLocal();
-    return;
-  }
-
+  // Re-entrant guard: aynı obj için POST/PATCH halen uçuyorsa ikinci çağrıyı atla.
+  // Aksi halde modal kayıt + opsLoadCloud retry akışı aynı objeyi paralel
+  // gönderip DB'de DUPLICATE kayıt yaratıyor (her POST'ta Supabase yeni id atar).
+  if (obj && obj._syncInFlight) return;
+  if (obj) obj._syncInFlight = true;
   try {
+    opsSaveLocal(); // önce yerel yedek
+    if (isLocalMode()) return;
+
+    // _authToken yoksa Supabase SDK'dan taze token al
+    if (!_authToken) {
+      try {
+        const { data: { session } } = await getSB().auth.getSession();
+        if (session?.access_token) _authToken = session.access_token;
+      } catch(e) {}
+    }
+    if (!_authToken) {
+      console.warn('opsSaveCloud: auth token yok, kayıt erteleniyor');
+      obj._syncPending = true;
+      opsSaveLocal();
+      return;
+    }
+
     // isEdit: obj._dbId varsa (Supabase'den yüklenmiş gerçek id), güncelleme
     // obj.id geçici local id olabilir; obj._dbId gerçek Supabase id'si
     const dbId   = obj._dbId ?? (typeof obj.id === 'number' && obj.id < 1e9 ? null : obj.id);
@@ -1009,10 +1014,24 @@ async function opsSaveCloud(obj) {
         body   : JSON.stringify(row),
       });
       if (res.ok) {
-        const created = await res.json();
-        if (created?.[0]?.id) {
-          // Supabase'nin atadığı gerçek id'yi sakla — hem _dbId hem id güncelle
-          const realId = created[0].id;
+        // PostgREST normalde return=representation ile [{...}] döner;
+        // ama bazı RLS koşullarında body boş array olabiliyor. O durumda
+        // Location header fallback'ine düşelim — yine yoksa pending'i kapatıp
+        // duplicate INSERT engelleyelim (kayıt DB'de oluşmuştur, refresh ile gelir).
+        let realId = null;
+        try {
+          const text = await res.text();
+          if (text && text.trim()) {
+            const created = JSON.parse(text);
+            if (created?.[0]?.id) realId = created[0].id;
+          }
+        } catch(e) { /* parse hata — fallback'e düş */ }
+        if (!realId) {
+          const loc = res.headers.get('Location') || res.headers.get('location') || '';
+          const m = loc.match(/id=eq\.(\d+)/i);
+          if (m) realId = parseInt(m[1], 10);
+        }
+        if (realId) {
           obj._dbId = realId;
           obj.id    = realId;
           obj._syncPending = false;
@@ -1026,6 +1045,22 @@ async function opsSaveCloud(obj) {
           }
           opsSaveLocal();
           console.log('is_emirleri kayıt OK, Supabase id:', realId);
+        } else {
+          // POST 200/201 ama id alamadık — RLS SELECT engeli yüksek ihtimal.
+          // Kayıt DB'de oluştu; pending bayrağını kapatıyoruz ki opsLoadCloud
+          // bu objeyi tekrar tekrar göndermesin (DUPLICATE INSERT'i engeller).
+          // Local kayıt opsLoadCloud refresh sonrası cloud listesiyle değişir.
+          console.warn('is_emirleri POST OK ama id alınamadı — duplicate önlemek için pending kapatılıyor');
+          obj._syncPending = false;
+          obj._syncError   = null;
+          obj._dbId        = obj._dbId || -1;  // sentinel: tekrar gönderilmesin
+          const idx = isEmirleri.findIndex(e => e === obj);
+          if (idx !== -1) {
+            isEmirleri[idx]._syncPending = false;
+            isEmirleri[idx]._syncError   = null;
+            isEmirleri[idx]._dbId        = isEmirleri[idx]._dbId || -1;
+          }
+          opsSaveLocal();
         }
       } else {
         const err = await res.text();
@@ -1054,6 +1089,8 @@ async function opsSaveCloud(obj) {
     if (typeof showToast === 'function') {
       showToast('İş emri kaydında ağ hatası — yerel olarak saklandı, yeniden denenecek.', 'error');
     }
+  } finally {
+    if (obj) delete obj._syncInFlight;
   }
 }
 
