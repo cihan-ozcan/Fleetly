@@ -167,25 +167,76 @@
   }
 
   // ── REVENUE CHART (30 gün — gelir / maliyet / km) ─────────
-  // Statik mock veri ile ilk render. Faz 4'te canlı veriye bağlanacak.
+  //
+  // 2026-05-07: Mock veriden CANLI veriye geçildi. Veri kaynağı:
+  //   • Gelir   = seferler.ucret  (günlük SUM)
+  //   • Maliyet = seferler.yakit_tutar + masraf_toplam_tl (v_sefer_detay'dan)
+  //                — yakıt 07i trigger ile otomatik, masraflar onaylı/ödendi
+  //   • KM      = seferler.km     (günlük SUM)
+  //
+  // window.seferData global'inden okunur (loadSeferData() v_sefer_detay'dan
+  // doldurur). Veri henüz yüklenmemişse seferData boş [] olur, chart 0'lı seri
+  // çizilir; loadSeferData tamamlandığında app-chunk-02.js bu fonksiyonu yeniden
+  // çağırır ve gerçek değerlerle güncellenir.
+  //
+  // ─── İLERİ FAZ — MALİYET KATEGORİSİ GENİŞLETME (TODO) ───
+  // "Maliyet" şu an sadece sefer-bazlı operasyonel maliyetler:
+  //   ✓ Yakıt (yakit_girisleri'nden km aralığı eşleşmesiyle)
+  //   ✓ Onaylı/ödendi masraflar (masraflar tablosundan, is_emri_id eşleşen)
+  // İleri fazda eklenecekler (kullanıcı isteği):
+  //   ○ Harcırah   — harcirah_kayitlari.tutar (sofor_user_id + tarih bazlı)
+  //   ○ Bakım      — bakim_kayitlari (varsa) veya masraflar.kategori='bakım'
+  //   ○ Sigorta    — araclar tablosu sigorta giderleri (yıllık/aylık prorate)
+  //   ○ Diğer       — operasyon kullanıcısının manuel eklediği genel giderler
+  // Bu kalemler sefer-spesifik değil (filo bazlı sabit/dönemsel), bu yüzden
+  // mevcut sefer-toplam yaklaşımı yerine ayrı bir agregasyon mantığı gerekir.
+  // UI'da legend'e ⓘ tooltip eklendi — kullanıcıya kapsam belirtilir.
   UI.initRevenueChart = function () {
     const canvas = document.getElementById('revenue-chart');
     if (!canvas || typeof Chart === 'undefined') return;
 
-    // 30 gün etiket
-    const labels = [];
+    // 30 gün — bugünden 29 gün önceye kadar (toplam 30 gün)
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const labels = [];
+    const dayKeys = []; // YYYY-MM-DD anahtarları (eşleştirme için)
+    const pad = function (n) { return String(n).padStart(2, '0'); };
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
+      const key = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+      dayKeys.push(key);
       labels.push(d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }));
     }
-    // Mock dalgalı seri
-    const revenue = [], cost = [], km = [];
-    for (let i = 0; i < 30; i++) {
-      revenue.push(Math.round(45000 + 25000 * Math.sin(i * 0.4) + i * 800));
-      cost.push(Math.round(28000 + 12000 * Math.sin(i * 0.5 + 1) + i * 400));
-      km.push(Math.round(8000 + 3000 * Math.cos(i * 0.3) + i * 80));
+
+    // Veri seti — günlük 0'lardan başla, seferData'dan agregat ekle
+    const revenue = new Array(30).fill(0);
+    const cost    = new Array(30).fill(0);
+    const km      = new Array(30).fill(0);
+
+    // window.seferData global olabilir (app-chunk-02.js'de tanımlı). Yoksa boş.
+    const seferler = (typeof window.seferData !== 'undefined' && Array.isArray(window.seferData))
+      ? window.seferData
+      : (typeof seferData !== 'undefined' ? seferData : []);
+
+    if (Array.isArray(seferler) && seferler.length > 0) {
+      // dayKeys → index lookup map
+      const idxByKey = {};
+      dayKeys.forEach(function (k, i) { idxByKey[k] = i; });
+
+      seferler.forEach(function (s) {
+        if (!s || !s.tarih) return;
+        // tarih: 'YYYY-MM-DD' veya ISO. İlk 10 hane = gün anahtarı.
+        const key = String(s.tarih).slice(0, 10);
+        const idx = idxByKey[key];
+        if (idx === undefined) return; // 30 gün dışında (eski) → atla
+        revenue[idx] += Number(s.ucret) || 0;
+        // Maliyet = yakıt + masraf (v_sefer_detay alanları)
+        const yakit = Number(s.yakit_tutar) || 0;
+        const masraf = Number(s.masraf_toplam_tl) || 0;
+        cost[idx] += yakit + masraf;
+        km[idx] += Number(s.km) || 0;
+      });
     }
 
     const css = getComputedStyle(document.documentElement);
@@ -194,6 +245,24 @@
     const successColor = css.getPropertyValue('--success').trim()     || '#16A974';
     const textMuted    = css.getPropertyValue('--text-muted').trim()  || '#5B6B82';
     const borderColor  = css.getPropertyValue('--border').trim()      || '#E1E7F0';
+
+    // 30 günlük toplam özet — başlık altındaki sub-text'i dinamik güncelle
+    try {
+      const totalRev  = revenue.reduce(function (a, b) { return a + b; }, 0);
+      const totalCost = cost.reduce(function (a, b) { return a + b; }, 0);
+      const totalKm   = km.reduce(function (a, b) { return a + b; }, 0);
+      const card = canvas.closest('.card');
+      const subEl = card ? card.querySelector('.card__sub') : null;
+      if (subEl) {
+        if (totalRev === 0 && totalCost === 0 && totalKm === 0) {
+          subEl.textContent = 'Son 30 günde teslim edilmiş sefer yok';
+        } else {
+          const fmt = function (n) { return n.toLocaleString('tr-TR', { maximumFractionDigits: 0 }); };
+          subEl.textContent =
+            'Toplam: ₺' + fmt(totalRev) + ' gelir · ₺' + fmt(totalCost) + ' maliyet · ' + fmt(totalKm) + ' km';
+        }
+      }
+    } catch (_) { /* sessiz */ }
 
     if (UI._revenueChart) {
       try { UI._revenueChart.destroy(); } catch (e) {}
