@@ -1768,6 +1768,11 @@ async function opsPushNeredesin(opsId) {
 
 /* ── REALTIME SUBSCRIPTION + PERİYODİK YENİDEN RENDER ────── */
 let _opsRealtimeChannel = null;
+// 2026-05-08: Re-entrant guard — Supabase removeChannel() senkron olarak CLOSED
+// status callback'ini emit ediyor; o callback de _opsScheduleReconnect'i çağırınca
+// stack patlıyordu (too much recursion / 372+ tekrar). Bu flag aktifken ikinci
+// schedule isteği atlanır; setTimeout içinde sıfırlanır.
+let _opsReconnecting = false;
 let _opsAutoRefreshTimer = null;
 let _opsTickTimer = null;
 let _opsReconnectAttempt = 0;
@@ -1800,12 +1805,16 @@ function opsStartRealtime() {
   }
 }
 function opsStopRealtime() {
-  try { if (_opsRealtimeChannel) getSB()?.removeChannel(_opsRealtimeChannel); } catch {}
+  // removeChannel senkron CLOSED callback'i tetikler → reconnect schedule'a düşmesin diye flag'i önceden set et
+  _opsReconnecting = true;
+  const old = _opsRealtimeChannel;
   _opsRealtimeChannel = null;
+  try { if (old) getSB()?.removeChannel(old); } catch {}
   if (_opsAutoRefreshTimer) { clearInterval(_opsAutoRefreshTimer); _opsAutoRefreshTimer = null; }
   if (_opsTickTimer) { clearInterval(_opsTickTimer); _opsTickTimer = null; }
   if (_opsReconnectTimer) { clearTimeout(_opsReconnectTimer); _opsReconnectTimer = null; }
   _opsReconnectAttempt = 0;
+  _opsReconnecting = false;
 }
 
 /**
@@ -1830,6 +1839,9 @@ function _opsConnectChannel() {
           // Bağlandıktan sonra bir kez fresh fetch — koptuğu sürede gelen değişiklikler
           opsLoadCloud().then(() => opsRenderAll()).catch(()=>{});
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          // Halen schedule edilmişse log spam'i engelle (removeChannel senkron
+          // CLOSED tetiklediği için aynı çevrimde 2 kez gelir)
+          if (_opsReconnecting) return;
           console.warn(`Ops realtime ${status} — yeniden bağlanılıyor...`);
           _opsScheduleReconnect();
         }
@@ -1841,9 +1853,18 @@ function _opsConnectChannel() {
 }
 
 function _opsScheduleReconnect() {
-  // Mevcut kanalı kapat — yenisi açılacak
-  try { if (_opsRealtimeChannel) getSB()?.removeChannel(_opsRealtimeChannel); } catch {}
+  // Re-entrant guard: removeChannel() senkron CLOSED callback'i emit ediyor;
+  // o callback bizi tekrar buraya çağırırsa stack patlar (browser
+  // "InternalError: too much recursion" + sayfa donması).
+  if (_opsReconnecting) return;
+  _opsReconnecting = true;
+
+  // Mevcut kanalı kapat — yenisi açılacak. Önce ref'i null'la, sonra remove et;
+  // böylece tekrar tetiklenen status callback'i "if (_opsRealtimeChannel)"
+  // koşulundan zaten geçemez.
+  const old = _opsRealtimeChannel;
   _opsRealtimeChannel = null;
+  try { if (old) getSB()?.removeChannel(old); } catch {}
   if (_opsReconnectTimer) clearTimeout(_opsReconnectTimer);
 
   // Exponential backoff: 1s, 2s, 4s, 8s, ..., max 30s
@@ -1851,6 +1872,7 @@ function _opsScheduleReconnect() {
   _opsReconnectAttempt++;
   _opsReconnectTimer = setTimeout(() => {
     _opsReconnectTimer = null;
+    _opsReconnecting = false;
     _opsConnectChannel();
   }, delay);
 }
@@ -1875,9 +1897,13 @@ window.addEventListener('focus', () => {
 window.addEventListener('online', () => {
   if (!document.getElementById('operasyon-page')?.classList.contains('open')) return;
   console.log('Ağ geri geldi — operasyon canlı bağlantısı yenileniyor');
+  // Aynı re-entrant guard mantığı: removeChannel senkron CLOSED tetikler.
   if (_opsRealtimeChannel) {
-    try { getSB()?.removeChannel(_opsRealtimeChannel); } catch {}
+    _opsReconnecting = true;
+    const old = _opsRealtimeChannel;
     _opsRealtimeChannel = null;
+    try { getSB()?.removeChannel(old); } catch {}
+    _opsReconnecting = false;
   }
   _opsConnectChannel();
   opsLoadCloud().then(() => opsRenderAll()).catch(()=>{});
