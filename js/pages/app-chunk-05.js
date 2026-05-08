@@ -1733,31 +1733,24 @@ async function opsPushNeredesin(opsId) {
 let _opsRealtimeChannel = null;
 let _opsAutoRefreshTimer = null;
 let _opsTickTimer = null;
+let _opsReconnectAttempt = 0;
+let _opsReconnectTimer = null;
 
 function opsStartRealtime() {
-  if (_opsRealtimeChannel) return; // already subscribed
-  const sb = getSB();
-  if (!sb) return;
-  try {
-    _opsRealtimeChannel = sb
-      .channel('ops-is-emirleri')
-      .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'is_emirleri' },
-          () => { opsLoadCloud().then(() => { opsRenderAll(); }); })
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('Ops realtime hata, polling fallback devrede');
-        }
-      });
-  } catch (err) {
-    console.warn('Realtime subscribe hata:', err);
-  }
-  // Yedek: realtime düşerse bile her 30sn'de bir bulut çek
+  // 2026-05-08: KÖK NEDEN — eski kodda CHANNEL_ERROR/TIMED_OUT'ta sadece warn yazıyordu,
+  // re-subscribe yapmıyordu. Realtime bir kez koptuğunda kanal ölü kalıyor →
+  // mobile UPDATE'leri DB'ye düşse bile web haberi olmuyor → şoför süreci ilerletse
+  // bile op modülü hâlâ "Bekliyor" gösteriyor. Sayfa Ctrl+F5'lenince düzeliyordu.
+  //
+  // Düzeltme: Status callback'inde re-subscribe + exponential backoff. Ek olarak
+  // polling interval 30sn → 10sn (realtime kopukken bile en geç 10sn'de güncel).
+  _opsConnectChannel();
+
   if (!_opsAutoRefreshTimer) {
     _opsAutoRefreshTimer = setInterval(() => {
       if (!document.getElementById('operasyon-page')?.classList.contains('open')) return;
       opsLoadCloud().then(() => opsRenderAll()).catch(()=>{});
-    }, 30000);
+    }, 10000);  // 30sn → 10sn (realtime düşse bile gecikme tolere edilebilir)
   }
   // Tick: süre/konum yaşı saniye saniye değişmesin diye 20sn'de re-render
   if (!_opsTickTimer) {
@@ -1774,7 +1767,84 @@ function opsStopRealtime() {
   _opsRealtimeChannel = null;
   if (_opsAutoRefreshTimer) { clearInterval(_opsAutoRefreshTimer); _opsAutoRefreshTimer = null; }
   if (_opsTickTimer) { clearInterval(_opsTickTimer); _opsTickTimer = null; }
+  if (_opsReconnectTimer) { clearTimeout(_opsReconnectTimer); _opsReconnectTimer = null; }
+  _opsReconnectAttempt = 0;
 }
+
+/**
+ * 2026-05-08: Realtime kanalını aç + status callback ile otomatik yeniden bağlanma.
+ * CHANNEL_ERROR / TIMED_OUT / CLOSED durumlarında exponential backoff (1s, 2s, 4s,
+ * max 30s) ile re-subscribe. Eski kodda kanal koptuğunda ölü kalıyor, mobile UPDATE
+ * geldiğinde web haberi olmuyor, kullanıcı Ctrl+F5'leyene kadar "Bekliyor" görüyordu.
+ */
+function _opsConnectChannel() {
+  if (_opsRealtimeChannel) return;
+  const sb = getSB();
+  if (!sb) return;
+  try {
+    _opsRealtimeChannel = sb
+      .channel('ops-is-emirleri')
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'is_emirleri' },
+          () => { opsLoadCloud().then(() => { opsRenderAll(); }); })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          _opsReconnectAttempt = 0;  // Başarı → backoff sıfırla
+          // Bağlandıktan sonra bir kez fresh fetch — koptuğu sürede gelen değişiklikler
+          opsLoadCloud().then(() => opsRenderAll()).catch(()=>{});
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn(`Ops realtime ${status} — yeniden bağlanılıyor...`);
+          _opsScheduleReconnect();
+        }
+      });
+  } catch (err) {
+    console.warn('Realtime subscribe hata:', err);
+    _opsScheduleReconnect();
+  }
+}
+
+function _opsScheduleReconnect() {
+  // Mevcut kanalı kapat — yenisi açılacak
+  try { if (_opsRealtimeChannel) getSB()?.removeChannel(_opsRealtimeChannel); } catch {}
+  _opsRealtimeChannel = null;
+  if (_opsReconnectTimer) clearTimeout(_opsReconnectTimer);
+
+  // Exponential backoff: 1s, 2s, 4s, 8s, ..., max 30s
+  const delay = Math.min(1000 * Math.pow(2, _opsReconnectAttempt), 30000);
+  _opsReconnectAttempt++;
+  _opsReconnectTimer = setTimeout(() => {
+    _opsReconnectTimer = null;
+    _opsConnectChannel();
+  }, delay);
+}
+
+/**
+ * 2026-05-08: Visibility / focus tetiklemeli forced refresh.
+ * Kullanıcı başka tab'a gidip dönünce, ya da telefon ekran kapalıyken realtime kopmuş
+ * olabilir — sayfa görünür olur olmaz hem fresh fetch yap hem de kanalı yeniden bağla.
+ */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (!document.getElementById('operasyon-page')?.classList.contains('open')) return;
+  // Kanal yoksa veya koptuysa yeniden bağlan
+  if (!_opsRealtimeChannel) _opsConnectChannel();
+  // Anında fresh fetch (kullanıcı dönüş yaptığı an için)
+  opsLoadCloud().then(() => opsRenderAll()).catch(()=>{});
+});
+window.addEventListener('focus', () => {
+  if (!document.getElementById('operasyon-page')?.classList.contains('open')) return;
+  if (!_opsRealtimeChannel) _opsConnectChannel();
+});
+window.addEventListener('online', () => {
+  if (!document.getElementById('operasyon-page')?.classList.contains('open')) return;
+  console.log('Ağ geri geldi — operasyon canlı bağlantısı yenileniyor');
+  if (_opsRealtimeChannel) {
+    try { getSB()?.removeChannel(_opsRealtimeChannel); } catch {}
+    _opsRealtimeChannel = null;
+  }
+  _opsConnectChannel();
+  opsLoadCloud().then(() => opsRenderAll()).catch(()=>{});
+});
 
 /* Tüm operasyon görünümlerini tek seferde yenile */
 function opsRenderAll() {
