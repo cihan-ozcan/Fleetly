@@ -22,6 +22,20 @@
     if (kind === 'error') console.error(msg); else console.log(msg);
   }
 
+  // Input metni URL veya ham koordinat çiftine benziyor mu?
+  // (Nominatim'e text-search yapılması anlamsız olan içerik tipleri)
+  function _looksLikeUrlOrCoord(s) {
+    const t = String(s || '').trim();
+    if (!t) return false;
+    if (/^https?:\/\//i.test(t)) return true;
+    if (/^geo:/i.test(t)) return true;
+    if (/^\/\/\/[a-z]+\.[a-z]+\.[a-z]+/i.test(t)) return true; // ///w3w
+    if (/^maps\.app\.goo\.gl|^goo\.gl|^maps\.google\./i.test(t)) return true;
+    // Ham koordinat: "41.0123,28.5678"
+    if (/^-?\d{1,3}\.\d{4,}\s*,\s*-?\d{1,3}\.\d{4,}$/.test(t)) return true;
+    return false;
+  }
+
   // ──────────────────────────────────────────────────────────
   // Public — sekme açıldığında çağrılır (harcirah-page.js)
   // ──────────────────────────────────────────────────────────
@@ -60,6 +74,52 @@
       if (info) info.textContent = '—';
       clearTimeout(kind === 'yukle' ? _yukleDeb : _teslimDeb);
       if (q.length < 3) { sug.style.display = 'none'; return; }
+
+      // 🔗 Maps URL / koordinat algılama — Nominatim text search'a gitmeden
+      // parseKonumUrl ile lat/lng çıkarılabiliyorsa direkt onu kullan.
+      if (_looksLikeUrlOrCoord(q) && typeof window.parseKonumUrl === 'function') {
+        const parsed = window.parseKonumUrl(q);
+        if (parsed && parsed._shortLink) {
+          sug.innerHTML = `
+            <div style="padding:10px 12px;font-size:11px;line-height:1.45;color:var(--text);">
+              🔗 <strong>Kısa link tespit edildi.</strong><br>
+              <span style="opacity:.75;">
+                Google Maps kısa linkleri tarayıcıdan çözülemez (CORS).<br>
+                Linki yeni sekmede açın → açılan sayfanın adres çubuğundaki <em>uzun link</em>i yapıştırın.
+              </span>
+            </div>`;
+          sug.style.display = 'block';
+          return;
+        }
+        if (parsed && parsed._w3w) {
+          sug.innerHTML = `
+            <div style="padding:10px 12px;font-size:11px;line-height:1.45;color:var(--text);opacity:.85;">
+              ⚠ <strong>What3Words</strong> formatı şu an desteklenmiyor — koordinat veya tam adres yapıştırın.
+            </div>`;
+          sug.style.display = 'block';
+          return;
+        }
+        if (parsed && isFinite(parsed.lat) && isFinite(parsed.lng)) {
+          sug.style.display = 'none';
+          if (info) info.textContent = `✓ ${parsed.lat.toFixed(4)}, ${parsed.lng.toFixed(4)} · adres çözümleniyor…`;
+          // Reverse geocode ile insanca adres bul (DB'nin il tespiti için gerekli)
+          (async () => {
+            const reverse = await window.OsrmHelper.reverseGeocode(parsed.lat, parsed.lng);
+            const display = reverse?.display_name || `Koordinat ${parsed.lat.toFixed(4)}, ${parsed.lng.toFixed(4)}`;
+            _state[kind] = { display_name: display, lat: parsed.lat, lng: parsed.lng, raw: reverse?.raw || null };
+            if (info) info.textContent = `✓ ${parsed.lat.toFixed(4)}, ${parsed.lng.toFixed(4)}`;
+          })();
+          return;
+        }
+        // URL gibi görünüyor ama parse edilemedi — Nominatim'e göndermek anlamsız
+        sug.innerHTML = `
+          <div style="padding:10px 12px;font-size:11px;line-height:1.45;color:var(--text);opacity:.85;">
+            ⚠ Linkten koordinat çıkarılamadı. <span style="opacity:.7;">Düz adres metni yazıp listeden seçebilirsiniz.</span>
+          </div>`;
+        sug.style.display = 'block';
+        return;
+      }
+
       const t = setTimeout(async () => {
         if (!window.OsrmHelper) return;
         const results = await window.OsrmHelper.geocode(q, { limit: 5 });

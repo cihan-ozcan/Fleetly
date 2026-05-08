@@ -172,6 +172,38 @@
     }
   }
 
+  // Reverse geocode — koordinattan insanca adres
+  async function reverseGeocode(lat, lng) {
+    if (!isFinite(lat) || !isFinite(lng)) return null;
+    const params = new URLSearchParams({
+      lat: String(lat),
+      lon: String(lng),
+      format: 'json',
+      zoom: '14',
+      addressdetails: '1'
+    });
+    try {
+      const res = await _fetchTimeout(NOMINATIM_BASE + '/reverse?' + params.toString(), {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) return null;
+      const r = await res.json();
+      if (!r || !r.lat) return null;
+      return {
+        display_name: r.display_name,
+        lat: parseFloat(r.lat),
+        lng: parseFloat(r.lon),
+        raw: r
+      };
+    } catch (e) {
+      if (window.CFG && window.CFG.DEBUG) {
+        console.warn('[OsrmHelper] Nominatim reverse hata:', e.message);
+      }
+      return null;
+    }
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // Format helpers
   // ──────────────────────────────────────────────────────────────────
@@ -199,6 +231,7 @@
   window.OsrmHelper = {
     route,
     geocode,
+    reverseGeocode,
     haversine,
     formatSure,
     formatKm,
