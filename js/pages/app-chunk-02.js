@@ -1570,8 +1570,11 @@ async function loadFuelData() {
     // Satırları { vehicleId: [...] } yapısına dönüştür
     const next = {};
     rows.forEach(r => {
-      if (!next[r.arac_id]) next[r.arac_id] = [];
-      next[r.arac_id].push({
+      // 2026-05-07l: Şoför basit-mod fiş bildirimleri arac_id boş gelir
+      // (operasyon onaylarken atayacak). Liste'de "atanmamış" kovasında dursun.
+      const aracKey = r.arac_id || '_atanmamis_';
+      if (!next[aracKey]) next[aracKey] = [];
+      next[aracKey].push({
         id        : r.id,
         tarih     : r.tarih,
         km        : r.km,
@@ -1584,7 +1587,15 @@ async function loadFuelData() {
         odemeTipi : r.odeme_tipi || '',
         fisNo     : r.fis_no || '',
         litreFiyat: r.litre_fiyat || (r.litre > 0 ? +(((r.fiyat||0)/r.litre).toFixed(2)) : 0),
-        anomaliFlag: r.anomali_flag || ''
+        anomaliFlag: r.anomali_flag || '',
+        // 2026-05-07l: şoför bildirimi onay akışı alanları
+        durum         : r.durum || 'onayli',
+        fisUrl        : r.fis_url || '',
+        fotoKadranUrl : r.foto_kadran_url || '',
+        soforUserId   : r.sofor_user_id || null,
+        isEmriId      : r.is_emri_id || null,
+        onayAt        : r.onay_at || null,
+        redNeden      : r.red_neden || ''
       });
     });
     // Güvenlik kapısı: cloud boş döndüyse ve local'de veri varsa
@@ -1599,11 +1610,396 @@ async function loadFuelData() {
     fuelData = next;
     saveFuelDataLocal();
     fuelLoaded = true;
+    // 2026-05-07l: Onay bekleyen şoför bildirimleri panel'i — yakıt modalı açıkken
+    // her veri yenilenmesinde güncellenir.
+    try { renderFuelPendingPanel(); } catch (_) { /* sessiz */ }
   } catch (err) {
     console.error('Yakıt verisi yüklenemedi:', err);
     fuelLoaded = true; // lokali kullan
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * ŞOFÖR YAKIT FİŞ BİLDİRİMİ — ONAY AKIŞI (2026-05-07l)
+ * ─────────────────────────────────────────────────────────────────────────
+ * Şoför mobil uygulamasından sadece 2 foto + opsiyonel not gönderir
+ * (durum='beklemede'). Operasyon burada inline mini-form ile araç + km +
+ * litre + tutar girer ve onaylar (durum='onayli'). Onaylanan kayıt yakıt
+ * cache + sefer chart hesaplamalarına otomatik dahil olur.
+ */
+function renderFuelPendingPanel() {
+  const panel = document.getElementById('fuel-pending-panel');
+  const list  = document.getElementById('fuel-pending-list');
+  const cntEl = document.getElementById('fuel-pending-count');
+  // Tüm araç kovalarını birleştir, durum='beklemede' olanları al
+  const tum = Object.values(fuelData || {}).flat();
+  const bekleyen = tum.filter(e => e && e.durum === 'beklemede');
+
+  // Ana sayfa stat kartı uyarı badge'i (yakit-stat-card içindeki fuel-pending-warn)
+  // — yakıt modalı açık olmasa bile dashboard'da görünür.
+  try {
+    const warnEl    = document.getElementById('fuel-pending-warn');
+    const warnCntEl = document.getElementById('fuel-pending-warn-count');
+    if (warnEl) {
+      if (bekleyen.length > 0) {
+        warnEl.style.display = '';
+        if (warnCntEl) warnCntEl.textContent = String(bekleyen.length);
+      } else {
+        warnEl.style.display = 'none';
+      }
+    }
+  } catch (_) { /* sessiz */ }
+
+  if (!panel || !list) return;
+  if (bekleyen.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+  if (cntEl) cntEl.textContent = bekleyen.length;
+  // En yeniler önce
+  bekleyen.sort((a, b) => String(b.tarih || '').localeCompare(String(a.tarih || '')));
+  list.innerHTML = bekleyen.map(_renderFuelPendingItem).join('');
+}
+
+function _renderFuelPendingItem(e) {
+  // Foto link'leri — lightbox açar (yeni sekme yerine inline büyük görüntüleme)
+  const fotoBtn = (url, label, ico) => url
+    ? `<button type="button" onclick="openFuelFotoLightbox('${url.replace(/'/g, "\\'")}', '${label}')"
+                style="display:inline-flex;align-items:center;gap:4px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.35);color:var(--purple);font-size:11px;font-weight:600;padding:3px 9px;border-radius:5px;cursor:pointer;font-family:inherit;">${ico} ${label}</button>`
+    : `<span style="font-size:11px;color:var(--text-muted);">${ico} ${label} yok</span>`;
+  const fis    = fotoBtn(e.fisUrl,        'Fiş',    '📄');
+  const kadran = fotoBtn(e.fotoKadranUrl, 'Kadran', '🚗');
+
+  // 2026-05-07l: Araç dropdown'unda DEFAULT seçim — bildirimin bağlı olduğu iş
+  // emrinin cekici_id'si (varsa) otomatik seçili. Operasyon plaka aramasın.
+  let defaultAracId = '';
+  if (e.isEmriId && typeof isEmirleri !== 'undefined') {
+    const isEmir = isEmirleri.find(ie => Number(ie._dbId ?? ie.id) === Number(e.isEmriId));
+    if (isEmir) {
+      if (isEmir.cekici_id) {
+        defaultAracId = isEmir.cekici_id;
+      } else if (isEmir.arac_plaka && typeof vehicles !== 'undefined') {
+        // Eski iş emirleri cekici_id'siz olabilir — plakayla eşleştir
+        const v = vehicles.find(v => v.plaka === isEmir.arac_plaka);
+        if (v) defaultAracId = v.id;
+      }
+    }
+  }
+
+  // Araç dropdown — vehicles global'inden plakalar (default seçili olan ile)
+  const aracOpts = (typeof vehicles !== 'undefined' ? vehicles : [])
+    .filter(v => (v.kind || 'cekici') === 'cekici' || v.kind === 'tek_parca')
+    .map(v => `<option value="${v.id}"${v.id === defaultAracId ? ' selected' : ''}>${v.plaka}</option>`).join('');
+
+  const safe = (s) => String(s || '').replace(/"/g, '&quot;');
+  const notHtml = e.not
+    ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;font-style:italic;">📝 "${safe(e.not)}"</div>`
+    : '';
+  const isEmriHtml = e.isEmriId
+    ? `<span style="display:inline-block;background:rgba(167,139,250,.12);color:var(--purple);font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;">📦 #${e.isEmriId}</span>`
+    : '';
+
+  return `
+  <div data-pending-id="${e.id}" style="border-bottom:1px solid rgba(245,158,11,.20);padding:10px 0;">
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:12px;">
+      <span style="color:var(--text-muted);">📅 ${e.tarih || '—'}</span>
+      <span>👤 <b>${safe(e.sofor) || 'Şoför'}</b></span>
+      ${isEmriHtml}
+      ${fis}
+      ${kadran}
+    </div>
+    ${notHtml}
+    <div style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap;">
+      <select id="pf-arac-${e.id}" class="fuel-inp" style="width:140px;font-size:11px;padding:4px 6px;">
+        <option value="">— Araç seç * —</option>
+        ${aracOpts}
+      </select>
+      <input type="number" id="pf-km-${e.id}"    placeholder="km *"    class="fuel-inp" style="width:90px;font-size:11px;padding:4px 6px;" min="0" />
+      <input type="number" id="pf-litre-${e.id}" placeholder="litre *" class="fuel-inp" style="width:80px;font-size:11px;padding:4px 6px;" step="0.01" min="0" />
+      <input type="number" id="pf-fiyat-${e.id}" placeholder="tutar ₺ *" class="fuel-inp" style="width:90px;font-size:11px;padding:4px 6px;" step="0.01" min="0" />
+      ${e.fisUrl ? `<button data-ocr-btn="${e.id}" onclick="runOcrOnFuelBildirimi('${e.id}','${e.fisUrl.replace(/'/g, "\\'")}')"
+              style="background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.35);color:#0284c7;border-radius:5px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;"
+              title="Fiş foto'sundan litre/tutar otomatik doldur (Tesseract.js OCR)">
+        🔍 OCR ile Doldur
+      </button>` : ''}
+      <button onclick="approveFuelBildirimi('${e.id}')"
+              style="background:#22c55e;color:#fff;border:none;border-radius:5px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;">
+        ✓ Onayla
+      </button>
+      <button onclick="rejectFuelBildirimi('${e.id}')"
+              style="background:transparent;color:#ef4444;border:1px solid rgba(239,68,68,.35);border-radius:5px;padding:6px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">
+        ✕ Reddet
+      </button>
+    </div>
+  </div>`;
+}
+
+/** Şoför yakıt bildirimini onayla — detay alanlarını DB'ye yaz, durum='onayli'. */
+async function approveFuelBildirimi(bildirimId) {
+  const aracEl  = document.getElementById('pf-arac-'  + bildirimId);
+  const kmEl    = document.getElementById('pf-km-'    + bildirimId);
+  const litreEl = document.getElementById('pf-litre-' + bildirimId);
+  const fiyatEl = document.getElementById('pf-fiyat-' + bildirimId);
+  const aracId  = aracEl?.value || '';
+  const km      = parseFloat(kmEl?.value);
+  const litre   = parseFloat(litreEl?.value);
+  const fiyat   = parseFloat(fiyatEl?.value);
+
+  if (!aracId) { showToast('Araç seçin', 'error'); return; }
+  if (!isFinite(km) || km < 0)       { showToast('KM girin', 'error');    return; }
+  if (!isFinite(litre) || litre <= 0){ showToast('Litre girin', 'error'); return; }
+  if (!isFinite(fiyat) || fiyat < 0) { showToast('Tutar girin', 'error'); return; }
+
+  const litreFiyat = litre > 0 ? +(fiyat / litre).toFixed(2) : 0;
+  let userId = null;
+  try {
+    const { data: { user } } = await getSB().auth.getUser();
+    userId = user?.id || null;
+  } catch (_) {}
+
+  try {
+    const res = await fetch(sbUrl(`yakit_girisleri?id=eq.${bildirimId}`), {
+      method : 'PATCH',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body   : JSON.stringify({
+        arac_id     : aracId,
+        km          : km,
+        litre       : litre,
+        fiyat       : fiyat,
+        litre_fiyat : litreFiyat,
+        durum       : 'onayli',
+        onay_at     : new Date().toISOString(),
+        onay_user_id: userId
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    showToast('✓ Yakıt bildirimi onaylandı', 'success');
+    await loadFuelData();
+    if (typeof renderFuelTable === 'function') renderFuelTable();
+    if (typeof updateFuelStat === 'function') updateFuelStat();
+  } catch (err) {
+    console.error('Onay hatası:', err);
+    showToast('Onay başarısız: ' + (err?.message || 'hata'), 'error');
+  }
+}
+
+/** Şoför yakıt bildirimini reddet — sebep iste, durum='red'. */
+async function rejectFuelBildirimi(bildirimId) {
+  const neden = prompt('Reddetme nedeni (şoföre görünür):');
+  if (neden == null) return; // iptal
+  if (!neden.trim()) { showToast('Sebep girmelisiniz', 'error'); return; }
+  try {
+    const res = await fetch(sbUrl(`yakit_girisleri?id=eq.${bildirimId}`), {
+      method : 'PATCH',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body   : JSON.stringify({ durum: 'red', red_neden: neden.trim() })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    showToast('Bildirim reddedildi', 'success');
+    await loadFuelData();
+  } catch (err) {
+    console.error('Red hatası:', err);
+    showToast('Hata: ' + (err?.message || ''), 'error');
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * OCR — Yakıt fişi otomatik parse (Tesseract.js, lazy-load, 2026-05-07l)
+ * ─────────────────────────────────────────────────────────────────────────
+ * Tesseract.js'i CDN'den yalnızca ihtiyaç olduğunda yükler (~2-3 MB).
+ * Türkçe paketi ile fiş üzerindeki litre, tutar, fiş no'yu regex ile parse eder.
+ * %100 doğruluk hedefi yok — operasyon yine kontrol edip "Onayla" basacak.
+ */
+
+let _tesseractPromise = null;
+function _ensureTesseract() {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  if (_tesseractPromise) return _tesseractPromise;
+  _tesseractPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload  = () => resolve(window.Tesseract);
+    s.onerror = () => reject(new Error('Tesseract yüklenemedi'));
+    document.head.appendChild(s);
+  });
+  return _tesseractPromise;
+}
+
+/**
+ * Türk yakıt fişi metninden litre, tutar, fiş no, tarih, istasyon çıkar.
+ * Heuristik — fiş şablonları çok değişken, eksik alanlar null kalır.
+ *
+ * Tipik kalıplar:
+ *   "237.21 LT X"           → litre
+ *   "TOPLAM *17.069,63"     → tutar
+ *   "KDV *17.069,63"        → tutar fallback
+ *   "FİŞ NO:0155"           → fiş no
+ *   "30-04-2026" / "30/04"  → tarih
+ *   "PETROL OFİSİ" / "U. FORCE MOTORIN" → istasyon/marka (heuristik)
+ */
+function _parseFuelReceiptText(text) {
+  const out = { litre: null, tutar: null, fisNo: null, tarih: null, istasyon: null };
+  if (!text) return out;
+  const T = text.replace(/\s+/g, ' ');
+
+  // ── Litre — "237,21 LT" / "237.21 L" / "237 LT X"
+  let m = T.match(/(\d{1,4}[.,]\d{1,3})\s*(?:LT|L)(?:\s|X|\b)/i)
+       || T.match(/(\d{1,4}[.,]\d{1,3})\s*L[İI]TRE/i);
+  if (m) {
+    const v = parseFloat(m[1].replace(',', '.'));
+    if (isFinite(v) && v > 0 && v < 5000) out.litre = v;
+  }
+
+  // ── Tutar — "TOPLAM *17.069,63" veya "KDV *17.069,63"
+  // TR formatı: bin ayracı '.', ondalık ',' → "17.069,63" → 17069.63
+  const tutarRegex = /(?:TOPLAM|KDV(?:\s*L[İI])?)\s*[:*]?\s*(\d{1,3}(?:\.\d{3})*,\d{2})/i;
+  m = T.match(tutarRegex);
+  if (!m) {
+    // Fallback: tek "*XX.XXX,XX" pattern (yıldız+TR sayı)
+    m = T.match(/\*\s*(\d{1,3}(?:\.\d{3})*,\d{2})/);
+  }
+  if (m) {
+    const v = parseFloat(m[1].replace(/\./g, '').replace(',', '.'));
+    if (isFinite(v) && v > 0 && v < 1_000_000) out.tutar = v;
+  } else {
+    // Düz nokta-format fallback (US-style)
+    m = T.match(/TOPLAM\s*[:*]?\s*(\d{1,7}\.\d{2})/i);
+    if (m) {
+      const v = parseFloat(m[1]);
+      if (isFinite(v)) out.tutar = v;
+    }
+  }
+
+  // ── Fiş no — "FİŞ NO:0155" / "FIS NO:155" / "F.NO:155"
+  m = T.match(/F[İI][ŞS]\s*NO\s*[:#]?\s*(\d{1,10})/i)
+   || T.match(/F\.\s*NO\s*[:#]?\s*(\d{1,10})/i);
+  if (m) out.fisNo = m[1];
+
+  // ── Tarih — "30-04-2026" / "30.04.2026" / "30/04/2026"
+  m = T.match(/(\d{2})[\.\-\/](\d{2})[\.\-\/](\d{4})/);
+  if (m) out.tarih = `${m[3]}-${m[2]}-${m[1]}`;
+
+  // ── İstasyon — kaba heuristik: ilk satırlardaki büyük harfli marka adları
+  // (Petrol Ofisi, OPET, Shell, BP, TP, Aytemiz, Total)
+  const ist = T.match(/\b(PETROL\s*OF[İI][SŞ][İI]|OPET|SHELL|BP|TP|AYTEM[İI]Z|TOTAL|LUKO[İI]L|GULF)\b/i);
+  if (ist) out.istasyon = ist[1];
+
+  return out;
+}
+
+/**
+ * Bildirim foto URL'sinden OCR yap, inline form alanlarını doldur.
+ * Spinner için butonu disable eder, hata olursa toast.
+ */
+async function runOcrOnFuelBildirimi(bildirimId, fisUrl) {
+  if (!fisUrl) { showToast('Fiş foto URL bulunamadı', 'error'); return; }
+  const btn = document.querySelector(`[data-ocr-btn="${bildirimId}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ OCR…'; }
+  try {
+    const T = await _ensureTesseract();
+    // CORS: Supabase storage public path → cross-origin fetch OK (image yine de):
+    // Tesseract URL'i img element gibi yükler; cross-origin image OCR çalışır.
+    const { data: { text } } = await T.recognize(fisUrl, 'tur+eng', {
+      logger: m => { /* console.log('[OCR]', m.status, Math.round((m.progress||0)*100)+'%'); */ }
+    });
+    const parsed = _parseFuelReceiptText(text);
+
+    let dolanAlan = 0;
+    if (parsed.litre != null) {
+      const el = document.getElementById('pf-litre-' + bildirimId);
+      if (el && !el.value) { el.value = parsed.litre; dolanAlan++; }
+    }
+    if (parsed.tutar != null) {
+      const el = document.getElementById('pf-fiyat-' + bildirimId);
+      if (el && !el.value) { el.value = parsed.tutar; dolanAlan++; }
+    }
+    if (dolanAlan === 0) {
+      showToast('OCR sonuç buldu ama parse edemedi — alanları kendiniz girin', 'warning');
+    } else {
+      const detay = [];
+      if (parsed.litre) detay.push(`${parsed.litre} L`);
+      if (parsed.tutar) detay.push(`₺${parsed.tutar.toLocaleString('tr-TR')}`);
+      if (parsed.istasyon) detay.push(parsed.istasyon);
+      if (parsed.fisNo) detay.push(`Fiş #${parsed.fisNo}`);
+      showToast(`✓ OCR: ${detay.join(' · ')} — kontrol edip onaylayın`, 'success');
+    }
+  } catch (err) {
+    console.error('OCR hatası:', err);
+    showToast('OCR başarısız: ' + (err?.message || 'hata'), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '🔍 OCR ile Doldur'; }
+  }
+}
+
+window._ensureTesseract       = _ensureTesseract;
+window._parseFuelReceiptText  = _parseFuelReceiptText;
+window.runOcrOnFuelBildirimi  = runOcrOnFuelBildirimi;
+
+/**
+ * Foto lightbox (2026-05-07l UX) — yakıt fişi/kadran fotoğrafını yeni sekme
+ * açmadan ekranda büyük göster. Tıklama / Esc ile kapanır.
+ * Klavye ile kapatma için body'e listener ekler (modal kapanırken kaldırılır).
+ */
+function openFuelFotoLightbox(url, label) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = [
+    'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;',
+    'display:flex;flex-direction:column;align-items:center;justify-content:center;',
+    'cursor:zoom-out;animation:fadeIn .15s ease;'
+  ].join('');
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-label', label || 'Fotoğraf');
+
+  const close = () => {
+    document.removeEventListener('keydown', onKey);
+    try { overlay.remove(); } catch (_) {}
+  };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  overlay.onclick = (ev) => {
+    // Img'ye tıklayınca kapanmasın (sadece dış alan)
+    if (ev.target === overlay) close();
+  };
+
+  // Üst başlık + kapat
+  const header = document.createElement('div');
+  header.style.cssText = 'position:absolute;top:14px;left:14px;right:14px;display:flex;align-items:center;justify-content:space-between;color:#fff;font-family:inherit;';
+  header.innerHTML = `
+    <div style="font-size:14px;font-weight:600;color:#fff;">${label || 'Fotoğraf'}</div>
+    <button onclick="this.closest('[role=dialog]').remove()"
+            style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;font-family:inherit;line-height:1;">✕</button>
+  `;
+  // Kapat butonu için kendi handler'ımız (event listener'ı temizlesin)
+  const closeBtn = header.querySelector('button');
+  closeBtn.onclick = close;
+  overlay.appendChild(header);
+
+  const img = document.createElement('img');
+  img.src = url;
+  img.alt = label || '';
+  img.style.cssText = 'max-width:95vw;max-height:88vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6);cursor:default;';
+  img.onclick = (e) => e.stopPropagation();
+  overlay.appendChild(img);
+
+  // Yeni sekmede aç linki (kullanıcı isterse)
+  const openExt = document.createElement('a');
+  openExt.href = url;
+  openExt.target = '_blank';
+  openExt.rel = 'noopener';
+  openExt.textContent = '↗ Yeni sekmede aç';
+  openExt.style.cssText = 'position:absolute;bottom:14px;color:#fff;font-size:12px;text-decoration:underline;background:rgba(255,255,255,.1);padding:6px 12px;border-radius:5px;';
+  openExt.onclick = (e) => e.stopPropagation();
+  overlay.appendChild(openExt);
+
+  document.body.appendChild(overlay);
+}
+
+// Global expose — onclick handler'larından erişilebilir olmalı
+window.renderFuelPendingPanel  = renderFuelPendingPanel;
+window.approveFuelBildirimi    = approveFuelBildirimi;
+window.rejectFuelBildirimi     = rejectFuelBildirimi;
+window.openFuelFotoLightbox    = openFuelFotoLightbox;
 
 // ── Supabase: tek kayıt ekle / güncelle (gerçek upsert) ──
 // Dönüş: { ok: true } veya { ok: false, error: string }
@@ -8141,6 +8537,13 @@ async function loadSeferData() {
     console.warn('Seferler Supabase hatası, localStorage kullanılıyor:', err);
   }
   updateSeferStat();
+  // 2026-05-07: Ana sayfa "Son 30 Gün — Gelir/Maliyet/KM" grafiği seferData'dan
+  // beslenir; veri yüklendiğinde chart'ı yenile.
+  try {
+    if (window.UI && typeof window.UI.initRevenueChart === 'function') {
+      window.UI.initRevenueChart();
+    }
+  } catch (_) { /* sessiz */ }
 }
 
 async function saveSeferData() {
