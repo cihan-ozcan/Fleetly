@@ -23,18 +23,9 @@
   <!-- ── SOL PANEL ── -->
   <div class="left-panel">
 
-    <!-- Logo (index.html ile aynı SVG) -->
+    <!-- Logo (index.html ile aynı görsel — assets/img/logo2.png) -->
     <a href="index.html" class="brand">
-      <svg class="brand-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="18" cy="18" r="17" fill="rgba(232,82,26,.10)" stroke="rgba(232,82,26,.20)" stroke-width="1"/>
-        <rect x="7" y="14" width="12" height="8" rx="1.5" fill="#e8521a"/>
-        <rect x="19" y="16" width="8" height="6" rx="1.5" fill="#e8521a"/>
-        <rect x="20" y="17" width="5.5" height="3" rx=".5" fill="rgba(8,9,26,.6)"/>
-        <circle cx="11.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
-        <circle cx="22.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
-        <path d="M30 10 A13.5 13.5 0 1 0 30 27" stroke="#ff7340" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-        <polygon points="26.5,7 30.5,10.5 26.5,14" fill="#ff7340"/>
-      </svg>
+      <img class="brand-icon" src="assets/img/logo2.png" alt="" />
       <span class="brand-name">FLEETLY<span class="brand-fit">.fit</span></span>
     </a>
 
@@ -51,38 +42,45 @@
 
     <div class="feature-list">
       <div class="feature-item">
-        <div class="feature-icon orange">🚛</div>
+        <div class="feature-icon orange">📦</div>
         <div class="feature-text">
-          <strong>Araç & Filo Yönetimi</strong>
-          <span>Tüm araçları tek ekrandan takip edin</span>
+          <strong>Konteyner Operasyon Yönetimi</strong>
+          <span>Bekliyor → Yolda → Fabrikada → Teslim akışı</span>
         </div>
       </div>
       <div class="feature-item">
-        <div class="feature-icon orange">⛽</div>
+        <div class="feature-icon blue">📱</div>
         <div class="feature-text">
-          <strong>Yakıt Takibi & Tüketim Analizi</strong>
-          <span>L/100km hesapla, maliyetleri görüntüle</span>
+          <strong>Şoför Mobil Uygulaması</strong>
+          <span>Android, çevrimdışı sync, push bildirim, dijital imza</span>
         </div>
       </div>
       <div class="feature-item">
-        <div class="feature-icon blue">🔧</div>
+        <div class="feature-icon green">💰</div>
         <div class="feature-text">
-          <strong>Bakım & Arıza Yönetimi</strong>
-          <span>Periyodik bakım hatırlatmaları, arıza logları</span>
+          <strong>Harcırah Otomatik Hesabı</strong>
+          <span>Sabit tarife + bölge/il fallback + haftalık kapatma</span>
         </div>
       </div>
       <div class="feature-item">
-        <div class="feature-icon teal">🗺</div>
+        <div class="feature-icon teal">🧮</div>
         <div class="feature-text">
-          <strong>Sefer ve Masraf Takibi</strong>
-          <span>Gelir-gider dengesi, PDF/Excel raporları</span>
+          <strong>Akıllı Mesafe & Süre (OSRM)</strong>
+          <span>İş emrine gerçek karayolu km + tahmini harcırah</span>
         </div>
       </div>
       <div class="feature-item">
-        <div class="feature-icon green">📊</div>
+        <div class="feature-icon orange">📋</div>
         <div class="feature-text">
-          <strong>Gelişmiş Raporlama</strong>
-          <span>Aylık ve yıllık performans analizleri</span>
+          <strong>Dijital Teslim Makbuzu (POD)</strong>
+          <span>Mobil imza, müşteriye otomatik PDF e-postası</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon blue">🔔</div>
+        <div class="feature-text">
+          <strong>Akıllı Bildirim Sistemi</strong>
+          <span>Yeni iş, durum, masraf, harcırah itirazı — anında push</span>
         </div>
       </div>
     </div>
@@ -100,16 +98,7 @@
       <!-- Mobile-only brand header (left panel hidden on small screens) -->
       <div style="display:none; justify-content:center; margin-bottom:28px;" class="mobile-brand-header">
         <a href="index.html" class="brand" style="margin-bottom:0; text-decoration:none;">
-          <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="18" cy="18" r="17" fill="rgba(232,82,26,.10)" stroke="rgba(232,82,26,.20)" stroke-width="1"/>
-            <rect x="7" y="14" width="12" height="8" rx="1.5" fill="#e8521a"/>
-            <rect x="19" y="16" width="8" height="6" rx="1.5" fill="#e8521a"/>
-            <rect x="20" y="17" width="5.5" height="3" rx=".5" fill="rgba(8,9,26,.6)"/>
-            <circle cx="11.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
-            <circle cx="22.5" cy="24" r="2.5" fill="#08091a" stroke="#e8521a" stroke-width="1.5"/>
-            <path d="M30 10 A13.5 13.5 0 1 0 30 27" stroke="#ff7340" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-            <polygon points="26.5,7 30.5,10.5 26.5,14" fill="#ff7340"/>
-          </svg>
+          <img src="assets/img/logo2.png" alt="" style="width:38px; height:32px; object-fit:contain; flex:none;" />
           <span class="brand-name" style="font-size:20px;">FLEETLY<span class="brand-fit">.fit</span></span>
         </a>
       </div>
@@ -258,7 +247,7 @@
             E-posta adresinize bir doğrulama mesajı gönderdik.<br>
             Uygulamaya giriş yapabilirsiniz.
           </p>
-          <button class="btn-cta" onclick="window.location.href='index.html'">
+          <button class="btn-cta" onclick="window.location.href='app.html'">
             Uygulamaya Git
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
