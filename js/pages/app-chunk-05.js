@@ -3370,6 +3370,26 @@ function parseKonumUrl(url) {
 }
 
 /* Konum link girişine yazınca anında ✓ / ⚠ badge'i göster */
+/* Maps kısa linkini (maps.app.goo.gl/...) backend'de çöz → input'u uzun URL ile
+   replace et → preview'i tekrar tetikle. Kullanıcı arada input'u değiştirirse
+   override etme (race-condition guard).  */
+async function _opsResolveShortLinkInto(inputEl, previewId, originalVal) {
+  if (!window.OsrmHelper || typeof window.OsrmHelper.resolveShortUrl !== 'function') return;
+  const longUrl = await window.OsrmHelper.resolveShortUrl(originalVal);
+  if (!inputEl || inputEl.value.trim() !== originalVal) return;
+  const badge = document.getElementById(previewId);
+  if (!longUrl) {
+    if (badge) {
+      badge.textContent = '🔗 Çözülemedi';
+      badge.style.cssText = 'display:inline-block;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:5px;font-size:10px;font-weight:700;padding:2px 7px;';
+    }
+    return;
+  }
+  inputEl.value = longUrl;
+  // Recursive — yeni uzun URL ile preview ve OSRM badge'i yenile
+  opsKonumLinkPreview(inputEl, previewId);
+}
+
 function opsKonumLinkPreview(inputEl, previewId) {
   const val = inputEl.value.trim();
   const badge = document.getElementById(previewId);
@@ -3380,8 +3400,10 @@ function opsKonumLinkPreview(inputEl, previewId) {
     badge.textContent = '⚠ Okunamadı';
     badge.style.cssText = 'display:inline-block;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:5px;font-size:10px;font-weight:700;padding:2px 7px;';
   } else if (parsed._shortLink) {
-    badge.textContent = '🔗 Kısa link';
+    badge.textContent = '🔗 Çözümleniyor…';
     badge.style.cssText = 'display:inline-block;background:rgba(234,179,8,.15);color:#eab308;border:1px solid rgba(234,179,8,.3);border-radius:5px;font-size:10px;font-weight:700;padding:2px 7px;';
+    // pg_net RPC ile kısa linki backend'de çöz → uzun URL'i input'a yaz → preview'i tekrar tetikle
+    _opsResolveShortLinkInto(inputEl, previewId, val);
   } else if (parsed._w3w) {
     badge.textContent = '///w3w';
     badge.style.cssText = 'display:inline-block;background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);border-radius:5px;font-size:10px;font-weight:700;padding:2px 7px;';

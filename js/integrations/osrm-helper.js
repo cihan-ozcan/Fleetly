@@ -228,10 +228,36 @@
     try { localStorage.removeItem(CACHE_KEY); } catch {}
   }
 
+  // ──────────────────────────────────────────────────────────────────
+  // Maps kısa link çözümleyici — Supabase RPC (pg_net üzerinden).
+  // CORS sebebiyle tarayıcıdan direkt yapılamıyor.
+  // ──────────────────────────────────────────────────────────────────
+  async function resolveShortUrl(url) {
+    if (!url || typeof url !== 'string') return null;
+    if (!window.sbUrl || !window.sbHeaders) return null;
+    try {
+      const res = await _fetchTimeout(window.sbUrl('rpc/resolve_short_url'), {
+        method: 'POST',
+        headers: { ...window.sbHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_url: url })
+      }, 6000);
+      if (!res.ok) return null;
+      const data = await res.json();
+      // PostgREST scalar return → string veya null
+      return typeof data === 'string' && data ? data : null;
+    } catch (e) {
+      if (window.CFG && window.CFG.DEBUG) {
+        console.warn('[OsrmHelper] resolveShortUrl hata:', e.message);
+      }
+      return null;
+    }
+  }
+
   window.OsrmHelper = {
     route,
     geocode,
     reverseGeocode,
+    resolveShortUrl,
     haversine,
     formatSure,
     formatKm,
