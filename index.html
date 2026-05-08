@@ -235,11 +235,13 @@ p { margin: 0; text-wrap: pretty; }
 }
 .nav__hamburger svg { width: 20px; height: 20px; }
 
-/* Logo SVG truck icon */
+/* Logo truck icon (img — assets/img/logo2.png) */
 .logo-truck {
-  width: 36px;
+  width: 44px;
   height: 36px;
   flex: none;
+  object-fit: contain;
+  display: block;
 }
 
 /* mobile */
@@ -1324,24 +1326,8 @@ p { margin: 0; text-wrap: pretty; }
 <header class="nav" id="nav">
   <div class="container nav__inner">
     <a href="#" class="nav__logo" aria-label="Fleetly.fit ana sayfa">
-      <!-- Logo: orange truck icon + wordmark -->
-      <svg class="logo-truck" viewBox="0 0 64 64" aria-hidden="true">
-        <g fill="#FF6B1F">
-          <!-- speed lines -->
-          <path d="M2 16 H22 L26 12 H30 L26 16 H22" />
-          <path d="M4 22 H18" />
-          <path d="M2 28 H14" />
-          <!-- truck body -->
-          <path d="M10 32 L10 50 L18 50 A6 6 0 0 1 30 50 L36 50 L36 38 L42 38 L48 44 L48 50 A6 6 0 0 1 60 50 L62 50 L62 36 L54 28 L36 28 L36 32 Z" />
-          <!-- truck cabin window -->
-          <path d="M40 32 L52 32 L56 38 L40 38 Z" fill="#0B1A2F" />
-        </g>
-        <!-- wheels -->
-        <circle cx="24" cy="50" r="4" fill="#0B1A2F" />
-        <circle cx="54" cy="50" r="4" fill="#0B1A2F" />
-        <circle cx="24" cy="50" r="1.5" fill="#FF6B1F" />
-        <circle cx="54" cy="50" r="1.5" fill="#FF6B1F" />
-      </svg>
+      <!-- Logo: turuncu kamyon ikonu (assets/img/logo2.png) + CSS wordmark -->
+      <img src="assets/img/logo2.png" alt="" class="logo-truck" />
       <span class="nav__logo-wordmark">Fleetly<span class="nav__logo-fit">.fit</span></span>
     </a>
 
@@ -1356,8 +1342,8 @@ p { margin: 0; text-wrap: pretty; }
     </nav>
 
     <div class="nav__cta">
-      <a href="#" class="nav__login">Giriş Yap</a>
-      <a href="#cta" class="btn btn--primary">Demo Talep Et</a>
+      <a href="app.html" class="nav__login">Giriş Yap</a>
+      <a href="register.html" class="btn btn--primary">Ücretsiz Dene</a>
       <button class="nav__hamburger" id="hamburger" aria-label="Menüyü aç" aria-expanded="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
@@ -1371,9 +1357,9 @@ p { margin: 0; text-wrap: pretty; }
       <li><a href="#pricing">Fiyatlandırma</a></li>
       <li><a href="#faq">SSS</a></li>
       <li><a href="#contact">İletişim</a></li>
-      <li><a href="#" style="margin-top:8px; font-weight:600;">Giriş Yap</a></li>
+      <li><a href="app.html" style="margin-top:8px; font-weight:600;">Giriş Yap</a></li>
     </ul>
-    <a href="#cta" class="btn btn--primary" style="width:100%; justify-content:center;">Demo Talep Et</a>
+    <a href="register.html" class="btn btn--primary" style="width:100%; justify-content:center;">Ücretsiz Dene</a>
   </div>
 </header>
 
@@ -1389,10 +1375,10 @@ p { margin: 0; text-wrap: pretty; }
       <h1 class="hero__title">Filonuzun beyni. <br/><span class="accent">Cebinizdeki</span> operasyon müdürü.</h1>
       <p class="hero__sub">Şoförden müşteriye, yakıt fişinden teslim makbuzuna — tek panelde. Excel ve WhatsApp karmaşası bitsin, operasyon tek panelden yürüsün.</p>
       <div class="hero__ctas">
-        <a href="#cta" class="btn btn--primary btn--lg">🚀 Ücretsiz Dene</a>
-        <a href="#" class="btn btn--ghost btn--lg">
+        <a href="register.html" class="btn btn--primary btn--lg">🚀 Ücretsiz Dene</a>
+        <a href="#features" class="btn btn--ghost btn--lg">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          90 saniyelik turu izle
+          Özellikleri keşfet
         </a>
       </div>
       <div class="hero__proof">
@@ -1458,22 +1444,6 @@ p { margin: 0; text-wrap: pretty; }
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- =========================================================
-     TRUST BAR
-     ========================================================= -->
-<section class="trust" aria-label="Müşteri logoları">
-  <div class="container">
-    <p class="trust__title">Türkiye'nin önde gelen lojistik firmaları kullanıyor</p>
-    <div class="trust__row">
-      <div class="trust__logo">ANADOLU LOJ.</div>
-      <div class="trust__logo">MARMARA TRANS</div>
-      <div class="trust__logo">EGE KARGO</div>
-      <div class="trust__logo">DENİZ FİLO</div>
-      <div class="trust__logo">KONTEYNER A.Ş.</div>
     </div>
   </div>
 </section>
@@ -1601,9 +1571,105 @@ p { margin: 0; text-wrap: pretty; }
         <ul class="feature-card__list">
           <li>Davet kodu + PIN ile gerçek kullanıcı</li>
           <li>Çevrimdışıyken çekilen imza/foto sonra senkron</li>
-          <li>Push: yeni iş emri, "neredesin?" sorgusu</li>
+          <li>Push: yeni iş emri, durum, "neredesin?" sorgusu</li>
         </ul>
-        <a href="#" class="feature-card__link">Detaylı gör →</a>
+        <a href="#features" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">💰</div>
+        <h3>Harcırah & Hak Ediş Yönetimi</h3>
+        <p class="feature-card__desc">Sabit tarife, bölge/il bazlı otomatik hesap, haftalık özet.</p>
+        <ul class="feature-card__list">
+          <li>İş emri açılır açılmaz harcırah otomatik üretilir</li>
+          <li>Uzak il fallback: bölge × km tarife + kademe + konaklama</li>
+          <li>Şoför mobilden onay/itiraz, yönetici PDF arşiv</li>
+        </ul>
+        <a href="#features" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">🧮</div>
+        <h3>Akıllı Mesafe & Süre Hesabı (OSRM)</h3>
+        <p class="feature-card__desc">İş emri açılırken gerçek karayolu km, süre ve tahmini harcırah anında.</p>
+        <ul class="feature-card__list">
+          <li>Adresten Nominatim ile koordinat + reverse geocode</li>
+          <li>OSRM ile gerçek karayolu km/süre — pazarlığı veriyle yap</li>
+          <li>Standalone hesaplayıcı: "İş emri aç" / "İl tarifesine ekle"</li>
+        </ul>
+        <a href="#features" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">⏱</div>
+        <h3>Fabrika Bekleme Takibi</h3>
+        <p class="feature-card__desc">Şoför fabrikaya girer, sayaç başlar; eşik aşılınca müşteri ücreti otomatik tahakkuk.</p>
+        <ul class="feature-card__list">
+          <li>Geofence ile fabrika giriş/çıkış otomatik tespit</li>
+          <li>Müşteri ücreti & şoför bekleme harcırahı ayrı eşikler</li>
+          <li>Faturalanabilir bekleme dakikası — itiraz edilemez kanıtla</li>
+        </ul>
+        <a href="#features" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">🗺</div>
+        <h3>Limanlar & Yoğunluk Haritası</h3>
+        <p class="feature-card__desc">Limanların gerçek yoğunluğunu polygon öğrenmesiyle çıkarır.</p>
+        <ul class="feature-card__list">
+          <li>Sürücü ziyaretlerinden polygon otomatik genişler</li>
+          <li>Anonim agregat: rakip data sızdırmadan yoğunluk gösterimi</li>
+          <li>"Şu an Ambarlı'da kaç araç var" — gerçek zamanlı</li>
+        </ul>
+        <a href="#features" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">👁</div>
+        <h3>Müşteri Takip Portalı</h3>
+        <p class="feature-card__desc">Müşteri linkle giriyor, kendi yükünü canlı izliyor — sizi telefonla aramıyor.</p>
+        <ul class="feature-card__list">
+          <li>Tek tıkla paylaşılan link (login gerekmez)</li>
+          <li>Canlı konum + ETA + durum şeridi</li>
+          <li>Müşteri portalı bittiğinde POD otomatik e-posta</li>
+        </ul>
+        <a href="#features" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">🔔</div>
+        <h3>Akıllı Bildirim Sistemi</h3>
+        <p class="feature-card__desc">FCM push + bildirim merkezi — "kaçırdım" mazereti yok.</p>
+        <ul class="feature-card__list">
+          <li>Yeni iş emri, foto, masraf, harcırah itirazı, yakıt fişi</li>
+          <li>Yönetici/operasyoncu/sahip ayrı abonelikler</li>
+          <li>Bildirim merkezi: okundu/okunmadı, filtre, arşiv</li>
+        </ul>
+        <a href="#features" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">🚛</div>
+        <h3>Çoklu Konteyner & Seri İş Emri</h3>
+        <p class="feature-card__desc">Aynı sevkiyatta birden fazla araç, aynı talepte birden fazla gün.</p>
+        <ul class="feature-card__list">
+          <li>Tek formdan N konteyner / N şoför ataması (grup_id)</li>
+          <li>Talep grup numarası: aynı müşteri için seri sevkiyat</li>
+          <li>Planlanan alım & teslim saatleri ayrı ayrı</li>
+        </ul>
+        <a href="#features" class="feature-card__link">Detaylı gör →</a>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="feature-card__icon">🛡</div>
+        <h3>Multi-Tenant Güvenlik</h3>
+        <p class="feature-card__desc">Her firma kendi verisini görür — DB seviyesinde RLS izolasyon.</p>
+        <ul class="feature-card__list">
+          <li>Row-Level Security: yetki olmayan satır SELECT bile edilemez</li>
+          <li>Davet sistemi: rol bazlı (yönetici / operasyoncu / sürücü)</li>
+          <li>Audit izi: kim ne zaman ne yaptı — geriye dönük</li>
+        </ul>
+        <a href="#features" class="feature-card__link">Detaylı gör →</a>
       </article>
 
     </div>
@@ -1861,7 +1927,7 @@ p { margin: 0; text-wrap: pretty; }
           <li><span class="check">✓</span>Dijital POD (10/ay)</li>
           <li><span class="check">✓</span>E-posta destek</li>
         </ul>
-        <a href="#cta" class="btn btn--ghost">Ücretsiz Dene</a>
+        <a href="register.html" class="btn btn--ghost">Ücretsiz Dene</a>
       </div>
 
       <div class="plan plan--featured">
@@ -1880,7 +1946,7 @@ p { margin: 0; text-wrap: pretty; }
           <li><span class="check">✓</span>Aylık PDF Yönetici Raporu</li>
           <li><span class="check">✓</span>Telefon + e-posta destek</li>
         </ul>
-        <a href="#cta" class="btn btn--primary">Hemen Başla</a>
+        <a href="register.html" class="btn btn--primary">Hemen Başla</a>
       </div>
 
       <div class="plan">
@@ -1989,7 +2055,7 @@ p { margin: 0; text-wrap: pretty; }
   <div class="container reveal">
     <h2>Filonuzu 7 gün boyunca ücretsiz deneyin.</h2>
     <p>Kredi kartı gerekmez. Tüm modüller açık. 15 dakikada kurulum.</p>
-    <a href="#" class="btn btn--white btn--lg">🚀 Hemen Başla</a>
+    <a href="register.html" class="btn btn--white btn--lg">🚀 Hemen Başla</a>
   </div>
 </section>
 
@@ -2002,7 +2068,7 @@ p { margin: 0; text-wrap: pretty; }
   <div class="container">
     <div class="footer__top">
       <div class="footer__brand">
-        <img src="logo-dark.jpg" alt="Fleetly.fit" loading="lazy" />
+        <img src="logo.jpg" alt="Fleetly.fit" loading="lazy" />
         <p>Konteyner taşımacılığı yapan filolar için uçtan uca operasyon yönetim sistemi. Türkiye'de geliştirildi, Türkçe destek.</p>
         <p class="footer__credit">© 2026 Fleetly.fit · created by cihanozcan</p>
       </div>
