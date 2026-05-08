@@ -1795,18 +1795,19 @@ async function approveFuelBildirimi(bildirimId) {
 
   const litreFiyat = litre > 0 ? +(fiyat / litre).toFixed(2) : 0;
 
-  // userId — getUser() yerine getSession() kullan (cache'li, asla askıda kalmaz).
-  // getUser() Supabase Auth API'sine HTTP atar; ağ aksaklığında await sonsuza
-  // kadar bekleyebilir → onayla "tepki vermiyor" sebebi.
+  // userId — Supabase auth çağrılarını ASLA kullanma (getUser/getSession ikisi de
+  // bazı tarayıcı/storage durumlarında askıda kalıyor → buton sonsuza kadar
+  // "Onaylanıyor..." kalıyor). Bunun yerine elimizdeki JWT'yi (_authToken) direkt
+  // decode et — sub claim = user_id. Bu sync, hızlı, askıda kalmaz.
   let userId = null;
   try {
-    const sb = getSB();
-    if (sb) {
-      const { data: { session } } = await sb.auth.getSession();
-      userId = session?.user?.id || null;
+    const tok = (typeof _authToken !== 'undefined' && _authToken) || null;
+    if (tok && tok.split('.').length === 3) {
+      const payload = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      userId = payload?.sub || null;
     }
   } catch (e) {
-    console.warn('[approve] session alınamadı, userId NULL ile devam:', e?.message);
+    console.warn('[approve] JWT decode başarısız, userId NULL ile devam:', e?.message);
   }
   console.log('[approve] userId:', userId, '— PATCH atılıyor');
 
@@ -1829,7 +1830,21 @@ async function approveFuelBildirimi(bildirimId) {
     console.log('[approve] başarılı:', bildirimId);
     if (typeof showToast === 'function') showToast('✓ Yakıt bildirimi onaylandı', 'success');
     await loadFuelData();
-    if (typeof renderFuelTable === 'function') renderFuelTable();
+    // Yakıt geçmişi tablosu — gerçek fonksiyon adı renderFuelModal (renderFuelTable yok).
+    // Modal açıksa entries listesini yeniler. Eğer kullanıcı seçili araç != onayladığı
+    // araçsa, doğru aracı göstermesi için activeFuelVehicleId'yi de güncellemeyi dener.
+    try {
+      if (typeof activeFuelVehicleId !== 'undefined' && aracId && activeFuelVehicleId !== aracId) {
+        // Onaylanan araç şu an seçili aracın değil — kullanıcıya görünür olsun diye
+        // seçimi onayladığı araca çevir (modal açıksa)
+        if (typeof selectFuelVehicle === 'function') {
+          selectFuelVehicle(aracId);
+        } else {
+          activeFuelVehicleId = aracId;
+        }
+      }
+      if (typeof renderFuelModal === 'function') renderFuelModal();
+    } catch (e) { console.warn('[approve] modal render uyarısı:', e?.message); }
     if (typeof updateFuelStat === 'function') updateFuelStat();
   } catch (err) {
     console.error('[approve] hata:', err);
