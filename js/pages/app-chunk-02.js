@@ -1732,24 +1732,47 @@ function _renderFuelPendingItem(e) {
         ✕ Reddet
       </button>
     </div>
+    <div id="pf-err-${e.id}"
+         style="display:none;margin-top:6px;font-size:11px;color:#ef4444;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:5px;padding:5px 8px;">
+    </div>
   </div>`;
 }
 
 /** Şoför yakıt bildirimini onayla — detay alanlarını DB'ye yaz, durum='onayli'. */
 async function approveFuelBildirimi(bildirimId) {
+  console.log('[approve] başlıyor — bildirimId:', bildirimId);
   const aracEl  = document.getElementById('pf-arac-'  + bildirimId);
   const kmEl    = document.getElementById('pf-km-'    + bildirimId);
   const litreEl = document.getElementById('pf-litre-' + bildirimId);
   const fiyatEl = document.getElementById('pf-fiyat-' + bildirimId);
+  const errEl   = document.getElementById('pf-err-'   + bildirimId);
   const aracId  = aracEl?.value || '';
   const km      = parseFloat(kmEl?.value);
   const litre   = parseFloat(litreEl?.value);
   const fiyat   = parseFloat(fiyatEl?.value);
 
-  if (!aracId) { showToast('Araç seçin', 'error'); return; }
-  if (!isFinite(km) || km < 0)       { showToast('KM girin', 'error');    return; }
-  if (!isFinite(litre) || litre <= 0){ showToast('Litre girin', 'error'); return; }
-  if (!isFinite(fiyat) || fiyat < 0) { showToast('Tutar girin', 'error'); return; }
+  // Görünür hata gösterimi — toast + inline border + #pf-err-* satırı (toast bazen
+  // diğer modaller altında kalıyor; inline her durumda görünür)
+  const setErr = (msg, focusEl) => {
+    if (errEl) {
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+    }
+    if (focusEl) {
+      focusEl.style.borderColor = '#ef4444';
+      focusEl.focus();
+    }
+    if (typeof showToast === 'function') showToast(msg, 'error');
+    console.warn('[approve] validation engelledi:', msg);
+  };
+  // Validation öncesi tüm border'ları sıfırla
+  [aracEl, kmEl, litreEl, fiyatEl].forEach(el => { if (el) el.style.borderColor = ''; });
+  if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+
+  if (!aracId)                          return setErr('Araç seçin', aracEl);
+  if (!isFinite(km) || km < 0)          return setErr('KM girin (sayı, ≥0)', kmEl);
+  if (!isFinite(litre) || litre <= 0)   return setErr('Litre girin (sayı, >0)', litreEl);
+  if (!isFinite(fiyat) || fiyat < 0)    return setErr('Tutar girin (sayı, ≥0)', fiyatEl);
 
   const litreFiyat = litre > 0 ? +(fiyat / litre).toFixed(2) : 0;
   let userId = null;
@@ -1774,13 +1797,14 @@ async function approveFuelBildirimi(bildirimId) {
       })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    showToast('✓ Yakıt bildirimi onaylandı', 'success');
+    console.log('[approve] başarılı:', bildirimId);
+    if (typeof showToast === 'function') showToast('✓ Yakıt bildirimi onaylandı', 'success');
     await loadFuelData();
     if (typeof renderFuelTable === 'function') renderFuelTable();
     if (typeof updateFuelStat === 'function') updateFuelStat();
   } catch (err) {
-    console.error('Onay hatası:', err);
-    showToast('Onay başarısız: ' + (err?.message || 'hata'), 'error');
+    console.error('[approve] hata:', err);
+    setErr('Onay başarısız: ' + (err?.message || 'hata'), null);
   }
 }
 
@@ -1841,48 +1865,60 @@ function _ensureTesseract() {
 function _parseFuelReceiptText(text) {
   const out = { litre: null, tutar: null, fisNo: null, tarih: null, istasyon: null };
   if (!text) return out;
-  const T = text.replace(/\s+/g, ' ');
+  // Tesseract bazen Ş→S, İ→I, ç→c yapıyor; satır sonlarını koru ama çok boşluğu sıkıştır
+  const T = text.replace(/[ \t]+/g, ' ').replace(/[|]/g, ' ');
+  const Tflat = T.replace(/\n/g, ' ');
 
-  // ── Litre — "237,21 LT" / "237.21 L" / "237 LT X"
-  let m = T.match(/(\d{1,4}[.,]\d{1,3})\s*(?:LT|L)(?:\s|X|\b)/i)
-       || T.match(/(\d{1,4}[.,]\d{1,3})\s*L[İI]TRE/i);
+  // ── Litre — geniş yelpaze:
+  //   "237,21 LT" / "237.21 L" / "237 LT X" / "MIKTAR 237,21" / "237,21 X"
+  //   Tesseract bazen "lt" yerine "It" / "Il" çıkarır
+  let m = Tflat.match(/(\d{1,4}[.,]\d{1,3})\s*(?:LT|L|LİT|LIT|LITRE|İLT|It|Il)\b/i)
+       || Tflat.match(/M[İI]KTAR\s*[:*]?\s*(\d{1,4}[.,]\d{1,3})/i)
+       || Tflat.match(/(?:^|\s)(\d{2,4}[.,]\d{2})\s*X(?:\s|$)/i);  // "237,21 X 71,99"
   if (m) {
     const v = parseFloat(m[1].replace(',', '.'));
     if (isFinite(v) && v > 0 && v < 5000) out.litre = v;
   }
 
-  // ── Tutar — "TOPLAM *17.069,63" veya "KDV *17.069,63"
-  // TR formatı: bin ayracı '.', ondalık ',' → "17.069,63" → 17069.63
-  const tutarRegex = /(?:TOPLAM|KDV(?:\s*L[İI])?)\s*[:*]?\s*(\d{1,3}(?:\.\d{3})*,\d{2})/i;
-  m = T.match(tutarRegex);
-  if (!m) {
-    // Fallback: tek "*XX.XXX,XX" pattern (yıldız+TR sayı)
-    m = T.match(/\*\s*(\d{1,3}(?:\.\d{3})*,\d{2})/);
-  }
-  if (m) {
-    const v = parseFloat(m[1].replace(/\./g, '').replace(',', '.'));
-    if (isFinite(v) && v > 0 && v < 1_000_000) out.tutar = v;
-  } else {
-    // Düz nokta-format fallback (US-style)
-    m = T.match(/TOPLAM\s*[:*]?\s*(\d{1,7}\.\d{2})/i);
+  // ── Tutar — TR ondalık virgüllü, bin ayracı nokta:
+  //   "TOPLAM *17.069,63" / "TOPLAM TUTAR 17.069,63" / "TUTAR: 1.234,56"
+  //   "GENEL TOPLAM" / "TUTAR" / "TOTAL" / "ÖDENECEK"
+  const tutarPatterns = [
+    /(?:GENEL\s*)?TOPLAM(?:\s*TUTAR)?\s*[:*]?\s*₺?\s*(\d{1,3}(?:\.\d{3})*,\d{2})/i,
+    /TUTAR\s*[:*]?\s*₺?\s*(\d{1,3}(?:\.\d{3})*,\d{2})/i,
+    /[ÖO]DENECEK\s*[:*]?\s*₺?\s*(\d{1,3}(?:\.\d{3})*,\d{2})/i,
+    /KDV(?:\s*L[İI])?\s*[:*]?\s*₺?\s*(\d{1,3}(?:\.\d{3})*,\d{2})/i,
+    /\*\s*(\d{1,3}(?:\.\d{3})*,\d{2})/,                  // *17.069,63
+    /(\d{1,3}(?:\.\d{3})+,\d{2})\s*(?:TL|₺)?/            // Son çare: en büyük TR formatlı sayı
+  ];
+  for (const re of tutarPatterns) {
+    m = Tflat.match(re);
     if (m) {
-      const v = parseFloat(m[1]);
-      if (isFinite(v)) out.tutar = v;
+      const v = parseFloat(m[1].replace(/\./g, '').replace(',', '.'));
+      if (isFinite(v) && v > 0 && v < 1_000_000) { out.tutar = v; break; }
+    }
+  }
+  if (out.tutar == null) {
+    // US-style fallback: "TOPLAM 17069.63"
+    m = Tflat.match(/(?:TOPLAM|TUTAR|TOTAL)\s*[:*]?\s*(\d{1,7}[.,]\d{2})/i);
+    if (m) {
+      const v = parseFloat(m[1].replace(',', '.'));
+      if (isFinite(v) && v > 50 && v < 1_000_000) out.tutar = v;
     }
   }
 
-  // ── Fiş no — "FİŞ NO:0155" / "FIS NO:155" / "F.NO:155"
-  m = T.match(/F[İI][ŞS]\s*NO\s*[:#]?\s*(\d{1,10})/i)
-   || T.match(/F\.\s*NO\s*[:#]?\s*(\d{1,10})/i);
+  // ── Fiş no
+  m = Tflat.match(/F[İI][ŞS]\s*NO\s*[:#]?\s*(\d{1,10})/i)
+   || Tflat.match(/F\.\s*NO\s*[:#]?\s*(\d{1,10})/i)
+   || Tflat.match(/BELGE\s*NO\s*[:#]?\s*(\d{1,10})/i);
   if (m) out.fisNo = m[1];
 
-  // ── Tarih — "30-04-2026" / "30.04.2026" / "30/04/2026"
-  m = T.match(/(\d{2})[\.\-\/](\d{2})[\.\-\/](\d{4})/);
+  // ── Tarih
+  m = Tflat.match(/(\d{2})[\.\-\/](\d{2})[\.\-\/](\d{4})/);
   if (m) out.tarih = `${m[3]}-${m[2]}-${m[1]}`;
 
-  // ── İstasyon — kaba heuristik: ilk satırlardaki büyük harfli marka adları
-  // (Petrol Ofisi, OPET, Shell, BP, TP, Aytemiz, Total)
-  const ist = T.match(/\b(PETROL\s*OF[İI][SŞ][İI]|OPET|SHELL|BP|TP|AYTEM[İI]Z|TOTAL|LUKO[İI]L|GULF)\b/i);
+  // ── İstasyon
+  const ist = Tflat.match(/\b(PETROL\s*OF[İI][SŞ][İI]|PO|OPET|SHELL|BP|TP|AYTEM[İI]Z|TOTAL\s*ENERG|LUKO[İI]L|GULF|MOIL|TURKUAZ)\b/i);
   if (ist) out.istasyon = ist[1];
 
   return out;
@@ -1915,7 +1951,9 @@ async function runOcrOnFuelBildirimi(bildirimId, fisUrl) {
       if (el && !el.value) { el.value = parsed.tutar; dolanAlan++; }
     }
     if (dolanAlan === 0) {
-      showToast('OCR sonuç buldu ama parse edemedi — alanları kendiniz girin', 'warning');
+      // Parse edemedi — RAW text'i bir mini panelde göster ki kullanıcı manuel okuyabilsin
+      _showFuelOcrRawText(bildirimId, text);
+      showToast('OCR sonuç buldu ama parse edemedi — okunan metin alttadır, kontrol edin', 'warning');
     } else {
       const detay = [];
       if (parsed.litre) detay.push(`${parsed.litre} L`);
@@ -1932,8 +1970,35 @@ async function runOcrOnFuelBildirimi(bildirimId, fisUrl) {
   }
 }
 
+/**
+ * OCR parse başarısız olduğunda kullanıcının fişten okuduğu metni gösterip
+ * manuel litre/tutar girmesini kolaylaştır. Pending kayıt'ın altına inline
+ * panel açar (lightbox değil — form üzerinde kalsın).
+ */
+function _showFuelOcrRawText(bildirimId, rawText) {
+  const errEl = document.getElementById('pf-err-' + bildirimId);
+  if (!errEl) return;
+  // Boş satırları sıkıştır, başına/sonuna boşluk almaz
+  const compact = String(rawText || '').split('\n')
+    .map(s => s.trim()).filter(Boolean).join('\n');
+  errEl.style.display = 'block';
+  errEl.style.color = '#374151';
+  errEl.style.background = 'rgba(234,179,8,.08)';
+  errEl.style.border = '1px solid rgba(234,179,8,.30)';
+  errEl.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-weight:600;color:#92400e;">
+      <span>📝 OCR okuduğu ham metin (kontrol edip alanları doldurun)</span>
+      <button onclick="this.closest('[id^=pf-err-]').style.display='none'"
+              style="background:transparent;border:none;cursor:pointer;font-size:14px;color:#92400e;">✕</button>
+    </div>
+    <pre style="white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:11px;color:#374151;background:#fff;padding:8px;border-radius:4px;border:1px solid rgba(0,0,0,.08);max-height:200px;overflow:auto;margin:0;">${
+      compact.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))
+    }</pre>`;
+}
+
 window._ensureTesseract       = _ensureTesseract;
 window._parseFuelReceiptText  = _parseFuelReceiptText;
+window._showFuelOcrRawText    = _showFuelOcrRawText;
 window.runOcrOnFuelBildirimi  = runOcrOnFuelBildirimi;
 
 /**
@@ -1941,58 +2006,82 @@ window.runOcrOnFuelBildirimi  = runOcrOnFuelBildirimi;
  * açmadan ekranda büyük göster. Tıklama / Esc ile kapanır.
  * Klavye ile kapatma için body'e listener ekler (modal kapanırken kaldırılır).
  */
+// Aktif foto panel referansı — birden fazla açılmasın, yenisi eskisini değiştirsin
+let _fuelFotoPanel = null;
 function openFuelFotoLightbox(url, label) {
-  const overlay = document.createElement('div');
-  overlay.style.cssText = [
-    'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;',
-    'display:flex;flex-direction:column;align-items:center;justify-content:center;',
-    'cursor:zoom-out;animation:fadeIn .15s ease;'
+  // Eski paneli temizle (kullanıcı başka bir foto'ya tıkladıysa eski panel yenile)
+  if (_fuelFotoPanel) { try { _fuelFotoPanel.remove(); } catch {} _fuelFotoPanel = null; }
+
+  // 2026-05-08: TAM EKRAN değil — sağ yarı sticky panel. Form sol tarafta görünür
+  // kalır, kullanıcı fotoğrafı görerek alanları doldurabilir.
+  const panel = document.createElement('div');
+  panel.style.cssText = [
+    'position:fixed;top:0;right:0;bottom:0;width:min(50vw,720px);z-index:99999;',
+    'background:rgba(8,9,26,.95);backdrop-filter:blur(8px);',
+    'display:flex;flex-direction:column;',
+    'box-shadow:-8px 0 32px rgba(0,0,0,.4);',
+    'border-left:1px solid rgba(255,255,255,.08);',
+    'animation:slideInRight .2s ease;'
   ].join('');
-  overlay.setAttribute('role', 'dialog');
-  overlay.setAttribute('aria-label', label || 'Fotoğraf');
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', label || 'Fotoğraf');
 
   const close = () => {
     document.removeEventListener('keydown', onKey);
-    try { overlay.remove(); } catch (_) {}
+    try { panel.remove(); } catch {}
+    if (_fuelFotoPanel === panel) _fuelFotoPanel = null;
   };
   const onKey = (e) => { if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
-  overlay.onclick = (ev) => {
-    // Img'ye tıklayınca kapanmasın (sadece dış alan)
-    if (ev.target === overlay) close();
-  };
 
-  // Üst başlık + kapat
+  // Üst başlık + kapat butonu
   const header = document.createElement('div');
-  header.style.cssText = 'position:absolute;top:14px;left:14px;right:14px;display:flex;align-items:center;justify-content:space-between;color:#fff;font-family:inherit;';
+  header.style.cssText = 'flex:none;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);color:#fff;font-family:inherit;';
   header.innerHTML = `
     <div style="font-size:14px;font-weight:600;color:#fff;">${label || 'Fotoğraf'}</div>
-    <button onclick="this.closest('[role=dialog]').remove()"
-            style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;font-family:inherit;line-height:1;">✕</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <a href="${url}" target="_blank" rel="noopener"
+         style="font-size:11px;color:rgba(255,255,255,.7);text-decoration:none;padding:6px 10px;border-radius:5px;background:rgba(255,255,255,.08);">↗ Yeni sekme</a>
+      <button data-close-fuel-panel
+              style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;font-family:inherit;line-height:1;">✕</button>
+    </div>
   `;
-  // Kapat butonu için kendi handler'ımız (event listener'ı temizlesin)
-  const closeBtn = header.querySelector('button');
-  closeBtn.onclick = close;
-  overlay.appendChild(header);
+  header.querySelector('[data-close-fuel-panel]').onclick = close;
+  panel.appendChild(header);
 
+  // Foto alanı — scrollable, zoom için pinch/wheel destekli
+  const imgWrap = document.createElement('div');
+  imgWrap.style.cssText = 'flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:16px;';
   const img = document.createElement('img');
   img.src = url;
   img.alt = label || '';
-  img.style.cssText = 'max-width:95vw;max-height:88vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6);cursor:default;';
-  img.onclick = (e) => e.stopPropagation();
-  overlay.appendChild(img);
+  img.style.cssText = 'max-width:100%;height:auto;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5);cursor:zoom-in;';
+  // Tıklayınca foto'yu büyüt (zoom toggle)
+  let zoomed = false;
+  img.onclick = () => {
+    zoomed = !zoomed;
+    img.style.maxWidth = zoomed ? 'none' : '100%';
+    img.style.cursor   = zoomed ? 'zoom-out' : 'zoom-in';
+  };
+  imgWrap.appendChild(img);
+  panel.appendChild(imgWrap);
 
-  // Yeni sekmede aç linki (kullanıcı isterse)
-  const openExt = document.createElement('a');
-  openExt.href = url;
-  openExt.target = '_blank';
-  openExt.rel = 'noopener';
-  openExt.textContent = '↗ Yeni sekmede aç';
-  openExt.style.cssText = 'position:absolute;bottom:14px;color:#fff;font-size:12px;text-decoration:underline;background:rgba(255,255,255,.1);padding:6px 12px;border-radius:5px;';
-  openExt.onclick = (e) => e.stopPropagation();
-  overlay.appendChild(openExt);
+  // Alt yardımcı şerit
+  const foot = document.createElement('div');
+  foot.style.cssText = 'flex:none;padding:10px 18px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:rgba(255,255,255,.55);text-align:center;';
+  foot.textContent = 'Esc ile kapat · Foto\'ya tıklayarak büyüt/küçült';
+  panel.appendChild(foot);
 
-  document.body.appendChild(overlay);
+  document.body.appendChild(panel);
+  _fuelFotoPanel = panel;
+
+  // Animasyon keyframe — bir kez document'e eklensin
+  if (!document.getElementById('fuel-foto-panel-anim')) {
+    const style = document.createElement('style');
+    style.id = 'fuel-foto-panel-anim';
+    style.textContent = '@keyframes slideInRight{from{transform:translateX(100%);opacity:.5}to{transform:translateX(0);opacity:1}}';
+    document.head.appendChild(style);
+  }
 }
 
 // Global expose — onclick handler'larından erişilebilir olmalı
