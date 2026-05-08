@@ -22,7 +22,8 @@
       "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew :app:compileDebugKotlin --no-daemon -q)",
       "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" /c/Users/cihan/Desktop/Fleetly-Android/gradlew.bat -p /c/Users/cihan/Desktop/Fleetly-Android :app:compileDebugKotlin --no-daemon)",
       "Bash(echo \"EXIT=$?\")",
-      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" /c/Users/cihan/Desktop/Fleetly-Android/gradlew.bat -p /c/Users/cihan/Desktop/Fleetly-Android :app:compileDebugKotlin --no-daemon --rerun-tasks)"
+      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" /c/Users/cihan/Desktop/Fleetly-Android/gradlew.bat -p /c/Users/cihan/Desktop/Fleetly-Android :app:compileDebugKotlin --no-daemon --rerun-tasks)",
+      "PowerShell(Set-Location 'C:\\\\Users\\\\cihan\\\\Desktop\\\\Fleetly-Android'; $env:JAVA_HOME='C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr'; .\\\\gradlew.bat ':app:compileDebugKotlin' --no-daemon -q 2>&1 | Select-Object -Last 40)"
     ]
   }
 }
