@@ -1712,7 +1712,19 @@ async function opsPushNeredesin(opsId) {
     if (btn) { btn.textContent = '✓ Gönderildi'; setTimeout(() => { if(btn){btn.disabled=false;btn.style.opacity='';btn.textContent='📡 Neredesin?';}}, 4000); }
   } catch (err) {
     console.error('Push gönderim hatası:', err);
-    showToast('Bildirim gönderilemedi: ' + (err?.message || 'hata'), 'error');
+    // 2026-05-08: Hata mesajını teşhise yardımcı detaylarla zenginleştir.
+    // "Failed to send a request" supabase-js client-side hatası — istek bile gitmedi.
+    // Tipik nedenler:
+    //   1. notify-driver Edge Function Cloud'a deploy edilmemiş
+    //   2. CORS preflight fail (Edge Function OPTIONS handler'ı yok)
+    //   3. Auth token expired
+    //   4. Network/firewall
+    const errMsg = err?.message || String(err);
+    const isClientFail = /Failed to send|Failed to fetch|NetworkError/i.test(errMsg);
+    const ipucu = isClientFail
+      ? '\n\n🔧 Olası nedenler:\n  • Edge Function deploy edilmemiş (terminalde: supabase functions deploy notify-driver --no-verify-jwt)\n  • Tarayıcı oturumu süresi dolmuş (sayfayı yenileyin)\n  • İnternet bağlantısı / firewall'
+      : '';
+    showToast('Bildirim gönderilemedi: ' + errMsg + ipucu, 'error');
     if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.textContent = '📡 Neredesin?'; }
   }
 }
@@ -1779,6 +1791,9 @@ function opsDurumBadge(durum, opts) {
   const tone = ({
     'Bekliyor':      'neutral',
     'Yolda':         'info',
+    // 2026-05-08: Boş Alındı (kontDurum=Boş) ve Alım Yapıldı (kontDurum=Dolu) ara duraklar
+    'Boş Alındı':    'warning',
+    'Alım Yapıldı':  'warning',
     'Fabrikada':     'purple',
     'Teslim Edildi': 'success',
     'İptal':         'danger',
@@ -1956,7 +1971,7 @@ function opsRenderTable() {
       let color = 'var(--text-primary)';
       let suffix = '';
       // Geç rozeti SADECE iş başlamamış durumlarında
-      if (isPast && (e.durum === 'Bekliyor' || e.durum === 'Boş Alındı')) {
+      if (isPast && (e.durum === 'Bekliyor' || e.durum === 'Boş Alındı' || e.durum === 'Alım Yapıldı')) {
         color = 'var(--ops-danger,#ef4444)'; suffix = ' GEÇ';
       } else if (isToday) {
         color = 'var(--ops-warning,#f59e0b)'; suffix = ' Bugün';
@@ -3993,7 +4008,7 @@ function _opsDrawerRender(e) {
       if (d === 'Teslim Edildi') return '✓';
       if (d === 'Yolda')         return '🚛';
       if (d === 'Fabrikada')     return '🏭';
-      if (d === 'Boş Alındı')    return '📦';
+      if (d === 'Boş Alındı' || d === 'Alım Yapıldı') return '📦';
       if (d === 'İptal')         return '✕';
       return '⏳';
     };
@@ -6739,6 +6754,7 @@ function _fleetFullRowHtml(e) {
     'Yolda':       '#5B9DF9',
     'Fabrikada':   '#9F7AEA',
     'Boş Alındı':  '#F59E0B',
+    'Alım Yapıldı':'#F59E0B',  // 2026-05-08: dolu alım ara durağı, BoşAlındı ile aynı ton
     'Bekliyor':    '#7A8299'
   };
   const durColor = durumColors[e.durum] || '#7A8299';
@@ -6818,7 +6834,7 @@ function _fleetFullRenderMarkers() {
   list.forEach(e => {
     const lat = parseFloat(e.konum_lat), lng = parseFloat(e.konum_lng);
     const id = e._dbId || e.id;
-    const cls = ({ 'Yolda':'yolda', 'Fabrikada':'fabrikada', 'Bekliyor':'bekliyor', 'Boş Alındı':'bekliyor' }[e.durum]) || 'bekliyor';
+    const cls = ({ 'Yolda':'yolda', 'Fabrikada':'fabrikada', 'Bekliyor':'bekliyor', 'Boş Alındı':'bekliyor', 'Alım Yapıldı':'bekliyor' }[e.durum]) || 'bekliyor';
     const isSel = (_fleetFullSelectedId === id) || _fleetFullSelectedSet.has(id);
     const icon = L.divIcon({
       className: '',
