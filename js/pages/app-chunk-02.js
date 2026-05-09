@@ -103,6 +103,8 @@ async function checkAuth() {
     await loadFirmaId();
     await updateFirmaHeader();
     hideLoginOverlay();
+    // Email doğrulama banner'ı (Faz 1, 2026-05-09)
+    checkEmailConfirmation();
     // Abonelik kontrolü yap
     await checkSubscription();
     loadVehicles();
@@ -131,6 +133,7 @@ async function checkAuth() {
       await loadFirmaId();
       await updateFirmaHeader();
       hideLoginOverlay();
+      checkEmailConfirmation();          // Faz 1
       await checkSubscription();
       // Müşteri verisini arka planda çek
       crmLoadData().then(() => {
@@ -143,9 +146,16 @@ async function checkAuth() {
       currentFirmaId = null;
       hideSubscriptionOverlay();
       hideTrialBanner();
+      hideEmailConfirmBanner();          // Faz 1
       showLoginOverlay();
     } else if (event === 'TOKEN_REFRESHED' && session) {
       _authToken = session.access_token;
+      // Token refresh sırasında doğrulama durumu değişmiş olabilir (kullanıcı linke tıklamışsa)
+      checkEmailConfirmation();
+    } else if (event === 'USER_UPDATED' && session) {
+      // Email doğrulama tamamlandığında Supabase USER_UPDATED tetikler
+      _authToken = session.access_token;
+      checkEmailConfirmation();
     }
   });
 }
@@ -321,6 +331,96 @@ function hideTrialBanner() {
   banner.classList.add('hidden');
 }
 
+/* ════════════════════════════════════════════════════════════
+   EMAIL DOĞRULAMA — banner + resend (2026-05-09 / Faz 1)
+   ════════════════════════════════════════════════════════════
+   Supabase Auth varsayılanı: email confirmation aktif. Yeni kayıt sonrası
+   email_confirmed_at NULL kalır, kullanıcı linki tıklayınca dolur. Doğrulama
+   olmadan da login mümkün — bu banner ile uyarı veriyoruz, doğrulanana kadar
+   kullanıcı linkine ulaşımı kolay kılıyoruz.
+   ════════════════════════════════════════════════════════════ */
+
+function _isEmailConfirmed(user) {
+  // Supabase user objesi: email_confirmed_at (yeni) veya confirmed_at (eski) — ikisini de kontrol et
+  if (!user) return true;  // user yoksa banner gösterme
+  return !!(user.email_confirmed_at || user.confirmed_at);
+}
+
+function showEmailConfirmBanner(email) {
+  const banner = document.getElementById('email-confirm-banner');
+  if (!banner) return;
+  const emailEl = document.getElementById('email-confirm-banner-email');
+  if (emailEl && email) emailEl.textContent = '· ' + email;
+  banner.style.display = 'flex';
+  banner.classList.remove('hidden');
+}
+
+function hideEmailConfirmBanner() {
+  const banner = document.getElementById('email-confirm-banner');
+  if (!banner) return;
+  banner.style.display = 'none';
+  banner.classList.add('hidden');
+}
+
+async function resendConfirmationEmail() {
+  const btn = document.getElementById('email-confirm-resend-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Gönderiliyor...'; }
+  try {
+    const sb = getSB();
+    if (!sb) throw new Error('Supabase istemcisi yok');
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user?.email) throw new Error('E-posta bulunamadı, lütfen yeniden giriş yapın');
+    const { error } = await sb.auth.resend({ type: 'signup', email: user.email });
+    if (error) throw error;
+    if (typeof showToast === 'function') {
+      showToast('✓ Doğrulama linki ' + user.email + ' adresine yeniden gönderildi', 'success');
+    }
+    if (btn) {
+      btn.innerHTML = '✓ Gönderildi';
+      // 60sn cooldown — Supabase rate limit'i koruyalım
+      let s = 60;
+      const tick = setInterval(() => {
+        s--;
+        if (btn) btn.innerHTML = `↻ Tekrar (${s}s)`;
+        if (s <= 0) {
+          clearInterval(tick);
+          if (btn) {
+            btn.innerHTML = '↻ Doğrulama Linkini Tekrar Gönder';
+            btn.disabled = false;
+          }
+        }
+      }, 1000);
+    }
+  } catch (err) {
+    console.error('[email-confirm] resend hata:', err);
+    if (typeof showToast === 'function') {
+      showToast('Gönderilemedi: ' + (err?.message || 'hata'), 'error');
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '↻ Doğrulama Linkini Tekrar Gönder';
+    }
+  }
+}
+
+// Login sonrası / her oturum kontrolünde çağrılır
+async function checkEmailConfirmation() {
+  try {
+    const sb = getSB();
+    if (!sb) return;
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { hideEmailConfirmBanner(); return; }
+    if (_isEmailConfirmed(user)) {
+      hideEmailConfirmBanner();
+    } else {
+      showEmailConfirmBanner(user.email);
+    }
+  } catch (err) {
+    // Sessiz geç — kritik değil
+    console.warn('[email-confirm] kontrol hatası:', err?.message);
+  }
+}
+
 function showSubscriptionOverlay(neden, kalanGun) {
   const overlay = document.getElementById('subscription-overlay');
   if (!overlay) return;
@@ -479,16 +579,22 @@ async function doResetPassword() {
   const sb = getSB();
   if (!sb) return;
   const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-error');
   if (!email) {
-    document.getElementById('login-error').textContent = '❌ Önce e-posta adresinizi girin.';
+    errEl.style.color = '';
+    errEl.textContent = '❌ Önce e-posta adresinizi girin.';
     return;
   }
-  const { error } = await sb.auth.resetPasswordForEmail(email);
+  // 2026-05-09 / Faz 1: redirectTo eklendi — kullanıcı linkine tıklayınca
+  // bizim reset-password.html sayfamıza dönsün, yeni şifresini girsin.
+  const redirectTo = window.location.origin + '/reset-password.html';
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) {
-    document.getElementById('login-error').textContent = '❌ Gönderilemedi: ' + error.message;
+    errEl.style.color = '';
+    errEl.textContent = '❌ Gönderilemedi: ' + error.message;
   } else {
-    document.getElementById('login-error').style.color = 'var(--green)';
-    document.getElementById('login-error').textContent = '✅ Şifre sıfırlama e-postası gönderildi.';
+    errEl.style.color = 'var(--green)';
+    errEl.textContent = '✅ Şifre sıfırlama linki ' + email + ' adresine gönderildi. E-postanızı kontrol edin.';
   }
 }
 
@@ -557,6 +663,56 @@ function sbHeaders() {
 function sbUrl(path) {
   return CFG.SUPABASE_URL + '/rest/v1/' + path;
 }
+
+/* ================================================================
+   GLOBAL 401 HANDLER (2026-05-09)
+   ----------------------------------------------------------------
+   Problem: Supabase varsayılanı refresh token rotation aktif. Multi
+   cihaz senaryolarında (mobile + web aynı kullanıcı) bir cihaz
+   refresh yapınca diğerinin token'ı invalid oluyor → 401. Eskiden
+   kullanıcı manuel localStorage temizliği yapmak zorunda kalıyordu.
+
+   Çözüm: window.fetch'i sarmala, Supabase response'u 401 dönerse
+   tek seferlik modal ile uyar, sb-* token'ı temizle, sayfayı yenile
+   → kullanıcı tekrar giriş yapsın.
+   ================================================================ */
+(function() {
+  if (window._fleetlyFetchPatched) return;  // tekrar yüklemede ikinci patch'i engelle
+  window._fleetlyFetchPatched = true;
+
+  const _origFetch = window.fetch.bind(window);
+  let _authExpiredShown = false;
+
+  window.fetch = async function(...args) {
+    const res = await _origFetch.apply(this, args);
+    try {
+      const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+      // Yalnızca Supabase REST/auth çağrılarındaki 401'i yakala
+      if (res.status === 401 && /supabase\.co\/(rest|auth)/.test(url)) {
+        console.warn('[auth-guard] 401 yakalandı:', url);
+        if (!_authExpiredShown) {
+          _authExpiredShown = true;
+          // Token'ları temizle
+          try {
+            Object.keys(localStorage)
+              .filter(k => /^sb-.*-auth-token/.test(k))
+              .forEach(k => localStorage.removeItem(k));
+          } catch (_) {}
+          // Kullanıcıya tek mesaj — alert engelleyici ama tartışmasız net
+          setTimeout(() => {
+            if (typeof showToast === 'function') {
+              showToast('⚠ Oturumunuz sona erdi. Sayfa yenilenecek, lütfen tekrar giriş yapın.', 'error');
+            }
+            // 1.5sn sonra reload — toast okunsun, kullanıcı şaşırmasın
+            setTimeout(() => location.reload(), 1500);
+          }, 0);
+        }
+      }
+    } catch (_) {}
+    return res;
+  };
+  console.log('[auth-guard] global 401 handler aktif');
+})();
 
 // localStorage yedeği kullanılıyor mu? (URL girilmemişse)
 function isLocalMode() {
