@@ -238,6 +238,27 @@
   </div>
 </div>
 
+<!-- ── EMAIL DOĞRULAMA BANNER ── -->
+<div id="email-confirm-banner" class="hidden" style="
+  background:linear-gradient(90deg,rgba(234,179,8,.14),rgba(234,179,8,.06));
+  border-bottom:1px solid rgba(234,179,8,.30);
+  padding:9px 24px;
+  display:none;align-items:center;justify-content:space-between;
+  font-size:12.5px;position:relative;z-index:99;
+  flex-wrap:wrap;gap:10px;
+">
+  <span style="color:var(--text2);">
+    ✉ <strong style="color:#d4a847;">E-posta adresiniz doğrulanmadı.</strong>
+    Tüm özellikleri kullanmak için kutunuza gelen bağlantıya tıklayın.
+    <span id="email-confirm-banner-email" style="opacity:.7;font-family:var(--font-mono);font-size:11px;"></span>
+  </span>
+  <button onclick="resendConfirmationEmail()" id="email-confirm-resend-btn" style="
+    background:rgba(234,179,8,.15);color:#d4a847;border:1px solid rgba(234,179,8,.4);
+    cursor:pointer;border-radius:8px;padding:5px 12px;
+    font-family:inherit;font-size:12px;font-weight:600;
+  ">↻ Doğrulama Linkini Tekrar Gönder</button>
+</div>
+
 <!-- ── DENEME SÜRESİ BANNER ── -->
 <div id="trial-banner" class="hidden" style="
   background:linear-gradient(90deg,rgba(255,107,31,.12),rgba(255,107,31,.06));
@@ -5913,6 +5934,8 @@ Net                 4.515,00 ₺ net
      BÖLÜM 7: JAVASCRIPT
      ========================================================= -->
 <script src="js/pages/app-chunk-02.js"></script>
+<!-- ── DIY Error Logger — sbUrl/sbHeaders'a bağımlı, app-chunk-02 sonrası yüklenir ── -->
+<script src="js/core/error-logger.js"></script>
 
   <!-- ── PWA Kurulum Mantığı ── -->
   <script src="js/pages/app-chunk-03.js"></script>
