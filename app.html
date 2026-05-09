@@ -278,6 +278,174 @@
   ">Abone Ol →</button>
 </div>
 
+<!-- =========================================================
+     ONBOARDING WIZARD (2026-05-09 / Faz 1)
+     ========================================================= -->
+<div id="onb-overlay" class="hidden" style="
+  position:fixed;inset:0;z-index:9998;
+  background:rgba(8,9,26,.85);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;
+  padding:20px;font-family:var(--font-body, 'Instrument Sans', sans-serif);
+">
+  <div style="
+    background:var(--surface, #10142a);
+    border:1px solid var(--border, #222844);
+    border-radius:14px;
+    width:100%;max-width:560px;max-height:92vh;overflow:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+    color:var(--text, #e6eeff);
+  ">
+    <!-- Üst başlık + progress -->
+    <div style="padding:18px 22px 14px;border-bottom:1px solid var(--border, #222844);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent, #FF6B1F);font-weight:700;">Hoş geldiniz</div>
+          <div id="onb-step-title" style="font-size:18px;font-weight:700;margin-top:3px;">Firma Logo & Adres</div>
+        </div>
+        <div id="onb-step-num" style="font-family:var(--font-mono,monospace);font-size:12px;color:var(--muted,#506080);">Adım 1 / 5</div>
+      </div>
+      <!-- Progress bar -->
+      <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;">
+        <div id="onb-progress" style="height:100%;width:20%;background:linear-gradient(90deg,#FF6B1F,#ff7340);transition:width .3s ease;"></div>
+      </div>
+    </div>
+
+    <!-- Adım içerikleri -->
+    <div id="onb-body" style="padding:22px;">
+
+      <!-- Adım 1: Firma logo + adres -->
+      <div data-onb-step="1">
+        <p style="font-size:13.5px;color:var(--text2,#a8b8d8);line-height:1.6;margin-bottom:18px;">
+          Firmanızın adres bilgisini girin. Bu PDF raporlarında ve müşteri portalında görünür.
+        </p>
+        <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:6px;">Firma Adresi</label>
+        <textarea id="onb-firma-adres" rows="3" placeholder="İstanbul, Avcılar..." style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:inherit;resize:vertical;"></textarea>
+        <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-top:14px;margin-bottom:6px;">Web Sitesi (opsiyonel)</label>
+        <input id="onb-firma-web" type="url" placeholder="https://firmaniz.com" style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:inherit;" />
+      </div>
+
+      <!-- Adım 2: İlk araç -->
+      <div data-onb-step="2" style="display:none;">
+        <p style="font-size:13.5px;color:var(--text2,#a8b8d8);line-height:1.6;margin-bottom:18px;">
+          İlk aracınızı ekleyin — operasyonların başlaması için en az bir araç gerek.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:6px;">Plaka *</label>
+            <input id="onb-arac-plaka" type="text" placeholder="34 ABC 1234" style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:var(--font-mono,monospace);text-transform:uppercase;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:6px;">Tip</label>
+            <select id="onb-arac-tip" style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:inherit;">
+              <option value="cekici">Çekici</option>
+              <option value="dorse">Dorse</option>
+              <option value="tek_parca">Tek Parça (Kamyon)</option>
+            </select>
+          </div>
+        </div>
+        <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-top:12px;margin-bottom:6px;">Marka / Model (opsiyonel)</label>
+        <input id="onb-arac-marka" type="text" placeholder="Mercedes Actros" style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:inherit;" />
+        <p style="font-size:11px;color:var(--muted,#506080);margin-top:10px;line-height:1.5;">💡 Daha sonra Filo modülünden tüm araçları toplu ekleyebilirsiniz.</p>
+      </div>
+
+      <!-- Adım 3: İlk sürücü davet -->
+      <div data-onb-step="3" style="display:none;">
+        <p style="font-size:13.5px;color:var(--text2,#a8b8d8);line-height:1.6;margin-bottom:18px;">
+          İlk sürücünüzü davet edin. Sürücü davet kodu + PIN ile mobil uygulamadan giriş yapacak.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:6px;">Ad Soyad</label>
+            <input id="onb-sofor-ad" type="text" placeholder="Mehmet Yılmaz" style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:inherit;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:6px;">Telefon (E.164)</label>
+            <input id="onb-sofor-tel" type="tel" placeholder="+90 532 000 0000" style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:var(--font-mono,monospace);" />
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--muted,#506080);margin-top:10px;line-height:1.5;">💡 Atlamak istersen "Atla" deyin — sürücüleri Sürücüler modülünden istediğin zaman ekleyebilirsin.</p>
+      </div>
+
+      <!-- Adım 4: İlk müşteri -->
+      <div data-onb-step="4" style="display:none;">
+        <p style="font-size:13.5px;color:var(--text2,#a8b8d8);line-height:1.6;margin-bottom:18px;">
+          İlk müşterinizi ekleyin. İş emri açarken müşteri seçimi yapacaksınız.
+        </p>
+        <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:6px;">Firma Adı</label>
+        <input id="onb-musteri-firma" type="text" placeholder="ABC Lojistik A.Ş." style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:inherit;" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:6px;">Yetkili Ad</label>
+            <input id="onb-musteri-yetkili" type="text" placeholder="Ali Veli" style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:inherit;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:6px;">Telefon</label>
+            <input id="onb-musteri-tel" type="tel" placeholder="+90 212 ..." style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:var(--font-mono,monospace);" />
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--muted,#506080);margin-top:10px;line-height:1.5;">💡 Atlanabilir — Müşteriler modülünden de eklenebilir.</p>
+      </div>
+
+      <!-- Adım 5: Harcırah ayarları -->
+      <div data-onb-step="5" style="display:none;">
+        <p style="font-size:13.5px;color:var(--text2,#a8b8d8);line-height:1.6;margin-bottom:18px;">
+          Harcırah otomatik hesabı için temel kuralları belirleyin. Hepsi sonra değiştirilebilir.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:6px;">Minimum Harcırah (₺)</label>
+            <input id="onb-harc-min" type="number" min="0" step="50" placeholder="600" value="600" style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:var(--font-mono,monospace);" />
+          </div>
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:6px;">Dolu Dönüş (%)</label>
+            <input id="onb-harc-dolu" type="number" min="0" max="100" step="5" placeholder="50" value="50" style="width:100%;padding:10px 12px;font-size:13px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:8px;color:var(--text,#e6eeff);font-family:var(--font-mono,monospace);" />
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--muted,#506080);margin-top:10px;line-height:1.5;">
+          💡 Sonradan Harcırah → Ayarlar sekmesinden değiştirebilir, bölge/il bazlı tarifeler ekleyebilirsin.
+        </p>
+        <div id="onb-final-summary" style="margin-top:18px;padding:12px 14px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:8px;font-size:12px;color:#86efac;line-height:1.5;">
+          ✅ Az kaldı! "Tamamla"ya bastığınızda Fleetly hazır olacak.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Hata satırı -->
+    <div id="onb-error" style="display:none;padding:0 22px 12px;font-size:12px;color:#ef4444;"></div>
+
+    <!-- Alt butonlar -->
+    <div style="padding:14px 22px 18px;border-top:1px solid var(--border,#222844);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <button id="onb-back-btn" onclick="onbBack()" style="
+        background:transparent;color:var(--text2,#a8b8d8);
+        border:1px solid var(--border2,#2c3558);border-radius:8px;
+        padding:9px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+        visibility:hidden;
+      ">← Geri</button>
+      <div style="display:flex;gap:10px;">
+        <button id="onb-skip-btn" onclick="onbSkip()" style="
+          background:transparent;color:var(--muted,#506080);
+          border:1px solid var(--border,#222844);border-radius:8px;
+          padding:9px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;
+        ">Atla</button>
+        <button id="onb-next-btn" onclick="onbNext()" style="
+          background:linear-gradient(135deg,#FF6B1F,#ff7340);color:#fff;
+          border:none;border-radius:8px;
+          padding:9px 18px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;
+        ">İleri →</button>
+      </div>
+    </div>
+
+    <!-- Tam atla / sonra yap link -->
+    <div style="text-align:center;padding:0 22px 16px;">
+      <button onclick="onbSkipAll()" style="background:none;border:none;color:var(--muted,#506080);font-size:11.5px;cursor:pointer;text-decoration:underline;font-family:inherit;">
+        Tüm sihirbazı atla — sonra ayarlar sekmesinden yaparım
+      </button>
+    </div>
+
+  </div>
+</div>
+
 <div id="login-overlay">
   <div class="login-card">
     <!-- Logo — bar design -->
@@ -5936,6 +6104,8 @@ Net                 4.515,00 ₺ net
 <script src="js/pages/app-chunk-02.js"></script>
 <!-- ── DIY Error Logger — sbUrl/sbHeaders'a bağımlı, app-chunk-02 sonrası yüklenir ── -->
 <script src="js/core/error-logger.js"></script>
+<!-- ── Onboarding Wizard (Faz 1) — yeni firma ilk login'de 5-adımlı kurulum ── -->
+<script src="js/pages/onboarding-wizard.js"></script>
 
   <!-- ── PWA Kurulum Mantığı ── -->
   <script src="js/pages/app-chunk-03.js"></script>

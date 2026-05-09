@@ -105,6 +105,8 @@ async function checkAuth() {
     hideLoginOverlay();
     // Email doğrulama banner'ı (Faz 1, 2026-05-09)
     checkEmailConfirmation();
+    // Onboarding wizard — yeni firma ilk login'de açılır (Faz 1)
+    if (typeof checkOnboarding === 'function') checkOnboarding();
     // Abonelik kontrolü yap
     await checkSubscription();
     loadVehicles();
@@ -134,6 +136,7 @@ async function checkAuth() {
       await updateFirmaHeader();
       hideLoginOverlay();
       checkEmailConfirmation();          // Faz 1
+      if (typeof checkOnboarding === 'function') checkOnboarding();   // Faz 1
       await checkSubscription();
       // Müşteri verisini arka planda çek
       crmLoadData().then(() => {
