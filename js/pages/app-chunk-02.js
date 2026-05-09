@@ -538,6 +538,7 @@ async function subPlanSatin() {
     console.error('[abonelik] başlatma hata:', err);
     showToast('Ödeme başlatılamadı: ' + (err?.message || 'hata'), 'error');
     if (btn) { btn.disabled = false; btn.textContent = '💳 Iyzipay ile Güvenli Öde →'; }
+  }
 }
 
 function showLoginOverlay() {
