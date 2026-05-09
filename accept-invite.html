@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleetly — Davet Kabul</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <meta name="theme-color" content="#e8521a" />
+  <link rel="stylesheet" href="css/pages/register.css" />
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- ── SOL PANEL ── -->
+  <div class="left-panel">
+    <a href="index.html" class="brand">
+      <img class="brand-icon" src="assets/img/logo2.png" alt="" />
+      <span class="brand-name">FLEETLY<span class="brand-fit">.fit</span></span>
+    </a>
+
+    <h1 class="left-heading">
+      Ekibe
+      <span class="accent-line">Hoş Geldiniz,</span>
+      <span class="ghost-line">Birkaç Adım Kaldı.</span>
+    </h1>
+
+    <p class="left-sub">
+      Yöneticiniz sizi Fleetly'ye davet etti. Hesabınızı oluşturun veya mevcut
+      hesabınızla giriş yapın — operasyon paneline anında erişim alacaksınız.
+    </p>
+
+    <div id="left-davet-info" style="margin-top:24px;background:rgba(232,82,26,.08);border:1px solid rgba(232,82,26,.2);border-radius:10px;padding:14px 16px;display:none;">
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:6px;">Davet Bilgileri</div>
+      <div style="font-size:12.5px;color:var(--text2);line-height:1.6;">
+        <div><strong style="color:var(--text);">Email:</strong> <span id="left-davet-email"></span></div>
+        <div><strong style="color:var(--text);">Rol:</strong> <span id="left-davet-rol"></span></div>
+        <div><strong style="color:var(--text);">Firma:</strong> <span id="left-davet-firma"></span></div>
+      </div>
+    </div>
+
+    <div class="trust-badge" style="margin-top:32px;">
+      <div class="trust-dot"></div>
+      Güvenli · SSL Şifreleme · KVKK Uyumlu
+    </div>
+  </div>
+
+  <!-- ── SAĞ PANEL — FORM ── -->
+  <div class="right-panel">
+    <div class="form-card">
+
+      <!-- Mobile-only brand header -->
+      <div style="display:none; justify-content:center; margin-bottom:28px;" class="mobile-brand-header">
+        <a href="index.html" class="brand" style="margin-bottom:0; text-decoration:none;">
+          <img src="assets/img/logo2.png" alt="" style="width:38px; height:32px; object-fit:contain; flex:none;" />
+          <span class="brand-name" style="font-size:20px;">FLEETLY<span class="brand-fit">.fit</span></span>
+        </a>
+      </div>
+
+      <!-- ════ Yükleme ════ -->
+      <div id="form-loading">
+        <div class="form-title">Davet doğrulanıyor…</div>
+        <div class="form-sub">Bağlantı kontrol ediliyor</div>
+      </div>
+
+      <!-- ════ HATA / GEÇERSİZ DAVET ════ -->
+      <div id="form-invalid" style="display:none;">
+        <div class="form-title" style="color:var(--red);">⚠ Davet Geçersiz</div>
+        <div class="form-sub" id="invalid-reason">Bu davet bağlantısı süresi dolmuş veya kullanılmış olabilir.</div>
+        <p style="font-size:12.5px;color:var(--text2);line-height:1.6;margin:18px 0;">
+          Yöneticinizden yeni bir davet bağlantısı isteyin. Davetler 48 saat geçerlidir.
+        </p>
+        <a href="index.html" class="btn-cta" style="text-decoration:none;justify-content:center;">
+          Anasayfaya Dön
+        </a>
+      </div>
+
+      <!-- ════ MOD SEÇİMİ — Hesap var mı yok mu? ════ -->
+      <div id="form-mode" style="display:none;">
+        <div class="form-title">Hesabınız var mı?</div>
+        <div class="form-sub">Davet bilgileri solda — devam etmek için seçim yapın</div>
+
+        <button class="btn-cta" onclick="switchTo('signup')" style="margin-top:18px;justify-content:center;">
+          Yeni Hesap Oluştur
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <button class="btn-cta" onclick="switchTo('login')" style="margin-top:10px;background:transparent;border:1px solid var(--border2);color:var(--text);justify-content:center;">
+          Mevcut Hesapla Giriş Yap
+        </button>
+      </div>
+
+      <!-- ════ SIGNUP FORMU ════ -->
+      <div id="form-signup" style="display:none;">
+        <div class="form-title">Hesap Oluştur</div>
+        <div class="form-sub" id="signup-email-readonly">Davet alınan email kullanılır</div>
+
+        <div class="field-group">
+          <div class="field-label">E-posta Adresi</div>
+          <input class="field-inp" type="email" id="iv-email" readonly />
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Ad Soyad</div>
+          <input class="field-inp" type="text" id="iv-ad" placeholder="Mehmet Yılmaz" />
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">Şifre</div>
+            <input class="field-inp" type="password" id="iv-pass" placeholder="En az 8 karakter" autocomplete="new-password" />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Şifre Tekrar</div>
+            <input class="field-inp" type="password" id="iv-pass2" placeholder="Aynı şifre" autocomplete="new-password" />
+          </div>
+        </div>
+
+        <div class="form-error" id="iv-error"></div>
+
+        <button class="btn-cta" id="iv-signup-btn" onclick="doSignup()">
+          Hesap Oluştur ve Daveti Kabul Et
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <div class="form-footer">
+          <a href="#" onclick="switchTo('mode');return false;">← Geri</a>
+        </div>
+      </div>
+
+      <!-- ════ LOGIN FORMU ════ -->
+      <div id="form-login" style="display:none;">
+        <div class="form-title">Giriş Yap</div>
+        <div class="form-sub">Mevcut Fleetly hesabınızla daveti kabul edin</div>
+
+        <div class="field-group">
+          <div class="field-label">E-posta Adresi</div>
+          <input class="field-inp" type="email" id="iv-login-email" autocomplete="email" />
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Şifre</div>
+          <input class="field-inp" type="password" id="iv-login-pass" placeholder="Şifre" autocomplete="current-password" />
+        </div>
+
+        <div class="form-error" id="iv-login-error"></div>
+
+        <button class="btn-cta" id="iv-login-btn" onclick="doLoginAndAccept()">
+          Giriş Yap ve Daveti Kabul Et
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <div class="form-footer">
+          <a href="#" onclick="switchTo('mode');return false;">← Geri</a>
+        </div>
+      </div>
+
+      <!-- ════ BAŞARI ════ -->
+      <div id="form-success" style="display:none;">
+        <div class="form-success">
+          <span class="success-icon">🎉</span>
+          <h2>Hoş Geldiniz!</h2>
+          <p id="success-msg">
+            Daveti başarıyla kabul ettiniz. Uygulamaya yönlendiriliyorsunuz.
+          </p>
+          <button class="btn-cta" onclick="window.location.href='app.html'">
+            Uygulamaya Git
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="security-row">
+        <div class="sec-item">🔒 SSL Şifreleme</div>
+        <div class="sec-item">🛡 Güvenli Depolama</div>
+        <div class="sec-item">🇹🇷 Türk Sunucusu</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CFG = window.FILO_CONFIG || { SUPABASE_URL: '', SUPABASE_ANON: '' };
+let _sb = null;
+function getSB() {
+  if (!_sb && CFG.SUPABASE_URL && CFG.SUPABASE_ANON) {
+    _sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON);
+  }
+  return _sb;
+}
+
+let _davetKodu = null;
+let _davetEmail = null;
+let _davetRol = null;
+
+const ROL_LABEL = {
+  yonetici: 'Yönetici',
+  operasyoncu: 'Operasyoncu',
+  muhasebeci: 'Muhasebeci'
+};
+
+function show(panel) {
+  ['form-loading','form-invalid','form-mode','form-signup','form-login','form-success']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = (id === panel) ? '' : 'none';
+    });
+}
+
+function setErr(id, msg) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = msg || '';
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) {
+    btn.dataset.orig = btn.innerHTML;
+    btn.innerHTML = '⏳ Lütfen bekleyin…';
+  } else if (btn.dataset.orig) {
+    btn.innerHTML = btn.dataset.orig;
+  }
+}
+
+function showInvalid(reason) {
+  document.getElementById('invalid-reason').textContent = reason || 'Bu davet bağlantısı geçersiz.';
+  show('form-invalid');
+}
+
+async function init() {
+  const params = new URLSearchParams(location.search);
+  _davetKodu = (params.get('kod') || '').trim().toUpperCase();
+  if (!_davetKodu) {
+    showInvalid('Davet kodu URL\'de bulunamadı.');
+    return;
+  }
+
+  const sb = getSB();
+  if (!sb) {
+    showInvalid('Sistem yapılandırması eksik.');
+    return;
+  }
+
+  // Davet bilgisini ön-doğrula — doğrudan tablodan SELECT yap (anon key ile)
+  // RLS firma_id IN _user_firma_yetkili_ids() istediği için anon SELECT engellenir.
+  // Bunun yerine REST yerine RPC paterni: bekle, kullanıcı login olunca davet_kabul_et çağırınca
+  // kontrol edilir. Şimdilik kod formatını basit kontrol et.
+  if (!/^[A-Z0-9]{8,12}$/.test(_davetKodu)) {
+    showInvalid('Davet kodu formatı hatalı.');
+    return;
+  }
+
+  // Mevcut session varsa direkt kabul akışına git
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    // Login olmuş — davet kabul et
+    return acceptInviteWithSession(session);
+  }
+
+  // Login değil — mod seçimi göster (signup vs login)
+  show('form-mode');
+  // Davet bilgilerini soldaki kart'a göstermeye çalış (RPC sonrası belli olacak)
+}
+
+async function acceptInviteWithSession(session) {
+  show('form-loading');
+  const sb = getSB();
+  try {
+    const { data, error } = await sb.rpc('firma_kullanici_davet_kabul_et', { p_kod: _davetKodu });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    document.getElementById('success-msg').innerHTML = `
+      <strong>${row?.firma_adi || 'Firma'}</strong> ekibine
+      <strong>${ROL_LABEL[row?.rol] || row?.rol || ''}</strong> olarak eklendiniz.<br>
+      Uygulamaya yönlendiriliyorsunuz.
+    `;
+    show('form-success');
+    setTimeout(() => window.location.href = 'app.html', 2500);
+  } catch (err) {
+    let msg = err?.message || 'Bilinmeyen hata';
+    // Türkçe mesajlar zaten Postgres'ten geliyor
+    showInvalid(msg);
+  }
+}
+
+function switchTo(mode) {
+  show('form-' + mode);
+  if (mode === 'signup') {
+    // Email read-only olarak doldur (davet email'i şart)
+    // Kullanıcı henüz email'i bilmiyor olabilir; signup'ta input'u bırak ama placeholder'da uyar
+    const inp = document.getElementById('iv-email');
+    inp.removeAttribute('readonly');
+    inp.placeholder = 'Davetinize gelen email adresi';
+    document.getElementById('signup-email-readonly').textContent =
+      'Email davetinizde gelen adres olmalı (yöneticinizin gönderdiği)';
+  }
+}
+
+async function doSignup() {
+  setErr('iv-error', '');
+  const email = document.getElementById('iv-email').value.trim().toLowerCase();
+  const ad    = document.getElementById('iv-ad').value.trim();
+  const p1    = document.getElementById('iv-pass').value;
+  const p2    = document.getElementById('iv-pass2').value;
+
+  if (!email || !email.includes('@')) return setErr('iv-error', '❌ Geçerli email girin.');
+  if (!ad)                            return setErr('iv-error', '❌ Ad soyad girin.');
+  if (p1.length < 8)                  return setErr('iv-error', '❌ Şifre en az 8 karakter olmalı.');
+  if (p1 !== p2)                      return setErr('iv-error', '❌ Şifreler eşleşmiyor.');
+
+  setLoading('iv-signup-btn', true);
+  try {
+    const sb = getSB();
+    const { data: authData, error: authErr } = await sb.auth.signUp({
+      email,
+      password: p1,
+      options: {
+        data: { ad },
+        emailRedirectTo: 'https://fleetly.fit/app.html'
+      }
+    });
+    if (authErr) throw authErr;
+
+    // Eğer email confirmation aktifse session yok — kullanıcı email'ini doğrulasın,
+    // sonra accept-invite linkine yine gelsin. Bu durumda mesaj göster.
+    if (!authData.session) {
+      show('form-success');
+      document.getElementById('success-msg').innerHTML = `
+        <strong>${email}</strong> adresine doğrulama e-postası gönderildi.<br>
+        E-postanızdaki linke tıklayıp giriş yaptıktan sonra
+        <a href="${location.href}" style="color:var(--accent);">bu sayfayı</a> tekrar açın.
+      `;
+      return;
+    }
+
+    // Session var — davet kabul akışına geç
+    await acceptInviteWithSession(authData.session);
+  } catch (err) {
+    let msg = '❌ ' + (err?.message || 'Hata');
+    if (/already registered/i.test(err?.message || '')) {
+      msg = '❌ Bu email zaten kayıtlı. "Mevcut Hesapla Giriş Yap" seçeneğini kullanın.';
+    }
+    setErr('iv-error', msg);
+    setLoading('iv-signup-btn', false);
+  }
+}
+
+async function doLoginAndAccept() {
+  setErr('iv-login-error', '');
+  const email = document.getElementById('iv-login-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('iv-login-pass').value;
+  if (!email || !pass) return setErr('iv-login-error', '❌ Email ve şifre girin.');
+
+  setLoading('iv-login-btn', true);
+  try {
+    const sb = getSB();
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    await acceptInviteWithSession(data.session);
+  } catch (err) {
+    setErr('iv-login-error', '❌ ' + (err?.message || 'Giriş başarısız'));
+    setLoading('iv-login-btn', false);
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('form-signup').style.display !== 'none') doSignup();
+  else if (document.getElementById('form-login').style.display !== 'none') doLoginAndAccept();
+});
+
+init();
+</script>
+</body>
+</html>

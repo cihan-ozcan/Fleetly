@@ -446,6 +446,77 @@
   </div>
 </div>
 
+<!-- =========================================================
+     EKİP YÖNETİMİ MODAL (2026-05-09 / Faz 2)
+     ========================================================= -->
+<div id="ekip-modal-bg" class="hidden" style="
+  position:fixed;inset:0;z-index:9997;
+  background:rgba(8,9,26,.80);backdrop-filter:blur(4px);
+  display:none;align-items:flex-start;justify-content:center;
+  padding:30px 16px;overflow:auto;
+  font-family:var(--font-body, 'Instrument Sans', sans-serif);
+">
+  <div style="
+    background:var(--surface, #10142a);
+    border:1px solid var(--border, #222844);
+    border-radius:14px;
+    width:100%;max-width:920px;margin:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+    color:var(--text, #e6eeff);
+  ">
+    <!-- Başlık -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border, #222844);">
+      <div>
+        <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent, #FF6B1F);font-weight:700;">Yönetim</div>
+        <div style="font-size:17px;font-weight:700;margin-top:3px;">Ekip — Kullanıcı & Rol Yönetimi</div>
+      </div>
+      <button onclick="closeEkipModal()" style="background:rgba(255,255,255,.08);border:1px solid var(--border2,#2c3558);color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1;font-family:inherit;">✕</button>
+    </div>
+
+    <!-- Davet et -->
+    <div style="padding:18px 22px;border-bottom:1px solid var(--border, #222844);">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;">+ Yeni Kullanıcı Davet Et</div>
+      <div style="display:grid;grid-template-columns:2fr 1.5fr 1.5fr auto;gap:10px;align-items:end;">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:5px;">E-posta *</label>
+          <input id="ekip-davet-email" type="email" placeholder="ekip@firma.com" style="width:100%;padding:9px 11px;font-size:12.5px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:7px;color:var(--text,#e6eeff);font-family:inherit;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:5px;">Ad Soyad</label>
+          <input id="ekip-davet-ad" type="text" placeholder="Ali Veli" style="width:100%;padding:9px 11px;font-size:12.5px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:7px;color:var(--text,#e6eeff);font-family:inherit;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:600;color:var(--text2,#a8b8d8);margin-bottom:5px;">Rol *</label>
+          <select id="ekip-davet-rol" style="width:100%;padding:9px 11px;font-size:12.5px;background:var(--surface2,#161b34);border:1px solid var(--border,#222844);border-radius:7px;color:var(--text,#e6eeff);font-family:inherit;">
+            <option value="operasyoncu">Operasyoncu</option>
+            <option value="muhasebeci">Muhasebeci</option>
+            <option value="yonetici">Yönetici</option>
+          </select>
+        </div>
+        <button onclick="ekipDavetOlustur()" id="ekip-davet-btn" style="background:linear-gradient(135deg,#FF6B1F,#ff7340);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;height:fit-content;">Davet Oluştur</button>
+      </div>
+      <div id="ekip-davet-error" style="display:none;margin-top:10px;font-size:12px;color:#ef4444;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:7px 10px;"></div>
+      <div id="ekip-davet-success" style="display:none;margin-top:10px;font-size:12px;color:#10b981;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:6px;padding:9px 12px;"></div>
+    </div>
+
+    <!-- Kullanıcı listesi -->
+    <div style="padding:18px 22px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:600;">Mevcut Kullanıcılar & Bekleyen Davetler</div>
+        <button onclick="ekipListeYukle()" style="background:transparent;border:1px solid var(--border2,#2c3558);color:var(--text2,#a8b8d8);border-radius:7px;padding:6px 12px;font-size:11.5px;cursor:pointer;font-family:inherit;">↻ Yenile</button>
+      </div>
+      <div id="ekip-liste" style="font-size:12.5px;">
+        <div style="text-align:center;padding:30px;color:var(--muted,#506080);">Yükleniyor…</div>
+      </div>
+    </div>
+
+    <!-- Bilgi notu -->
+    <div style="padding:14px 22px;border-top:1px solid var(--border, #222844);background:rgba(59,130,246,.04);font-size:11.5px;color:var(--text2,#a8b8d8);line-height:1.5;">
+      💡 Davet linkleri 48 saat geçerlidir. Davet edilen kişi linke tıklayıp hesabını oluşturduğunda otomatik ekibe katılır. Sürücü davetleri ayrı sistemden — buradan yalnızca <strong>ofis ekibi</strong> davet edilir (operasyoncu, muhasebeci, yönetici).
+    </div>
+  </div>
+</div>
+
 <div id="login-overlay">
   <div class="login-card">
     <!-- Logo — bar design -->
@@ -555,6 +626,13 @@
       <button class="sidebar__item" onclick="openRaporModal();closeSidebar&&closeSidebar()" title="Raporlar">
         <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="13" width="3" height="6"/><rect x="12" y="9" width="3" height="10"/><rect x="17" y="5" width="3" height="14"/></svg>
         <span class="sidebar__item-label">Raporlar</span>
+      </button>
+
+      <!-- AYARLAR — yalnızca yetkili roller (Faz 2) -->
+      <div class="sidebar__group" id="sidebar-group-ayarlar">Yönetim</div>
+      <button class="sidebar__item" id="sidebar-item-ekip" onclick="openEkipModal();closeSidebar&&closeSidebar()" title="Ekip — kullanıcı davet, rol yönetimi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="sidebar__item-label">Ekip</span>
       </button>
 
     </nav>
@@ -6106,6 +6184,8 @@ Net                 4.515,00 ₺ net
 <script src="js/core/error-logger.js"></script>
 <!-- ── Onboarding Wizard (Faz 1) — yeni firma ilk login'de 5-adımlı kurulum ── -->
 <script src="js/pages/onboarding-wizard.js"></script>
+<!-- ── Ekip Yönetimi (Faz 2) — ofis kullanıcı davet/rol/kaldır ── -->
+<script src="js/pages/ekip-yonetimi.js"></script>
 
   <!-- ── PWA Kurulum Mantığı ── -->
   <script src="js/pages/app-chunk-03.js"></script>
