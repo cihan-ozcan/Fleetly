@@ -481,45 +481,63 @@ function selectSubPlan(plan) {
   if (yillik) yillik.style.background  = plan === 'yillik' ? 'rgba(249,115,22,.06)' : 'var(--surface2)';
 }
 
-function subPlanSatin() {
-  // ── Shopier ödeme linkleri ──────────────────────────────────────
-  // Shopier panelinden ürün oluşturduktan sonra linkleri buraya yapıştırın.
-  // Shopier → Ürünler → Yeni Ürün → "Ödeme Linki"ni kopyalayın.
-  const SHOPIER_LINKS = {
-    aylik : 'https://www.shopier.com/45898631',
-    yillik: 'https://www.shopier.com/45898648'
-  };
-  // ───────────────────────────────────────────────────────────────
-
-  const link = SHOPIER_LINKS[_secilenSubPlan];
-
-  // Henüz link eklenmemişse uyarı ver
-  if (!link || link.includes('BURAYA')) {
-    showToast('⚠ Ödeme linki henüz tanımlanmadı. Shopier panelinden linki ekleyin.', 'error');
-    return;
-  }
+async function subPlanSatin() {
+  // 2026-05-09 / Faz 4: Iyzipay entegrasyonu
+  // Akış:
+  //   1. RPC abonelik_odeme_baslat → odeme_id + tutar (DB'ye 'bekliyor' kayıt yazılır)
+  //   2. Edge Function iyzipay-init çağrılır → paymentPageUrl döner
+  //   3. window.location.href = paymentPageUrl (Iyzipay 3DS doğrulama sayfası)
+  //   4. Kullanıcı kart bilgisini Iyzipay sayfasında girer
+  //   5. Iyzipay → callback Edge Function → abonelik aktif olur
+  //   6. Kullanıcı abonelik-callback.html'e yönlendirilir → "✓ Aboneliğiniz aktif!"
 
   const btn = document.getElementById('sub-buy-btn');
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = '⏳ Shopier ödeme sayfasına yönlendiriliyorsunuz…';
-  }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Ödeme sayfası hazırlanıyor…'; }
 
-  // Shopier linkine firma_id'yi parametre olarak ekle (takip için)
-  const url = new URL(link);
-  if (currentFirmaId) url.searchParams.set('ref', currentFirmaId);
+  try {
+    const sb = getSB();
+    if (!sb) throw new Error('Supabase yok');
 
-  // Yeni sekmede aç — kullanıcı ödeyip geri döndüğünde uygulama hâlâ açık olsun
-  window.open(url.toString(), '_blank');
+    // 1. Bekleyen ödeme kaydı oluştur — RPC içinde validation + plan tutarı doğrulanır
+    const { data, error } = await sb.rpc('abonelik_odeme_baslat', {
+      p_plan_id: _secilenSubPlan
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) && data[0];
+    if (!row?.odeme_id) throw new Error('Ödeme kaydı oluşturulamadı');
 
-  // 3 saniye sonra butonu tekrar aktif et
-  setTimeout(() => {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = '💳 Shopier ile Güvenli Öde →';
+    // 2. Edge function — sandbox / prod ayrımı supabase secrets'ta
+    const initUrl = (CFG.SUPABASE_URL || '') + '/functions/v1/iyzipay-init';
+    const res = await fetch(initUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (_authToken || CFG.SUPABASE_ANON),
+        'apikey': CFG.SUPABASE_ANON
+      },
+      body: JSON.stringify({
+        odeme_id: row.odeme_id,
+        plan_id: _secilenSubPlan,
+        tutar: row.tutar,
+        plan_ad: row.plan_ad,
+        firma_email: row.firma_email,
+        firma_ad: row.firma_ad
+      })
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`iyzipay-init HTTP ${res.status}: ${txt.slice(0, 300)}`);
     }
-    showToast('💡 Ödemeyi tamamladıysanız aboneliğiniz 24 saat içinde aktif edilecektir.', 'info');
-  }, 3000);
+    const j = await res.json();
+    if (!j.paymentPageUrl) throw new Error(j.errorMessage || 'Iyzipay yanıtı geçersiz');
+
+    // 3. Iyzipay sayfasına yönlendir
+    window.location.href = j.paymentPageUrl;
+
+  } catch (err) {
+    console.error('[abonelik] başlatma hata:', err);
+    showToast('Ödeme başlatılamadı: ' + (err?.message || 'hata'), 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '💳 Iyzipay ile Güvenli Öde →'; }
 }
 
 function showLoginOverlay() {

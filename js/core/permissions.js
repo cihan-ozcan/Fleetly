@@ -32,10 +32,10 @@
   const ITEM_ROLES = {
     // Yönetim grubu — yalnızca sahip + yönetici
     'sidebar-item-ekip':         ['sahip', 'yonetici'],
+    'sidebar-item-veri':         ['sahip', 'yonetici'],   // Faz 5: KVKK ihraç + sil (silme tab'ı sahip-only modal içinde)
     'sidebar-group-ayarlar':     ['sahip', 'yonetici'],
-    // Faz 4-5'te eklenecek:
+    // İleride eklenecek:
     // 'sidebar-item-abonelik':  ['sahip'],   // ödeme, plan değiştirme
-    // 'sidebar-item-firma-ayar': ['sahip'],  // KVKK, vergi, banka
     // 'sidebar-item-hata-log':  ['sahip'],   // app_errors panel
   };
 
@@ -43,6 +43,8 @@
   const ACTION_ROLES = {
     'manage_subscription':   ['sahip'],                                       // Faz 4
     'manage_firma_settings': ['sahip'],                                       // Faz 4
+    'delete_account':        ['sahip'],                                       // Faz 5 — hesabı silme talebi
+    'export_data':           ['sahip', 'yonetici'],                           // Faz 5 — KVKK m.11 veri ihracı
     'manage_team':           ['sahip', 'yonetici'],                           // Faz 2 (Ekip)
     'view_app_errors':       ['sahip', 'yonetici'],                           // DIY logger
     'manage_fleet':          ['sahip', 'yonetici', 'operasyoncu'],            // Filo CRUD

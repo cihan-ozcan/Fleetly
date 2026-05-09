@@ -35,6 +35,27 @@ window.FILO_CONFIG = {
   MAPBOX_TOKEN : '',
 
   // ─────────────────────────────────────────────────────────────
+  // GOOGLE ANALYTICS 4 — opsiyonel
+  // ─────────────────────────────────────────────────────────────
+  // GA4 measurement ID (G-XXXXXXXXXX). Boş bırakırsanız analytics
+  // hiç yüklenmez (ölçüm yok). Cookie consent banner'ında kullanıcı
+  // "Yalnızca Zorunlu" seçerse yine yüklenmez (analytics kategorisi).
+  // Almak için: https://analytics.google.com/ → Admin → Data Streams
+  //   → Add stream → Web → fleetly.fit → Measurement ID (G-...)
+  // ─────────────────────────────────────────────────────────────
+  GA4_ID : '',
+
+  // ─────────────────────────────────────────────────────────────
+  // ONBOARDING VIDEOSU — opsiyonel
+  // ─────────────────────────────────────────────────────────────
+  // register.html sol panelinde "3 Dakikada Fleetly" tanıtım videosu.
+  // YouTube video ID (örn. 'dQw4w9WgXcQ'). Boş bırakırsanız card gizli.
+  // Click-to-load — kullanıcı butona tıklayana kadar YouTube'a istek
+  // gitmez (KVKK + sayfa hızı için).
+  // ─────────────────────────────────────────────────────────────
+  ONBOARDING_VIDEO_ID : '',
+
+  // ─────────────────────────────────────────────────────────────
   // LİMAN GLOBAL DÜZENLEME — geçici flag
   // ─────────────────────────────────────────────────────────────
   // Pre-seed limanlar (Kumport, Marport, Mardaş, Galataport ...) global
