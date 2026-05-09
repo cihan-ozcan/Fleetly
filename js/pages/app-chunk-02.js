@@ -103,6 +103,11 @@ async function checkAuth() {
     await loadFirmaId();
     await updateFirmaHeader();
     hideLoginOverlay();
+    // Rol bazlı UI gating (Faz 3, 2026-05-09) — sidebar item'larını role göre gizle
+    if (typeof loadCurrentUserRole === 'function') {
+      await loadCurrentUserRole();
+      if (typeof applyRoleGating === 'function') applyRoleGating(window._authUserRol);
+    }
     // Email doğrulama banner'ı (Faz 1, 2026-05-09)
     checkEmailConfirmation();
     // Onboarding wizard — yeni firma ilk login'de açılır (Faz 1)
@@ -135,6 +140,11 @@ async function checkAuth() {
       await loadFirmaId();
       await updateFirmaHeader();
       hideLoginOverlay();
+      // Rol bazlı UI gating (Faz 3) — login eventiyle de tetikle
+      if (typeof loadCurrentUserRole === 'function') {
+        await loadCurrentUserRole();
+        if (typeof applyRoleGating === 'function') applyRoleGating(window._authUserRol);
+      }
       checkEmailConfirmation();          // Faz 1
       if (typeof checkOnboarding === 'function') checkOnboarding();   // Faz 1
       await checkSubscription();
@@ -147,6 +157,8 @@ async function checkAuth() {
       _isLoggingOut = false;
       _authToken = null;
       currentFirmaId = null;
+      window._authUserRol = null;        // Faz 3 — rol cache temizle
+      window._authUserAd = null;
       hideSubscriptionOverlay();
       hideTrialBanner();
       hideEmailConfirmBanner();          // Faz 1
