@@ -966,16 +966,37 @@ async function opsSaveCloud(obj) {
     opsSaveLocal(); // önce yerel yedek
     if (isLocalMode()) return;
 
-    // _authToken yoksa Supabase SDK'dan taze token al
+    // _authToken yoksa Supabase auth'tan al — getSession() askıda kalabiliyor
+    // (yakıt onaylarken aynı bug). LocalStorage'a düşen Supabase token'ı direkt
+    // okumayı dene; başarısızsa getSession()'a 2sn timeout ile düş.
     if (!_authToken) {
       try {
-        const { data: { session } } = await getSB().auth.getSession();
-        if (session?.access_token) _authToken = session.access_token;
-      } catch(e) {}
+        // Supabase token'ı genelde "sb-<project>-auth-token" key'inde JSON olarak
+        const lsKey = Object.keys(localStorage).find(k => /^sb-.*-auth-token$/.test(k));
+        if (lsKey) {
+          const v = JSON.parse(localStorage.getItem(lsKey) || 'null');
+          if (v?.access_token) _authToken = v.access_token;
+        }
+      } catch (_) {}
     }
     if (!_authToken) {
-      console.warn('opsSaveCloud: auth token yok, kayıt erteleniyor');
+      // Son çare — getSession ama timeout'lu
+      try {
+        const sb = getSB();
+        if (sb) {
+          const sessP = sb.auth.getSession();
+          const timeoutP = new Promise((_, rej) => setTimeout(() => rej(new Error('getSession timeout 2s')), 2000));
+          const { data: { session } } = await Promise.race([sessP, timeoutP]);
+          if (session?.access_token) _authToken = session.access_token;
+        }
+      } catch (e) {
+        console.warn('[opsSaveCloud] getSession başarısız:', e?.message);
+      }
+    }
+    if (!_authToken) {
+      console.warn('[opsSaveCloud] auth token alınamadı, kayıt erteleniyor');
       obj._syncPending = true;
+      obj._syncError   = 'Auth token yok';
       opsSaveLocal();
       return;
     }
@@ -987,11 +1008,15 @@ async function opsSaveCloud(obj) {
     const row    = await opsObjToRow(obj, isEdit);
 
     if (isEdit) {
+      // 15sn timeout — askıda kalan fetch'i abort et, görünür hata olarak yansıt
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 15000);
       const res = await fetch(sbUrl('is_emirleri?id=eq.' + dbId), {
         method : 'PATCH',
         headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
         body   : JSON.stringify(row),
-      });
+        signal : ctrl.signal,
+      }).finally(() => clearTimeout(t));
       if (!res.ok) {
         const err = await res.text();
         console.error('PATCH hatası:', res.status, err);
@@ -1008,11 +1033,17 @@ async function opsSaveCloud(obj) {
       }
     } else {
       // YENİ KAYIT — id body'e eklenmez, Supabase otomatik atar
+      // 15sn timeout — askıda kalan fetch'i abort et
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 15000);
+      console.log('[opsSaveCloud] POST atılıyor, payload key sayısı:', Object.keys(row).length);
       const res = await fetch(sbUrl('is_emirleri'), {
         method : 'POST',
         headers: { ...sbHeaders(), 'Prefer': 'return=representation' },
         body   : JSON.stringify(row),
-      });
+        signal : ctrl.signal,
+      }).finally(() => clearTimeout(t));
+      console.log('[opsSaveCloud] POST yanıtı:', res.status, res.statusText);
       if (res.ok) {
         // PostgREST normalde return=representation ile [{...}] döner;
         // ama bazı RLS koşullarında body boş array olabiliyor. O durumda
@@ -1082,12 +1113,16 @@ async function opsSaveCloud(obj) {
       }
     }
   } catch(err) {
-    console.error('is_emirleri buluta kaydedilemedi:', err);
+    const isAbort = err?.name === 'AbortError';
+    const msg = isAbort
+      ? 'İstek 15sn sonra zaman aşımına uğradı (network/Supabase yanıt vermedi)'
+      : String(err?.message || err);
+    console.error('[opsSaveCloud] HATA:', msg, err);
     obj._syncPending = true;
-    obj._syncError   = String(err?.message || err);
+    obj._syncError   = msg;
     opsSaveLocal();
     if (typeof showToast === 'function') {
-      showToast('İş emri kaydında ağ hatası — yerel olarak saklandı, yeniden denenecek.', 'error');
+      showToast('İş emri kaydedilemedi: ' + msg, 'error');
     }
   } finally {
     if (obj) delete obj._syncInFlight;
