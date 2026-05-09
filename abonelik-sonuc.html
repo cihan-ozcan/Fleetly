@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleetly — Abonelik Sonucu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <meta name="theme-color" content="#e8521a" />
+  <link rel="stylesheet" href="css/pages/register.css" />
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="left-panel">
+    <a href="index.html" class="brand">
+      <img class="brand-icon" src="assets/img/logo2.png" alt="" />
+      <span class="brand-name">FLEETLY<span class="brand-fit">.fit</span></span>
+    </a>
+    <h1 class="left-heading">
+      Abonelik
+      <span class="accent-line">İşlemi,</span>
+      <span class="ghost-line">Sonuçlandırılıyor.</span>
+    </h1>
+    <p class="left-sub">
+      Iyzipay'den dönen yanıt işleniyor. Bu sayfayı kapatmayın — birkaç saniye sürebilir.
+    </p>
+  </div>
+
+  <div class="right-panel">
+    <div class="form-card">
+
+      <div id="state-loading">
+        <div class="form-title">⏳ İşlem doğrulanıyor…</div>
+        <div class="form-sub">Iyzipay'den dönen ödeme bilgileri kontrol ediliyor</div>
+        <div style="margin-top:24px;display:flex;justify-content:center;">
+          <div style="width:48px;height:48px;border:4px solid var(--surface3);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;"></div>
+        </div>
+      </div>
+
+      <div id="state-success" style="display:none;">
+        <div class="form-success">
+          <span class="success-icon">🎉</span>
+          <h2>Aboneliğiniz aktif!</h2>
+          <div class="trial-badge" id="success-plan-badge">✓ Aktif Plan</div>
+          <p id="success-detay">Ödemeniz başarılı. Aboneliğiniz <strong id="success-bitis"></strong> tarihine kadar aktif.</p>
+          <button class="btn-cta" onclick="window.location.href='app.html'">
+            Uygulamaya Dön
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="state-fail" style="display:none;">
+        <div class="form-title" style="color:var(--red);">⚠ Ödeme Tamamlanamadı</div>
+        <div class="form-sub" id="fail-reason">Iyzipay ödemeyi reddetti veya işlem kullanıcı tarafından iptal edildi.</div>
+        <p style="font-size:12.5px;color:var(--text2);line-height:1.6;margin:18px 0;">
+          Kartınızdan tutar çekilmediyse endişelenmeyin — bekleyen ödemeler 24 saat içinde otomatik temizlenir.
+          Tekrar denemek için aşağıdaki butonu kullanın.
+        </p>
+        <button class="btn-cta" onclick="window.location.href='app.html'">
+          Uygulamaya Dön ve Tekrar Dene
+        </button>
+      </div>
+
+      <div class="security-row">
+        <div class="sec-item">🔒 SSL Şifreleme</div>
+        <div class="sec-item">🛡 Güvenli Depolama</div>
+        <div class="sec-item">🇹🇷 Türk Sunucusu</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+const CFG = window.FILO_CONFIG || { SUPABASE_URL: '', SUPABASE_ANON: '' };
+let _sb = null;
+function getSB() {
+  if (!_sb && CFG.SUPABASE_URL && CFG.SUPABASE_ANON) {
+    _sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON);
+  }
+  return _sb;
+}
+
+function show(state) {
+  ['loading','success','fail'].forEach(s => {
+    const el = document.getElementById('state-' + s);
+    if (el) el.style.display = (s === state) ? '' : 'none';
+  });
+}
+
+async function init() {
+  const params = new URLSearchParams(location.search);
+  const status = params.get('status');         // 'success' | 'fail'
+  const odemeId = params.get('odeme_id');
+  const planAd = params.get('plan_ad') || '';
+  const bitis = params.get('bitis');           // ISO date
+
+  if (status === 'success') {
+    if (planAd) document.getElementById('success-plan-badge').textContent = '✓ ' + planAd + ' Plan';
+    if (bitis) {
+      const d = new Date(bitis);
+      const txt = d.toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' });
+      document.getElementById('success-bitis').textContent = txt;
+    } else {
+      document.getElementById('success-detay').textContent = 'Ödemeniz başarılı. Aboneliğiniz aktive edildi.';
+    }
+    show('success');
+    return;
+  }
+
+  if (status === 'fail') {
+    const reason = params.get('reason');
+    if (reason) {
+      document.getElementById('fail-reason').textContent = decodeURIComponent(reason);
+    }
+    show('fail');
+    return;
+  }
+
+  // status parametresi yok — büyük ihtimalle Iyzipay henüz callback yapmamış
+  // ya da kullanıcı doğrudan bu sayfayı açtı. odeme_id varsa DB'den durumu çek.
+  if (odemeId) {
+    show('loading');
+    const sb = getSB();
+    if (!sb) { show('fail'); return; }
+    // 5sn içinde durum kontrolü (max 5 deneme)
+    let tries = 0;
+    const poll = setInterval(async () => {
+      tries++;
+      try {
+        const { data, error } = await sb
+          .from('odeme_gecmisi')
+          .select('id, durum, plan_id, bitis')
+          .eq('id', odemeId)
+          .limit(1);
+        if (!error && data && data[0]) {
+          if (data[0].durum === 'basarili') {
+            clearInterval(poll);
+            const d = new Date(data[0].bitis);
+            document.getElementById('success-bitis').textContent =
+              d.toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' });
+            document.getElementById('success-plan-badge').textContent =
+              '✓ ' + (data[0].plan_id === 'yillik' ? 'Yıllık' : 'Aylık') + ' Plan';
+            show('success');
+            return;
+          }
+          if (data[0].durum === 'basarisiz' || data[0].durum === 'tutar_uyumsuz') {
+            clearInterval(poll);
+            show('fail');
+            return;
+          }
+        }
+      } catch (_) {}
+      if (tries > 10) {
+        clearInterval(poll);
+        show('fail');
+        document.getElementById('fail-reason').textContent =
+          'İşlem zaman aşımına uğradı. Iyzipay hesabınızı kontrol edin veya destek ile iletişime geçin.';
+      }
+    }, 1500);
+    return;
+  }
+
+  // Hiç parametre yok — anasayfaya yönlendir
+  show('fail');
+  document.getElementById('fail-reason').textContent = 'Geçersiz erişim — bu sayfa Iyzipay yönlendirmesi için tasarlanmıştır.';
+}
+
+init();
+</script>
+<script src="js/core/cookie-consent.js" defer></script>
+</body>
+</html>

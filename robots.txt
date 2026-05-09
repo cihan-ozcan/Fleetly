@@ -1,0 +1,29 @@
+# Fleetly.fit — robots.txt
+
+User-agent: *
+Allow: /
+Allow: /register.html
+Allow: /kvkk-aydinlatma.html
+Allow: /kullanim-sartlari.html
+
+# Auth & operational sayfalar — index dışı
+Disallow: /app.html
+Disallow: /accept-invite.html
+Disallow: /reset-password.html
+Disallow: /abonelik-sonuc.html
+Disallow: /portal.html
+Disallow: /sofor.html
+Disallow: /sofor-profil.html
+Disallow: /musteri_takip.html
+
+# Backup ve geliştirme klasörleri
+Disallow: /_backup_pre_refactor/
+Disallow: /design_handoff_fleet_management/
+Disallow: /design_handoff_konteyner_operasyonu/
+
+# Config ve internal
+Disallow: /config.js
+Disallow: /supabase/
+
+# Sitemap
+Sitemap: https://fleetly.fit/sitemap.xml
