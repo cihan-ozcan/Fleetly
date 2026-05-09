@@ -5982,100 +5982,11 @@ function opsFotoEkle(isEmriId, inputEl) {
 //
 // Bu fonksiyon NO-OP olarak bırakıldı (geri uyumluluk için silinmedi).
 // loadSeferData() v_sefer_detay view'undan çekerken yeni sefer otomatik gelir.
-function opsAutoCreateSefer(e) {
-  // Trigger devraldı — frontend sefer satırı oluşturmasın.
-  // Çift kayıt UNIQUE INDEX seferler_ops_id_uq ile zaten engellenir; bu sadece
-  // network çağrısını da atlayalım, console temiz kalsın diye.
-  return;
-  // (Aşağıdaki kod artık çalışmaz — referans için tutuluyor, ileride silinebilir.)
-  const mevcutSefer = seferData.find(s => s._opsId === e.id || s._opsId === e._dbId);
-  if (mevcutSefer) return; // zaten var
-
-  // ── 1) KM: koordinatlardan haversine mesafesi ──────────────
-  function _haversine(la1,ln1,la2,ln2) {
-    const R=6371,r=x=>x*Math.PI/180;
-    const dLa=r(la2-la1),dLn=r(ln2-ln1);
-    const a=Math.sin(dLa/2)**2+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLn/2)**2;
-    return 2*R*Math.asin(Math.sqrt(a));
-  }
-  let km = 0;
-  const yLat=parseFloat(e.yukle_lat), yLng=parseFloat(e.yukle_lng);
-  const tLat=parseFloat(e.teslim_lat), tLng=parseFloat(e.teslim_lng);
-  if (isFinite(yLat) && isFinite(yLng) && isFinite(tLat) && isFinite(tLng)) {
-    km = Math.round(_haversine(yLat, yLng, tLat, tLng));
-  }
-
-  // ── 2) ÜCRET: CRM siparişlerinden müşteri eşleştirmesi ─────
-  // Bu ayın ya da en yakın tarihteki açık siparişin tutarını al
-  let ucret = 0;
-  if (e.musteri_id && crmSiparisler.length) {
-    const musteriSiparisleri = crmSiparisler
-      .filter(s => s.musteri_id == e.musteri_id && s.durum !== 'İptal' && (s.tutar||0) > 0)
-      .sort((a,b) => b.tarih.localeCompare(a.tarih)); // en yeniden başla
-    if (musteriSiparisleri.length) {
-      ucret = musteriSiparisleri[0].tutar || 0;
-    }
-  }
-
-  // ── 3) YÜK: konteyner bilgisi + müşteri ───────────────────
-  const konteynerler = (e.konteyner_no || '').split('\n').map(s=>s.trim()).filter(Boolean);
-  const yukStr = [
-    konteynerler.join(', ') || null,
-    e.kont_tip              || null,
-    e.musteri_adi           || null,
-  ].filter(Boolean).join(' · ');
-
-  // ── 4) NOT: operasyon özeti ────────────────────────────────
-  const notParcalar = [`Ops #${e.id}`];
-  if (e.referans_no)  notParcalar.push(`Ref: ${e.referans_no}`);
-  if (e.muhur_no)     notParcalar.push(`Mühür: ${e.muhur_no}`);
-  if (e.kont_durum)   notParcalar.push(e.kont_durum);
-  if (ucret > 0)      notParcalar.push(`CRM: ₺${ucret.toLocaleString('tr-TR')}`);
-
-  // ── 5) ARAÇ ───────────────────────────────────────────────
-  const veh = vehicles.find(v => v.plaka === e.arac_plaka);
-
-  // ── 6) KM ARALIĞI: iş emrinden devral → daha doğru yakıt eşleşmesi ──
-  const basKm = (e.baslangic_km != null) ? +e.baslangic_km : null;
-  const bitKm = (e.bitis_km     != null) ? +e.bitis_km     : null;
-  if (basKm != null && bitKm != null && bitKm > basKm && !km) {
-    km = +(bitKm - basKm).toFixed(0);
-  }
-  // Yakıt cache'ini hemen hesapla
-  let yakitLitre = null, yakitTutar = null;
-  if (veh && basKm != null && bitKm != null && bitKm > basKm) {
-    const r = calcFuelForKmRange(veh.id, basKm, bitKm);
-    if (r.count > 0) { yakitLitre = r.litre; yakitTutar = r.tl; }
-  }
-
-  const seferEntry = {
-    id     : uid(),
-    _opsId : e._dbId ?? e.id,
-    tarih  : e.teslim_zamani ? e.teslim_zamani.slice(0, 10) : new Date().toISOString().slice(0, 10),
-    aracId : veh ? veh.id : '',
-    plaka  : e.arac_plaka || '',
-    sofor  : e.sofor      || '',
-    kalkis : e.yukle_yeri  || '—',
-    varis  : e.teslim_yeri || '—',
-    km,
-    baslangic_km: basKm,
-    bitis_km    : bitKm,
-    yakit_litre : yakitLitre,
-    yakit_tutar : yakitTutar,
-    yuk    : yukStr,
-    ucret,
-    not    : notParcalar.join(' · '),
-  };
-
-  seferData.push(seferEntry);
-  saveSeferData();
-  saveSeferEntryCloud(seferEntry);
-  updateSeferStat();
-  addActivity('sefer_ekle', seferEntry.plaka || '—', seferEntry.kalkis + ' → ' + seferEntry.varis);
-
-  const kmStr   = km   > 0 ? ` · ${km} km`       : '';
-  const ucretStr = ucret > 0 ? ` · ₺${ucret.toLocaleString('tr-TR')}` : '';
-  showToast(`✅ Sefer kaydı oluşturuldu — ${seferEntry.kalkis} → ${seferEntry.varis}${kmStr}${ucretStr}`, 'success');
+function opsAutoCreateSefer(_e) {
+  // 2026-05-07i'den itibaren NO-OP. Sefer kaydı DB trigger'ında üretilir
+  // (trg_isemri_otomatik_sefer); is_emirleri.durum='Teslim Edildi' iken
+  // seferler INSERT olur, yakıt yakit_girisleri'nden km aralığı ile bağlanır.
+  // Geriye uyumluluk için fonksiyon ismi korundu — eski çağrı noktaları sessizce geçer.
 }
 
 
