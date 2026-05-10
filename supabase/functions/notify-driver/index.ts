@@ -227,6 +227,51 @@ async function sendFcm(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Auth helper — caller JWT'sinden user_id çıkar (--no-verify-jwt deploy edildiği
+// için manuel doğrulama yapıyoruz; aksi halde herhangi biri push spam'leyebilir).
+// ─────────────────────────────────────────────────────────────────────────────
+async function getCallerUserId(authHeader: string): Promise<string | null> {
+  const jwt = (authHeader || "").replace(/^Bearer\s+/i, "").trim();
+  if (!jwt) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${jwt}`, apikey: SERVICE_ROLE_KEY },
+    });
+    if (!r.ok) return null;
+    const j = await r.json().catch(() => null);
+    return j?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Caller'ın bağlı olduğu firma_id setini topla (firma_kullanicilar + suruculer). */
+async function getCallerFirmaIds(callerId: string): Promise<Set<string>> {
+  const out = new Set<string>();
+  try {
+    const fkRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/firma_kullanicilar?user_id=eq.${callerId}&select=firma_id`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
+    );
+    if (fkRes.ok) {
+      const rows: { firma_id: string }[] = await fkRes.json();
+      rows.forEach(r => out.add(r.firma_id));
+    }
+  } catch (_) { /* yoksay */ }
+  try {
+    const surRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/suruculer?auth_user_id=eq.${callerId}&select=firma_id`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
+    );
+    if (surRes.ok) {
+      const rows: { firma_id: string }[] = await surRes.json();
+      rows.forEach(r => out.add(r.firma_id));
+    }
+  } catch (_) { /* yoksay */ }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Web Push (mevcut akış — VAPID)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -287,9 +332,21 @@ serve(async (req: Request) => {
     return new Response("surucu_id gerekli", { status: 400 });
   }
 
-  // Şoförün PUSH KANALLARINI çek (web + mobile)
+  // 🔒 YETKI (2026-05-10): caller'ın authenticated olduğunu ve hedef sürücünün
+  // caller'ın firma'sında bulunduğunu doğrula. --no-verify-jwt ile deploy
+  // edildiği için manuel kontrol gerekiyor; aksi halde herhangi biri her
+  // sürücüye push spam atabilir.
+  const callerId = await getCallerUserId(req.headers.get("Authorization") || "");
+  if (!callerId) {
+    return new Response(
+      JSON.stringify({ sent: false, reason: "Yetkisiz: oturum gerekli" }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Şoförün firma_id + PUSH KANALLARINI çek (service role — yetki kontrolü manuel)
   const dbRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/suruculer?id=eq.${surucu_id}&select=push_subscription,fcm_token,ad`,
+    `${SUPABASE_URL}/rest/v1/suruculer?id=eq.${surucu_id}&select=firma_id,push_subscription,fcm_token,ad`,
     {
       headers: {
         apikey       : SERVICE_ROLE_KEY,
@@ -309,6 +366,15 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ sent: false, reason: "surucu bulunamadı" }),
       { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // 🔒 Caller bu sürücünün firmasında mı?
+  const callerFirmaIds = await getCallerFirmaIds(callerId);
+  if (!callerFirmaIds.has(row.firma_id)) {
+    return new Response(
+      JSON.stringify({ sent: false, reason: "Yetkisiz: bu sürücü sizin firmanızda değil" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
     );
   }
 

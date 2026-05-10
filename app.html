@@ -1052,10 +1052,15 @@
           <div class="card__title">Yaklaşan Bakımlar</div>
           <div class="card__sub">Önümüzdeki 30 gün</div>
         </div>
-        <button class="btn--ghost btn--sm" onclick="openMaintSummaryModal()">
-          Tümü
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn--ghost btn--sm" onclick="window._openYeniBakimRandevu && window._openYeniBakimRandevu()" title="Yeni bakım randevusu ekle" aria-label="Yeni randevu ekle">
+            + Randevu
+          </button>
+          <button class="btn--ghost btn--sm" onclick="openMaintSummaryModal()">
+            Tümü
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
       </div>
       <div class="card__body card__body--flush">
         <div id="upcoming-maint-list">
@@ -1115,79 +1120,22 @@
 
   <!-- 4.4 EN İYİ SÜRÜCÜLER + SON SEFERLER (Faz 3 genişletme) -->
   <div class="dash-row dash-row--10-16">
-    <!-- En İyi Sürücüler -->
+    <!-- Bugünün Operasyonu -->
     <div class="card">
       <div class="card__head">
         <div>
-          <div class="card__title">En İyi Sürücüler</div>
-          <div class="card__sub">Bu ay performans skoru</div>
+          <div class="card__title">Bugünün Operasyonu</div>
+          <div class="card__sub">Anlık iş emri durumu</div>
         </div>
-        <button class="btn--ghost btn--sm" onclick="openDriverModal()">
-          Tümü
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
       </div>
       <div class="card__body card__body--flush">
-        <div id="top-drivers-list">
-          <!-- Faz 4'te canlı veriyle dolacak — şimdilik mock -->
-          <div class="list-row">
-            <div class="list-row__rank">#1</div>
-            <div class="list-row__avatar" style="background:linear-gradient(135deg,#FFD93D,#F4A300)">MK</div>
+        <div id="bugun-ozet-list">
+          <!-- dashboard-bugun-ozeti.js tarafından doldurulur — yüklenirken placeholder -->
+          <div class="list-row" style="opacity:.5">
+            <div class="list-row__icon-box list-row__icon-box--info">⏳</div>
             <div class="list-row__main">
-              <div class="list-row__title">Mehmet Kaya ⭐</div>
-              <div class="list-row__sub">28 sefer · 12.450 km</div>
-            </div>
-            <div class="list-row__right">
-              <div class="list-row__metric list-row__metric--success">96</div>
-              <div class="list-row__lbl">SKOR</div>
-            </div>
-          </div>
-          <div class="list-row">
-            <div class="list-row__rank">#2</div>
-            <div class="list-row__avatar">AY</div>
-            <div class="list-row__main">
-              <div class="list-row__title">Ahmet Yılmaz</div>
-              <div class="list-row__sub">25 sefer · 11.200 km</div>
-            </div>
-            <div class="list-row__right">
-              <div class="list-row__metric list-row__metric--success">92</div>
-              <div class="list-row__lbl">SKOR</div>
-            </div>
-          </div>
-          <div class="list-row">
-            <div class="list-row__rank">#3</div>
-            <div class="list-row__avatar">SD</div>
-            <div class="list-row__main">
-              <div class="list-row__title">Selim Demir</div>
-              <div class="list-row__sub">22 sefer · 9.860 km</div>
-            </div>
-            <div class="list-row__right">
-              <div class="list-row__metric list-row__metric--success">88</div>
-              <div class="list-row__lbl">SKOR</div>
-            </div>
-          </div>
-          <div class="list-row">
-            <div class="list-row__rank">#4</div>
-            <div class="list-row__avatar">CO</div>
-            <div class="list-row__main">
-              <div class="list-row__title">Can Özkan</div>
-              <div class="list-row__sub">18 sefer · 7.420 km</div>
-            </div>
-            <div class="list-row__right">
-              <div class="list-row__metric list-row__metric--warning">79</div>
-              <div class="list-row__lbl">SKOR</div>
-            </div>
-          </div>
-          <div class="list-row">
-            <div class="list-row__rank">#5</div>
-            <div class="list-row__avatar">BA</div>
-            <div class="list-row__main">
-              <div class="list-row__title">Burak Aslan</div>
-              <div class="list-row__sub">15 sefer · 6.180 km</div>
-            </div>
-            <div class="list-row__right">
-              <div class="list-row__metric list-row__metric--warning">74</div>
-              <div class="list-row__lbl">SKOR</div>
+              <div class="list-row__title">Yükleniyor…</div>
+              <div class="list-row__sub">Anlık operasyon verileri okunuyor</div>
             </div>
           </div>
         </div>
@@ -6272,6 +6220,8 @@ Net                 4.515,00 ₺ net
 <script src="js/pages/veri-yonetimi.js"></script>
 <!-- ── Yaklaşan Bakımlar dashboard kartı (Faz 9) — bakim_randevulari RPC ── -->
 <script src="js/pages/dashboard-bakim-card.js"></script>
+<!-- ── Bugünün Operasyonu dashboard kartı — anlık iş emri sayaçları ── -->
+<script src="js/pages/dashboard-bugun-ozeti.js"></script>
 <!-- ── Bakım Randevu CRUD modalları (Faz 9) — yeni / detay / liste ── -->
 <script src="js/pages/bakim-randevu.js"></script>
 <!-- ── Rol Bazlı UI Gating (Faz 3) — operasyoncu/muhasebeci yönetim sekmelerini görmesin ── -->

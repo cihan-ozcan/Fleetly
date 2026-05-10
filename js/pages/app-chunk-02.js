@@ -9941,7 +9941,8 @@ async function saveTarife() {
     try {
       const { data: { user } } = await getSB().auth.getUser();
       if (user) {
-        const row = { ...t, user_id: user.id };
+        // 2026-05-10d: tarifeler.firma_id artık UUID + RLS — currentFirmaId zorunlu.
+        const row = { ...t, user_id: user.id, firma_id: currentFirmaId || null };
         delete row.id;
         if (idx >= 0 && typeof t.id === 'number' && t.id < 1e12) {
           await fetch(sbUrl('tarifeler?id=eq.' + t.id), { method: 'PATCH', headers: sbHeaders(), body: JSON.stringify(row) });
