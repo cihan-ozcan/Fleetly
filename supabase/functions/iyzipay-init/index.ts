@@ -30,6 +30,12 @@ const IYZIPAY_SECRET_KEY   = Deno.env.get("IYZIPAY_SECRET_KEY")!;
 const IYZIPAY_BASE_URL     = Deno.env.get("IYZIPAY_BASE_URL")     ?? "https://sandbox-api.iyzipay.com";
 const IYZIPAY_CALLBACK_URL = Deno.env.get("IYZIPAY_CALLBACK_URL") ?? "";
 
+// Auth doğrulama için (2026-05-10 — odeme_id sahip kontrolü)
+const SUPABASE_URL_AUTH  = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY   =
+  Deno.env.get("SUPABASE_SECRET_KEY") ??
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -89,6 +95,50 @@ function splitName(full: string): { name: string; surname: string } {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
+// Auth helpers — caller'ın odeme_id'ye yetkisini doğrula (2026-05-10)
+// Eski versiyon hiç kontrol yapmıyordu → A firması B'nin odeme_id'siyle
+// Iyzipay sayfasını başlatabilir, ödeme yapsa B'nin aboneliği aktif olur.
+// ──────────────────────────────────────────────────────────────────────────
+async function getCallerUserId(authHeader: string): Promise<string | null> {
+  const jwt = (authHeader || "").replace(/^Bearer\s+/i, "").trim();
+  if (!jwt) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL_AUTH}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${jwt}`, apikey: SERVICE_ROLE_KEY },
+    });
+    if (!r.ok) return null;
+    const j = await r.json().catch(() => null);
+    return j?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function callerOwnsOdeme(callerId: string, odemeId: string): Promise<boolean> {
+  try {
+    const fkRes = await fetch(
+      `${SUPABASE_URL_AUTH}/rest/v1/firma_kullanicilar?user_id=eq.${callerId}&select=firma_id`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
+    );
+    if (!fkRes.ok) return false;
+    const fkRows: { firma_id: string }[] = await fkRes.json();
+    if (fkRows.length === 0) return false;
+    const firmaIds = new Set(fkRows.map(r => r.firma_id));
+
+    const odRes = await fetch(
+      `${SUPABASE_URL_AUTH}/rest/v1/odeme_gecmisi?id=eq.${encodeURIComponent(odemeId)}&select=firma_id`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
+    );
+    if (!odRes.ok) return false;
+    const odRows: { firma_id: string }[] = await odRes.json();
+    if (odRows.length === 0) return false;
+    return firmaIds.has(odRows[0].firma_id);
+  } catch {
+    return false;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
@@ -104,6 +154,18 @@ serve(async (req) => {
     if (!odeme_id || !plan_id || !tutar) {
       return new Response(JSON.stringify({ error: "odeme_id, plan_id, tutar zorunlu" }),
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+    }
+
+    // 🔒 YETKI (2026-05-10): caller bu odeme_id'ye sahip mi?
+    // Eski akışta kontrol yoktu → cross-tenant ödeme manipülasyonu mümkündü.
+    const callerId = await getCallerUserId(req.headers.get("Authorization") || "");
+    if (!callerId) {
+      return new Response(JSON.stringify({ error: "Yetkisiz: oturum gerekli" }),
+        { status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+    }
+    if (!(await callerOwnsOdeme(callerId, String(odeme_id)))) {
+      return new Response(JSON.stringify({ error: "Bu ödeme size ait değil" }),
+        { status: 403, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
     }
 
     if (!IYZIPAY_API_KEY || !IYZIPAY_SECRET_KEY) {
