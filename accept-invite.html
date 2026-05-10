@@ -256,16 +256,22 @@ async function init() {
     return;
   }
 
-  // Mevcut session varsa direkt kabul akışına git
-  const { data: { session } } = await sb.auth.getSession();
+  // Mevcut session varsa direkt kabul akışına git.
+  // V5 known issue: SDK getSession() bazen askıda kalıyor — 2sn timeout ile race.
+  let session = null;
+  try {
+    const sessionPromise = sb.auth.getSession().then(r => r?.data?.session ?? null);
+    const timeoutPromise = new Promise(res => setTimeout(() => res(null), 2000));
+    session = await Promise.race([sessionPromise, timeoutPromise]);
+  } catch (_) { session = null; }
+
   if (session) {
     // Login olmuş — davet kabul et
     return acceptInviteWithSession(session);
   }
 
-  // Login değil — mod seçimi göster (signup vs login)
+  // Login değil (veya SDK askıda kaldı) — mod seçimi göster (signup / login)
   show('form-mode');
-  // Davet bilgilerini soldaki kart'a göstermeye çalış (RPC sonrası belli olacak)
 }
 
 async function acceptInviteWithSession(session) {
