@@ -1592,7 +1592,160 @@
   }
 
   // ════════════════════════════════════════════════════════
-  // PDF BORDRO (jsPDF + autoTable)
+  // PDF BORDRO — EDITORIAL TEMA (krem zemin + Newsreader)
+  // ════════════════════════════════════════════════════════
+  async function _harcHaftaPdfIndir_editorial(h, kayitlar) {
+    const T = window.PdfTheme;
+    const ctx = await T.init({ orientation:'portrait' });
+    const { doc, PW, PH, ML, MR, MT, MB, CW, COLOR } = ctx;
+
+    function fmtTRY(n) { return n == null ? '—' : (Math.round(n*100)/100).toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+    const today = new Date();
+    const docNo = 'FL-HC-' + (h.hafta_yili || today.getFullYear()) + '-H' + (h.hafta_no || '00');
+    const dateStamp = today.toLocaleDateString('tr-TR', {day:'2-digit', month:'long', year:'numeric'}).toUpperCase().replace(/\s+/g,' . ');
+
+    function newPage() {
+      T.drawFooter(ctx, { label:'Fleetly · Harcırah Bordrosu' });
+      doc.addPage();
+      T.drawPageBg(ctx);
+      return T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+        { key:'Belge No', value: docNo },
+        { key:'Şoför',    value: h.sofor_ad || '—' },
+        { key:'Sayfa',    value: String(doc.internal.getNumberOfPages()).padStart(2,'0') },
+      ]});
+    }
+
+    T.drawPageBg(ctx);
+    let y = T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+      { key:'Belge No', value: docNo },
+      { key:'Şoför',    value: h.sofor_ad || '—' },
+      { key:'Sayfa',    value:'01' },
+    ]});
+
+    const durumTxt = h.durum === 'odendi' ? 'Ödendi' : h.durum === 'iptal' ? 'İptal' : 'Kapalı';
+    y = T.drawTitleBlock(ctx, {
+      title:'Harcırah', titleEm:'Bordrosu.',
+      deck:'Haftalık şoför harcırah hesabı, kayıt detayları ve net ödeme tutarı.',
+      badge: durumTxt,
+      dateStamp: dateStamp,
+      y: y + 8,
+    });
+
+    const tarihTxt = (h.baslangic_tarih && h.bitis_tarih)
+      ? new Date(h.baslangic_tarih).toLocaleDateString('tr-TR') + ' — ' + new Date(h.bitis_tarih).toLocaleDateString('tr-TR')
+      : '—';
+    y = T.drawMetaStrip(ctx, {
+      y: y + 4,
+      items:[
+        { key:'Şoför',         value: h.sofor_ad || '—' },
+        { key:'Hafta',         value: (h.hafta_yili || '—') + ' / H' + (h.hafta_no || '—') },
+        { key:'Tarih Aralığı', value: tarihTxt },
+        { key:'Kayıt',         value: kayitlar.length + ' adet' },
+      ],
+    });
+
+    // KPI grid 3×1 (özet)
+    y = T.drawKpiGrid(ctx, {
+      y: y, cols: 3,
+      items: [
+        { label:'Brüt Toplam', pre:'TL ', value: fmtTRY(h.toplam_brut), positive: (h.toplam_brut||0) > 0 },
+        { label:'Avans Düşüm', pre:'− TL ', value: fmtTRY(h.toplam_avans) },
+        { label:'Net Ödenecek', pre:'TL ', value: fmtTRY(h.toplam_net), positive: (h.toplam_net||0) > 0 },
+      ],
+    });
+
+    // §01 — Kayıt Detayları
+    y = T.drawSectionHead(ctx, {
+      y: y + 6, num:'01', title:'Günlük Kayıt Detayları',
+      meta: kayitlar.length + ' kayıt',
+    });
+
+    const detRows = kayitlar.map((k, i) => [
+      String(i+1),
+      k.is_tarihi ? new Date(k.is_tarihi).toLocaleDateString('tr-TR', {day:'2-digit', month:'2-digit'}) : '—',
+      { text: k.arac_plaka || '—', plate: !!k.arac_plaka },
+      k.hesaplanan_tutar != null ? fmtTRY(k.hesaplanan_tutar) : '—',
+      k.manuel_tutar != null ? fmtTRY(k.manuel_tutar) : '—',
+      k.ek_masraflar > 0 ? '+ ' + fmtTRY(k.ek_masraflar) : '—',
+      k.avans_dusum > 0 ? '− ' + fmtTRY(k.avans_dusum) : '—',
+      { text: fmtTRY(k.net_tutar || 0), bold: true, positive: (k.net_tutar||0) > 0 },
+    ]);
+    y = T.drawTable(ctx, {
+      y: y + 4,
+      columns: [
+        { label:'#',       w: 6,  align:'right' },
+        { label:'Tarih',   w: 10, align:'left'  },
+        { label:'Plaka',   w: 16, align:'left'  },
+        { label:'Tarife',  w: 13, align:'right' },
+        { label:'Manuel',  w: 13, align:'right' },
+        { label:'Ek',      w: 13, align:'right' },
+        { label:'Avans',   w: 13, align:'right' },
+        { label:'Net (₺)', w: 16, align:'right' },
+      ],
+      rows: detRows.length ? detRows : [['—','—','—','—','—','—','—','—']],
+      foot: [
+        '',
+        'TOPLAM',
+        '',
+        '',
+        '',
+        h.toplam_ek_masraf > 0 ? '+ ' + fmtTRY(h.toplam_ek_masraf) : '',
+        h.toplam_avans > 0 ? '− ' + fmtTRY(h.toplam_avans) : '',
+        { text: fmtTRY(h.toplam_net || 0), positive: (h.toplam_net||0) > 0 },
+      ],
+      onPageBreak: () => newPage(),
+    });
+
+    // §02 — Ödeme Özeti (P/L style)
+    y = T.drawSectionHead(ctx, { y: y + 6, num:'02', title:'Ödeme Özeti' });
+    const halfW = (CW - 4) / 2;
+    T.drawPLList(ctx, {
+      x: ML + halfW + 4, y: y + 4, w: halfW,
+      rows: [
+        { label:'Brüt Toplam',  value:'TL ' + fmtTRY(h.toplam_brut) },
+        { label:'Avans Düşüm',  value:'− TL ' + fmtTRY(h.toplam_avans) },
+        { label:'NET ÖDENECEK', value:'TL ' + fmtTRY(h.toplam_net),
+          positive: true, isTotal: true },
+      ],
+    });
+    y += 30;
+
+    // Notlar
+    if (h.notlar) {
+      if (y + 14 > PH - MB - 8) y = newPage();
+      ctx.setSans(8, 'bold'); ctx.setText(COLOR.ink3);
+      doc.text(ctx.tr('NOT'), ML, y);
+      y += 5;
+      ctx.setSans(9, 'italic'); ctx.setText(COLOR.ink);
+      const lines = doc.splitTextToSize(ctx.tr(h.notlar), CW - 4);
+      doc.text(lines, ML, y);
+      y += 4.5 * lines.length + 4;
+    }
+
+    // Sign-off
+    if (y + 28 > PH - MB - 8) y = newPage();
+    T.drawSignOff(ctx, {
+      y: y + 14,
+      preparedLabel:'HAZIRLAYAN',
+      approvedLabel:'TESLİM ALAN',
+      prepared:'Operasyon · Fleetly',
+      approved:(h.sofor_ad || '—') + ' · İmza ve Tarih',
+    });
+
+    T.drawFooter(ctx, { label:'Fleetly · Harcırah Bordrosu · ' + (h.sofor_ad || '—') });
+    T.stampPageNumbers(ctx);
+
+    const asciiName = String(h.sofor_ad || 'sofor').toLowerCase()
+      .replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g')
+      .replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    doc.save(`harcirah-${asciiName}-${h.hafta_yili}-h${h.hafta_no}.pdf`);
+    if (typeof toast === 'function') toast('PDF indirildi', 'success');
+  }
+
+  // ════════════════════════════════════════════════════════
+  // PDF BORDRO (jsPDF + autoTable) — eski, fallback
   // ════════════════════════════════════════════════════════
   async function harcHaftaPdfIndir(haftalikId) {
     if (typeof window.jspdf === 'undefined') {
@@ -1603,6 +1756,10 @@
     const h = list.find(x => x.id === haftalikId);
     if (!h) { if (typeof toast === 'function') toast('Hafta bulunamadı', 'error'); return; }
     const kayitlar = await window.HarcirahAPI.haftalikKayitlar(h);
+
+    if (window.PdfTheme) {
+      return _harcHaftaPdfIndir_editorial(h, kayitlar);
+    }
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });

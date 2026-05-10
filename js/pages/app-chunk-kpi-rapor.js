@@ -501,6 +501,228 @@ async function kpiRaporExcelIndir() {
 /* ──────────────────────────────────────────────────────────────────────
    7) PDF ÇIKTISI — jsPDF, kapak + sürücü başına 1 sayfa + özet ranking
    ──────────────────────────────────────────────────────────────────── */
+async function _kpiRaporPdfIndir_editorial() {
+  const T = window.PdfTheme;
+  const ctx = await T.init({ orientation:'portrait' });
+  const { doc, PW, PH, ML, MR, MT, MB, CW, COLOR } = ctx;
+
+  function fmtNum(n, dec) { dec = dec == null ? 0 : dec; return n == null ? '—' : (Math.round(n * Math.pow(10,dec)) / Math.pow(10,dec)).toLocaleString('tr-TR', {maximumFractionDigits:dec}); }
+  function fmtTRY(n) { return n == null ? '—' : Math.round(n).toLocaleString('tr-TR'); }
+
+  const sorted = [..._KPI.veri.perDriver].sort((a,b) => b.performans_skoru - a.performans_skoru);
+  const firmaAdi = (typeof currentFirmaAdi !== 'undefined' && currentFirmaAdi) ? currentFirmaAdi : 'Fleetly';
+  const ayLbl = _kpiAyLabel(_KPI.ay);
+
+  const today = new Date();
+  const docNo = 'FL-KP-' + (_KPI.ay || today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0'));
+  const dateStamp = today.toLocaleDateString('tr-TR', {day:'2-digit', month:'long', year:'numeric'}).toUpperCase().replace(/\s+/g,' . ');
+
+  function newPage() {
+    T.drawFooter(ctx, { label:'Fleetly · Sürücü KPI · ' + ayLbl });
+    doc.addPage();
+    T.drawPageBg(ctx);
+    return T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+      { key:'Belge No', value: docNo },
+      { key:'Dönem',    value: ayLbl },
+      { key:'Sayfa',    value: String(doc.internal.getNumberOfPages()).padStart(2,'0') },
+    ]});
+  }
+
+  // ── KAPAK SAYFASI ──
+  T.drawPageBg(ctx);
+  let y = T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+    { key:'Belge No', value: docNo },
+    { key:'Dönem',    value: ayLbl },
+    { key:'Sayfa',    value:'01' },
+  ]});
+
+  y = T.drawTitleBlock(ctx, {
+    title:'Sürücü KPI', titleEm:'Karnesi.',
+    deck:'Aylık sürücü performans değerlendirmesi: teslim, hız, verim, uyum.',
+    badge: firmaAdi,
+    dateStamp: dateStamp, y: y + 8,
+  });
+
+  // Genel istatistikler
+  const top_is = sorted.reduce((s,d) => s + d.toplam_is, 0);
+  const top_tamamlanan = sorted.reduce((s,d) => s + d.tamamlanan, 0);
+  const top_km = sorted.reduce((s,d) => s + d.toplam_km, 0);
+  const top_yakit_tl = sorted.reduce((s,d) => s + d.toplam_yakit_tl, 0);
+  const top_yakit_lt = sorted.reduce((s,d) => s + d.toplam_yakit_lt, 0);
+  const ortSkor = sorted.length ? Math.round(sorted.reduce((s,d) => s + d.performans_skoru, 0) / sorted.length) : 0;
+  const basariOrani = top_is > 0 ? (top_tamamlanan/top_is*100) : 0;
+
+  y = T.drawMetaStrip(ctx, {
+    y: y + 4,
+    items:[
+      { key:'Sürücü', value: sorted.length + ' kişi' },
+      { key:'İş Emri', value: top_is + ' adet' },
+      { key:'Tamamlanan', value: top_tamamlanan + ' adet' },
+      { key:'Başarı', value: '%' + basariOrani.toFixed(1) },
+    ],
+  });
+
+  y = T.drawKpiGrid(ctx, {
+    y: y, cols: 3,
+    items: [
+      { label:'Ortalama Skor', value: String(ortSkor), unit:' / 100',
+        delta: ortSkor >= 75 ? 'Yüksek performans' : ortSkor >= 50 ? 'Orta seviye' : 'Geliştirilmeli',
+        positive: ortSkor >= 75 },
+      { label:'Toplam İş Emri', value: String(top_is), unit:' adet',
+        delta: 'Tamamlanan: ' + top_tamamlanan },
+      { label:'Toplam Mesafe', value: fmtNum(top_km), unit:' km',
+        delta: 'Tüm sürücüler' },
+      { label:'Toplam Yakıt', value: fmtNum(top_yakit_lt, 1), unit:' L' },
+      { label:'Yakıt Maliyeti', pre:'TL ', value: fmtTRY(top_yakit_tl) },
+      { label:'Başarı Oranı', value: basariOrani.toFixed(1), unit:'%',
+        positive: basariOrani >= 90 },
+    ],
+  });
+
+  // §01 — Sıralama tablosu kapakta
+  y = T.drawSectionHead(ctx, {
+    y: y + 6, num:'01', title:'Performans Sıralaması',
+    meta: 'Top ' + Math.min(10, sorted.length),
+  });
+  y = T.drawTable(ctx, {
+    y: y + 4,
+    columns: [
+      { label:'#',           w: 6,  align:'right' },
+      { label:'Sürücü',      w: 30, align:'left'  },
+      { label:'İş Emri',     w: 12, align:'right' },
+      { label:'Başarı',      w: 12, align:'right' },
+      { label:'Toplam KM',   w: 14, align:'right' },
+      { label:'Yakıt (L)',   w: 12, align:'right' },
+      { label:'Skor',        w: 14, align:'right' },
+    ],
+    rows: sorted.slice(0, 10).map((d, i) => [
+      String(i+1),
+      d.ad || '—',
+      String(d.toplam_is),
+      '%' + (d.basari_orani || 0).toFixed(1),
+      fmtNum(d.toplam_km),
+      fmtNum(d.toplam_yakit_lt, 1),
+      { text: String(d.performans_skoru) + ' / 100',
+        positive: d.performans_skoru >= 75,
+        negative: d.performans_skoru < 50,
+        bold: true },
+    ]),
+    onPageBreak: () => newPage(),
+  });
+
+  T.drawFooter(ctx, { label:'Fleetly · Sürücü KPI · ' + ayLbl });
+
+  // ── HER SÜRÜCÜ İÇİN 1 SAYFA ──
+  for (let i = 0; i < sorted.length; i++) {
+    const d = sorted[i];
+    let py = newPage();
+
+    py = T.drawTitleBlock(ctx, {
+      title: d.ad ? d.ad.split(' ')[0] : '—',
+      titleEm: d.ad && d.ad.split(' ').length > 1 ? d.ad.split(' ').slice(1).join(' ') + '.' : '',
+      deck:'Sıra ' + (i+1) + ' / ' + sorted.length + '. ' + ayLbl + ' performans karnesi.',
+      badge: d.performans_skoru + ' / 100',
+      dateStamp: dateStamp, y: py + 8,
+    });
+
+    py = T.drawMetaStrip(ctx, {
+      y: py + 4,
+      items:[
+        { key:'Sıra',        value: '#' + (i+1) + ' / ' + sorted.length },
+        { key:'İş Emri',     value: d.toplam_is + ' adet' },
+        { key:'Tamamlanan',  value: d.tamamlanan + ' / ' + d.toplam_is },
+        { key:'Skor',        value: d.performans_skoru + ' / 100' },
+      ],
+    });
+
+    // 4 ana KPI
+    py = T.drawKpiGrid(ctx, {
+      y: py, cols: 4,
+      items: [
+        { label:'Teslim', value: (d.basari_orani || 0).toFixed(1), unit:'%',
+          delta: d.tamamlanan + ' / ' + d.toplam_is + ' tamamlanan',
+          positive: d.basari_orani >= 90 },
+        { label:'Hız', value: d.ort_teslim_suresi ? d.ort_teslim_suresi.toFixed(1) : '—',
+          unit: d.ort_teslim_suresi ? ' sa' : '',
+          delta:'Ort. teslim süresi' },
+        { label:'Verim', value: d.km_basi_lt_100km ? d.km_basi_lt_100km.toFixed(1) : '—',
+          unit: d.km_basi_lt_100km ? ' L/100km' : '',
+          delta: d.km_basi_tl ? 'TL ' + d.km_basi_tl.toFixed(2) + '/km' : '—',
+          positive: d.km_basi_lt_100km != null && d.km_basi_lt_100km < 30 },
+        { label:'Uyum (POD)', value: (d.foto_yukleme_orani || 0).toFixed(1), unit:'%',
+          delta: d.eksik_pod ? d.eksik_pod + ' eksik POD' : 'Tam uyum',
+          positive: d.eksik_pod === 0 },
+      ],
+    });
+
+    // §X — Detaylı metrikler
+    py = T.drawSectionHead(ctx, { y: py + 6, title:'Detaylı Metrikler', meta:'10 metrik' });
+    py = T.drawTable(ctx, {
+      y: py + 4,
+      columns: [
+        { label:'Metrik', w: 60, align:'left'  },
+        { label:'Değer',  w: 40, align:'right' },
+      ],
+      rows: [
+        ['Toplam İş Emri', { text: String(d.toplam_is), bold: true }],
+        ['Tamamlanan', { text: String(d.tamamlanan), bold: true, positive: true }],
+        ['İptal Edilen', { text: String(d.iptal), color: d.iptal > 0 ? COLOR.negative : COLOR.ink3 }],
+        ['Toplam Sefer', String(d.toplam_sefer)],
+        ['Toplam KM', fmtNum(d.toplam_km, 1) + ' km'],
+        ['Ortalama Sefer KM', fmtNum(d.ort_sefer_km, 1) + ' km'],
+        ['Toplam Yakıt', fmtNum(d.toplam_yakit_lt, 1) + ' L'],
+        ['Yakıt Maliyeti', { text: 'TL ' + fmtTRY(d.toplam_yakit_tl), bold: true }],
+        ['Fotoğraflı İş', String(d.foto_yuklenen_is) + ' adet'],
+        ['Eksik POD', { text: String(d.eksik_pod), color: d.eksik_pod > 0 ? COLOR.negative : COLOR.positive, bold: true }],
+      ],
+      onPageBreak: () => newPage(),
+    });
+
+    // §X — Skor dağılımı (yatay bar)
+    py = T.drawSectionHead(ctx, { y: py + 6, title:'Performans Skor Dağılımı', meta:'Her bileşen 25 puan' });
+    ctx.setStroke(COLOR.ink); ctx.hairline(0.4);
+    doc.line(ML, py + 4, ML + CW, py + 4);
+    let by = py + 12;
+    const segs = [
+      { label:'Teslim',    value: d.teslim_p, color: COLOR.ink },
+      { label:'Hız',       value: d.hiz_p,    color: COLOR.ink2 },
+      { label:'Verim',     value: d.verim_p,  color: COLOR.ink4 },
+      { label:'Uyum (POD)', value: d.uyum_p,   color: COLOR.positive },
+    ];
+    segs.forEach(seg => {
+      ctx.setSans(8.5, 'normal');
+      ctx.setText(COLOR.ink);
+      doc.text(ctx.tr(seg.label), ML, by);
+      const barX = ML + 50;
+      const barW = CW - 50 - 24;
+      ctx.setFill(COLOR.hairline2);
+      doc.rect(barX, by - 4, barW, 5, 'F');
+      const fillW = (seg.value/25) * barW;
+      ctx.setFill(seg.color);
+      doc.rect(barX, by - 4, Math.max(2, fillW), 5, 'F');
+      ctx.setMono(8, 'bold');
+      ctx.setText(seg.color);
+      doc.text(Math.round(seg.value) + ' / 25', barX + barW + 3, by);
+      by += 9;
+    });
+    ctx.setStroke(COLOR.ink); ctx.hairline(0.4);
+    doc.line(ML, by + 2, ML + CW, by + 2);
+
+    // Toplam skor
+    by += 8;
+    ctx.setSans(9, 'bold'); ctx.setText(COLOR.ink);
+    doc.text(ctx.tr('TOPLAM SKOR'), ML, by);
+    ctx.setMono(12, 'bold');
+    ctx.setText(d.performans_skoru >= 75 ? COLOR.positive : d.performans_skoru < 50 ? COLOR.negative : COLOR.ink);
+    doc.text(d.performans_skoru + ' / 100', ML + CW, by, { align:'right' });
+
+    T.drawFooter(ctx, { label:'Fleetly · ' + (d.ad || '—') + ' · ' + ayLbl });
+  }
+
+  T.stampPageNumbers(ctx);
+  doc.save(`Surucu_KPI_${_KPI.ay}.pdf`);
+}
+
 async function kpiRaporPdfIndir() {
   if (typeof window.jspdf === 'undefined') { showToast?.('PDF kütüphanesi yüklenmedi', 'error'); return; }
   if (!_KPI.veri || !_KPI.veri.perDriver?.length) { showToast?.('Önce hesapla butonuna basın', 'error'); return; }
@@ -512,6 +734,13 @@ async function kpiRaporPdfIndir() {
   if (prog) prog.classList.add('show');
 
   try {
+    if (window.PdfTheme) {
+      await _kpiRaporPdfIndir_editorial();
+      if (btn) { btn.textContent = '✓ İndirildi'; setTimeout(() => { if(btn){btn.disabled=false;btn.textContent='📄 PDF';} }, 2500); }
+      setTimeout(() => { if (prog) prog.classList.remove('show'); if (bar) bar.style.width = '0%'; }, 800);
+      return;
+    }
+
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 

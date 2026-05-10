@@ -29,7 +29,10 @@
       "Bash(awk -F: '$1>=1500 && $1<=1700')",
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/app-chunk-02.js\")",
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/integrations/pdf-theme.js\")",
-      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/integrations/pdf-fonts.js\")"
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/integrations/pdf-fonts.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/harcirah-page.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/app-chunk-kpi-rapor.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/app-chunk-pod.js\")"
     ]
   }
 }

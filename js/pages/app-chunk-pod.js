@@ -271,7 +271,240 @@ function podBlobToDataUrl(blob) {
 }
 
 /* ──────────────────────────────────────────────────────────────────────
-   6) TASLAK PDF ÜRETİMİ (jsPDF)
+   6) TASLAK PDF ÜRETİMİ — EDITORIAL TEMA (krem + Newsreader)
+   Ortak iskelet: detay tablosu, teslim notu+imza, fotoğraflar.
+   final=true → yeşil "ONAYLANDI" rozeti + onay bloğu + QR
+   final=false → "TASLAK" rozeti + sarı durum bandı
+   ──────────────────────────────────────────────────────────────────── */
+async function _podPdfUret_editorial(opts, final) {
+  const T = window.PdfTheme;
+  const ctx = await T.init({ orientation:'portrait' });
+  const { doc, PW, PH, ML, MR, MT, MB, CW, COLOR } = ctx;
+
+  const e = opts.isEmri || {};
+  const tarih = new Date(e.teslim_zamani || Date.now()).toLocaleDateString('tr-TR');
+  const saat  = new Date(e.teslim_zamani || Date.now()).toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' });
+
+  const isEmriNo = e.firma_isemri_no ?? e.id ?? '?';
+  const docNo = 'POD-' + String(isEmriNo) + (final ? '-FINAL' : '-TASLAK');
+  const dateStamp = new Date().toLocaleDateString('tr-TR', {day:'2-digit', month:'long', year:'numeric'}).toUpperCase().replace(/\s+/g,' . ');
+
+  // ── Sayfa zemin + topbar ──
+  T.drawPageBg(ctx);
+  let y = T.drawTopbar(ctx, { brand: opts.firmaAdi || 'Fleetly', meta:[
+    { key:'Belge No', value: docNo },
+    { key:'Tarih',    value: tarih + ' ' + saat },
+    { key:'Sayfa',    value:'01' },
+  ]});
+
+  y = T.drawTitleBlock(ctx, {
+    title:'Teslimat', titleEm:'Makbuzu.',
+    deck: final
+      ? 'Yönetici tarafından onaylanmış teslim belgesi.'
+      : 'Saha teslimi tamamlandı; yönetici onayı bekleniyor.',
+    badge: final ? 'Onaylandı' : 'Taslak',
+    dateStamp: dateStamp,
+    y: y + 8,
+  });
+
+  // İş emri no + müşteri (meta strip)
+  y = T.drawMetaStrip(ctx, {
+    y: y + 4,
+    items: [
+      { key:'İş Emri No', value: '#' + String(isEmriNo) },
+      { key:'Müşteri',    value: e.musteri_adi || '—' },
+      { key:'Referans',   value: e.referans_no || '—' },
+      { key:'Plaka',      value: e.arac_plaka || '—' },
+    ],
+  });
+
+  // §01 — Teslim Detayları
+  y = T.drawSectionHead(ctx, { y: y + 4, num:'01', title:'Teslim Detayları' });
+  ctx.setStroke(COLOR.ink); ctx.hairline(0.4);
+  doc.line(ML, y + 4, ML + CW, y + 4);
+  y += 10;
+
+  const detay = [
+    { key:'Sürücü',         val: opts.sofor || e.sofor || '—' },
+    { key:'Araç Plaka',     val: e.arac_plaka || '—' },
+    { key:'Yükleme Yeri',   val: e.yukle_yeri || '—' },
+    { key:'Teslim Yeri',    val: e.teslim_yeri || '—' },
+    { key:'Konteyner No',   val: (e.konteyner_no || '—').split('\n')[0] },
+    { key:'Konteyner Tipi', val: e.kont_tip || '—' },
+    { key:'Mühür No',       val: e.muhur_no || '—' },
+    { key:'Boş Dönüş',      val: e.bos_donus || '—' },
+  ];
+  // 2 sütun layout
+  const colW = (CW - 8) / 2;
+  detay.forEach((row, i) => {
+    const col = i % 2;
+    const r = Math.floor(i / 2);
+    const xx = ML + col * (colW + 8);
+    const yy = y + r * 7;
+    ctx.setSans(7, 'bold'); ctx.setText(COLOR.ink3);
+    doc.text(ctx.tr(row.key.toUpperCase()), xx, yy);
+    ctx.setSans(9, 'normal'); ctx.setText(COLOR.ink);
+    doc.text(ctx.tr(row.val), xx, yy + 4.5);
+  });
+  y += Math.ceil(detay.length / 2) * 7 + 6;
+
+  // KM aralığı + konum
+  if (e.baslangic_km != null || e.bitis_km != null) {
+    ctx.setSans(7, 'bold'); ctx.setText(COLOR.ink3);
+    doc.text('KM ARALIĞI', ML, y);
+    ctx.setMono(9, 'normal'); ctx.setText(COLOR.ink);
+    const km = (e.baslangic_km != null && e.bitis_km != null)
+      ? ' (' + (+e.bitis_km - +e.baslangic_km).toLocaleString('tr-TR') + ' km)' : '';
+    doc.text((e.baslangic_km ?? '?') + ' → ' + (e.bitis_km ?? '?') + km, ML + 26, y);
+    y += 6;
+  }
+  if (e.konum_lat && e.konum_lng) {
+    ctx.setSans(7, 'bold'); ctx.setText(COLOR.ink3);
+    doc.text('TESLİM KONUMU', ML, y);
+    ctx.setMono(9, 'normal'); ctx.setText(COLOR.ink);
+    doc.text((+e.konum_lat).toFixed(5) + ', ' + (+e.konum_lng).toFixed(5), ML + 32, y);
+    y += 6;
+  }
+
+  ctx.setStroke(COLOR.hairline); ctx.hairline(0.18);
+  doc.line(ML, y + 2, ML + CW, y + 2);
+  y += 8;
+
+  // §02 — Teslim Notu + İmza
+  y = T.drawSectionHead(ctx, { y: y, num:'02', title:'Teslim Notu & İmza' });
+  ctx.setStroke(COLOR.ink); ctx.hairline(0.4);
+  doc.line(ML, y + 4, ML + CW, y + 4);
+  y += 10;
+
+  const halfW = (CW - 8) / 2;
+  // Sol: teslim notu + alan
+  ctx.setSans(7, 'bold'); ctx.setText(COLOR.ink3);
+  doc.text('TESLİM NOTU', ML, y);
+  ctx.setSans(9, 'italic'); ctx.setText(COLOR.ink);
+  const not = (opts.teslimNotu || e.teslim_not_musteri || '').trim();
+  const notLines = doc.splitTextToSize(ctx.tr(not || 'Not yok.'), halfW);
+  doc.text(notLines, ML, y + 5);
+
+  const alan = (opts.teslimAlan || e.teslim_alan_ad || '').trim();
+  if (alan) {
+    ctx.setSans(7, 'bold'); ctx.setText(COLOR.ink3);
+    doc.text('TESLİM ALAN', ML, y + 5 + notLines.length * 4.5 + 4);
+    ctx.setSans(10, 'bold'); ctx.setText(COLOR.ink);
+    doc.text(ctx.tr(alan), ML, y + 5 + notLines.length * 4.5 + 9);
+  }
+
+  // Sağ: imza
+  ctx.setSans(7, 'bold'); ctx.setText(COLOR.ink3);
+  doc.text('MÜŞTERİ İMZASI', ML + halfW + 8, y);
+  if (opts.imzaDataUrl) {
+    try {
+      doc.addImage(opts.imzaDataUrl, 'PNG', ML + halfW + 8, y + 4, halfW, 26);
+    } catch (err) { console.warn('İmza eklenemedi:', err); }
+  } else {
+    ctx.setSans(9, 'italic'); ctx.setText(COLOR.ink3);
+    doc.text(ctx.tr('İmza alınmadı.'), ML + halfW + 8, y + 18);
+  }
+  ctx.setStroke(COLOR.ink); ctx.hairline(0.4);
+  doc.line(ML + halfW + 8, y + 32, ML + CW, y + 32);
+  ctx.setSans(7, 'normal'); ctx.setText(COLOR.ink3);
+  doc.text(ctx.tr('İmza ve mühür'), ML + halfW + 8, y + 35);
+
+  y += 40;
+
+  // §03 — Fotoğraflar
+  const fotos = (opts.fotoUrls || []).slice(0, 4);
+  if (fotos.length) {
+    y = T.drawSectionHead(ctx, {
+      y: y + 2, num:'03', title:'Teslim Fotoğrafları',
+      meta: fotos.length + ' adet',
+    });
+    ctx.setStroke(COLOR.ink); ctx.hairline(0.4);
+    doc.line(ML, y + 4, ML + CW, y + 4);
+    y += 8;
+
+    const cellW = (CW - 12) / 4;
+    const cellH = 36;
+    for (let i = 0; i < fotos.length; i++) {
+      const x = ML + i * (cellW + 4);
+      try {
+        doc.addImage(fotos[i], undefined, x, y, cellW, cellH, undefined, 'FAST');
+      } catch (err) {
+        ctx.setFill(COLOR.paper2);
+        doc.rect(x, y, cellW, cellH, 'F');
+        ctx.setSans(8, 'italic'); ctx.setText(COLOR.ink3);
+        doc.text(ctx.tr('(yüklenemedi)'), x + cellW/2, y + cellH/2, {align:'center'});
+      }
+      ctx.setStroke(COLOR.hairline); ctx.hairline(0.15);
+      doc.rect(x, y, cellW, cellH, 'S');
+    }
+    y += cellH + 6;
+  }
+
+  // ── DURUM / ONAY BLOĞU ──
+  if (final) {
+    // Yeşil onay bloğu
+    if (y + 30 > PH - MB - 8) y = Math.min(y, PH - MB - 38);
+    ctx.setStroke(COLOR.positive); ctx.hairline(0.6);
+    ctx.setFill(COLOR.paper);
+    doc.rect(ML, y, CW, 26, 'S');
+
+    ctx.setSans(7, 'bold'); ctx.setText(COLOR.positive);
+    doc.text('YÖNETİCİ ONAYI', ML + 4, y + 6);
+
+    ctx.setSans(9, 'normal'); ctx.setText(COLOR.ink);
+    doc.text(ctx.tr('Onaylayan: ') + ctx.tr(opts.onaylayanAd || '—'), ML + 4, y + 13);
+    const onayTarih = opts.onayZamani ? new Date(opts.onayZamani).toLocaleString('tr-TR') : new Date().toLocaleString('tr-TR');
+    doc.text(ctx.tr('Onay Tarihi: ') + onayTarih, ML + 4, y + 19);
+    if (opts.onayNotu) {
+      ctx.setSans(8.5, 'italic'); ctx.setText(COLOR.ink2);
+      const nLines = doc.splitTextToSize(ctx.tr('Not: ' + opts.onayNotu), CW - 50);
+      doc.text(nLines, ML + 4, y + 24);
+    }
+
+    // QR — sağda
+    if (opts.qrUrl) {
+      try {
+        doc.addImage(opts.qrUrl, 'PNG', ML + CW - 30, y + 1, 24, 24);
+        ctx.setSans(6, 'normal'); ctx.setText(COLOR.ink3);
+        doc.text(ctx.tr('Doğrulama QR'), ML + CW - 18, y + 26, {align:'center'});
+      } catch {}
+    }
+
+    // "ONAYLANDI" rozeti — sağ üst, sayfanın sağında
+    ctx.setStroke(COLOR.positive); ctx.hairline(0.6);
+    const stampW = 40, stampH = 14;
+    const stampX = PW - MR - stampW;
+    const stampY = MT + 24;
+    doc.rect(stampX, stampY, stampW, stampH, 'S');
+    doc.rect(stampX + 0.8, stampY + 0.8, stampW - 1.6, stampH - 1.6, 'S');
+    ctx.setSerif(10, 'italic'); ctx.setText(COLOR.positive);
+    doc.text('ONAYLANDI', stampX + stampW/2, stampY + 7, {align:'center'});
+    ctx.setMono(6, 'normal');
+    const onayTr = new Date(opts.onayZamani || Date.now()).toLocaleDateString('tr-TR');
+    doc.text(onayTr, stampX + stampW/2, stampY + 11.5, {align:'center'});
+  } else {
+    // Sarı taslak bandı
+    if (y + 14 > PH - MB - 8) y = PH - MB - 22;
+    ctx.setStroke(COLOR.ink2); ctx.hairline(0.3);
+    doc.rect(ML, y, CW, 12, 'S');
+    ctx.setSerif(10, 'italic'); ctx.setText(COLOR.ink);
+    doc.text(ctx.tr('TASLAK · Yönetici onayı bekliyor'), ML + CW/2, y + 8, {align:'center'});
+  }
+
+  // Footer
+  T.drawFooter(ctx, {
+    label:'Fleetly · Teslimat Makbuzu' + (final ? ' · Onaylı' : ' · Taslak'),
+    pageNo: 1, totalPages: 1,
+  });
+
+  return doc.output('blob');
+}
+
+async function _podTaslakPdfUret_editorial(opts) { return _podPdfUret_editorial(opts, false); }
+async function _podFinalPdfUret_editorial(opts)  { return _podPdfUret_editorial(opts, true); }
+
+/* ──────────────────────────────────────────────────────────────────────
+   6) TASLAK PDF ÜRETİMİ (jsPDF) — eski, fallback
    ──────────────────────────────────────────────────────────────────── */
 async function podTaslakPdfUret(opts) {
   /* opts: {
@@ -279,6 +512,9 @@ async function podTaslakPdfUret(opts) {
        fotoUrls (max 4), kapakRengi
      }
      Döner: Blob (application/pdf)                                       */
+  if (window.PdfTheme) {
+    return _podTaslakPdfUret_editorial(opts);
+  }
   if (!window.jspdf) throw new Error('jsPDF yüklü değil');
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -734,6 +970,9 @@ async function podQrDataUrl(text, opts = {}) {
 async function podFinalPdfUret(opts) {
   /* opts: { isEmri, firmaAdi, sofor, imzaDataUrl, teslimNotu, teslimAlan,
              fotoUrls, onaylayanAd, onayZamani, onayNotu, qrUrl }            */
+  if (window.PdfTheme) {
+    return _podFinalPdfUret_editorial(opts);
+  }
   if (!window.jspdf) throw new Error('jsPDF yüklü değil');
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
