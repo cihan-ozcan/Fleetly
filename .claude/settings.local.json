@@ -32,7 +32,14 @@
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/integrations/pdf-fonts.js\")",
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/harcirah-page.js\")",
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/app-chunk-kpi-rapor.js\")",
-      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/app-chunk-pod.js\")"
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/app-chunk-pod.js\")",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e ' *)",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/integrations/fleetly-icons.js\")",
+      "Bash(node scripts/migrate-emojis.js)",
+      "Bash(node scripts/migrate-emojis.js --apply)",
+      "Bash(node scripts/migrate-android-icons.js)",
+      "Bash(node scripts/migrate-android-icons.js --apply)"
     ]
   }
 }

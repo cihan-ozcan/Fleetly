@@ -757,7 +757,7 @@ a{color:inherit}
 
 <!-- ERROR -->
 <div id="error-state">
-  <div class="err-icon">🔒</div>
+  <div class="err-icon"><i data-icon="lock" aria-hidden="true"></i></div>
   <h2 id="error-title">Bulunamadı</h2>
   <p id="error-msg">Bu takip linki geçersiz veya süresi dolmuş.</p>
 </div>
@@ -848,16 +848,16 @@ a{color:inherit}
     <!-- ACTION BAR -->
     <div class="action-bar reveal" data-d="3">
       <button class="act-btn call" id="btn-call" onclick="callDriver()">
-        <span class="act-icon">📞</span><span data-i18n="btn_call">Şoförü Ara</span>
+        <span class="act-icon"><i data-icon="phone" aria-hidden="true"></i></span><span data-i18n="btn_call">Şoförü Ara</span>
       </button>
       <button class="act-btn whatsapp" id="btn-wa" onclick="whatsappDriver()">
-        <span class="act-icon">💬</span><span data-i18n="btn_wa">WhatsApp</span>
+        <span class="act-icon"><i data-icon="message-circle" aria-hidden="true"></i></span><span data-i18n="btn_wa">WhatsApp</span>
       </button>
       <button class="act-btn share" id="btn-share" onclick="openShareSheet()">
-        <span class="act-icon">🔗</span><span data-i18n="btn_share">Paylaş</span>
+        <span class="act-icon"><i data-icon="link" aria-hidden="true"></i></span><span data-i18n="btn_share">Paylaş</span>
       </button>
       <button class="act-btn pod disabled" id="btn-pod" onclick="printPOD()">
-        <span class="act-icon">📄</span><span data-i18n="btn_pod">POD İndir</span>
+        <span class="act-icon"><i data-icon="file-text" aria-hidden="true"></i></span><span data-i18n="btn_pod">POD İndir</span>
       </button>
     </div>
 
@@ -875,7 +875,7 @@ a{color:inherit}
           </div>
           <div id="harita-wrap">
             <div class="no-loc" id="no-location">
-              <div class="no-loc-icon">📡</div>
+              <div class="no-loc-icon"><i data-icon="globe" aria-hidden="true"></i></div>
               <div data-i18n="no_loc_1">Konum henüz paylaşılmadı</div>
               <div style="font-size:11px;opacity:.6" data-i18n="no_loc_2">Şoför yola çıktığında rota burada görünecek</div>
             </div>
@@ -946,7 +946,7 @@ a{color:inherit}
         <div id="pod-wrap" style="display:none" class="reveal" data-d="5">
           <div class="pod-card">
             <div class="pod-hdr">
-              <span class="pod-hdr-icon">✅</span>
+              <span class="pod-hdr-icon"><i data-icon="check" aria-hidden="true"></i></span>
               <div>
                 <div class="pod-hdr-title" data-i18n="pod_title">Teslimat Tamamlandı</div>
                 <div class="pod-hdr-sub" id="pod-sub">—</div>
@@ -975,13 +975,13 @@ a{color:inherit}
             <div id="pod-pdf-box" style="display:none;margin-top:14px;padding:12px 14px;background:var(--green-50);border:1px solid rgba(16,185,129,.25);border-radius:10px">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
                 <div>
-                  <div style="font-size:13px;font-weight:700;color:#047857">📄 Teslim Makbuzu</div>
+                  <div style="font-size:13px;font-weight:700;color:#047857"><i data-icon="file-text" aria-hidden="true"></i> Teslim Makbuzu</div>
                   <div style="font-size:11.5px;color:var(--slate-500);margin-top:2px">PDF olarak indirilebilir</div>
                 </div>
                 <span id="pod-pdf-badge" style="font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px;border:1px solid;background:#FEF3C7;color:#92400E;border-color:#FDE68A">⏳ Taslak</span>
               </div>
               <a id="pod-pdf-btn" href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#10B981,#059669);color:#fff;text-decoration:none;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:700;margin-top:10px">
-                📥 Teslim Makbuzunu İndir
+                <i data-icon="import" aria-hidden="true"></i> Teslim Makbuzunu İndir
               </a>
             </div>
           </div>
@@ -1001,7 +1001,7 @@ a{color:inherit}
         <!-- NOTLAR -->
         <div id="notlar-wrap" style="display:none" class="reveal" data-d="5">
           <div class="notlar-box">
-            <div class="notlar-ttl">📝 <span data-i18n="sec_not">Operasyon Notu</span></div>
+            <div class="notlar-ttl"><i data-icon="note" aria-hidden="true"></i> <span data-i18n="sec_not">Operasyon Notu</span></div>
             <p id="notlar-text"></p>
           </div>
         </div>
@@ -1020,7 +1020,7 @@ a{color:inherit}
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="if(event.target===this)closeLightbox()">
-  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-close" onclick="closeLightbox()"><i data-icon="x" aria-hidden="true"></i></button>
   <img id="lightbox-img" src="" alt="">
   <div class="lightbox-lbl" id="lightbox-lbl"></div>
 </div>
@@ -1030,11 +1030,11 @@ a{color:inherit}
   <div class="share-sheet">
     <div class="share-title" data-i18n="share_title">Takip Linkini Paylaş</div>
     <div class="share-list">
-      <button class="share-opt" onclick="shareVia('wa')"><span class="share-opt-icon">💬</span>WhatsApp</button>
-      <button class="share-opt" onclick="shareVia('sms')"><span class="share-opt-icon">📱</span>SMS</button>
-      <button class="share-opt" onclick="shareVia('mail')"><span class="share-opt-icon">✉️</span>E-posta</button>
-      <button class="share-opt" onclick="shareVia('tg')"><span class="share-opt-icon">✈️</span>Telegram</button>
-      <button class="share-opt" onclick="shareVia('native')"><span class="share-opt-icon">📤</span>Diğer</button>
+      <button class="share-opt" onclick="shareVia('wa')"><span class="share-opt-icon"><i data-icon="message-circle" aria-hidden="true"></i></span>WhatsApp</button>
+      <button class="share-opt" onclick="shareVia('sms')"><span class="share-opt-icon"><i data-icon="phone-android" aria-hidden="true"></i></span>SMS</button>
+      <button class="share-opt" onclick="shareVia('mail')"><span class="share-opt-icon"><i data-icon="mail" aria-hidden="true"></i>️</span>E-posta</button>
+      <button class="share-opt" onclick="shareVia('tg')"><span class="share-opt-icon"><i data-icon="send" aria-hidden="true"></i>️</span>Telegram</button>
+      <button class="share-opt" onclick="shareVia('native')"><span class="share-opt-icon"><i data-icon="export" aria-hidden="true"></i></span>Diğer</button>
     </div>
     <div class="share-link-row">
       <input type="text" class="share-link-input" id="share-link-input" readonly>

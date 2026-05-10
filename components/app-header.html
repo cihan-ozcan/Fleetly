@@ -82,10 +82,10 @@
         <span>Ayarlar</span>
       </button>
       <div class="settings-dropdown hidden" id="settings-dropdown">
-        <div class="settings-item" id="settings-pwa-item" onclick="pwaInstall();closeSettings()" style="display:none">📲 Ana Ekrana Ekle</div>
+        <div class="settings-item" id="settings-pwa-item" onclick="pwaInstall();closeSettings()" style="display:none"><i data-icon="phone-android" aria-hidden="true"></i> Ana Ekrana Ekle</div>
         <div class="settings-sep" id="settings-pwa-sep" style="display:none"></div>
-        <div class="settings-item" onclick="openDashEdit();closeSettings()">🎛 Dashboard Düzenle</div>
-        <div class="settings-item" onclick="openBrandingModal();closeSettings()">🎨 Marka &amp; Portal Ayarları</div>
+        <div class="settings-item" onclick="openDashEdit();closeSettings()"><i data-icon="sliders" aria-hidden="true"></i> Dashboard Düzenle</div>
+        <div class="settings-item" onclick="openBrandingModal();closeSettings()"><i data-icon="sparkles" aria-hidden="true"></i> Marka &amp; Portal Ayarları</div>
         <div class="settings-sep"></div>
         <div class="settings-item" onclick="exportJSON();closeSettings()">⬇ Dışa Aktar</div>
         <label class="settings-item" style="cursor:pointer">⬆ İçe Aktar<input type="file" accept=".json" style="display:none" onchange="importJSON(this);closeSettings()" /></label>
@@ -103,23 +103,23 @@
     </button>
 
     <!-- Mobil hamburger -->
-    <button id="mob-menu-btn" onclick="toggleMobMenu()" title="Menü">☰</button>
+    <button id="mob-menu-btn" onclick="toggleMobMenu()" title="Menü"><i data-icon="menu" aria-hidden="true"></i></button>
   </div>
 </header>
 
 <div id="mob-menu">
   <button class="btn-sm accent" onclick="openModal();closeMobMenu()">+ Araç Ekle</button>
   <div style="border-top:1px solid var(--border);margin:4px 0"></div>
-  <button class="btn-sm" onclick="openOperasyonPage();closeMobMenu()" style="color:var(--accent)">📦 Operasyon</button>
-  <button class="btn-sm" onclick="openMusteriPage();closeMobMenu()" style="color:#2dd4bf">🤝 Müşteri &amp; Sipariş</button>
-  <button class="btn-sm" onclick="openSeferModal();closeMobMenu()" style="color:var(--purple)">🗺 Seferler</button>
-  <button class="btn-sm" onclick="openTeklifModal();closeMobMenu()" style="color:var(--yellow)">💼 Fiyat Teklifi</button>
-  <button class="btn-sm" onclick="openMasrafModal();closeMobMenu()" style="color:var(--yellow)">💸 Masraflar</button>
-  <button class="btn-sm" onclick="openRaporModal();closeMobMenu()" style="color:#e879f9">📊 Raporlar</button>
+  <button class="btn-sm" onclick="openOperasyonPage();closeMobMenu()" style="color:var(--accent)"><i data-icon="container" aria-hidden="true"></i> Operasyon</button>
+  <button class="btn-sm" onclick="openMusteriPage();closeMobMenu()" style="color:#2dd4bf"><i data-icon="handshake" aria-hidden="true"></i> Müşteri &amp; Sipariş</button>
+  <button class="btn-sm" onclick="openSeferModal();closeMobMenu()" style="color:var(--purple)"><i data-icon="map" aria-hidden="true"></i> Seferler</button>
+  <button class="btn-sm" onclick="openTeklifModal();closeMobMenu()" style="color:var(--yellow)"><i data-icon="briefcase" aria-hidden="true"></i> Fiyat Teklifi</button>
+  <button class="btn-sm" onclick="openMasrafModal();closeMobMenu()" style="color:var(--yellow)"><i data-icon="banknote" aria-hidden="true"></i> Masraflar</button>
+  <button class="btn-sm" onclick="openRaporModal();closeMobMenu()" style="color:#e879f9"><i data-icon="chart-bar" aria-hidden="true"></i> Raporlar</button>
   <div style="border-top:1px solid var(--border);margin:4px 0"></div>
   <button class="btn-sm" onclick="openFuelSummary();closeMobMenu()" style="color:var(--accent)">⛽ Yakıt Yönetimi</button>
-  <button class="btn-sm" onclick="openMaintSummaryModal();closeMobMenu()" style="color:var(--blue)">🔧 Bakım & Arıza</button>
-  <button class="btn-sm" onclick="openDriverModal();closeMobMenu()" style="color:var(--green)">👤 Sürücü Belgeleri</button>
+  <button class="btn-sm" onclick="openMaintSummaryModal();closeMobMenu()" style="color:var(--blue)"><i data-icon="wrench" aria-hidden="true"></i> Bakım & Arıza</button>
+  <button class="btn-sm" onclick="openDriverModal();closeMobMenu()" style="color:var(--green)"><i data-icon="user" aria-hidden="true"></i> Sürücü Belgeleri</button>
   <div style="border-top:1px solid var(--border);margin:4px 0"></div>
   <button class="btn-sm" onclick="exportJSON();closeMobMenu()">⬇ Dışa Aktar</button>
   <label class="btn-sm" style="cursor:pointer">
