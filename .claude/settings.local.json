@@ -26,7 +26,10 @@
       "PowerShell(Set-Location 'C:\\\\Users\\\\cihan\\\\Desktop\\\\Fleetly-Android'; $env:JAVA_HOME='C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr'; .\\\\gradlew.bat ':app:compileDebugKotlin' --no-daemon -q 2>&1 | Select-Object -Last 40)",
       "Bash(awk -F: '{print $1\":\"$2}')",
       "Bash(awk -F: '$1>=11200 && $1<=11400')",
-      "Bash(awk -F: '$1>=1500 && $1<=1700')"
+      "Bash(awk -F: '$1>=1500 && $1<=1700')",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/app-chunk-02.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/integrations/pdf-theme.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/integrations/pdf-fonts.js\")"
     ]
   }
 }

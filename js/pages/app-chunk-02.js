@@ -4206,6 +4206,571 @@ async function downloadSingleVehiclePDF() {
   showToast('PDF indirildi ✓', 'success');
 }
 
+/* ================================================================
+   YAKIT RAPORU PDF — EDITORIAL TEMA (PdfTheme + Newsreader/Roboto)
+   ================================================================ */
+async function _downloadFuelPDF_editorial(allEntries) {
+  const T = window.PdfTheme;
+  const ctx = await T.init({ orientation:'portrait' });
+  const { doc, PW, PH, ML, MR, MT, MB, CW, COLOR } = ctx;
+
+  // ── Hesaplamalar ──
+  const allSorted = allEntries.slice().sort((a,b) => new Date(a.tarih)-new Date(b.tarih) || a.km-b.km);
+  const totalL  = allSorted.reduce((s,e)=>s+(e.litre||0),0);
+  const totalTL = allSorted.reduce((s,e)=>s+((e.litre||0)*(e.fiyat||0)),0);
+  const dCount  = allSorted.length;
+
+  // Araç bazlı tüketim L/100km
+  const allByVehicle = {};
+  vehicles.forEach(v => {
+    const ve = (fuelData[v.id]||[]).slice().sort((a,b)=>a.km-b.km);
+    if (ve.length >= 2) {
+      const kmRange = ve[ve.length-1].km - ve[0].km;
+      const usedL = ve.slice(1).reduce((s,e)=>s+(e.litre||0),0);
+      if (kmRange > 0) allByVehicle[v.id] = (usedL/kmRange)*100;
+    }
+  });
+  const consVals = Object.values(allByVehicle);
+  const avgCons = consVals.length ? consVals.reduce((a,b)=>a+b,0)/consVals.length : null;
+
+  // Bu ay & geçen ay (Yönetici Özet'e gerek)
+  const _now = new Date();
+  const buAyKey = _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0');
+  const _prev = new Date(_now.getFullYear(), _now.getMonth()-1, 1);
+  const oncekiAyKey = _prev.getFullYear() + '-' + String(_prev.getMonth()+1).padStart(2,'0');
+  let buAyL = 0, buAyTL = 0, buAyDolum = 0;
+  let oncL = 0, oncTL = 0;
+  const buAyPerVehicle = {}, buAyPerSofor = {};
+  vehicles.forEach(v => {
+    (fuelData[v.id]||[]).forEach(e => {
+      const mk = e.tarih ? e.tarih.slice(0,7) : '';
+      const lit = +(e.litre||0); const tl = lit * (+(e.fiyat||0));
+      if (mk === buAyKey) {
+        buAyL += lit; buAyTL += tl; buAyDolum++;
+        if (!buAyPerVehicle[v.id]) buAyPerVehicle[v.id] = {litre:0, tl:0, plaka:v.plaka||'—', dolum:0};
+        buAyPerVehicle[v.id].litre += lit;
+        buAyPerVehicle[v.id].tl    += tl;
+        buAyPerVehicle[v.id].dolum++;
+        const sof = (e.sofor||'').trim();
+        if (sof) {
+          if (!buAyPerSofor[sof]) buAyPerSofor[sof] = {litre:0, tl:0, dolum:0};
+          buAyPerSofor[sof].litre += lit;
+          buAyPerSofor[sof].tl    += tl;
+          buAyPerSofor[sof].dolum++;
+        }
+      } else if (mk === oncekiAyKey) {
+        oncL += lit; oncTL += tl;
+      }
+    });
+  });
+  const trendL  = oncL  > 0 ? ((buAyL  - oncL ) / oncL ) * 100 : null;
+  const trendTL = oncTL > 0 ? ((buAyTL - oncTL) / oncTL) * 100 : null;
+
+  // Yardımcılar
+  function fmtTRY(n) { return n == null ? '—' : Math.round(n).toLocaleString('tr-TR'); }
+  function fmtL(n)   { return n == null ? '—' : n.toLocaleString('tr-TR', {maximumFractionDigits:1}); }
+  function fmtPct(n) { if (n == null) return '—'; const s = n >= 0 ? '+' : ''; return s + n.toFixed(1) + '%'; }
+
+  // Belge no + tarih
+  const today = new Date();
+  const docNo = 'FL-YR-' + today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + String(today.getDate()).padStart(2,'0');
+  const dateStamp = today.toLocaleDateString('tr-TR', {day:'2-digit', month:'long', year:'numeric'}).toUpperCase().replace(/\s+/g,' . ');
+  const dateRange = (() => {
+    const minD = allSorted[0]?.tarih, maxD = allSorted[allSorted.length-1]?.tarih;
+    if (!minD || !maxD) return '—';
+    return minD.split('-').reverse().join('.') + ' — ' + maxD.split('-').reverse().join('.');
+  })();
+
+  // Sayfa numarası takibi (her addPage sonrası yeni topbar çiz)
+  function newPage(sayfaNo) {
+    T.drawFooter(ctx, { label:'Fleetly · Yakıt Raporu' });
+    doc.addPage();
+    T.drawPageBg(ctx);
+    return T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+      { key:'Belge No', value:docNo },
+      { key:'Rapor',    value:'Yakıt Tüketim' },
+      { key:'Sayfa',    value: String(sayfaNo || doc.internal.getNumberOfPages()).padStart(2,'0') },
+    ]});
+  }
+
+  // ─── SAYFA 1: Kapak + KPI + §01 Araç Özeti ───
+  T.drawPageBg(ctx);
+  let y = T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+    { key:'Belge No', value:docNo },
+    { key:'Rapor',    value:'Yakıt Tüketim' },
+    { key:'Sayfa',    value:'01' },
+  ]});
+
+  y = T.drawTitleBlock(ctx, {
+    title:'Yakıt',
+    titleEm:'Raporu.',
+    deck:'Tüm filo araçları için kapsamlı yakıt tüketimi ve maliyet analizi.',
+    badge:'Operasyon',
+    dateStamp: dateStamp,
+    y: y + 8,
+  });
+
+  y = T.drawMetaStrip(ctx, {
+    y: y + 4,
+    items:[
+      { key:'Veri Aralığı', value: dateRange },
+      { key:'Filo',         value: vehicles.length + ' araç' },
+      { key:'Toplam Dolum', value: dCount + ' kayıt' },
+      { key:'Para Birimi',  value: 'TL' },
+    ],
+  });
+
+  // KPI grid 3×2
+  const kpiItems = [
+    { label:'Toplam Maliyet', pre:'TL ', value: fmtTRY(totalTL),
+      delta: 'KM başı maliyet ' + (totalL > 0 ? (totalTL/totalL).toFixed(2) : '—') + ' TL/L' },
+    { label:'Toplam Litre', value: fmtL(totalL), unit:' L',
+      delta: dCount + ' dolum işlemi · ' + vehicles.length + ' araç' },
+    { label:'Ort. Tüketim', value: avgCons ? avgCons.toFixed(1) : '—', unit:' L/100km',
+      delta: avgCons ? (avgCons < 25 ? 'Verimli' : avgCons < 35 ? 'Normal' : 'Yüksek') + ' aralıkta' : 'Yetersiz veri',
+      positive: avgCons != null && avgCons < 25 },
+    { label:'Bu Ay Maliyet', pre:'TL ', value: fmtTRY(buAyTL),
+      delta: trendTL != null ? '%' + Math.abs(trendTL).toFixed(1) + ' önceki aya göre' : 'Önceki ay verisi yok',
+      deltaDir: trendTL == null ? null : (trendTL > 0 ? 'down' : 'up') },
+    { label:'Bu Ay Litre', value: fmtL(buAyL), unit:' L',
+      delta: trendL != null ? '%' + Math.abs(trendL).toFixed(1) + ' önceki aya göre' : 'Önceki ay verisi yok',
+      deltaDir: trendL == null ? null : (trendL > 0 ? 'down' : 'up') },
+    { label:'Bu Ay Dolum', value: String(buAyDolum), unit:' kayıt',
+      delta: Object.keys(buAyPerVehicle).length + ' araç dolum yaptı' },
+  ];
+  y = T.drawKpiGrid(ctx, { y: y, items: kpiItems, cols: 3 });
+
+  // §01 — Araç Bazlı Özet tablosu
+  y = T.drawSectionHead(ctx, {
+    y: y + 6, num:'01', title:'Araç Bazlı Yakıt Özeti',
+    meta: vehicles.length + ' araç · ' + dCount + ' dolum',
+  });
+
+  const vehSummaryRows = [];
+  let footL = 0, footTL = 0, footDol = 0;
+  vehicles.forEach(v => {
+    const ve = (fuelData[v.id]||[]).slice().sort((a,b)=>new Date(a.tarih)-new Date(b.tarih));
+    if (ve.length === 0) return;
+    const vL  = ve.reduce((s,e)=>s+(e.litre||0),0);
+    const vTL = ve.reduce((s,e)=>s+((e.litre||0)*(e.fiyat||0)),0);
+    const vc  = allByVehicle[v.id];
+    const last = ve[ve.length-1];
+    footL += vL; footTL += vTL; footDol += ve.length;
+    vehSummaryRows.push([
+      { text: v.plaka || '—', plate: true },
+      v.tip || '—',
+      String(ve.length),
+      fmtL(vL) + ' L',
+      { text: fmtTRY(vTL), bold: true, positive: vTL > 0 },
+      vc != null
+        ? { text: vc.toFixed(1) + ' L/100km',
+            color: vc < 25 ? COLOR.positive : vc < 35 ? COLOR.ink : COLOR.negative,
+            bold: true }
+        : '—',
+      last?.tarih ? last.tarih.split('-').reverse().join('.') : '—',
+    ]);
+  });
+
+  y = T.drawTable(ctx, {
+    y: y + 4,
+    columns: [
+      { label:'Plaka',       w: 18, align:'left'  },
+      { label:'Tip',         w: 14, align:'left'  },
+      { label:'Dolum',       w: 9,  align:'right' },
+      { label:'Litre',       w: 14, align:'right' },
+      { label:'Maliyet (TL)',w: 16, align:'right' },
+      { label:'Tüketim',     w: 17, align:'right' },
+      { label:'Son Dolum',   w: 12, align:'right' },
+    ],
+    rows: vehSummaryRows.length ? vehSummaryRows : [['—','—','—','—','—','—','—']],
+    foot: [
+      'TOPLAM',
+      vehicles.length + ' araç',
+      String(footDol),
+      fmtL(footL) + ' L',
+      { text: fmtTRY(footTL), positive: true },
+      avgCons ? avgCons.toFixed(1) + ' L/100km' : '—',
+      '',
+    ],
+    onPageBreak: () => newPage(),
+  });
+
+  T.drawFooter(ctx, { label:'Fleetly · Yakıt Raporu', center: dateRange });
+
+  // ─── SAYFA 2: §02 Aylık Trend grafiği + tablo ───
+  let yy = newPage();
+  yy = T.drawTitleBlock(ctx, {
+    title:'Aylık', titleEm:'Trend.',
+    deck:'Son 12 aydaki yakıt tüketimi ve maliyet trendi.',
+    badge:'Son 12 Ay',
+    dateStamp: dateStamp,
+    y: yy + 8,
+  });
+
+  // Aylık veri
+  const months12 = [];
+  for (let i=11; i>=0; i--) {
+    const d = new Date(_now.getFullYear(), _now.getMonth()-i, 1);
+    months12.push({ key: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), d });
+  }
+  const monthL = {}, monthTL = {};
+  months12.forEach(m => { monthL[m.key]=0; monthTL[m.key]=0; });
+  allSorted.forEach(e => {
+    const mk = e.tarih ? e.tarih.slice(0,7) : '';
+    if (mk in monthL) { monthL[mk]+=(e.litre||0); monthTL[mk]+=((e.litre||0)*(e.fiyat||0)); }
+  });
+
+  yy = T.drawSectionHead(ctx, {
+    y: yy + 8, num:'02', title:'Aylık Litre & Maliyet',
+    meta: 'Çift eksenli grafik',
+  });
+
+  // Chart.js — editorial palet
+  const labels = months12.map(m => m.d.toLocaleDateString('tr-TR',{month:'short',year:'2-digit'}));
+  const litreData = months12.map(m => +(monthL[m.key]||0).toFixed(1));
+  const tutarData = months12.map(m => +(monthTL[m.key]||0).toFixed(0));
+  const chartCanvas = document.createElement('canvas');
+  chartCanvas.width = 980; chartCanvas.height = 320;
+  document.body.appendChild(chartCanvas);
+  const chartInst = new Chart(chartCanvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Litre (L)', data: litreData,
+          backgroundColor:'rgba(63,68,75,0.92)', borderColor:'rgba(21,24,28,1)',
+          borderWidth: 0.6, borderRadius: 0, yAxisID: 'y' },
+        { label:'Maliyet (TL)', data: tutarData, type:'line',
+          borderColor:'rgba(31,110,68,1)', backgroundColor:'rgba(31,110,68,0.08)',
+          borderWidth: 1.6, pointBackgroundColor:'rgba(31,110,68,1)', pointRadius: 3,
+          fill: true, tension: 0.3, yAxisID: 'y2' },
+      ]
+    },
+    options: {
+      responsive: false, animation: false,
+      plugins: { legend: { labels: { color:'#15181c', font:{size:11,weight:'500'} } } },
+      scales: {
+        x: { ticks:{ color:'#3f444b', font:{size:10} }, grid:{ color:'rgba(214,207,185,0.5)' } },
+        y: { ticks:{ color:'#3f444b', font:{size:10} }, grid:{ color:'rgba(214,207,185,0.4)' },
+             title:{ display:true, text:'Litre', color:'#15181c', font:{size:10,weight:'600'} } },
+        y2:{ position:'right', ticks:{ color:'#1f6e44', font:{size:10} }, grid:{drawOnChartArea:false},
+             title:{ display:true, text:'Maliyet (TL)', color:'#1f6e44', font:{size:10,weight:'600'} } },
+      }
+    }
+  });
+  await new Promise(res => setTimeout(res, 220));
+  const chartImg = chartCanvas.toDataURL('image/png');
+  const chartH = 70;
+  doc.addImage(chartImg, 'PNG', ML, yy + 4, CW, chartH);
+  yy += chartH + 8;
+  chartInst.destroy(); chartCanvas.remove();
+
+  // Aylık tablo
+  const monthlyRows = months12.map(m => [
+    m.d.toLocaleDateString('tr-TR', {month:'long', year:'numeric'}),
+    fmtL(monthL[m.key]) + ' L',
+    { text: fmtTRY(monthTL[m.key]), bold: monthTL[m.key] > 0, positive: monthTL[m.key] > 0 },
+    (monthL[m.key] > 0 ? (monthTL[m.key]/monthL[m.key]).toFixed(2) + ' TL/L' : '—'),
+  ]);
+  yy = T.drawTable(ctx, {
+    y: yy + 4,
+    columns: [
+      { label:'Ay',           w: 30, align:'left'  },
+      { label:'Litre',        w: 24, align:'right' },
+      { label:'Maliyet (TL)', w: 26, align:'right' },
+      { label:'Ort. Birim',   w: 20, align:'right' },
+    ],
+    rows: monthlyRows,
+    foot: [
+      'TOPLAM',
+      fmtL(months12.reduce((s,m)=>s+(monthL[m.key]||0),0)) + ' L',
+      { text: fmtTRY(months12.reduce((s,m)=>s+(monthTL[m.key]||0),0)), positive: true },
+      '',
+    ],
+    onPageBreak: () => newPage(),
+  });
+  T.drawFooter(ctx, { label:'Fleetly · Yakıt Raporu · Aylık Trend' });
+
+  // ─── ARAÇ BAŞINA SAYFA: §03+ Detay ───
+  let secNum = 3;
+  for (const v of vehicles) {
+    const ve = (fuelData[v.id]||[]).slice().sort((a,b)=>new Date(a.tarih)-new Date(b.tarih)||a.km-b.km);
+    if (ve.length === 0) continue;
+
+    let py = newPage();
+
+    // Plaka başlığı block
+    py = T.drawSectionHead(ctx, {
+      y: py + 8, num: String(secNum).padStart(2,'0'),
+      title: 'Araç Detayı',
+      meta: (v.tip || '') + (v.sofor ? ' · ' + v.sofor : ''),
+    });
+    secNum++;
+
+    // Plaka rozeti (ortalanmış)
+    ctx.setSans(0, 'normal');
+    const plateW = T.drawPlate(ctx, v.plaka || '—', ML, py + 8, { size: 13 });
+
+    // Mini KPI grid (6 hücre)
+    const vTotalL  = ve.reduce((s,e)=>s+(e.litre||0),0);
+    const vTotalTL = ve.reduce((s,e)=>s+((e.litre||0)*(e.fiyat||0)),0);
+    const vKmRange = ve.length>=2 ? ve[ve.length-1].km-ve[0].km : 0;
+    const vCons    = allByVehicle[v.id];
+    const vLastFiyat = ve[ve.length-1]?.fiyat || 0;
+
+    py += 12;
+    const miniKpis = [
+      { label:'Dolum', value: String(ve.length), unit:' kez' },
+      { label:'Toplam Litre', value: fmtL(vTotalL), unit:' L' },
+      { label:'Toplam Maliyet', pre:'TL ', value: fmtTRY(vTotalTL),
+        positive: vTotalTL > 0 },
+      { label:'Mesafe', value: vKmRange.toLocaleString('tr-TR'), unit:' km' },
+      { label:'Tüketim', value: vCons ? vCons.toFixed(1) : '—',
+        unit: vCons ? ' L/100km' : '',
+        positive: vCons != null && vCons < 25 },
+      { label:'Son Birim Fiyat', pre:'TL ', value: vLastFiyat > 0 ? vLastFiyat.toFixed(2) : '—',
+        unit:' / L' },
+    ];
+    py = T.drawKpiGrid(ctx, { y: py, items: miniKpis, cols: 3 });
+
+    // Araç aylık grafiği
+    const vMonthL = {};
+    months12.forEach(m => { vMonthL[m.key]=0; });
+    ve.forEach(e => {
+      const mk = e.tarih?e.tarih.slice(0,7):'';
+      if (mk in vMonthL) vMonthL[mk]+=(e.litre||0);
+    });
+    const vLitreData = months12.map(m => +(vMonthL[m.key]||0).toFixed(1));
+
+    const vCanvas = document.createElement('canvas');
+    vCanvas.width=980; vCanvas.height=240;
+    document.body.appendChild(vCanvas);
+    const vChart = new Chart(vCanvas, {
+      type:'bar',
+      data:{
+        labels,
+        datasets:[{ label:'Litre', data: vLitreData,
+          backgroundColor:'rgba(63,68,75,0.85)', borderColor:'rgba(21,24,28,1)',
+          borderWidth:0.5, borderRadius:0 }]
+      },
+      options:{
+        responsive:false, animation:false,
+        plugins:{ legend:{ labels:{ color:'#15181c', font:{size:10,weight:'500'} } } },
+        scales:{
+          x:{ ticks:{ color:'#3f444b', font:{size:9} }, grid:{ color:'rgba(214,207,185,0.5)' } },
+          y:{ ticks:{ color:'#3f444b', font:{size:9} }, grid:{ color:'rgba(214,207,185,0.4)' },
+              title:{ display:true, text:'Litre', color:'#15181c', font:{size:9,weight:'600'} } },
+        }
+      }
+    });
+    await new Promise(res => setTimeout(res, 180));
+    const vH = 50;
+    if (py + vH + 4 > PH - MB - 8) {
+      py = newPage();
+    }
+    doc.addImage(vCanvas.toDataURL('image/png'), 'PNG', ML, py, CW, vH);
+    py += vH + 6;
+    vChart.destroy(); vCanvas.remove();
+
+    // Detay tablo
+    const detRows = ve.map((e, ei) => {
+      const prev = ei>0 ? ve[ei-1] : null;
+      const kmFark = prev ? e.km-prev.km : null;
+      const cons = (kmFark && kmFark>0) ? (e.litre/kmFark)*100 : null;
+      const tutar = e.litre*(e.fiyat||0);
+      return [
+        e.tarih ? e.tarih.split('-').reverse().join('.') : '—',
+        e.km ? e.km.toLocaleString('tr-TR') + ' km' : '—',
+        e.litre ? e.litre.toLocaleString('tr-TR', {minimumFractionDigits:1}) + ' L' : '—',
+        e.fiyat ? e.fiyat.toFixed(2) + ' TL' : '—',
+        { text: tutar > 0 ? fmtTRY(tutar) : '—', bold: tutar > 0, positive: tutar > 0 },
+        cons != null
+          ? { text: cons.toFixed(1) + ' L',
+              color: cons < 25 ? COLOR.positive : cons < 35 ? COLOR.ink : COLOR.negative }
+          : (ei === 0 ? 'Ref.' : '—'),
+        kmFark != null ? '+' + kmFark.toLocaleString('tr-TR') : '—',
+      ];
+    });
+    py = T.drawTable(ctx, {
+      y: py,
+      columns: [
+        { label:'Tarih',       w: 12, align:'left'  },
+        { label:'KM',          w: 16, align:'right' },
+        { label:'Litre',       w: 13, align:'right' },
+        { label:'Birim Fiyat', w: 14, align:'right' },
+        { label:'Tutar (TL)',  w: 17, align:'right' },
+        { label:'L/100km',     w: 14, align:'right' },
+        { label:'KM Fark',     w: 14, align:'right' },
+      ],
+      rows: detRows,
+      foot: [
+        'TOPLAM',
+        '',
+        fmtL(vTotalL) + ' L',
+        '',
+        { text: fmtTRY(vTotalTL), positive: true },
+        vCons ? vCons.toFixed(1) + ' L' : '—',
+        vKmRange ? '+' + vKmRange.toLocaleString('tr-TR') : '—',
+      ],
+      onPageBreak: () => newPage(),
+    });
+
+    T.drawFooter(ctx, { label:'Fleetly · Yakıt Raporu · ' + (v.plaka || '—') });
+  }
+
+  // ─── SON SAYFA: Bu Ay Yönetici Özeti + Top 5 + Anomali + Sign-off ───
+  let oz = newPage();
+  oz = T.drawTitleBlock(ctx, {
+    title:'Aylık', titleEm:'Özet.',
+    deck: 'Bu ay (' + _now.toLocaleDateString('tr-TR',{month:'long',year:'numeric'}) + ') yakıt tüketimi yönetici özeti.',
+    badge:'Yönetici',
+    dateStamp: dateStamp,
+    y: oz + 8,
+  });
+
+  // §X — Bu ay top 5 araç + top 5 şoför (iki tablo yan yana imkansız basit kalsın → alt alta)
+  const topVehList = Object.entries(buAyPerVehicle).sort((a,b) => b[1].tl - a[1].tl).slice(0, 5);
+  const topSofList = Object.entries(buAyPerSofor).sort((a,b) => b[1].tl - a[1].tl).slice(0, 5);
+
+  oz = T.drawSectionHead(ctx, {
+    y: oz + 6, num: String(secNum).padStart(2,'0'), title:'En Yüksek 5 Araç',
+    meta: 'Bu ay · TL bazlı sıralama',
+  });
+  secNum++;
+  if (topVehList.length === 0) {
+    ctx.setSans(10, 'italic'); ctx.setText(COLOR.ink3);
+    doc.text('Bu ay yakıt kaydı bulunmadı.', ML, oz + 8); oz += 14;
+  } else {
+    oz = T.drawTable(ctx, {
+      y: oz + 4,
+      columns: [
+        { label:'#',     w: 6,  align:'left'  },
+        { label:'Plaka', w: 22, align:'left'  },
+        { label:'Dolum', w: 12, align:'right' },
+        { label:'Litre', w: 18, align:'right' },
+        { label:'Maliyet (TL)', w: 24, align:'right' },
+        { label:'Pay %', w: 18, align:'right' },
+      ],
+      rows: topVehList.map(([id, dat], i) => {
+        const pct = buAyTL > 0 ? (dat.tl / buAyTL * 100) : 0;
+        return [
+          String(i+1),
+          { text: dat.plaka || '—', plate: true },
+          String(dat.dolum),
+          fmtL(dat.litre) + ' L',
+          { text: fmtTRY(dat.tl), bold: true, positive: dat.tl > 0 },
+          '%' + pct.toFixed(1),
+        ];
+      }),
+      onPageBreak: () => newPage(),
+    });
+  }
+
+  oz = T.drawSectionHead(ctx, {
+    y: oz + 6, num: String(secNum).padStart(2,'0'), title:'En Yüksek 5 Şoför',
+    meta: 'Bu ay · TL bazlı sıralama',
+  });
+  secNum++;
+  if (topSofList.length === 0) {
+    ctx.setSans(10, 'italic'); ctx.setText(COLOR.ink3);
+    doc.text('Bu ay şoför bilgisi olan kayıt bulunmadı.', ML, oz + 8); oz += 14;
+  } else {
+    oz = T.drawTable(ctx, {
+      y: oz + 4,
+      columns: [
+        { label:'#',     w: 6,  align:'left'  },
+        { label:'Şoför', w: 32, align:'left'  },
+        { label:'Dolum', w: 12, align:'right' },
+        { label:'Litre', w: 16, align:'right' },
+        { label:'Maliyet (TL)', w: 20, align:'right' },
+        { label:'Pay %', w: 14, align:'right' },
+      ],
+      rows: topSofList.map(([sof, dat], i) => {
+        const pct = buAyTL > 0 ? (dat.tl / buAyTL * 100) : 0;
+        return [
+          String(i+1),
+          sof.length > 28 ? sof.slice(0,28) + '…' : sof,
+          String(dat.dolum),
+          fmtL(dat.litre) + ' L',
+          { text: fmtTRY(dat.tl), bold: true, positive: dat.tl > 0 },
+          '%' + pct.toFixed(1),
+        ];
+      }),
+      onPageBreak: () => newPage(),
+    });
+  }
+
+  // Anomali listesi
+  const anomaliler = [];
+  vehicles.forEach(v => {
+    const ve = (fuelData[v.id]||[]).slice().sort((a,b) => new Date(a.tarih)-new Date(b.tarih) || a.km-b.km);
+    for (let i = 1; i < ve.length; i++) {
+      const e = ve[i], prev = ve[i-1];
+      if (e.km < prev.km - 5) {
+        anomaliler.push({ tarih:e.tarih, plaka:v.plaka||'—', tip:'KM Geri Gitti',
+          detay: prev.km.toLocaleString('tr-TR') + ' → ' + e.km.toLocaleString('tr-TR') });
+      }
+      const dKm = e.km - prev.km;
+      if (dKm > 0 && dKm < 5000) {
+        const cons = (e.litre / dKm) * 100;
+        if (cons > 60) anomaliler.push({ tarih:e.tarih, plaka:v.plaka||'—', tip:'Yüksek Tüketim',
+          detay: cons.toFixed(1) + ' L/100km' });
+      }
+      const sameDay = ve.filter(x => x.tarih === e.tarih);
+      if (sameDay.length > 1 && i === ve.findIndex(x => x.tarih === e.tarih) + 1) {
+        anomaliler.push({ tarih:e.tarih, plaka:v.plaka||'—', tip:'Çift Dolum',
+          detay: sameDay.length + ' kez aynı gün dolum' });
+      }
+    }
+  });
+
+  if (anomaliler.length > 0) {
+    if (oz + 30 > PH - MB - 24) oz = newPage();
+    oz = T.drawSectionHead(ctx, {
+      y: oz + 6, num: String(secNum).padStart(2,'0'), title:'Anomali Uyarıları',
+      meta: anomaliler.length + ' kayıt',
+    });
+    secNum++;
+    oz = T.drawTable(ctx, {
+      y: oz + 4,
+      columns: [
+        { label:'Tarih', w: 14, align:'left' },
+        { label:'Plaka', w: 22, align:'left' },
+        { label:'Tip',   w: 22, align:'left' },
+        { label:'Detay', w: 42, align:'left' },
+      ],
+      rows: anomaliler.slice(0, 10).map(a => [
+        a.tarih ? a.tarih.split('-').reverse().join('.') : '—',
+        { text: a.plaka, plate: true },
+        { text: a.tip, color: COLOR.negative, bold: true },
+        a.detay,
+      ]),
+      onPageBreak: () => newPage(),
+    });
+    if (anomaliler.length > 10) {
+      ctx.setSans(8, 'italic'); ctx.setText(COLOR.ink3);
+      doc.text('… ve ' + (anomaliler.length - 10) + ' anomali daha (toplam ' + anomaliler.length + ').', ML, oz + 4);
+      oz += 10;
+    }
+  }
+
+  // Sign-off
+  if (oz + 30 > PH - MB - 8) oz = newPage();
+  T.drawSignOff(ctx, {
+    y: oz + 14,
+    prepared: 'Operasyon Departmanı · Fleetly',
+    approved: 'Genel Müdür · İmza ve Tarih',
+  });
+
+  T.drawFooter(ctx, { label:'Fleetly · Yakıt Raporu · Yönetici Özeti' });
+
+  // Tüm sayfalara final pageNo bas
+  T.stampPageNumbers(ctx);
+
+  _pdfSave(doc, 'yakit_raporu_' + new Date().toISOString().slice(0,10) + '.pdf');
+  showToast('PDF indirildi ✓', 'success');
+}
+
 async function downloadFuelPDF() {
   loadFuelData();
 
@@ -4222,6 +4787,11 @@ async function downloadFuelPDF() {
   }
 
   showToast('PDF hazırlanıyor…', 'info');
+
+  // Yeni editorial tema kullanılırsa devral, yoksa eski navy banner versiyonu
+  if (window.PdfTheme) {
+    return _downloadFuelPDF_editorial(allEntries);
+  }
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -11351,6 +11921,7 @@ async function downloadIsKarlilikExcel() {
 
 /* ── Aylık Yönetici Raporu (PDF) ── */
 async function downloadYoneticiRaporu() {
+  // ── Ay seçimi (form'dan ya da geçen ay default) ──
   var ay = document.getElementById('yonetici-rapor-ay')?.value;
   if (!ay) {
     var d = new Date();
@@ -11366,61 +11937,19 @@ async function downloadYoneticiRaporu() {
   if (!allE.length) { showToast('Seçili ayda (' + ay + ') yakıt kaydı yok.', 'error'); return; }
   showToast('Yönetici raporu hazırlanıyor…', 'info');
 
+  // ── Plaka/şoför haritaları ──
   var pm = {}, sofMap = {};
   vehicles.forEach(function(v){ pm[v.id] = v.plaka || v.id; sofMap[v.id] = v.sofor || ''; });
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const PW = 210, PH = 297, ML = 14, MR = 14, CW = PW - ML - MR;
-  const C = {
-    bg:[8,12,16], surface:[17,24,32], surface2:[24,32,44], border:[37,47,62],
-    accent:[249,115,22], text:[226,234,243], text2:[168,184,204], muted:[82,96,112],
-    green:[34,197,94], yellow:[245,158,11], red:[239,68,68], blue:[56,189,248],
-    purple:[167,139,250], white:[255,255,255],
-  };
-  function _tr(s) {
-    if (!s) return '';
-    return String(s).replace(/ş/g,'s').replace(/Ş/g,'S').replace(/ğ/g,'g').replace(/Ğ/g,'G')
-      .replace(/ü/g,'u').replace(/Ü/g,'U').replace(/ö/g,'o').replace(/Ö/g,'O')
-      .replace(/ç/g,'c').replace(/Ç/g,'C').replace(/ı/g,'i').replace(/İ/g,'I');
-  }
-  function sf(c){doc.setFillColor(...c);} function st(c){doc.setTextColor(...c);}
-  function rc(x,y,w,h,s='F'){doc.rect(x,y,w,h,s);} function rr(x,y,w,h,r,s='F'){doc.roundedRect(x,y,w,h,r,r,s);}
-  let pg = 1;
-  function footer() {
-    st(C.muted); doc.setFontSize(8);
-    doc.text(_tr('Aylik Yonetici Raporu | ') + ay, ML, PH-8);
-    doc.text(_tr('Sayfa ') + pg, PW-MR, PH-8, {align:'right'});
-    doc.text(new Date().toLocaleDateString('tr-TR'), PW/2, PH-8, {align:'center'});
-  }
-  function newPage() { footer(); doc.addPage(); pg++; sf(C.bg); rc(0,0,PW,PH); }
-
-  // --- Kapak ---
-  sf(C.bg); rc(0,0,PW,PH);
-  sf(C.surface); rc(0,0,PW,55);
-  sf(C.purple); rc(0,0,4,55);
-  st(C.white); doc.setFontSize(22); doc.setFont('helvetica','bold');
-  doc.text(_tr('AYLIK YAKIT YONETICI RAPORU'), ML, 22);
-  doc.setFontSize(14); doc.setFont('helvetica','normal'); st(C.text2);
+  // ── Hesaplamalar ──
   const [yy, mm] = ay.split('-');
-  const ayAd = new Date(yy, mm-1, 1).toLocaleDateString('tr-TR', {month:'long', year:'numeric'});
-  doc.text(_tr(ayAd), ML, 32);
-  sf(C.surface2); rr(PW-ML-62, 14, 62, 28, 3);
-  st(C.purple); doc.setFontSize(9); doc.setFont('helvetica','bold');
-  doc.text(_tr('FIRMA SAHIBI ICIN'), PW-MR-31, 24, {align:'center'});
-  doc.setFontSize(7); st(C.muted); doc.setFont('helvetica','normal');
-  doc.text(_tr('Gizli / Ic Kullanim'), PW-MR-31, 32, {align:'center'});
-
-  let y = 68;
-
-  // --- Üst seviye KPI kartları ---
+  const ayAd = new Date(parseInt(yy), parseInt(mm)-1, 1).toLocaleDateString('tr-TR', {month:'long', year:'numeric'});
   const totalL = allE.reduce(function(s,e){return s+(e.litre||0);},0);
   const totalTL = allE.reduce(function(s,e){return s+(e.litre||0)*(e.fiyat||0);},0);
   const prices = allE.filter(function(e){return e.fiyat>0;}).map(function(e){return e.fiyat;});
   const ortP = prices.length ? prices.reduce(function(a,b){return a+b;},0)/prices.length : 0;
   const dolumCnt = allE.length;
 
-  // Önceki ay
   const prevD = new Date(parseInt(yy), parseInt(mm)-2, 1);
   const prevK = prevD.getFullYear() + '-' + String(prevD.getMonth()+1).padStart(2,'0');
   let prevTL = 0, prevL = 0;
@@ -11435,47 +11964,7 @@ async function downloadYoneticiRaporu() {
   const tlDelta = prevTL > 0 ? ((totalTL - prevTL) / prevTL * 100) : null;
   const lDelta  = prevL > 0 ? ((totalL - prevL) / prevL * 100) : null;
 
-  const cards = [
-    {l:'Toplam Gider', v: totalTL.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' TL', c:C.green},
-    {l:'Toplam Litre', v: totalL.toLocaleString('tr-TR',{maximumFractionDigits:1}) + ' L', c:C.accent},
-    {l:'Dolum Sayisi', v: dolumCnt + ' dolum', c:C.blue},
-    {l:'Ort. Birim Fiyat', v: ortP > 0 ? ortP.toFixed(2) + ' TL/L' : '--', c:C.purple},
-  ];
-  const cW = (CW - 9) / 4;
-  cards.forEach(function(card, i) {
-    const cx = ML + i * (cW + 3);
-    sf(C.surface); rr(cx, y, cW, 26, 3);
-    sf(card.c); rr(cx, y, 3, 26, 1);
-    st(card.c); doc.setFontSize(12); doc.setFont('helvetica','bold');
-    doc.text(card.v, cx+cW/2, y+13, {align:'center'});
-    st(C.muted); doc.setFontSize(7); doc.setFont('helvetica','normal');
-    doc.text(_tr(card.l).toUpperCase(), cx+cW/2, y+20, {align:'center'});
-  });
-  y += 34;
-
-  // --- Önceki aya göre karşılaştırma ---
-  sf(C.surface); rr(ML, y, CW, 22, 3);
-  st(C.purple); doc.setFontSize(11); doc.setFont('helvetica','bold');
-  doc.text(_tr('Onceki Aya Gore Karsilastirma (' + prevK + ')'), ML+5, y+7);
-  doc.setFontSize(9); doc.setFont('helvetica','normal'); st(C.text2);
-  let cmpTxt = '';
-  if (tlDelta !== null) {
-    const arr = tlDelta >= 0 ? '^' : 'v';
-    const clr = Math.abs(tlDelta) < 5 ? C.yellow : (tlDelta > 0 ? C.red : C.green);
-    st(clr); doc.setFont('helvetica','bold');
-    doc.text(_tr('Maliyet: ' + arr + ' %' + Math.abs(tlDelta).toFixed(1)) + '  (' + prevTL.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' TL -> ' + totalTL.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' TL)', ML+5, y+14);
-  } else {
-    st(C.muted); doc.text(_tr('Onceki ay verisi yok.'), ML+5, y+14);
-  }
-  if (lDelta !== null) {
-    const arr2 = lDelta >= 0 ? '^' : 'v';
-    const clr2 = Math.abs(lDelta) < 5 ? C.yellow : (lDelta > 0 ? C.red : C.green);
-    st(clr2); doc.setFont('helvetica','bold');
-    doc.text(_tr('Litre: ' + arr2 + ' %' + Math.abs(lDelta).toFixed(1)), ML+CW/2+5, y+14);
-  }
-  y += 28;
-
-  // --- En çok yakıt yakan 5 araç ---
+  // En çok yakıt 5 araç
   const byVeh = {};
   allE.forEach(function(e){
     const k = pm[e._vid] || e._vid;
@@ -11485,34 +11974,8 @@ async function downloadYoneticiRaporu() {
     byVeh[k].n++;
   });
   const topVeh = Object.entries(byVeh).sort(function(a,b){return b[1].t - a[1].t;}).slice(0,5);
-  st(C.accent); doc.setFontSize(11); doc.setFont('helvetica','bold');
-  doc.text(_tr('En Cok Yakit Gideri Olan 5 Arac'), ML, y); y += 6;
-  sf(C.surface2); rc(ML, y, CW, 7);
-  st(C.muted); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-  doc.text(_tr('PLAKA'), ML+3, y+4.8);
-  doc.text(_tr('DOLUM'), ML+55, y+4.8);
-  doc.text(_tr('LITRE'), ML+80, y+4.8);
-  doc.text(_tr('MALIYET (TL)'), ML+115, y+4.8);
-  doc.text(_tr('PAY %'), ML+165, y+4.8);
-  y += 8;
-  topVeh.forEach(function(kv, i){
-    sf(i%2===0?C.surface:C.bg); rc(ML, y, CW, 7);
-    const pct = totalTL > 0 ? (kv[1].t / totalTL * 100).toFixed(1) : '0.0';
-    st(C.text); doc.setFontSize(9); doc.setFont('helvetica','bold');
-    doc.text(_tr(kv[0]), ML+3, y+4.8);
-    doc.setFont('helvetica','normal'); st(C.text2);
-    doc.text(String(kv[1].n), ML+55, y+4.8);
-    doc.text(kv[1].l.toLocaleString('tr-TR',{maximumFractionDigits:1}), ML+80, y+4.8);
-    st(C.green); doc.setFont('helvetica','bold');
-    doc.text(kv[1].t.toLocaleString('tr-TR',{maximumFractionDigits:0}), ML+115, y+4.8);
-    st(C.purple);
-    doc.text('%' + pct, ML+165, y+4.8);
-    y += 7;
-  });
-  y += 6;
-  if (y > PH - 100) { newPage(); y = 15; }
 
-  // --- En çok yakıt yakan 5 şoför ---
+  // En çok yakıt 5 şoför
   const bySof = {};
   allE.forEach(function(e){
     const k = (e.sofor || sofMap[e._vid] || '— Bilinmeyen —').trim() || '— Bilinmeyen —';
@@ -11522,36 +11985,8 @@ async function downloadYoneticiRaporu() {
     bySof[k].n++;
   });
   const topSof = Object.entries(bySof).sort(function(a,b){return b[1].t - a[1].t;}).slice(0,5);
-  st(C.purple); doc.setFontSize(11); doc.setFont('helvetica','bold');
-  doc.text(_tr('En Cok Yakit Gideri Olan 5 Sofor'), ML, y); y += 6;
-  sf(C.surface2); rc(ML, y, CW, 7);
-  st(C.muted); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-  doc.text(_tr('SOFOR'), ML+3, y+4.8);
-  doc.text(_tr('DOLUM'), ML+70, y+4.8);
-  doc.text(_tr('LITRE'), ML+95, y+4.8);
-  doc.text(_tr('MALIYET (TL)'), ML+125, y+4.8);
-  doc.text(_tr('PAY %'), ML+170, y+4.8);
-  y += 8;
-  topSof.forEach(function(kv, i){
-    sf(i%2===0?C.surface:C.bg); rc(ML, y, CW, 7);
-    const pct = totalTL > 0 ? (kv[1].t / totalTL * 100).toFixed(1) : '0.0';
-    st(C.text); doc.setFontSize(9); doc.setFont('helvetica','bold');
-    doc.text(_tr(kv[0]), ML+3, y+4.8);
-    doc.setFont('helvetica','normal'); st(C.text2);
-    doc.text(String(kv[1].n), ML+70, y+4.8);
-    doc.text(kv[1].l.toLocaleString('tr-TR',{maximumFractionDigits:1}), ML+95, y+4.8);
-    st(C.green); doc.setFont('helvetica','bold');
-    doc.text(kv[1].t.toLocaleString('tr-TR',{maximumFractionDigits:0}), ML+125, y+4.8);
-    st(C.purple);
-    doc.text('%' + pct, ML+170, y+4.8);
-    y += 7;
-  });
-  y += 6;
 
-  // --- Anomali Özeti ---
-  if (y > PH - 60) { newPage(); y = 15; }
-  st(C.red); doc.setFontSize(11); doc.setFont('helvetica','bold');
-  doc.text(_tr('Bu Ayda Tespit Edilen Anomaliler'), ML, y); y += 6;
+  // Anomaliler
   const monthAnoms = [];
   vehicles.forEach(function(v){
     const en = (fuelData[v.id]||[]).slice().sort(function(a,b){return new Date(a.tarih)-new Date(b.tarih) || a.km-b.km;});
@@ -11559,66 +11994,365 @@ async function downloadYoneticiRaporu() {
       if (!e.tarih || !e.tarih.startsWith(ay)) return;
       const problems = [];
       if (i > 0 && e.km < en[i-1].km) problems.push('Km geri gitti');
-      if (i > 0 && e.tarih === en[i-1].tarih) problems.push('Ayni gun cift dolum');
+      if (i > 0 && e.tarih === en[i-1].tarih) problems.push('Aynı gün çift dolum');
       if (i > 0 && en[i-1].km < e.km) {
         const cons = (e.litre / (e.km - en[i-1].km)) * 100;
-        if (cons > 60) problems.push('Yuksek tuketim ' + cons.toFixed(1));
+        if (cons > 60) problems.push('Yüksek tüketim ' + cons.toFixed(1));
       }
       if (e.fiyat > 0 && (e.fiyat < 5 || e.fiyat > 150)) problems.push('Anormal fiyat');
-      if (e.litre > 500) problems.push('Yuksek litre');
-      if (problems.length) monthAnoms.push({plaka: v.plaka, tarih: e.tarih, sofor: e.sofor || v.sofor || '—', problem: problems.join(' · ')});
+      if (e.litre > 500) problems.push('Yüksek litre');
+      if (problems.length) monthAnoms.push({plaka: v.plaka || '—', tarih: e.tarih, sofor: e.sofor || v.sofor || '—', problem: problems.join(' · ')});
     });
   });
-  if (monthAnoms.length === 0) {
-    sf(C.surface); rr(ML, y, CW, 16, 3);
-    st(C.green); doc.setFontSize(10); doc.setFont('helvetica','bold');
-    doc.text(_tr('✓ Bu ayda anomali tespit edilmedi. Tum dolum kayitlari normal goruyor.'), ML+5, y+10);
-    y += 20;
+
+  // ── PDF: Editorial tema ──
+  if (!window.PdfTheme) {
+    showToast('PDF tema modülü yüklenmedi (pdf-theme.js).', 'error');
+    return;
+  }
+  const ctx = await PdfTheme.init({ orientation:'portrait' });
+  const { doc, PW, PH, ML, MR, MT, MB, CW, COLOR } = ctx;
+  const T = PdfTheme;
+
+  // Belge no — FL-YR-YYYY-MMDD
+  const today = new Date();
+  const docNo = 'FL-YR-' + today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + String(today.getDate()).padStart(2,'0');
+  const dateStamp = today.toLocaleDateString('tr-TR', {day:'2-digit', month:'long', year:'numeric'}).toUpperCase().replace(/\s+/g,' . ');
+
+  // ─── SAYFA 1: Kapak + KPI ───
+  T.drawPageBg(ctx);
+  let y = T.drawTopbar(ctx, {
+    brand:'Fleetly',
+    meta:[
+      { key:'Belge No', value:docNo },
+      { key:'Dönem',    value:ayAd },
+      { key:'Sayfa',    value:'01' },
+    ]
+  });
+
+  y = T.drawTitleBlock(ctx, {
+    title:'Yönetim',
+    titleEm:'Raporu.',
+    deck:'Aylık yakıt giderlerinin kapsamlı analizi ve performans değerlendirmesi.',
+    badge:'Gizli — İç Kullanım',
+    dateStamp:dateStamp,
+    y: y + 8,
+  });
+
+  y = T.drawMetaStrip(ctx, {
+    y: y + 4,
+    items:[
+      { key:'Dönem',        value:ayAd },
+      { key:'Filo',         value:vehicles.length + ' araç' },
+      { key:'Hazırlayan',   value:'Operasyon Departmanı' },
+      { key:'Para Birimi',  value:'Türk Lirası (TL)' },
+    ],
+  });
+
+  // KPI grid 3×2
+  function fmtTRY(n) {
+    if (n == null) return '—';
+    return Math.round(n).toLocaleString('tr-TR');
+  }
+  function fmtL(n) {
+    if (n == null) return '—';
+    return n.toLocaleString('tr-TR', {maximumFractionDigits:1});
+  }
+  function fmtPct(n) {
+    if (n == null) return '—';
+    const sign = n >= 0 ? '+' : '';
+    return sign + n.toFixed(1) + '%';
+  }
+
+  const kpis = [
+    { label:'Toplam Yakıt Gideri', pre:'TL ', value:fmtTRY(totalTL),
+      delta: tlDelta != null ? '%' + Math.abs(tlDelta).toFixed(1) + ' önceki aya göre' : 'Önceki ay verisi yok',
+      deltaDir: tlDelta == null ? null : (tlDelta > 0 ? 'down' : 'up') },
+    { label:'Toplam Litre', value:fmtL(totalL), unit:' L',
+      delta: lDelta != null ? '%' + Math.abs(lDelta).toFixed(1) + ' önceki aya göre' : 'Önceki ay verisi yok',
+      deltaDir: lDelta == null ? null : (lDelta > 0 ? 'down' : 'up') },
+    { label:'Dolum Sayısı', value:String(dolumCnt), unit:' dolum',
+      delta: vehicles.length + ' araç · ortalama ' + (vehicles.length > 0 ? Math.round(dolumCnt/vehicles.length) : 0) + ' dolum/araç' },
+    { label:'Ort. Birim Fiyat', pre:'TL ', value:ortP > 0 ? ortP.toFixed(2) : '—', unit:' / L',
+      delta: prices.length + ' fiyat noktasından ortalama' },
+    { label:'Ort. Dolum Tutarı', pre:'TL ', value:dolumCnt > 0 ? fmtTRY(totalTL/dolumCnt) : '—',
+      delta: 'Dolum başına ortalama' },
+    { label:'En Yüksek Gider', value:topVeh.length ? topVeh[0][0] : '—',
+      delta: topVeh.length ? 'TL ' + fmtTRY(topVeh[0][1].t) + ' · ' + ((topVeh[0][1].t/totalTL)*100).toFixed(1) + '% pay' : '—' },
+  ];
+  y = T.drawKpiGrid(ctx, { y: y, items: kpis, cols: 3 });
+
+  // §01 — Araç bazlı gider donut + legend
+  y = T.drawSectionHead(ctx, {
+    y: y + 6, num:'01', title:'Yakıt Gider Dağılımı',
+    meta: topVeh.length + ' araç · ' + dolumCnt + ' dolum',
+  });
+
+  // Donut için "diğer" hesabı
+  const top4 = topVeh.slice(0, 4);
+  const otherSum = topVeh.slice(4).reduce((s, kv) => s + kv[1].t, 0)
+                 + Object.entries(byVeh).filter(([k]) => !topVeh.slice(0,4).find(([k2]) => k2 === k)).reduce((s, kv) => s + kv[1].t, 0)
+                 - top4.reduce((s, kv) => s + kv[1].t, 0); // top4 dışındakilerin toplamı
+  // Daha temiz hesap: tüm araçlardan top 4 dışındakiler
+  const allOther = Object.entries(byVeh).filter(([k]) => !top4.find(([tk]) => tk === k))
+                                        .reduce((s, kv) => s + kv[1].t, 0);
+  const slicePalette = [COLOR.ink, COLOR.ink2, COLOR.ink4, COLOR.hairline, COLOR.positive];
+  const slices = top4.map((kv, i) => ({
+    label: kv[0],
+    value: kv[1].t,
+    color: slicePalette[i] || COLOR.ink2,
+    amount: 'TL ' + fmtTRY(kv[1].t),
+  }));
+  if (allOther > 0) {
+    slices.push({ label:'Diğer', value: allOther, color: slicePalette[4], amount:'TL ' + fmtTRY(allOther), highlight:false });
+  }
+
+  // İki sütun: sol donut + legend, sağ "Önceki aya göre karşılaştırma" tablosu
+  // Üstte border-top siyah çizgi (drawSectionHead sonrası)
+  ctx.setStroke(COLOR.ink); ctx.hairline(0.4);
+  doc.line(ML, y, ML + CW, y);
+  y += 6;
+
+  const halfW = (CW - 14) / 2;
+  T.drawDonut(ctx, {
+    cx: ML + 22, cy: y + 22, r: 18, strokeW: 6,
+    slices: slices,
+    centerLabel: dolumCnt > 0 ? '%' + ((topVeh[0]?.[1].t || 0) / totalTL * 100).toFixed(1) : '',
+    centerSubtext: 'EN BÜYÜK PAY',
+  });
+  T.drawDonutLegend(ctx, {
+    slices: slices,
+    x: ML + 46, y: y + 1, w: halfW - 26,
+    total: totalTL || 1,
+  });
+
+  // Sağ taraf: önceki aya karşılaştırma kart-listesi
+  const cmpRows = [
+    { label:'Bu ay toplam gider', value:'TL ' + fmtTRY(totalTL) },
+    { label:'Önceki ay (' + prevK + ')', value: prevTL > 0 ? 'TL ' + fmtTRY(prevTL) : '—' },
+    { label:'Fark (TL)', value: prevTL > 0 ? (totalTL - prevTL >= 0 ? '+' : '') + 'TL ' + fmtTRY(Math.abs(totalTL - prevTL)) : '—',
+      positive: tlDelta != null && tlDelta < 0 },
+    { label:'Fark (%)', value: fmtPct(tlDelta), positive: tlDelta != null && tlDelta < 0 },
+    { label:'Bu ay toplam litre', value: fmtL(totalL) + ' L' },
+    { label:'Önceki ay litre', value: prevL > 0 ? fmtL(prevL) + ' L' : '—' },
+    { label:'Litre fark (%)', value: fmtPct(lDelta), positive: lDelta != null && lDelta < 0 },
+    { label:'Net Sonuç', value: tlDelta != null ? (tlDelta < 0 ? 'İyileşme' : tlDelta > 5 ? 'Dikkat' : 'Stabil') : '—',
+      positive: tlDelta != null && tlDelta < 0, isTotal: true },
+  ];
+  T.drawPLList(ctx, { x: ML + halfW + 14, y: y + 1, w: halfW, rows: cmpRows });
+
+  y += 50;
+
+  // Pull quote — özet insight
+  let insight = '';
+  if (topVeh.length > 0) {
+    const pct = ((topVeh[0][1].t / totalTL) * 100).toFixed(0);
+    insight = ayAd + ' döneminde toplam yakıt gideri TL ' + fmtTRY(totalTL) + ' olarak gerçekleşmiştir. '
+            + topVeh[0][0] + ' plakalı araç toplam giderin %' + pct + 'ini tek başına üretmiştir';
+    if (tlDelta != null) {
+      insight += tlDelta < 0
+        ? ', önceki aya göre %' + Math.abs(tlDelta).toFixed(1) + ' iyileşme kaydedilmiştir.'
+        : ', önceki aya göre %' + tlDelta.toFixed(1) + ' artış görülmüştür.';
+    } else {
+      insight += '.';
+    }
   } else {
-    sf(C.surface2); rc(ML, y, CW, 7);
-    st(C.muted); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-    doc.text(_tr('TARIH'), ML+3, y+4.8);
-    doc.text(_tr('PLAKA'), ML+28, y+4.8);
-    doc.text(_tr('SOFOR'), ML+60, y+4.8);
-    doc.text(_tr('SORUN'), ML+105, y+4.8);
-    y += 8;
-    monthAnoms.slice(0, 20).forEach(function(a, i){
-      if (y > PH - 18) { newPage(); y = 15; }
-      sf(i%2===0?C.surface:C.bg); rc(ML, y, CW, 6.5);
-      st(C.text2); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.text(_tr(a.tarih.split('-').reverse().join('.')), ML+3, y+4.5);
-      doc.setFont('helvetica','bold');
-      doc.text(_tr(a.plaka), ML+28, y+4.5);
-      doc.setFont('helvetica','normal'); st(C.muted);
-      doc.text(_tr(a.sofor).slice(0,18), ML+60, y+4.5);
-      st(C.red);
-      doc.text(_tr(a.problem).slice(0,60), ML+105, y+4.5);
-      y += 6.5;
+    insight = ayAd + ' döneminde yeterli veri toplanamamıştır.';
+  }
+  if (y + 24 < PH - MB - 8) {
+    y = T.drawPullQuote(ctx, { y: y, text: insight });
+  }
+
+  T.drawFooter(ctx, { label:'Fleetly · Yönetim Raporu · ' + ayAd, pageNo:1 });
+
+  // ─── SAYFA 2: Top araç/şoför + Anomaliler + Sign-off ───
+  doc.addPage();
+  T.drawPageBg(ctx);
+  let y2 = T.drawTopbar(ctx, {
+    brand:'Fleetly',
+    meta:[
+      { key:'Belge No', value:docNo },
+      { key:'Dönem',    value:ayAd },
+      { key:'Sayfa',    value:'02' },
+    ]
+  });
+
+  // §02 — Araç bazlı (top 5)
+  y2 = T.drawSectionHead(ctx, {
+    y: y2 + 8, num:'02', title:'Araç Bazlı Gider Sıralaması',
+    meta: 'En Yüksek 5 Araç · Pay %',
+  });
+
+  const vehRows = topVeh.map((kv, i) => {
+    const pct = totalTL > 0 ? (kv[1].t / totalTL * 100) : 0;
+    return [
+      { text: kv[0], plate: true },
+      kv[1].n.toString(),
+      { text: fmtL(kv[1].l) + ' L', bold: false },
+      { text: fmtTRY(kv[1].t), bold: true, positive: true },
+      { text: '%' + pct.toFixed(1), bold: false },
+    ];
+  });
+  const vehFoot = [
+    'TOPLAM',
+    String(allE.length),
+    fmtL(totalL) + ' L',
+    { text: fmtTRY(totalTL), positive: true },
+    '100,0%',
+  ];
+
+  y2 = T.drawTable(ctx, {
+    y: y2 + 4,
+    columns: [
+      { label:'Plaka',        w: 30, align:'left'  },
+      { label:'Dolum',        w: 14, align:'right' },
+      { label:'Litre',        w: 18, align:'right' },
+      { label:'Maliyet (TL)', w: 22, align:'right' },
+      { label:'Pay',          w: 16, align:'right' },
+    ],
+    rows: vehRows,
+    foot: vehFoot,
+    onPageBreak: () => {
+      T.drawFooter(ctx, { label:'Fleetly · Yönetim Raporu · ' + ayAd });
+      doc.addPage(); T.drawPageBg(ctx);
+      return T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+        { key:'Belge No', value:docNo },
+        { key:'Dönem',    value:ayAd },
+        { key:'Sayfa',    value:String(doc.internal.getNumberOfPages()).padStart(2,'0') },
+      ]}) + 6;
+    }
+  });
+
+  // §03 — Şoför bazlı
+  y2 = T.drawSectionHead(ctx, {
+    y: y2 + 6, num:'03', title:'Şoför Bazlı Gider Sıralaması',
+    meta: 'En Yüksek 5 Şoför · Pay %',
+  });
+
+  const sofRows = topSof.map((kv, i) => {
+    const pct = totalTL > 0 ? (kv[1].t / totalTL * 100) : 0;
+    return [
+      kv[0],
+      kv[1].n.toString(),
+      fmtL(kv[1].l) + ' L',
+      { text: fmtTRY(kv[1].t), bold: true, positive: true },
+      '%' + pct.toFixed(1),
+    ];
+  });
+  y2 = T.drawTable(ctx, {
+    y: y2 + 4,
+    columns: [
+      { label:'Şoför',        w: 36, align:'left'  },
+      { label:'Dolum',        w: 12, align:'right' },
+      { label:'Litre',        w: 16, align:'right' },
+      { label:'Maliyet (TL)', w: 22, align:'right' },
+      { label:'Pay',          w: 14, align:'right' },
+    ],
+    rows: sofRows.length ? sofRows : [['—','—','—','—','—']],
+    onPageBreak: () => {
+      T.drawFooter(ctx, { label:'Fleetly · Yönetim Raporu · ' + ayAd });
+      doc.addPage(); T.drawPageBg(ctx);
+      return T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+        { key:'Belge No', value:docNo },
+        { key:'Dönem',    value:ayAd },
+        { key:'Sayfa',    value:String(doc.internal.getNumberOfPages()).padStart(2,'0') },
+      ]}) + 6;
+    }
+  });
+
+  // §04 — Anomaliler
+  if (y2 + 30 > PH - MB - 8) {
+    T.drawFooter(ctx, { label:'Fleetly · Yönetim Raporu · ' + ayAd });
+    doc.addPage(); T.drawPageBg(ctx);
+    y2 = T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+      { key:'Belge No', value:docNo },
+      { key:'Dönem',    value:ayAd },
+      { key:'Sayfa',    value:String(doc.internal.getNumberOfPages()).padStart(2,'0') },
+    ]}) + 8;
+  }
+  y2 = T.drawSectionHead(ctx, {
+    y: y2 + 6, num:'04', title:'Tespit Edilen Anomaliler',
+    meta: monthAnoms.length + ' kayıt',
+  });
+
+  if (monthAnoms.length === 0) {
+    ctx.setSans(10, 'italic');
+    ctx.setText(COLOR.positive);
+    doc.text('✓  Bu ay anomali tespit edilmedi. Tüm dolum kayıtları normal görünüyor.', ML, y2 + 8);
+    y2 += 16;
+  } else {
+    const anomRows = monthAnoms.slice(0, 12).map(a => [
+      a.tarih ? a.tarih.split('-').reverse().join('.') : '—',
+      { text: a.plaka, plate: true },
+      a.sofor.length > 22 ? a.sofor.slice(0, 22) + '…' : a.sofor,
+      { text: a.problem.length > 50 ? a.problem.slice(0, 50) + '…' : a.problem, color: COLOR.negative },
+    ]);
+    y2 = T.drawTable(ctx, {
+      y: y2 + 4,
+      columns: [
+        { label:'Tarih',   w: 14, align:'left'  },
+        { label:'Plaka',   w: 22, align:'left'  },
+        { label:'Şoför',   w: 26, align:'left'  },
+        { label:'Sorun',   w: 38, align:'left'  },
+      ],
+      rows: anomRows,
+      onPageBreak: () => {
+        T.drawFooter(ctx, { label:'Fleetly · Yönetim Raporu · ' + ayAd });
+        doc.addPage(); T.drawPageBg(ctx);
+        return T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+          { key:'Belge No', value:docNo },
+          { key:'Dönem',    value:ayAd },
+          { key:'Sayfa',    value:String(doc.internal.getNumberOfPages()).padStart(2,'0') },
+        ]}) + 6;
+      }
     });
-    if (monthAnoms.length > 20) {
-      st(C.muted); doc.setFontSize(8); doc.setFont('helvetica','italic');
-      doc.text(_tr('(... ve ' + (monthAnoms.length - 20) + ' anomali daha)'), ML, y+5);
-      y += 10;
+    if (monthAnoms.length > 12) {
+      ctx.setSans(8, 'italic');
+      ctx.setText(COLOR.ink3);
+      doc.text('… ve ' + (monthAnoms.length - 12) + ' anomali daha (toplam ' + monthAnoms.length + ').', ML, y2 + 4);
+      y2 += 10;
     }
   }
 
-  // --- Yönetici Yorumları ---
-  if (y > PH - 50) { newPage(); y = 15; }
-  y += 4;
-  st(C.accent); doc.setFontSize(11); doc.setFont('helvetica','bold');
-  doc.text(_tr('Ozet ve Oneriler'), ML, y); y += 6;
-  sf(C.surface); rr(ML, y, CW, 34, 3);
-  st(C.text2); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  // Yorumlar / öneriler — pull quote
+  if (y2 + 30 > PH - MB - 30) {
+    T.drawFooter(ctx, { label:'Fleetly · Yönetim Raporu · ' + ayAd });
+    doc.addPage(); T.drawPageBg(ctx);
+    y2 = T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+      { key:'Belge No', value:docNo },
+      { key:'Dönem',    value:ayAd },
+      { key:'Sayfa',    value:String(doc.internal.getNumberOfPages()).padStart(2,'0') },
+    ]}) + 8;
+  }
   let suggestion = '';
-  if (tlDelta !== null && tlDelta > 10) suggestion += '• Toplam gider onceki aya gore %' + tlDelta.toFixed(1) + ' artti. Fiyat artisi veya fazladan dolum kontrol edilmeli.  \n';
-  if (tlDelta !== null && tlDelta < -10) suggestion += '• Toplam gider onceki aya gore %' + Math.abs(tlDelta).toFixed(1) + ' dustu. Iyi yonde ilerleme.  \n';
-  if (monthAnoms.length > 0) suggestion += '• ' + monthAnoms.length + ' anomali tespit edildi; ilgili soforlerle gorusulmeli.  \n';
-  if (topVeh.length > 0) suggestion += '• En yuksek gider ' + topVeh[0][0] + ' aracinda (' + topVeh[0][1].t.toLocaleString('tr-TR',{maximumFractionDigits:0}) + ' TL).  \n';
-  if (!suggestion) suggestion = '• Bu ay icin otomatik oneri bulunmadi. Manuel inceleme tavsiye edilir.';
-  const lines = doc.splitTextToSize(_tr(suggestion), CW - 10);
-  doc.text(lines, ML+5, y+7);
+  if (tlDelta != null && tlDelta > 10) suggestion += 'Toplam gider önceki aya göre %' + tlDelta.toFixed(1) + ' arttı; fiyat artışı veya fazladan dolum kontrol edilmeli. ';
+  if (tlDelta != null && tlDelta < -10) suggestion += 'Toplam gider önceki aya göre %' + Math.abs(tlDelta).toFixed(1) + ' düştü; iyi yönde ilerleme. ';
+  if (monthAnoms.length > 0) suggestion += monthAnoms.length + ' anomali tespit edildi; ilgili şoförlerle görüşülmesi önerilir. ';
+  if (topVeh.length > 0) suggestion += 'En yüksek gider ' + topVeh[0][0] + ' aracında (TL ' + fmtTRY(topVeh[0][1].t) + ').';
+  if (!suggestion) suggestion = 'Bu ay için otomatik öneri bulunmadı. Manuel inceleme tavsiye edilir.';
+  y2 = T.drawPullQuote(ctx, { y: y2 + 4, text: suggestion });
 
-  footer();
+  // Sign-off
+  if (y2 + 28 > PH - MB - 8) {
+    T.drawFooter(ctx, { label:'Fleetly · Yönetim Raporu · ' + ayAd });
+    doc.addPage(); T.drawPageBg(ctx);
+    y2 = T.drawTopbar(ctx, { brand:'Fleetly', meta:[
+      { key:'Belge No', value:docNo },
+      { key:'Dönem',    value:ayAd },
+      { key:'Sayfa',    value:String(doc.internal.getNumberOfPages()).padStart(2,'0') },
+    ]}) + 8;
+  }
+  T.drawSignOff(ctx, {
+    y: y2 + 14,
+    prepared: 'Operasyon Departmanı · Fleetly',
+    approved: 'Genel Müdür · İmza ve Tarih',
+  });
+
+  T.drawFooter(ctx, { label:'Fleetly · Yönetim Raporu · ' + ayAd });
+
+  // Tüm sayfalara final pageNo bas
+  T.stampPageNumbers(ctx);
+
   doc.save('yonetici_raporu_' + ay + '.pdf');
   showToast('Yönetici raporu indirildi ✓', 'success');
 }
