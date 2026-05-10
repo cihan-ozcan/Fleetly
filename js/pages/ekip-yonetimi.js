@@ -84,9 +84,18 @@
     try {
       const sb = window.getSB ? window.getSB() : (window._sb || null);
       if (!sb) throw new Error('Supabase istemcisi yok');
-      const { data, error } = await sb.rpc('firma_kullanici_davet_olustur', {
+      // 15 sn timeout — Supabase JS SDK bazen auth zincirinde askıda kalır;
+      // RPC tamamlandıysa sayfa yenilenince davet listede görünür.
+      const rpcPromise = sb.rpc('firma_kullanici_davet_olustur', {
         p_email: email, p_rol: rol, p_ad: ad
       });
+      const timeoutPromise = new Promise((_, rej) =>
+        setTimeout(
+          () => rej(new Error('Yanıt 15 sn içinde gelmedi — sayfayı yenileyin (Ctrl+F5), davet büyük olasılıkla oluşmuştur.')),
+          15000
+        )
+      );
+      const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       const link = row?.davet_link || ('https://fleetly.fit/accept-invite.html?kod=' + row?.davet_kodu);
