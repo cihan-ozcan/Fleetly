@@ -82,20 +82,36 @@
     const btn = _$('ekip-davet-btn');
     if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Oluşturuluyor…'; }
     try {
-      const sb = window.getSB ? window.getSB() : (window._sb || null);
-      if (!sb) throw new Error('Supabase istemcisi yok');
-      // 15 sn timeout — Supabase JS SDK bazen auth zincirinde askıda kalır;
-      // RPC tamamlandıysa sayfa yenilenince davet listede görünür.
-      const rpcPromise = sb.rpc('firma_kullanici_davet_olustur', {
-        p_email: email, p_rol: rol, p_ad: ad
-      });
-      const timeoutPromise = new Promise((_, rej) =>
-        setTimeout(
-          () => rej(new Error('Yanıt 15 sn içinde gelmedi — sayfayı yenileyin (Ctrl+F5), davet büyük olasılıkla oluşmuştur.')),
-          15000
-        )
-      );
-      const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
+      // SDK yerine doğrudan fetch — Supabase JS SDK auth zincirinde
+      // askıda kalıyor (V5 known issue). sbUrl + sbHeaders memory pattern.
+      if (typeof window.sbUrl !== 'function' || typeof window.sbHeaders !== 'function') {
+        // app-chunk-02.js'deki global fonksiyonlar; window. olmadan da erişilebilir
+        if (typeof sbUrl !== 'function' || typeof sbHeaders !== 'function') {
+          throw new Error('sbUrl/sbHeaders yok — config.js yüklenmemiş olabilir');
+        }
+      }
+      const _sbUrl     = (typeof window.sbUrl === 'function')     ? window.sbUrl     : sbUrl;
+      const _sbHeaders = (typeof window.sbHeaders === 'function') ? window.sbHeaders : sbHeaders;
+
+      const ctrl = new AbortController();
+      const tId  = setTimeout(() => ctrl.abort(), 12000);
+      let res;
+      try {
+        res = await fetch(_sbUrl('rpc/firma_kullanici_davet_olustur'), {
+          method:  'POST',
+          headers: { ..._sbHeaders(), 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ p_email: email, p_rol: rol, p_ad: ad }),
+          signal:  ctrl.signal
+        });
+      } finally {
+        clearTimeout(tId);
+      }
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.message || j?.hint || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const error = null;
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       const link = row?.davet_link || ('https://fleetly.fit/accept-invite.html?kod=' + row?.davet_kodu);
