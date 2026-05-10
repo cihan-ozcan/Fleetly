@@ -45,9 +45,11 @@ begin
       using errcode = '42501';
   end if;
 
-  -- Faz 8 — rate limit
-  perform public._rate_limit_check('davet_olustur:firma:' || v_firma::text, 30, interval '1 hour');
-  perform public._rate_limit_check('davet_olustur:user:' || v_uid::text, 60, interval '1 hour');
+  -- Faz 8 — rate limit (l migration uygulanmamışsa fail-soft skip)
+  if to_regprocedure('public._rate_limit_check(text, integer, interval)') is not null then
+    perform public._rate_limit_check('davet_olustur:firma:' || v_firma::text, 30, interval '1 hour');
+    perform public._rate_limit_check('davet_olustur:user:' || v_uid::text, 60, interval '1 hour');
+  end if;
 
   if v_email is null or v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
     raise exception 'Geçersiz email' using errcode = '22023';
