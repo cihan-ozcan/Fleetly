@@ -1052,15 +1052,10 @@
           <div class="card__title">Yaklaşan Bakımlar</div>
           <div class="card__sub">Önümüzdeki 30 gün</div>
         </div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <button class="btn--ghost btn--sm" onclick="window._openYeniBakimRandevu && window._openYeniBakimRandevu()" title="Yeni bakım randevusu ekle" aria-label="Yeni randevu ekle">
-            + Randevu
-          </button>
-          <button class="btn--ghost btn--sm" onclick="openMaintSummaryModal()">
-            Tümü
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
-        </div>
+        <button class="btn--ghost btn--sm" onclick="openMaintSummaryModal()">
+          Tümü
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
       </div>
       <div class="card__body card__body--flush">
         <div id="upcoming-maint-list">
