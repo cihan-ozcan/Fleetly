@@ -3,9 +3,6 @@ config.js
 # Refactor yedek klasörü — yalnızca lokal, repo'ya GİTMEZ
 _backup_pre_refactor/
 
-# Claude Code internal state (worktree'ler, settings) — repo'ya GİTMEZ
-.claude/
-
 # Yaygın sistem / editör dosyaları
 .DS_Store
 Thumbs.db
