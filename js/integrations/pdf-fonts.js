@@ -2,35 +2,45 @@
  * pdf-fonts.js — jsPDF için Türkçe karakter destekli font lazy loader
  * -----------------------------------------------------------------------------
  * jsPDF'in default Helvetica fontu sadece Latin-1 destekler — Türkçe karakterler
- * (ı, İ, ş, Ş, ğ, Ğ, ü, Ü, ö, Ö, ç, Ç) yanlış basılır. Bu modül:
+ * (ı, İ, ş, Ş, ğ, Ğ, ü, Ü, ö, Ö, ç, Ç) yanlış basılır.
  *
- *   • Roboto Latin-Ext TTF dosyalarını CDN'den fetch eder (Regular + Bold)
- *   • Base64'e çevirip jsPDF VFS'ine ekler
- *   • Fontu "Roboto" adıyla kaydeder (doc.setFont('Roboto'))
- *   • Cache'ler — sonraki PDF'lerde tekrar yüklemez
+ * Bu modül 2 font ailesi yükler (Fontsource CDN, latin-ext subset):
+ *   • Roboto (sans-serif)         — Regular + Bold + Italic + BoldItalic
+ *   • Newsreader (editorial serif) — Regular + Italic (büyük H1 başlıklar için)
  *
- * Kullanım (PDF üretim fonksiyonunda):
+ * Mono için jsPDF'in native Courier fontu kullanılır (ek yük yok). Courier
+ * Latin-1 olduğundan tabular sayıları (TL, %, km) doğru basar; Türkçe metin
+ * mono ile basılmaz, sadece numerik içerik gider.
+ *
+ * Kullanım:
  *
  *   const { jsPDF } = window.jspdf;
  *   const doc = new jsPDF();
- *   await PdfFonts.load(doc);
- *   doc.setFont('Roboto', 'normal');   // Türkçe destekli
- *   doc.text('Şoför Mehmet Yılmaz', 10, 20);
- *
+ *   const ok = await PdfFonts.load(doc, { serif: true });   // ikisini de yükler
+ *   doc.setFont('Roboto', 'normal');     // Türkçe sans
+ *   doc.setFont('Newsreader', 'italic'); // Türkçe italic serif (H1)
+ *   doc.setFont('courier', 'normal');    // tabular sayılar (native)
  * ===========================================================================*/
 
 (function () {
   'use strict';
 
-  // Fontsource CDN — TTF dosyaları doğrudan, latin-ext alt-set Türkçe içerir
-  const FONT_REGULAR_URL = 'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/files/roboto-latin-ext-400-normal.ttf';
-  const FONT_BOLD_URL    = 'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/files/roboto-latin-ext-700-normal.ttf';
+  // Fontsource CDN — Latin-Ext subset Türkçe içerir
+  const URLS = {
+    robotoRegular:    'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/files/roboto-latin-ext-400-normal.ttf',
+    robotoBold:       'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/files/roboto-latin-ext-700-normal.ttf',
+    robotoItalic:     'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/files/roboto-latin-ext-400-italic.ttf',
+    robotoBoldItalic: 'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/files/roboto-latin-ext-700-italic.ttf',
+    newsreaderRegular:'https://cdn.jsdelivr.net/fontsource/fonts/newsreader@latest/files/newsreader-latin-ext-400-normal.ttf',
+    newsreaderItalic: 'https://cdn.jsdelivr.net/fontsource/fonts/newsreader@latest/files/newsreader-latin-ext-400-italic.ttf',
+  };
 
-  let _cache = null;          // { regular: base64, bold: base64 }
-  let _loadPromise = null;    // re-entrancy: aynı anda iki PDF üretimi olursa tek fetch
+  let _cacheSans = null;       // { regular, bold, italic, boldItalic }
+  let _cacheSerif = null;      // { regular, italic }
+  let _loadSansPromise = null;
+  let _loadSerifPromise = null;
 
-  async function _arrayBufferToBase64(buf) {
-    // Büyük buffer'lar için chunk'lı base64 (yığın taşmasını önler)
+  async function _ab2b64(buf) {
     const bytes = new Uint8Array(buf);
     const CHUNK = 0x8000;
     let bin = '';
@@ -40,65 +50,112 @@
     return btoa(bin);
   }
 
-  async function _fetchFonts() {
-    if (_cache) return _cache;
-    if (_loadPromise) return _loadPromise;
+  async function _fetchAsB64(url) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('font ' + r.status + ' ' + url);
+    return _ab2b64(await r.arrayBuffer());
+  }
 
-    _loadPromise = (async () => {
+  async function _fetchSans() {
+    if (_cacheSans) return _cacheSans;
+    if (_loadSansPromise) return _loadSansPromise;
+    _loadSansPromise = (async () => {
       try {
-        const [regBuf, boldBuf] = await Promise.all([
-          fetch(FONT_REGULAR_URL).then(r => {
-            if (!r.ok) throw new Error('Regular font ' + r.status);
-            return r.arrayBuffer();
-          }),
-          fetch(FONT_BOLD_URL).then(r => {
-            if (!r.ok) throw new Error('Bold font ' + r.status);
-            return r.arrayBuffer();
-          })
+        const [reg, bold, ita, bita] = await Promise.all([
+          _fetchAsB64(URLS.robotoRegular),
+          _fetchAsB64(URLS.robotoBold),
+          _fetchAsB64(URLS.robotoItalic).catch(() => null),
+          _fetchAsB64(URLS.robotoBoldItalic).catch(() => null),
         ]);
-        _cache = {
-          regular: await _arrayBufferToBase64(regBuf),
-          bold:    await _arrayBufferToBase64(boldBuf)
-        };
-        return _cache;
+        _cacheSans = { regular: reg, bold: bold, italic: ita, boldItalic: bita };
+        return _cacheSans;
       } catch (err) {
-        _loadPromise = null;  // tekrar denenebilir
+        _loadSansPromise = null;
         throw err;
       }
     })();
+    return _loadSansPromise;
+  }
 
-    return _loadPromise;
+  async function _fetchSerif() {
+    if (_cacheSerif) return _cacheSerif;
+    if (_loadSerifPromise) return _loadSerifPromise;
+    _loadSerifPromise = (async () => {
+      try {
+        const [reg, ita] = await Promise.all([
+          _fetchAsB64(URLS.newsreaderRegular),
+          _fetchAsB64(URLS.newsreaderItalic),
+        ]);
+        _cacheSerif = { regular: reg, italic: ita };
+        return _cacheSerif;
+      } catch (err) {
+        _loadSerifPromise = null;
+        throw err;
+      }
+    })();
+    return _loadSerifPromise;
   }
 
   /**
-   * jsPDF doc'una Roboto fontunu yükler ve aktif font olarak set eder.
-   * Hata olursa false döner — çağıran fallback'a (Helvetica + ascii çevirisi) düşebilir.
+   * jsPDF doc'una fontları yükler.
+   * @param {jsPDF} doc
+   * @param {Object} opts
+   * @param {boolean} [opts.serif=false]  — Newsreader (büyük italic H1 için)
+   * @returns {Promise<{sans:boolean, serif:boolean}>}
    */
-  async function load(doc) {
+  async function load(doc, opts) {
+    opts = opts || {};
+    const wantSerif = !!opts.serif;
+    const result = { sans: false, serif: false };
     if (!doc || typeof doc.addFileToVFS !== 'function') {
       console.warn('[PdfFonts] doc geçersiz');
-      return false;
+      return result;
     }
+
+    // Sans her zaman yüklenir — Türkçe gövde metni için zorunlu
     try {
-      const fonts = await _fetchFonts();
-      doc.addFileToVFS('Roboto-Regular.ttf', fonts.regular);
+      const f = await _fetchSans();
+      doc.addFileToVFS('Roboto-Regular.ttf', f.regular);
       doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-      doc.addFileToVFS('Roboto-Bold.ttf', fonts.bold);
+      doc.addFileToVFS('Roboto-Bold.ttf', f.bold);
       doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+      if (f.italic) {
+        doc.addFileToVFS('Roboto-Italic.ttf', f.italic);
+        doc.addFont('Roboto-Italic.ttf', 'Roboto', 'italic');
+      }
+      if (f.boldItalic) {
+        doc.addFileToVFS('Roboto-BoldItalic.ttf', f.boldItalic);
+        doc.addFont('Roboto-BoldItalic.ttf', 'Roboto', 'bolditalic');
+      }
       doc.setFont('Roboto', 'normal');
-      return true;
+      result.sans = true;
     } catch (err) {
-      console.warn('[PdfFonts] yüklenemedi:', err.message);
-      return false;
+      console.warn('[PdfFonts] Roboto yüklenemedi:', err.message);
     }
+
+    if (wantSerif) {
+      try {
+        const f = await _fetchSerif();
+        doc.addFileToVFS('Newsreader-Regular.ttf', f.regular);
+        doc.addFont('Newsreader-Regular.ttf', 'Newsreader', 'normal');
+        doc.addFileToVFS('Newsreader-Italic.ttf', f.italic);
+        doc.addFont('Newsreader-Italic.ttf', 'Newsreader', 'italic');
+        result.serif = true;
+      } catch (err) {
+        console.warn('[PdfFonts] Newsreader yüklenemedi:', err.message);
+      }
+    }
+    return result;
   }
 
-  /** Fontların önceden yüklenmesi (uygulama açılışında "warm cache" için). */
-  function preload() {
-    return _fetchFonts().catch(() => null);
+  /** Uygulama açılışında "warm cache" için ön-yükleme. */
+  function preload(opts) {
+    const tasks = [_fetchSans().catch(() => null)];
+    if (opts && opts.serif) tasks.push(_fetchSerif().catch(() => null));
+    return Promise.all(tasks);
   }
 
-  function isCached() { return _cache != null; }
+  function isCached() { return { sans: _cacheSans != null, serif: _cacheSerif != null }; }
 
   window.PdfFonts = { load, preload, isCached };
 })();
