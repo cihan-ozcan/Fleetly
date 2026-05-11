@@ -332,7 +332,10 @@
   function openGuzergahlarPage() {
     const page = ensureDom();
     page.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    // NOT: body.style.overflow='hidden' DAHA ÖNCE eklenmişti ama çıkış X'siz
+    // yapıldığında body scroll kalıcı kilitli kalıyordu → operasyon sayfası
+    // gibi başka sayfalarda scroll bozuluyordu. Page zaten position:fixed
+    // overlay olduğu için body kilidi görsel olarak gereksiz.
     refresh();
     setTimeout(() => {
       const map = ensureMap();
@@ -343,6 +346,7 @@
   function closeGuzergahlarPage() {
     const page = document.getElementById(PAGE_ID);
     if (page) page.classList.add('hidden');
+    // Yedek: önceki sürümde kilitli kalmış olabilir, her durumda boşalt
     document.body.style.overflow = '';
   }
 
