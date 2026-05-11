@@ -102,6 +102,14 @@
           <i data-icon="server"></i>
           <span>Sistem & CMS</span>
         </a>
+        <a class="adm-nav-item" data-section="hatalar">
+          <i data-icon="alert-triangle"></i>
+          <span>Hatalar</span>
+        </a>
+        <a class="adm-nav-item" data-section="saglik">
+          <i data-icon="activity"></i>
+          <span>Sistem Sağlık</span>
+        </a>
         <a class="adm-nav-item" data-section="audit">
           <i data-icon="history"></i>
           <span>Denetim Log</span>
@@ -325,6 +333,63 @@
         </div>
       </section>
 
+      <!-- HATALAR -->
+      <section class="adm-section hidden" data-section="hatalar">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Hatalar</h1>
+            <p class="adm-deck">Web ve Android tarafından raporlanan frontend hataları.</p>
+          </div>
+          <div class="adm-section-actions">
+            <input id="adm-hata-search" class="adm-input" placeholder="Mesaj / source ara…" type="search">
+            <select id="adm-hata-severity" class="adm-input">
+              <option value="">Tüm Severity</option>
+              <option value="error">Error</option>
+              <option value="warn">Warn</option>
+              <option value="info">Info</option>
+            </select>
+            <select id="adm-hata-platform" class="adm-input">
+              <option value="">Tüm Platform</option>
+              <option value="web">Web</option>
+              <option value="android">Android</option>
+            </select>
+            <select id="adm-hata-resolved" class="adm-input">
+              <option value="false" selected>Açık (çözülmemiş)</option>
+              <option value="true">Çözüldü</option>
+              <option value="">Tümü</option>
+            </select>
+            <select id="adm-hata-songun" class="adm-input">
+              <option value="1">Son 24 saat</option>
+              <option value="7" selected>Son 7 gün</option>
+              <option value="30">Son 30 gün</option>
+              <option value="90">Son 90 gün</option>
+            </select>
+            <button class="adm-btn adm-btn-ghost" onclick="admHatalarYenile()">
+              <i data-icon="refresh"></i> Yenile
+            </button>
+          </div>
+        </header>
+        <div id="adm-hatalar-content">
+          <div class="adm-empty">Yükleniyor…</div>
+        </div>
+      </section>
+
+      <!-- SİSTEM SAĞLIK -->
+      <section class="adm-section hidden" data-section="saglik">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Sistem Sağlık</h1>
+            <p class="adm-deck">Cron job'lar, storage kullanımı, DB boyutları ve e-posta gönderim logu.</p>
+          </div>
+          <button class="adm-btn adm-btn-ghost" onclick="admSaglikYenile()">
+            <i data-icon="refresh"></i> Yenile
+          </button>
+        </header>
+        <div id="adm-saglik-content">
+          <div class="adm-empty">Yükleniyor…</div>
+        </div>
+      </section>
+
       <!-- AUDIT LOG -->
       <section class="adm-section hidden" data-section="audit">
         <header class="adm-section-head">
@@ -398,6 +463,8 @@
   <script src="js/pages/admin/duyurular.js"></script>
   <script src="js/pages/admin/eposta.js"></script>
   <script src="js/pages/admin/sistem.js"></script>
+  <script src="js/pages/admin/hatalar.js"></script>
+  <script src="js/pages/admin/saglik.js"></script>
   <script src="js/pages/admin/audit.js"></script>
   <script src="js/pages/admin/ayarlar.js"></script>
 </body>

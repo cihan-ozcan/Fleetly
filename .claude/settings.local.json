@@ -52,7 +52,9 @@
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/limanlar-page.js\")",
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/suruculer.js\")",
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/abonelikler.js\")",
-      "Bash(node --check C:/Users/cihan/Desktop/Fleetly-main/__TRACKED_VAR__)"
+      "Bash(node --check C:/Users/cihan/Desktop/Fleetly-main/__TRACKED_VAR__)",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/hatalar.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/saglik.js\")"
     ]
   }
 }
