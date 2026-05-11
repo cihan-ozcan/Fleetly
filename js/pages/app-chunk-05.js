@@ -4154,6 +4154,15 @@ function openOpsDrawer(id) {
   opsDrawerSwitchTab('detaylar');
   // Güzergah verisini çek (drawer açıldığında bir kere)
   setTimeout(() => opsGuzergahYukle(), 80);
+  // 🛡 Defansif widget tetikleme — _opsDrawerRender içindeki sıralı async
+  // çağrılarda biri sync hata atarsa diğerleri atlanıyor, "Yükleniyor..."
+  // kalıyor (F5'siz tekrar açılışta gözlenen sorun). Widget'ları drawer
+  // dışından da garanti tetikliyoruz; her biri kendi içinde idempotent.
+  setTimeout(() => {
+    try { opsBenzerSeferleriYukle();   } catch (err) { console.warn('[ops-drawer] benzer seferleri:', err); }
+    try { opsDrawerMasrafYukle();      } catch (err) { console.warn('[ops-drawer] masraflar:', err); }
+    try { _opsDrawerHarcirahRender(e); } catch (err) { console.warn('[ops-drawer] harcirah:', err); }
+  }, 120);
 }
 
 /* ── DRAWER tabs (Detaylar / Olay Akışı / Belgeler / Yakıt) ─── */
