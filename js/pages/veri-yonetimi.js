@@ -9,7 +9,7 @@
  *   - firma_veri_silme_iptal()           → talep iptal (sahip)
  *   - firma_veri_silme_durum()           → UI banner state
  *
- * UI: app.html içindeki #veri-modal-bg modalı.
+ * UI: /app/ içindeki #veri-modal-bg modalı.
  *   - Verimi İndir butonu  → ihraç (sahip|yönetici görür)
  *   - Tehlikeli Alan kutusu → sadece sahip görür (data-roles="sahip" gating)
  * =========================================================================== */

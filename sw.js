@@ -18,7 +18,7 @@ self.addEventListener('push', e => {
     icon            : '/icon-192.png',
     badge           : '/icon-192.png',
     tag             : payload.tag     || 'fleetly-is-emri',
-    data            : { url: payload.url || '/sofor.html' },
+    data            : { url: payload.url || '/sofor/' },
     requireInteraction: true,
     vibrate         : [200, 100, 200, 100, 400],
     actions         : [
@@ -41,7 +41,7 @@ self.addEventListener('notificationclick', e => {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       // Açık sekme varsa odaklan
       for (const c of list) {
-        if (c.url.includes('sofor.html') && 'focus' in c) return c.focus();
+        if (c.url.includes('/sofor/') && 'focus' in c) return c.focus();
       }
       // Yoksa yeni sekme aç
       return clients.openWindow(targetUrl);

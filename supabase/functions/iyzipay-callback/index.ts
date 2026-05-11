@@ -7,7 +7,7 @@
  *   2. Iyzipay'in retrieve API'sine çağrı yapar (token ile detayları al)
  *   3. status='success' ise RPC abonelik_iyzipay_aktif_et çağrılır
  *   4. status='failure' ise RPC abonelik_iyzipay_basarisiz çağrılır
- *   5. Kullanıcıyı abonelik-sonuc.html'e yönlendirir (success/fail param ile)
+ *   5. Kullanıcıyı /abonelik/'e yönlendirir (success/fail param ile)
  *
  * Iyzipay callback format (form-data):
  *   token=...&status=success
@@ -92,7 +92,7 @@ serve(async (req) => {
     }
 
     if (!token) {
-      return redirect(`${FLEETLY_APP_URL}/abonelik-sonuc.html?status=fail&reason=${encodeURIComponent("Token alınamadı")}`);
+      return redirect(`${FLEETLY_APP_URL}/abonelik/?status=fail&reason=${encodeURIComponent("Token alınamadı")}`);
     }
 
     // Iyzipay retrieve — token ile gerçek ödeme detaylarını al
@@ -114,7 +114,7 @@ serve(async (req) => {
     const retJ = await retR.json().catch(() => null);
 
     if (!retJ) {
-      return redirect(`${FLEETLY_APP_URL}/abonelik-sonuc.html?status=fail&reason=${encodeURIComponent("Iyzipay yanıt vermedi")}`);
+      return redirect(`${FLEETLY_APP_URL}/abonelik/?status=fail&reason=${encodeURIComponent("Iyzipay yanıt vermedi")}`);
     }
 
     // Iyzipay paymentStatus: 'SUCCESS' | 'FAILURE' | 'INIT_THREEDS' | ...
@@ -123,7 +123,7 @@ serve(async (req) => {
     const isSuccess = retJ.status === "success" && retJ.paymentStatus === "SUCCESS";
 
     if (!odemeId) {
-      return redirect(`${FLEETLY_APP_URL}/abonelik-sonuc.html?status=fail&reason=${encodeURIComponent("Ödeme ID bulunamadı")}`);
+      return redirect(`${FLEETLY_APP_URL}/abonelik/?status=fail&reason=${encodeURIComponent("Ödeme ID bulunamadı")}`);
     }
 
     if (isSuccess) {
@@ -136,13 +136,13 @@ serve(async (req) => {
         p_tutar: parseFloat(retJ.paidPrice || retJ.price || "0")
       });
       if (!rpcRes.ok) {
-        return redirect(`${FLEETLY_APP_URL}/abonelik-sonuc.html?status=fail&reason=${encodeURIComponent("Abonelik aktif edilemedi: " + rpcRes.raw.slice(0, 120))}`);
+        return redirect(`${FLEETLY_APP_URL}/abonelik/?status=fail&reason=${encodeURIComponent("Abonelik aktif edilemedi: " + rpcRes.raw.slice(0, 120))}`);
       }
       // RPC dönen abonelik_bitis tarihini parametreye ekle
       const result = Array.isArray(rpcRes.json) ? rpcRes.json[0] : rpcRes.json;
       const bitisIso = result?.abonelik_bitis ? new Date(result.abonelik_bitis).toISOString() : "";
       const planAd = retJ.basketItems?.[0]?.name || "";
-      return redirect(`${FLEETLY_APP_URL}/abonelik-sonuc.html?status=success&odeme_id=${odemeId}&plan_ad=${encodeURIComponent(planAd)}&bitis=${encodeURIComponent(bitisIso)}`);
+      return redirect(`${FLEETLY_APP_URL}/abonelik/?status=success&odeme_id=${odemeId}&plan_ad=${encodeURIComponent(planAd)}&bitis=${encodeURIComponent(bitisIso)}`);
     } else {
       // Başarısız — RPC ile işaretle
       await rpc("abonelik_iyzipay_basarisiz", {
@@ -152,10 +152,10 @@ serve(async (req) => {
         p_iyzipay_raw: retJ
       });
       const reason = retJ.errorMessage || "Ödeme reddedildi";
-      return redirect(`${FLEETLY_APP_URL}/abonelik-sonuc.html?status=fail&odeme_id=${odemeId}&reason=${encodeURIComponent(reason)}`);
+      return redirect(`${FLEETLY_APP_URL}/abonelik/?status=fail&odeme_id=${odemeId}&reason=${encodeURIComponent(reason)}`);
     }
 
   } catch (err) {
-    return redirect(`${FLEETLY_APP_URL}/abonelik-sonuc.html?status=fail&reason=${encodeURIComponent(String(err?.message || err))}`);
+    return redirect(`${FLEETLY_APP_URL}/abonelik/?status=fail&reason=${encodeURIComponent(String(err?.message || err))}`);
   }
 });

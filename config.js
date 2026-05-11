@@ -16,7 +16,7 @@ window.FILO_CONFIG = {
   // Measurement ID: 'G-XXXXXXXXXX'
   GA4_ID: '',
 
-  // ── Onboarding videosu (register.html sol panelinde) ──
+  // ── Onboarding videosu (/kayit/ sol panelinde) ──
   // YouTube video ID (ör. 'dQw4w9WgXcQ'). Boş ise card gizli.
   // Click-to-load — kullanıcı tıklamadan YouTube'a istek atılmaz.
   ONBOARDING_VIDEO_ID: '',

@@ -1,6 +1,6 @@
 /* ===================================================================
-   app-chunk-03.js — app.html içinden otomatik taşındı (Phase 4, mekanik)
-   Orijinal konum: 10. <script> tag'i (app.html).
+   app-chunk-03.js — /app/ içinden otomatik taşındı (Phase 4, mekanik)
+   Orijinal konum: 10. <script> tag'i (/app/).
    İçerik AYNEN korunur; global değişkenler, fonksiyon isimleri,
    yükleme sırası değiştirilmedi. İleride modülerleştirilecek.
    ================================================================= */

@@ -2,20 +2,20 @@
 
 User-agent: *
 Allow: /
-Allow: /register.html
-Allow: /kvkk-aydinlatma.html
-Allow: /kullanim-sartlari.html
+Allow: /kayit/
+Allow: /kvkk/
+Allow: /kullanim/
 
 # Auth & operational sayfalar — index dışı
-Disallow: /app.html
-Disallow: /accept-invite.html
-Disallow: /reset-password.html
-Disallow: /abonelik-sonuc.html
-Disallow: /portal.html
-Disallow: /sofor.html
-Disallow: /sofor-profil.html
-Disallow: /musteri_takip.html
-Disallow: /admin.html
+Disallow: /app/
+Disallow: /davet/
+Disallow: /sifre-sifirla/
+Disallow: /abonelik/
+Disallow: /portal/
+Disallow: /sofor/
+Disallow: /profil/
+Disallow: /takip/
+Disallow: /admin/
 
 # Backup ve geliştirme klasörleri
 Disallow: /_backup_pre_refactor/

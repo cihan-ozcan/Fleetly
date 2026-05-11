@@ -13,7 +13,7 @@
                         yeni token'lara map edilir; mevcut CSS dosyaları aynen
                         çalışmaya devam eder.
 
-   NOT: Faz 0 sırasında app.html ve musteri_takip.html üzerinde
+   NOT: Faz 0 sırasında /app/ ve /takip/ üzerinde
         <html data-theme="dark"> bayrağı set edilir → mevcut görünüm bozulmaz.
         Faz 2'de tema toggle + localStorage persist eklenecek.
    =================================================================== */

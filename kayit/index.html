@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleetly — Ücretsiz Deneyin</title>
+  <meta name="description" content="Fleetly.fit konteyner filo yönetim sistemi — 7 gün ücretsiz deneyin. Kredi kartı gerekmez. Anında erişim." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://fleetly.fit/kayit/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://fleetly.fit/kayit/" />
+  <meta property="og:title" content="Fleetly.fit — 7 Gün Ücretsiz Deneme" />
+  <meta property="og:description" content="Filo operasyonunuzu Fleetly.fit ile yönetin. Kredi kartı gerekmez." />
+  <meta property="og:image" content="https://fleetly.fit/assets/img/og-image.png" />
+  <meta property="og:locale" content="tr_TR" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Fleetly.fit — 7 Gün Ücretsiz Deneme" />
+  <meta name="twitter:image" content="https://fleetly.fit/assets/img/og-image.png" />
+  <link rel="icon" type="image/png" href="/assets/img/logo2.png" />
+  <link rel="apple-touch-icon" href="/assets/img/logo2.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/config.js"></script>
+  <meta name="theme-color" content="#e8521a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Fleetly" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/css/pages/register.css" />
+  <script src="/js/core/include.js" defer></script>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- ── SOL PANEL ── -->
+  <div class="left-panel">
+
+    <!-- Logo (index.html ile aynı görsel — assets/img/logo2.png) -->
+    <a href="index.html" class="brand">
+      <img class="brand-icon" src="/assets/img/logo2.png" alt="" />
+      <span class="brand-name">FLEETLY<span class="brand-fit">.fit</span></span>
+    </a>
+
+    <h1 class="left-heading">
+      Ücretsiz
+      <span class="accent-line">Başlayın,</span>
+      <span class="ghost-line">Farkı Görün.</span>
+    </h1>
+
+    <p class="left-sub">
+      7 gün boyunca tüm özelliklere sınırsız erişin. Kredi kartı gerekmez.
+      Deneme bitince dilediğiniz planı seçin.
+    </p>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon orange"><i data-icon="container" aria-hidden="true"></i></div>
+        <div class="feature-text">
+          <strong>Konteyner Operasyon Yönetimi</strong>
+          <span>Bekliyor → Yolda → Fabrikada → Teslim akışı</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon blue"><i data-icon="phone-android" aria-hidden="true"></i></div>
+        <div class="feature-text">
+          <strong>Şoför Mobil Uygulaması</strong>
+          <span>Android, çevrimdışı sync, push bildirim, dijital imza</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon green"><i data-icon="money" aria-hidden="true"></i></div>
+        <div class="feature-text">
+          <strong>Harcırah Otomatik Hesabı</strong>
+          <span>Sabit tarife + bölge/il fallback + haftalık kapatma</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon teal"><i data-icon="calculator" aria-hidden="true"></i></div>
+        <div class="feature-text">
+          <strong>Akıllı Mesafe & Süre (OSRM)</strong>
+          <span>İş emrine gerçek karayolu km + tahmini harcırah</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon orange"><i data-icon="clipboard" aria-hidden="true"></i></div>
+        <div class="feature-text">
+          <strong>Dijital Teslim Makbuzu (POD)</strong>
+          <span>Mobil imza, müşteriye otomatik PDF e-postası</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon blue"><i data-icon="bell" aria-hidden="true"></i></div>
+        <div class="feature-text">
+          <strong>Akıllı Bildirim Sistemi</strong>
+          <span>Yeni iş, durum, masraf, harcırah itirazı — anında push</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onboarding videosu (config.js → ONBOARDING_VIDEO_ID set edildiğinde gösterilir) -->
+    <div id="onboarding-video-card" style="display:none;margin-top:24px;border:1px solid rgba(255,255,255,.10);border-radius:12px;overflow:hidden;background:#0B1A2F;cursor:pointer;transition:transform .15s, box-shadow .2s;" onclick="_flLoadOnboardingVideo()" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 12px 30px rgba(255,107,31,.20)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="padding:10px 14px;background:rgba(255,255,255,.04);font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+        <span><i data-icon="apps" aria-hidden="true"></i></span><span>3 Dakikada Fleetly</span>
+      </div>
+      <div id="onboarding-video-poster" style="position:relative;padding-bottom:56.25%;height:0;background:linear-gradient(135deg,#0B1A2F 0%,#234A85 100%);">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+          <div style="width:64px;height:64px;border-radius:50%;background:rgba(255,107,31,.95);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(255,107,31,.45);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:10px;left:14px;font-size:11px;color:rgba(255,255,255,.8);font-weight:500;">Tıklayın → YouTube üzerinden oynat</div>
+      </div>
+      <div id="onboarding-video-iframe-wrap" style="display:none;position:relative;padding-bottom:56.25%;height:0;">
+        <iframe id="onboarding-video-iframe" src=""
+          style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+          allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture;web-share"
+          allowfullscreen
+          loading="lazy"
+          title="Fleetly tanıtım videosu"></iframe>
+      </div>
+    </div>
+    <script>
+      (function () {
+        try {
+          var vid = (window.FILO_CONFIG && window.FILO_CONFIG.ONBOARDING_VIDEO_ID || '').trim();
+          if (!vid || !/^[A-Za-z0-9_-]{6,16}$/.test(vid)) return;
+          var card = document.getElementById('onboarding-video-card');
+          if (card) card.style.display = 'block';
+        } catch (_) {}
+      })();
+      window._flLoadOnboardingVideo = function () {
+        var vid = (window.FILO_CONFIG && window.FILO_CONFIG.ONBOARDING_VIDEO_ID || '').trim();
+        if (!vid) return;
+        var poster = document.getElementById('onboarding-video-poster');
+        var wrap   = document.getElementById('onboarding-video-iframe-wrap');
+        var ifr    = document.getElementById('onboarding-video-iframe');
+        if (!ifr) return;
+        ifr.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(vid) + '?autoplay=1&rel=0&modestbranding=1';
+        if (poster) poster.style.display = 'none';
+        if (wrap)   wrap.style.display   = 'block';
+        if (typeof window.fleetlyTrack === 'function') {
+          window.fleetlyTrack('onboarding_video_play', { video_id: vid });
+        }
+      };
+    </script>
+
+    <div class="trust-badge">
+      <div class="trust-dot"></div>
+      Güvenli · Türk Sunucuları · KVKK Uyumlu
+    </div>
+  </div>
+
+  <!-- ── SAĞ PANEL — FORM ── -->
+  <div class="right-panel">
+    <div class="form-card">
+
+      <!-- Mobile-only brand header (left panel hidden on small screens) -->
+      <div style="display:none; justify-content:center; margin-bottom:28px;" class="mobile-brand-header">
+        <a href="index.html" class="brand" style="margin-bottom:0; text-decoration:none;">
+          <img src="/assets/img/logo2.png" alt="" style="width:38px; height:32px; object-fit:contain; flex:none;" />
+          <span class="brand-name" style="font-size:20px;">FLEETLY<span class="brand-fit">.fit</span></span>
+        </a>
+      </div>
+
+      <!-- ADIM GÖSTERGESİ -->
+      <div class="step-indicator">
+        <div class="step active" id="step1-ind">
+          <div class="step-num">1</div>
+          <span>Hesap</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step2-ind">
+          <div class="step-num">2</div>
+          <span>Firma</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step3-ind">
+          <div class="step-num">3</div>
+          <span>Plan</span>
+        </div>
+      </div>
+
+      <!-- ════ ADIM 1: Hesap ════ -->
+      <div id="step1">
+        <div class="form-title">Hesap Oluştur</div>
+        <div class="form-sub">E-posta adresinizle hemen başlayın</div>
+
+        <div class="field-group">
+          <div class="field-label">E-posta Adresi</div>
+          <input class="field-inp" type="email" id="r-email" placeholder="ornek@sirket.com" autocomplete="email" />
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">Şifre</div>
+            <input class="field-inp" type="password" id="r-pass" placeholder="En az 8 karakter" autocomplete="new-password" />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Şifre Tekrar</div>
+            <input class="field-inp" type="password" id="r-pass2" placeholder="Aynı şifre" autocomplete="new-password" />
+          </div>
+        </div>
+
+        <div class="form-error" id="step1-error"></div>
+
+        <button class="btn-cta" id="step1-btn" onclick="goStep2()">
+          Devam Et
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <div class="form-footer">
+          Hesabınız var mı? <a href="/app/">Giriş yapın</a>
+        </div>
+      </div>
+
+      <!-- ════ ADIM 2: Firma ════ -->
+      <div id="step2" style="display:none">
+        <div class="form-title">Firma Bilgileri</div>
+        <div class="form-sub">Şirketinizi sisteme tanıtın</div>
+
+        <div class="field-group">
+          <div class="field-label">Firma Adı *</div>
+          <input class="field-inp" type="text" id="r-firma" placeholder="ABC Lojistik A.Ş." />
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">Telefon</div>
+            <input class="field-inp" type="tel" id="r-telefon" placeholder="0532 000 00 00" />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Vergi No</div>
+            <input class="field-inp" type="text" id="r-vergino" placeholder="1234567890" />
+          </div>
+        </div>
+
+        <div class="form-error" id="step2-error"></div>
+
+        <button class="btn-cta" id="step2-btn" onclick="goStep3()">
+          Devam Et
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <div class="form-footer">
+          <a href="#" onclick="backStep(1)">← Geri dön</a>
+        </div>
+      </div>
+
+      <!-- ════ ADIM 3: Plan ════ -->
+      <div id="step3" style="display:none">
+        <div class="form-title">Plan Seçin</div>
+        <div class="form-sub">İlk 7 gün <strong style="color:var(--green)">ücretsiz</strong> — kredi kartı gerekmez</div>
+
+        <div class="plan-grid">
+          <label class="plan-card" id="plan-aylik" for="plan-r-aylik">
+            <input type="radio" name="plan" id="plan-r-aylik" value="aylik" checked onchange="selectPlan('aylik')" />
+            <div class="plan-name">Aylık</div>
+            <div class="plan-price">₺990 <small>/ay</small></div>
+            <div class="plan-desc">Aylık yenilenebilir. Dilediğinizde iptal.</div>
+          </label>
+          <label class="plan-card" id="plan-yillik" for="plan-r-yillik">
+            <input type="radio" name="plan" id="plan-r-yillik" value="yillik" onchange="selectPlan('yillik')" />
+            <div class="plan-badge">%25 İndirim</div>
+            <div class="plan-name">Yıllık</div>
+            <div class="plan-price">₺8.900 <small>/yıl</small></div>
+            <div class="plan-desc">Yılda ₺2.980 tasarruf. Tek ödeme.</div>
+          </label>
+        </div>
+
+        <div class="trial-info-box">
+          <div class="trial-info-title"><i data-icon="check" aria-hidden="true"></i> 7 Gün Ücretsiz Deneme</div>
+          <div class="trial-info-text">
+            Kayıt olduğunuzda deneme süreniz başlar. Ödeme bilgisi istemiyoruz.
+            Deneme sonunda abone olmak isterseniz ödeme adımına yönlendirilirsiniz.
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="r-kvkk" />
+          <label for="r-kvkk">
+            <a href="/kullanim/" target="_blank" rel="noopener">Kullanım Şartları</a> ve
+            <a href="/kvkk/" target="_blank" rel="noopener">KVKK Aydınlatma Metni</a>'ni okudum ve kabul ediyorum.
+          </label>
+        </div>
+
+        <div class="form-error" id="step3-error"></div>
+
+        <button class="btn-cta" id="step3-btn" onclick="doRegister()">
+          Ücretsiz Deneyi Başlat
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <div class="form-footer">
+          <a href="#" onclick="backStep(2)">← Geri dön</a>
+        </div>
+      </div>
+
+      <!-- ════ BAŞARI EKRANI ════ -->
+      <div id="step-success" style="display:none">
+        <div class="form-success">
+          <span class="success-icon"><i data-icon="party" aria-hidden="true"></i></span>
+          <h2>Hoş Geldiniz!</h2>
+          <div class="trial-badge"><i data-icon="check" aria-hidden="true"></i> 7 Günlük Deneme Başladı</div>
+          <p>
+            Hesabınız oluşturuldu.<br>
+            E-posta adresinize bir doğrulama mesajı gönderdik.<br>
+            Uygulamaya giriş yapabilirsiniz.
+          </p>
+          <button class="btn-cta" onclick="window.location.href='/app/'">
+            Uygulamaya Git
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Güvenlik satırı -->
+      <div class="security-row">
+        <div class="sec-item"><i data-icon="lock" aria-hidden="true"></i> SSL Şifreleme</div>
+        <div class="sec-item"><i data-icon="shield" aria-hidden="true"></i> Güvenli Depolama</div>
+        <div class="sec-item"><i data-icon="flag" aria-hidden="true"></i><i data-icon="flag" aria-hidden="true"></i> Türk Sunucusu</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CFG = window.FILO_CONFIG || { SUPABASE_URL: '', SUPABASE_ANON: '' };
+let _sb = null;
+
+function getSB() {
+  if (!_sb && CFG.SUPABASE_URL && CFG.SUPABASE_ANON) {
+    _sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON);
+  }
+  return _sb;
+}
+
+let secilenPlan = 'aylik';
+
+function selectPlan(p) {
+  secilenPlan = p;
+  document.getElementById('plan-aylik').classList.toggle('selected', p === 'aylik');
+  document.getElementById('plan-yillik').classList.toggle('selected', p === 'yillik');
+}
+
+selectPlan('aylik');
+
+function showStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('step'+i);
+    if (el) el.style.display = (i === n) ? '' : 'none';
+  });
+  ['step1-ind','step2-ind','step3-ind'].forEach((id, idx) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'step';
+    if (idx+1 < n)  el.classList.add('done');
+    if (idx+1 === n) el.classList.add('active');
+    const num = el.querySelector('.step-num');
+    if (idx+1 < n) num.textContent = '✓';
+    else num.textContent = idx+1;
+  });
+}
+
+function backStep(n) { showStep(n); }
+
+function setErr(id, msg) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = msg || '';
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) {
+    btn.dataset.orig = btn.innerHTML;
+    btn.innerHTML = '⏳ Lütfen bekleyin…';
+  } else {
+    btn.innerHTML = btn.dataset.orig || 'Devam Et →';
+  }
+}
+
+async function goStep2() {
+  setErr('step1-error', '');
+  const email = document.getElementById('r-email').value.trim();
+  const pass  = document.getElementById('r-pass').value;
+  const pass2 = document.getElementById('r-pass2').value;
+  if (!email || !email.includes('@')) { setErr('step1-error', '❌ Geçerli bir e-posta girin.'); return; }
+  if (pass.length < 8) { setErr('step1-error', '❌ Şifre en az 8 karakter olmalı.'); return; }
+  if (pass !== pass2)  { setErr('step1-error', '❌ Şifreler eşleşmiyor.'); return; }
+  showStep(2);
+}
+
+function goStep3() {
+  setErr('step2-error', '');
+  const firma = document.getElementById('r-firma').value.trim();
+  if (!firma) { setErr('step2-error', '❌ Firma adı zorunludur.'); return; }
+  showStep(3);
+}
+
+async function doRegister() {
+  setErr('step3-error', '');
+  const kvkk = document.getElementById('r-kvkk').checked;
+  if (!kvkk) { setErr('step3-error', '❌ Kullanım şartlarını kabul etmelisiniz.'); return; }
+
+  const sb = getSB();
+  if (!sb) { setErr('step3-error', '⚠ Sistem yapılandırması eksik. Yöneticiye başvurun.'); return; }
+
+  const email    = document.getElementById('r-email').value.trim();
+  const pass     = document.getElementById('r-pass').value;
+  const firmaAdi = document.getElementById('r-firma').value.trim();
+  const telefon  = document.getElementById('r-telefon').value.trim() || null;
+  const vergiNo  = document.getElementById('r-vergino').value.trim() || null;
+
+  setLoading('step3-btn', true);
+
+  try {
+    const { data: authData, error: authErr } = await sb.auth.signUp({
+      email,
+      password: pass,
+      options: { emailRedirectTo: 'https://fleetly.fit/app/' }
+    });
+
+    if (authErr) {
+      let msg = '❌ ' + authErr.message;
+      if (authErr.message.includes('already registered')) msg = '❌ Bu e-posta zaten kayıtlı. Giriş yapın.';
+      if (authErr.message.includes('weak')) msg = '❌ Şifre çok zayıf. Harf ve sayı kombinasyonu kullanın.';
+      setErr('step3-error', msg);
+      setLoading('step3-btn', false);
+      return;
+    }
+
+    localStorage.setItem('fleetly_firma_adi', firmaAdi);
+    localStorage.setItem('fleetly_firma_tel', telefon  || '');
+    localStorage.setItem('fleetly_firma_vno', vergiNo  || '');
+
+    const { data: { session: currentSession } } = await sb.auth.getSession();
+    if (currentSession) {
+      const { error: rpcErr } = await sb.rpc('firma_kayit_et', {
+        p_firma_adi : firmaAdi,
+        p_email     : email,
+        p_telefon   : telefon,
+        p_vergi_no  : vergiNo
+      });
+      if (rpcErr) console.warn('RPC uyarısı:', rpcErr.message);
+    }
+
+    localStorage.setItem('fleetly_secilen_plan', secilenPlan);
+
+    setLoading('step3-btn', false);
+    [1,2,3].forEach(i => {
+      const el = document.getElementById('step'+i);
+      if (el) el.style.display = 'none';
+    });
+    document.getElementById('step-success').style.display = '';
+
+  } catch (err) {
+    console.error(err);
+    setErr('step3-error', '❌ Beklenmedik hata: ' + err.message);
+    setLoading('step3-btn', false);
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const step1 = document.getElementById('step1');
+  const step2 = document.getElementById('step2');
+  const step3 = document.getElementById('step3');
+  if (step1 && step1.style.display !== 'none') goStep2();
+  else if (step2 && step2.style.display !== 'none') goStep3();
+  else if (step3 && step3.style.display !== 'none') doRegister();
+});
+</script>
+<script src="/js/core/cookie-consent.js" defer></script>
+<script src="/js/core/analytics.js" defer></script>
+</body>
+</html>

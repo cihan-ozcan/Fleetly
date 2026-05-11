@@ -6,7 +6,7 @@
  *   - Yolda               → durum IN ('Yolda','Fabrikada','Boş Alındı','Alım Yapıldı')
  *   - Bugün teslim edildi → durum = 'Teslim Edildi' AND teslim_zamani >= bugün 00:00
  *
- * Render hedefi: #bugun-ozet-list (app.html)
+ * Render hedefi: #bugun-ozet-list (/app/)
  * Multi-tenant: is_emirleri RLS aware (2026_05_07b emergency fix sonrası).
  *
  * Refresh:

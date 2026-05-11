@@ -1,10 +1,10 @@
 /* ===================================================================
-   register.css — register.html sayfasının stilleri
+   register.css — /kayit/ sayfasının stilleri
    Phase 3 refactor ile <style> bloğundan buraya taşındı.
    Değer/selectors birebir korundu; görsel değişiklik yoktur.
    =================================================================== */
 
-/* ─── block 1/1 from register.html ─── */
+/* ─── block 1/1 from /kayit/ ─── */
     :root {
       --bg:        #08091a;
       --bg2:       #0c0e22;

@@ -1,10 +1,10 @@
 /* ===================================================================
-   sofor.css — sofor.html sayfasının stilleri
+   sofor.css — /sofor/ sayfasının stilleri
    Phase 3 refactor ile <style> bloğundan buraya taşındı.
    Değer/selectors birebir korundu; görsel değişiklik yoktur.
    =================================================================== */
 
-/* ─── block 1/1 from sofor.html ─── */
+/* ─── block 1/1 from /sofor/ ─── */
 :root {
   --bg:#08091a; --surface:#0e1025; --surface2:#131428; --surface3:#1a1c35;
   --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.16);

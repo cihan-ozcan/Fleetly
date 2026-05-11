@@ -129,7 +129,7 @@
             </div>
             <div style="font-size:12px;color:var(--adm-ink-2);">
               ${kayitAcik
-                ? 'Yeni kullanıcılar register.html üzerinden firma kaydı yapabilir.'
+                ? 'Yeni kullanıcılar /kayit/ üzerinden firma kaydı yapabilir.'
                 : 'Yeni kayıtlar engellendi. Mevcut kullanıcılar etkilenmez.'}
             </div>
           </div>

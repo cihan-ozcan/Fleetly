@@ -8,7 +8,7 @@
  *   - Onay yoksa sayfa yüklendikten 600ms sonra alt-orta/alt-sağda banner
  *   - "Tümünü Kabul Et"  → all
  *   - "Yalnızca Zorunlu" → essential
- *   - "Detay"            → kvkk-aydinlatma.html sekmesi
+ *   - "Detay"            → /kvkk/ sekmesi
  *
  * Yeniden açma:
  *   - window.openCookieSettings() global fonksiyon (footer linkten çağrılabilir)
@@ -141,7 +141,7 @@
         Fleetly.fit, oturum yönetimi ve tema tercihiniz için
         <strong>yalnızca zorunlu çerezler</strong> kullanır. Pazarlama veya
         üçüncü taraf takip çerezi yoktur. Detay için
-        <a href="kvkk-aydinlatma.html" target="_blank" rel="noopener">KVKK Aydınlatma Metni</a>'mizi inceleyebilirsiniz.
+        <a href="/kvkk/" target="_blank" rel="noopener">KVKK Aydınlatma Metni</a>'mizi inceleyebilirsiniz.
       </div>
       <div class="fl-cc-actions">
         <button type="button" class="fl-cc-btn fl-cc-btn--link"  data-cc="detail">Detay</button>
@@ -156,7 +156,7 @@
       if (!btn) return;
       const action = btn.getAttribute('data-cc');
       if (action === 'detail') {
-        window.open('kvkk-aydinlatma.html', '_blank', 'noopener');
+        window.open('/kvkk/', '_blank', 'noopener');
         return;
       }
       setConsent(action);

@@ -5,7 +5,7 @@
  * RPC: yaklasan_bakimlar_listele(p_gun)
  *   → bakim_randevulari (tip, plan_tarihi, durum, surucu_ad)
  *
- * Render hedefi: #upcoming-maint-list (app.html line ~1061)
+ * Render hedefi: #upcoming-maint-list (/app/ line ~1061)
  *
  * Refresh:
  *   - Login sonrası (checkAuth)

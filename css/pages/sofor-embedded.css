@@ -1,7 +1,7 @@
 /* ===================================================================
-   sofor-embedded.css — Şoför portalı için app.html içinde gömülü stil
-   Orijinali app.html içindeydi. İşlevsellik aynı; sadece dosyaya taşındı.
-   NOT: sofor.html'in ayrı stil dosyasından farklıdır; bu blok app.html içindeki
+   sofor-embedded.css — Şoför portalı için /app/ içinde gömülü stil
+   Orijinali /app/ içindeydi. İşlevsellik aynı; sadece dosyaya taşındı.
+   NOT: /sofor/'in ayrı stil dosyasından farklıdır; bu blok /app/ içindeki
         sofor modülü için geçerlidir.
    =================================================================== */
   /* Şoför portalı — ayrı, tam ekran, mobil-öncelikli */

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleetly — Şifre Sıfırla</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/config.js"></script>
+  <meta name="theme-color" content="#e8521a" />
+  <link rel="stylesheet" href="/css/pages/register.css" />
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- ── SOL PANEL ── -->
+  <div class="left-panel">
+    <a href="index.html" class="brand">
+      <img class="brand-icon" src="/assets/img/logo2.png" alt="" />
+      <span class="brand-name">FLEETLY<span class="brand-fit">.fit</span></span>
+    </a>
+
+    <h1 class="left-heading">
+      Şifrenizi
+      <span class="accent-line">Sıfırlayın,</span>
+      <span class="ghost-line">Hesaba Dönün.</span>
+    </h1>
+
+    <p class="left-sub">
+      Yeni bir şifre belirleyin, hemen tekrar Fleetly'ye girin.
+      Önceki şifreniz kullanılamaz hale gelir.
+    </p>
+
+    <div class="trust-badge">
+      <div class="trust-dot"></div>
+      Güvenli · SSL Şifreleme · KVKK Uyumlu
+    </div>
+  </div>
+
+  <!-- ── SAĞ PANEL — FORM ── -->
+  <div class="right-panel">
+    <div class="form-card">
+
+      <!-- Mobile-only brand header -->
+      <div style="display:none; justify-content:center; margin-bottom:28px;" class="mobile-brand-header">
+        <a href="index.html" class="brand" style="margin-bottom:0; text-decoration:none;">
+          <img src="/assets/img/logo2.png" alt="" style="width:38px; height:32px; object-fit:contain; flex:none;" />
+          <span class="brand-name" style="font-size:20px;">FLEETLY<span class="brand-fit">.fit</span></span>
+        </a>
+      </div>
+
+      <!-- ════ FORM: Yeni şifre ════ -->
+      <div id="form-reset">
+        <div class="form-title">Yeni Şifre Belirle</div>
+        <div class="form-sub">En az 8 karakter, harf ve sayı önerilir</div>
+
+        <div class="field-group">
+          <div class="field-label">Yeni Şifre</div>
+          <input class="field-inp" type="password" id="r-new-pass" placeholder="En az 8 karakter" autocomplete="new-password" />
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Şifre Tekrar</div>
+          <input class="field-inp" type="password" id="r-new-pass2" placeholder="Aynı şifreyi tekrar girin" autocomplete="new-password" />
+        </div>
+
+        <div class="form-error" id="reset-error"></div>
+
+        <button class="btn-cta" id="reset-btn" onclick="doResetPasswordSubmit()">
+          Şifreyi Güncelle
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <div class="form-footer">
+          <a href="/app/">← Giriş sayfasına dön</a>
+        </div>
+      </div>
+
+      <!-- ════ BAŞARI EKRANI ════ -->
+      <div id="form-success" style="display:none;">
+        <div class="form-success">
+          <span class="success-icon"><i data-icon="check" aria-hidden="true"></i></span>
+          <h2>Şifreniz güncellendi</h2>
+          <p>
+            Yeni şifrenizle artık giriş yapabilirsiniz.<br>
+            Aşağıdaki butonla uygulamaya yönlendirileceksiniz.
+          </p>
+          <button class="btn-cta" onclick="window.location.href='/app/'">
+            Uygulamaya Git
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ════ HATA / GEÇERSİZ LİNK ════ -->
+      <div id="form-invalid" style="display:none;">
+        <div class="form-title" style="color:var(--red);"><i data-icon="alert-triangle" aria-hidden="true"></i> Bağlantı Geçersiz</div>
+        <div class="form-sub">Bu sıfırlama bağlantısı süresi dolmuş veya geçersiz olabilir.</div>
+        <p style="font-size:12.5px;color:var(--text2);line-height:1.6;margin:18px 0;">
+          Lütfen giriş sayfasından "Şifremi Unuttum" ile yeni bir bağlantı talep edin.
+          Sıfırlama bağlantıları yalnızca 1 saat geçerlidir.
+        </p>
+        <button class="btn-cta" onclick="window.location.href='/app/'">
+          Giriş Sayfasına Dön
+        </button>
+      </div>
+
+      <div class="security-row">
+        <div class="sec-item"><i data-icon="lock" aria-hidden="true"></i> SSL Şifreleme</div>
+        <div class="sec-item"><i data-icon="shield" aria-hidden="true"></i> Güvenli Depolama</div>
+        <div class="sec-item"><i data-icon="flag" aria-hidden="true"></i><i data-icon="flag" aria-hidden="true"></i> Türk Sunucusu</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CFG = window.FILO_CONFIG || { SUPABASE_URL: '', SUPABASE_ANON: '' };
+let _sb = null;
+
+function getSB() {
+  if (!_sb && CFG.SUPABASE_URL && CFG.SUPABASE_ANON) {
+    _sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON);
+  }
+  return _sb;
+}
+
+function setErr(msg) {
+  const el = document.getElementById('reset-error');
+  if (el) el.textContent = msg || '';
+}
+
+function setLoading(loading) {
+  const btn = document.getElementById('reset-btn');
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) {
+    btn.dataset.orig = btn.innerHTML;
+    btn.innerHTML = '⏳ Lütfen bekleyin…';
+  } else if (btn.dataset.orig) {
+    btn.innerHTML = btn.dataset.orig;
+  }
+}
+
+// Sayfa açıldığında: Supabase recovery linkinden gelen access_token URL hash'inde olur.
+// SDK bunu otomatik yakalar; biz session var mı kontrol eder, yoksa "geçersiz link" göstereceğiz.
+async function init() {
+  const sb = getSB();
+  if (!sb) {
+    document.getElementById('form-reset').style.display = 'none';
+    document.getElementById('form-invalid').style.display = '';
+    return;
+  }
+
+  // SDK URL hash'ini parse eder ve session kurar. PASSWORD_RECOVERY event'ini bekleyebiliriz
+  // ama session'ı doğrudan kontrol etmek daha pratik:
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    // Hash henüz işlenmemiş olabilir — onAuthStateChange'i dinleyelim
+    let resolved = false;
+    const sub = sb.auth.onAuthStateChange((event, sess) => {
+      if (resolved) return;
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        if (sess) {
+          resolved = true;
+          // form aktif zaten, init başarılı
+        }
+      }
+    });
+    // 3sn bekle — gelmezse geçersiz link
+    setTimeout(async () => {
+      if (resolved) return;
+      const { data: { session: s2 } } = await sb.auth.getSession();
+      if (!s2) {
+        document.getElementById('form-reset').style.display = 'none';
+        document.getElementById('form-invalid').style.display = '';
+      }
+      try { sub.data.subscription.unsubscribe(); } catch (_) {}
+    }, 3000);
+  }
+}
+
+async function doResetPasswordSubmit() {
+  setErr('');
+  const p1 = document.getElementById('r-new-pass').value;
+  const p2 = document.getElementById('r-new-pass2').value;
+  if (p1.length < 8)  return setErr('❌ Şifre en az 8 karakter olmalı.');
+  if (p1 !== p2)      return setErr('❌ Şifreler eşleşmiyor.');
+
+  setLoading(true);
+  try {
+    const sb = getSB();
+    if (!sb) throw new Error('Supabase istemcisi yok');
+    const { error } = await sb.auth.updateUser({ password: p1 });
+    if (error) throw error;
+    document.getElementById('form-reset').style.display = 'none';
+    document.getElementById('form-success').style.display = '';
+  } catch (err) {
+    console.error('reset password hata:', err);
+    setErr('❌ Güncellenemedi: ' + (err?.message || 'hata'));
+    setLoading(false);
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const f = document.getElementById('form-reset');
+  if (f && f.style.display !== 'none') doResetPasswordSubmit();
+});
+
+init();
+</script>
+<script src="/js/core/cookie-consent.js" defer></script>
+</body>
+</html>

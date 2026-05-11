@@ -1,6 +1,6 @@
 /* ===================================================================
-   app-chunk-02.js — app.html içinden otomatik taşındı (Phase 4, mekanik)
-   Orijinal konum: 9. <script> tag'i (app.html).
+   app-chunk-02.js — /app/ içinden otomatik taşındı (Phase 4, mekanik)
+   Orijinal konum: 9. <script> tag'i (/app/).
    İçerik AYNEN korunur; global değişkenler, fonksiyon isimleri,
    yükleme sırası değiştirilmedi. İleride modülerleştirilecek.
    ================================================================= */
@@ -620,8 +620,8 @@ async function doResetPassword() {
     return;
   }
   // 2026-05-09 / Faz 1: redirectTo eklendi — kullanıcı linkine tıklayınca
-  // bizim reset-password.html sayfamıza dönsün, yeni şifresini girsin.
-  const redirectTo = window.location.origin + '/reset-password.html';
+  // bizim /sifre-sifirla/ sayfamıza dönsün, yeni şifresini girsin.
+  const redirectTo = window.location.origin + '/sifre-sifirla/';
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) {
     errEl.style.color = '';

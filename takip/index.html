@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<!-- Müşteri takip sayfası — light/enterprise SaaS teması (yeni tasarım) -->
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#0F172A">
+<meta name="description" content="Canlı sevkiyat takibi — konteyner operasyonu, tahmini varış, rota ve teslim raporu">
+<meta property="og:title" content="Sevkiyat Takip — Fleetly">
+<meta property="og:description" content="Konteyner sevkiyatınızı canlı izleyin.">
+<meta property="og:type" content="website">
+<title>Sevkiyat Takip — Fleetly</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Leaflet (interaktif harita) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+
+<script src="/config.js" onerror="console.warn('config.js yok')"></script>
+<!-- 2026-05-08: Eski css/pages/musteri-takip.css link'i KALDIRILDI.
+     Yeni tasarım self-contained inline CSS kullanıyor; eski sheet hero rengi
+     ve hero-durum.bekliyor arka planını override ediyordu (krem + siyah text). -->
+<script src="/js/core/include.js" defer></script>
+
+<style id="musteri-takip-inline">
+/* ══════════════════════════════════════════════════════════════
+   TOKENS — light enterprise theme
+══════════════════════════════════════════════════════════════ */
+:root {
+  --navy-900:#0B1220; --navy-800:#0F172A; --navy-700:#1E293B; --navy-600:#334155;
+  --slate-500:#64748B; --slate-400:#94A3B8; --slate-300:#CBD5E1;
+  --slate-200:#E2E8F0; --slate-100:#F1F5F9; --slate-50:#F8FAFC;
+  --ink:#0F172A; --ink-2:#475569;
+  --text:#0F172A; --text2:#64748B;
+  --surface:#FFFFFF; --surface2:#F1F5F9; --bg:#F8FAFC;
+
+  --green-500:#10B981; --green-400:#34D399; --green-300:#6EE7B7; --green-50:#ECFDF5;
+  --orange-500:#F97316; --orange-400:#FB923C; --orange-50:#FFF7ED;
+  --blue-500:#3B82F6; --blue-50:#EFF6FF;
+  --red-500:#EF4444; --red-50:#FEF2F2;
+  --amber-500:#F59E0B; --amber-50:#FFFBEB;
+  --teal:#14B8A6;
+
+  --accent:#F97316;          /* brand color (overridable from JS) */
+  --accent-dim:#F9731622;
+  --accent2:#F97316;
+  --green:#10B981;
+
+  --shadow-xs:0 1px 2px rgba(15,23,42,.04);
+  --shadow-sm:0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+  --shadow-md:0 4px 12px rgba(15,23,42,.06), 0 2px 4px rgba(15,23,42,.04);
+  --shadow-lg:0 12px 32px rgba(15,23,42,.08), 0 4px 12px rgba(15,23,42,.04);
+
+  --radius:12px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  font-feature-settings:'cv11','ss01','ss03';
+  background:var(--bg); color:var(--text);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  line-height:1.45;
+}
+.mn,.mono{font-family:'JetBrains Mono',ui-monospace,monospace; font-feature-settings:'zero','cv11'; letter-spacing:-.01em}
+button{font-family:inherit}
+a{color:inherit}
+
+/* ══════════════════════════════════════════════════════════════
+   LOADING / ERROR STATES
+══════════════════════════════════════════════════════════════ */
+#loading-state,#error-state{
+  position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:14px; background:var(--bg); z-index:1000;
+}
+#error-state{display:none}
+.spinner{
+  width:38px;height:38px;border-radius:50%;
+  border:3px solid var(--slate-200); border-top-color:var(--accent);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err-icon{font-size:42px}
+#error-state h2{margin:0;font-size:20px;color:var(--ink)}
+#error-state p{margin:0;color:var(--text2);font-size:14px}
+
+/* ══════════════════════════════════════════════════════════════
+   TOPBAR
+══════════════════════════════════════════════════════════════ */
+.topbar{
+  background:var(--navy-800); color:#fff;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  position:sticky; top:0; z-index:50;
+}
+.topbar-inner{
+  max-width:1240px; margin:0 auto; padding:14px 24px;
+  display:flex; align-items:center; gap:16px;
+}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-mark{
+  width:40px;height:40px;border-radius:10px;
+  background:radial-gradient(circle at 30% 25%, #FED7AA 0%, #FB923C 35%, var(--accent) 75%, #C2410C 100%);
+  box-shadow:inset 0 -4px 8px rgba(124,45,18,.35), 0 4px 10px rgba(249,115,22,.25);
+  display:grid; place-items:center; color:#fff; flex:0 0 auto;
+  font-size:18px; font-weight:700;
+  overflow:hidden;
+}
+.brand-text{display:flex;flex-direction:column;min-width:0}
+.brand-title{font-weight:700;font-size:15px;letter-spacing:.02em;color:#fff;font-family:'JetBrains Mono',monospace}
+.brand-sub{font-size:11px;letter-spacing:.14em;color:var(--slate-400);text-transform:uppercase}
+.topbar-spacer{flex:1}
+
+/* LIVE pill (also used for offline state via .off) */
+.live-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 12px;
+  background:rgba(16,185,129,.12);
+  border:1px solid rgba(16,185,129,.35);
+  border-radius:999px;
+  color:var(--green-300);
+  font-size:11px;font-weight:700;letter-spacing:.14em;
+}
+.live-pill.off{
+  background:rgba(239,68,68,.12);
+  border-color:rgba(239,68,68,.35);
+  color:#FCA5A5;
+}
+.live-pill.off .live-dot{background:#F87171; animation:none}
+.live-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--green-400);
+  box-shadow:0 0 0 0 rgba(52,211,153,.8);
+  animation:pulse 1.6s ease-out infinite;
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(52,211,153,.8)}
+  70%{box-shadow:0 0 0 10px rgba(52,211,153,0)}
+  100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}
+}
+
+.lang-btn{
+  padding:6px 12px;border-radius:8px;
+  background:transparent;border:1px solid rgba(255,255,255,.1);
+  color:var(--slate-300);font-size:12px;font-weight:600;
+  cursor:pointer;letter-spacing:.04em;
+  transition:all .15s ease;
+}
+.lang-btn:hover{color:#fff;border-color:rgba(255,255,255,.2)}
+
+/* ══════════════════════════════════════════════════════════════
+   HERO
+══════════════════════════════════════════════════════════════ */
+.hero-wrap{
+  background:linear-gradient(180deg,var(--navy-800) 0%,var(--navy-700) 100%);
+  position:relative; overflow:hidden; color:#fff;
+}
+.hero-wrap::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(800px 300px at 15% -10%, rgba(59,130,246,.18), transparent 60%),
+    radial-gradient(600px 280px at 90% -20%, rgba(16,185,129,.18), transparent 60%);
+  pointer-events:none;
+}
+.hero-wrap::after{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:32px 32px;
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.6),transparent 70%);
+  pointer-events:none;
+}
+.hero{
+  max-width:1240px; margin:0 auto; padding:36px 24px 28px; position:relative;
+}
+.hero-row{
+  display:grid; grid-template-columns:1fr auto;
+  gap:22px; align-items:center;
+}
+.hero-durum{
+  display:flex; align-items:center; gap:18px;
+}
+.hero-icon{
+  width:64px;height:64px;border-radius:18px;
+  display:grid;place-items:center;font-size:30px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  flex:0 0 auto;
+  transition:all .3s ease;
+}
+.hero-txt{min-width:0}
+.hero-label{
+  display:inline-block;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--slate-400);font-weight:600;
+  margin-bottom:6px;
+}
+.hero-title{
+  margin:0; font-size:clamp(24px,3.4vw,36px);
+  font-weight:700; letter-spacing:-.025em; line-height:1.15;
+  color:#fff;
+}
+
+/* Hero state colors (drive icon & title accent) */
+.hero-durum.bekliyor   .hero-icon{background:rgba(245,158,11,.15); border-color:rgba(245,158,11,.4); color:#FCD34D}
+.hero-durum.yolda      .hero-icon{background:rgba(16,185,129,.15); border-color:rgba(16,185,129,.4); color:#6EE7B7;
+  animation:nudge 1.6s ease-in-out infinite}
+.hero-durum.fabrikada  .hero-icon{background:rgba(59,130,246,.15); border-color:rgba(59,130,246,.4); color:#93C5FD}
+.hero-durum.teslim     .hero-icon{background:rgba(16,185,129,.18); border-color:rgba(16,185,129,.5); color:#A7F3D0}
+.hero-durum.iptal      .hero-icon{background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.4); color:#FCA5A5}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+
+/* Truck scene (decorative, right side) */
+.truck-scene{
+  position:relative; width:280px; height:84px; flex-shrink:0;
+}
+.truck-road{
+  position:absolute;left:0;right:0;bottom:8px;height:2px;
+  background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;
+}
+.truck-road::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent 0 16px,var(--green-400) 16px 28px);
+  animation:road 1.4s linear infinite;
+}
+@keyframes road{to{transform:translateX(-44px)}}
+.truck-svg{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  width:96px;height:56px;
+  animation:truck-bob 1.4s ease-in-out infinite;
+}
+@keyframes truck-bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-1.5px)}}
+
+/* ══════════════════════════════════════════════════════════════
+   METRICS — glass card overlapping hero
+══════════════════════════════════════════════════════════════ */
+.metrics{
+  margin:22px auto 0; max-width:1240px; padding:0 24px;
+  position:relative; transform:translateY(50%);
+}
+.metrics-card{
+  background:rgba(255,255,255,.7);
+  backdrop-filter:blur(20px) saturate(160%);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  border:1px solid rgba(255,255,255,.6);
+  box-shadow:var(--shadow-lg);
+  border-radius:16px;
+  padding:22px 28px;
+  display:grid; grid-template-columns:1fr 1px 1fr 1px 1fr;
+  gap:24px; align-items:center;
+}
+.metrics-card .div{width:1px;height:44px;background:var(--slate-200)}
+.metric{display:flex;flex-direction:column;gap:4px}
+.metric-lbl{
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--slate-500);font-weight:600;
+}
+.metric-val{
+  font-size:24px;font-weight:700;letter-spacing:-.02em;
+  color:var(--ink); line-height:1.1;
+}
+.metric-val.blue{color:var(--blue-500)}
+.metric-val.orange{color:var(--orange-500)}
+.metric-val.green{color:var(--green-500)}
+.metric-unit{font-size:14px;color:var(--ink-2);font-weight:500;margin-left:2px}
+
+/* ══════════════════════════════════════════════════════════════
+   PAGE LAYOUT
+══════════════════════════════════════════════════════════════ */
+.page{
+  max-width:1240px; margin:0 auto;
+  padding:80px 24px 64px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ACTION BAR
+══════════════════════════════════════════════════════════════ */
+.action-bar{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+  margin-bottom:24px;
+}
+.act-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  padding:12px 16px; border-radius:999px;
+  border:1px solid var(--slate-200);
+  background:#fff; font-size:14px;font-weight:600;
+  color:var(--ink); cursor:pointer;
+  transition:all .18s ease; box-shadow:var(--shadow-xs);
+}
+.act-btn:hover:not(.disabled){
+  transform:translateY(-1px);
+  box-shadow:var(--shadow-md);
+  border-color:var(--slate-300);
+}
+.act-btn.disabled{opacity:.45; cursor:not-allowed}
+.act-btn .act-icon{font-size:16px;line-height:1}
+.act-btn.call{color:#0F172A}
+.act-btn.whatsapp{color:#075E54}
+.act-btn.share{color:#1E40AF}
+.act-btn.pod{
+  background:var(--ink); color:#fff; border-color:var(--ink);
+}
+.act-btn.pod:hover:not(.disabled){background:#000}
+
+/* ══════════════════════════════════════════════════════════════
+   GRID LAYOUT — map+details left, timeline+pod right
+══════════════════════════════════════════════════════════════ */
+.layout{
+  display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);
+  gap:24px;
+}
+.col{display:flex;flex-direction:column;gap:20px}
+
+/* ══════════════════════════════════════════════════════════════
+   CARDS
+══════════════════════════════════════════════════════════════ */
+.card{
+  background:#fff;
+  border:1px solid var(--slate-200);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  overflow:hidden;
+}
+.sec-title{
+  font-size:11px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase; color:var(--slate-500);
+  display:flex;align-items:center;gap:8px;
+  margin:0 0 12px 4px;
+}
+.sec-title::before{
+  content:''; width:6px;height:6px;border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-dim);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAP
+══════════════════════════════════════════════════════════════ */
+.map-wrap{
+  background:#fff;
+  border:1px solid var(--slate-200);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  overflow:hidden;
+}
+.map-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 20px;
+  border-bottom:1px solid var(--slate-100);
+}
+.map-head-lbl{
+  font-size:11px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase; color:var(--slate-500);
+  display:inline-flex;align-items:center;gap:8px;
+}
+.map-head-lbl::before{
+  content:''; width:6px;height:6px;border-radius:50%;
+  background:var(--green-500);
+  box-shadow:0 0 0 3px rgba(16,185,129,.18);
+}
+.map-head-time{
+  font-size:12px;color:var(--slate-500);
+  font-family:'JetBrains Mono',monospace;
+}
+#harita-wrap{
+  position:relative; aspect-ratio:16/10;
+  background:var(--slate-100);
+}
+#harita{
+  position:absolute; inset:0; width:100%; height:100%;
+  z-index:1;
+}
+.no-loc{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:10px; color:var(--text2); padding:20px; text-align:center;
+}
+.no-loc-icon{font-size:36px;opacity:.6}
+.no-loc > div:nth-child(2){font-size:14px;font-weight:600;color:var(--ink)}
+
+/* Leaflet markers */
+.pin-marker{
+  width:30px;height:30px;border-radius:50% 50% 50% 0;
+  transform:rotate(-45deg);
+  display:grid;place-items:center;
+  color:#fff; font-weight:700; font-size:12px;
+  box-shadow:0 4px 12px rgba(0,0,0,.25);
+  border:2px solid #fff;
+}
+.pin-marker span{transform:rotate(45deg)}
+.pin-marker.start{background:var(--slate-500)}
+.pin-marker.end  {background:var(--accent)}
+.truck-marker{
+  width:44px;height:44px;border-radius:50%;
+  background:#fff; border:3px solid var(--green-500);
+  display:grid;place-items:center; font-size:22px;
+  box-shadow:0 0 0 6px rgba(16,185,129,.2), 0 6px 18px rgba(16,185,129,.35);
+  animation:truckPulse 2s ease-in-out infinite;
+}
+@keyframes truckPulse{
+  0%,100%{box-shadow:0 0 0 6px rgba(16,185,129,.2),0 6px 18px rgba(16,185,129,.35)}
+  50%{box-shadow:0 0 0 10px rgba(16,185,129,.05),0 6px 18px rgba(16,185,129,.35)}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INFO GRID (Sevkiyat Bilgileri)
+══════════════════════════════════════════════════════════════ */
+.info-grid{
+  display:grid; grid-template-columns:repeat(2,1fr);
+  gap:1px; background:var(--slate-100);
+  border-radius:var(--radius); overflow:hidden;
+  border:1px solid var(--slate-200);
+}
+.info-card{
+  background:#fff; padding:16px 18px;
+  display:flex; flex-direction:column; gap:4px;
+  min-height:78px;
+}
+.info-card.full{grid-column:1/-1}
+.info-label{
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--slate-500); font-weight:600;
+}
+.info-value{
+  font-size:15px;font-weight:600;color:var(--ink);
+  word-break:break-word;
+}
+.info-value.mn{font-size:14px}
+
+/* ══════════════════════════════════════════════════════════════
+   OPERATION STAGES (timeline)
+══════════════════════════════════════════════════════════════ */
+.progress-card{padding:18px 20px}
+.step{
+  position:relative;
+  display:grid; grid-template-columns:36px 1fr;
+  gap:14px; padding:10px 0;
+  align-items:flex-start;
+}
+.step + .step::before{
+  content:''; position:absolute;
+  left:17px; top:-10px; width:2px; height:20px;
+  background:var(--slate-200);
+}
+/* connector turns green when previous step is .done */
+.step.done + .step::before{background:var(--green-400)}
+.step-dot{
+  width:36px;height:36px;border-radius:50%;
+  display:grid;place-items:center;
+  background:#fff;
+  border:2px solid var(--slate-200);
+  color:var(--slate-400);
+  font-size:14px; font-weight:600;
+  flex:0 0 auto;
+  transition:all .25s ease;
+  z-index:1;
+}
+.step-dot.done{
+  background:var(--green-500); border-color:var(--green-500);
+  color:#fff; box-shadow:0 0 0 4px rgba(16,185,129,.15);
+}
+.step-dot.active{
+  background:#fff; border-color:var(--green-500);
+  color:var(--green-500);
+  box-shadow:0 0 0 4px rgba(16,185,129,.15);
+  animation:ringPulse 2s ease-in-out infinite;
+}
+@keyframes ringPulse{
+  0%,100%{box-shadow:0 0 0 4px rgba(16,185,129,.15)}
+  50%{box-shadow:0 0 0 8px rgba(16,185,129,.05)}
+}
+.step-info{padding-top:6px;min-width:0;flex:1}
+.step-label{
+  font-size:14px;font-weight:600;color:var(--ink);
+}
+.step-label:not(.done):not(.active){color:var(--slate-500)}
+.step-time{
+  font-size:12px;color:var(--slate-500);
+  font-family:'JetBrains Mono',monospace;
+  margin-top:2px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   POD CARD
+══════════════════════════════════════════════════════════════ */
+.pod-card{
+  background:#fff;
+  border:1px solid var(--green-300);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  padding:20px;
+  position:relative;
+  overflow:hidden;
+}
+.pod-card::before{
+  content:''; position:absolute; left:0; top:0; bottom:0;
+  width:4px; background:var(--green-500);
+}
+.pod-hdr{
+  display:flex; align-items:center; gap:14px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--slate-100);
+  margin-bottom:14px;
+}
+.pod-hdr-icon{
+  width:44px;height:44px;border-radius:12px;
+  background:var(--green-50); color:var(--green-500);
+  display:grid;place-items:center; font-size:22px;
+  border:1px solid rgba(16,185,129,.2);
+}
+.pod-hdr-title{font-size:16px;font-weight:700;color:var(--ink)}
+.pod-hdr-sub{font-size:12px;color:var(--slate-500);margin-top:2px}
+.pod-row{
+  display:grid; grid-template-columns:1fr 1fr; gap:12px 16px;
+}
+.pod-row-lbl{
+  font-size:11px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase; color:var(--slate-500);
+}
+.pod-row-val{font-size:14px;font-weight:600;color:var(--ink)}
+.pod-imza{
+  margin-top:6px; padding:10px;
+  background:var(--slate-50); border:1px solid var(--slate-200);
+  border-radius:8px; max-width:280px;
+}
+.pod-imza img{display:block;width:100%;height:auto}
+
+/* ══════════════════════════════════════════════════════════════
+   FOTOĞRAFLAR
+══════════════════════════════════════════════════════════════ */
+.foto-card{
+  background:#fff;
+  border:1px solid var(--slate-200);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  padding:18px 20px;
+}
+.foto-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.foto-count{
+  background:var(--slate-100); color:var(--ink);
+  font-size:12px;font-weight:700;
+  padding:3px 10px; border-radius:999px;
+}
+.foto-grid{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:10px;
+}
+.foto-item{
+  position:relative; aspect-ratio:1;
+  border-radius:10px; overflow:hidden;
+  background:var(--slate-100);
+  cursor:pointer; transition:transform .15s ease;
+  border:1px solid var(--slate-200);
+}
+.foto-item:hover{transform:translateY(-2px)}
+.foto-item img{width:100%;height:100%;object-fit:cover;display:block}
+.foto-item-lbl{
+  position:absolute; left:0; right:0; bottom:0;
+  background:linear-gradient(transparent, rgba(0,0,0,.7));
+  color:#fff; padding:14px 10px 8px;
+  font-size:11px; font-weight:600;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   NOTLAR
+══════════════════════════════════════════════════════════════ */
+.notlar-box{
+  background:var(--amber-50);
+  border:1px solid #FDE68A;
+  border-radius:var(--radius);
+  padding:16px 18px;
+}
+.notlar-ttl{
+  font-size:11px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase; color:#92400E;
+  margin-bottom:6px;
+}
+.notlar-box p{margin:0;color:#451A03;font-size:14px;line-height:1.6}
+
+/* ══════════════════════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════════════════════ */
+.footer{
+  text-align:center; padding:28px 24px 40px;
+  color:var(--slate-500); font-size:12px;
+  max-width:1240px; margin:0 auto;
+}
+.footer a{color:var(--accent);text-decoration:none;font-weight:600}
+.footer a:hover{text-decoration:underline}
+
+/* ══════════════════════════════════════════════════════════════
+   LIGHTBOX
+══════════════════════════════════════════════════════════════ */
+.lightbox{
+  position:fixed; inset:0; z-index:200;
+  background:rgba(15,23,42,.92);
+  display:none; align-items:center; justify-content:center;
+  padding:40px;
+}
+.lightbox.open{display:flex}
+.lightbox img{max-width:100%; max-height:90vh; border-radius:8px; box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.lightbox-close{
+  position:absolute; top:16px; right:16px;
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(255,255,255,.1); color:#fff;
+  border:1px solid rgba(255,255,255,.2); cursor:pointer;
+  font-size:18px;
+}
+.lightbox-lbl{
+  position:absolute; bottom:24px; left:50%;
+  transform:translateX(-50%);
+  color:#fff; font-size:14px;
+  background:rgba(0,0,0,.6); padding:8px 16px;
+  border-radius:999px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SHARE SHEET
+══════════════════════════════════════════════════════════════ */
+.share-sheet-bg{
+  position:fixed; inset:0; z-index:150;
+  background:rgba(15,23,42,.5);
+  display:none; align-items:flex-end; justify-content:center;
+  padding:0;
+}
+.share-sheet-bg.open{display:flex}
+@media(min-width:720px){
+  .share-sheet-bg{align-items:center}
+}
+.share-sheet{
+  background:#fff;
+  width:100%; max-width:480px;
+  border-radius:20px 20px 0 0;
+  padding:22px 22px 30px;
+  box-shadow:0 -12px 40px rgba(0,0,0,.2);
+}
+@media(min-width:720px){
+  .share-sheet{border-radius:16px;padding:26px}
+}
+.share-title{font-size:16px;font-weight:700;margin-bottom:14px;color:var(--ink)}
+.share-list{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(80px,1fr));
+  gap:8px; margin-bottom:14px;
+}
+.share-opt{
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:14px 8px;
+  background:var(--slate-50); border:1px solid var(--slate-200);
+  border-radius:12px; cursor:pointer;
+  font-size:12px; font-weight:600; color:var(--ink);
+  transition:all .15s ease;
+}
+.share-opt:hover{background:var(--slate-100); transform:translateY(-1px)}
+.share-opt-icon{font-size:22px}
+.share-link-row{
+  display:flex; gap:8px; padding-top:10px;
+  border-top:1px solid var(--slate-100);
+}
+.share-link-input{
+  flex:1; padding:10px 12px;
+  background:var(--slate-50);
+  border:1px solid var(--slate-200);
+  border-radius:8px;
+  font-size:12px; color:var(--ink);
+  font-family:'JetBrains Mono',monospace;
+  min-width:0;
+}
+.share-copy-btn{
+  padding:10px 16px; border-radius:8px;
+  background:var(--ink); color:#fff;
+  border:0; cursor:pointer;
+  font-size:13px; font-weight:600;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════════════ */
+#toast{
+  position:fixed; bottom:24px; left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--ink); color:#fff;
+  padding:12px 22px; border-radius:999px;
+  font-size:13px;font-weight:600;
+  box-shadow:var(--shadow-lg);
+  opacity:0; pointer-events:none;
+  transition:all .3s ease; z-index:300;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.error{background:#B91C1C}
+#toast.success{background:#047857}
+
+/* ══════════════════════════════════════════════════════════════
+   FADE-IN
+══════════════════════════════════════════════════════════════ */
+.reveal{opacity:0; transform:translateY(12px); animation:rise .6s cubic-bezier(.22,.61,.36,1) forwards}
+.reveal[data-d="1"]{animation-delay:.05s}
+.reveal[data-d="2"]{animation-delay:.12s}
+.reveal[data-d="3"]{animation-delay:.2s}
+.reveal[data-d="4"]{animation-delay:.28s}
+.reveal[data-d="5"]{animation-delay:.36s}
+@keyframes rise{to{opacity:1;transform:translateY(0)}}
+
+/* ══════════════════════════════════════════════════════════════
+   PRINT
+══════════════════════════════════════════════════════════════ */
+.print-only{display:none}
+@media print{
+  body{background:#fff}
+  .topbar, .hero-wrap, .action-bar, .lightbox, .share-sheet-bg, #toast,
+  .map-wrap, #foto-wrap, .footer, .lang-btn, .live-pill{display:none !important}
+  .print-only{display:flex !important}
+  .print-header{
+    justify-content:space-between; align-items:flex-end;
+    padding:0 0 16px; border-bottom:2px solid #000; margin-bottom:20px;
+  }
+  .page{padding:20px}
+  .pod-card{box-shadow:none;border:1px solid #000}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════════════ */
+@media (max-width:1024px){
+  .layout{grid-template-columns:1fr}
+}
+@media (max-width:720px){
+  .topbar-inner{padding:12px 16px;gap:10px}
+  .hero{padding:28px 16px 24px}
+  .hero-row{grid-template-columns:1fr}
+  .truck-scene{display:none}
+  .hero-icon{width:54px;height:54px;font-size:26px}
+  .metrics{padding:0 16px;transform:translateY(0);margin-top:18px;margin-bottom:-40px}
+  .metrics-card{
+    grid-template-columns:1fr 1fr;
+    padding:18px;gap:16px;
+  }
+  .metrics-card .div{display:none}
+  .metrics-card .metric:nth-child(5){grid-column:1/-1; padding-top:14px; border-top:1px solid var(--slate-200)}
+  .page{padding:60px 16px 40px}
+  .action-bar{grid-template-columns:repeat(2,1fr)}
+  .info-grid{grid-template-columns:1fr}
+  .pod-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-state">
+  <div class="spinner"></div>
+  <div id="loading-text" style="color:var(--text2);font-size:14px">Sevkiyat bilgileri yükleniyor…</div>
+</div>
+
+<!-- ERROR -->
+<div id="error-state">
+  <div class="err-icon"><i data-icon="lock" aria-hidden="true"></i></div>
+  <h2 id="error-title">Bulunamadı</h2>
+  <p id="error-msg">Bu takip linki geçersiz veya süresi dolmuş.</p>
+</div>
+
+<!-- MAIN -->
+<div id="main-content" style="display:none">
+
+  <!-- PRINT HEADER (only visible in print) -->
+  <div class="print-only print-header">
+    <div>
+      <h1 style="margin:0;font-size:20px">TESLİMAT RAPORU (POD)</h1>
+      <div class="sub" id="print-sub" style="color:#555;font-size:13px;margin-top:4px">—</div>
+    </div>
+    <div class="sub" id="print-date" style="color:#555;font-size:13px">—</div>
+  </div>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark" id="brand-mark">⬡</div>
+        <div class="brand-text">
+          <span class="brand-title" id="brand-title" data-i18n="brand_title">Sevkiyat Takip</span>
+          <span class="brand-sub" id="brand-sub">—</span>
+        </div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <span class="live-pill" id="live-pill"><span class="live-dot"></span><span data-i18n="live">CANLI</span></span>
+      <button class="lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="hero">
+      <div class="hero-row reveal" data-d="1">
+        <div class="hero-durum" id="hero-durum">
+          <div class="hero-icon" id="hero-icon">⏳</div>
+          <div class="hero-txt">
+            <div class="hero-label" data-i18n="hero_label">Mevcut Durum</div>
+            <h1 class="hero-title" id="hero-title">Yükleniyor…</h1>
+          </div>
+        </div>
+        <div class="truck-scene" aria-hidden="true">
+          <div class="truck-road"></div>
+          <div class="truck-svg">
+            <svg viewBox="0 0 200 110" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+              <rect x="6" y="20" width="120" height="62" rx="3" fill="#FB923C" stroke="#7C2D12" stroke-width="2"/>
+              <path d="M22 26v50M40 26v50M58 26v50M76 26v50M94 26v50M112 26v50" stroke="#7C2D12" stroke-width="1.2" opacity=".55"/>
+              <path d="M126 30h28l16 22v30h-44V30z" fill="#10B981" stroke="#064E3B" stroke-width="2"/>
+              <rect x="132" y="38" width="28" height="14" rx="2" fill="#A7F3D0" stroke="#064E3B" stroke-width="1.5"/>
+              <rect x="2" y="80" width="178" height="6" rx="2" fill="#1F2937"/>
+              <circle cx="30" cy="92" r="11" fill="#0F172A"/><circle cx="30" cy="92" r="4" fill="#64748B"/>
+              <circle cx="60" cy="92" r="11" fill="#0F172A"/><circle cx="60" cy="92" r="4" fill="#64748B"/>
+              <circle cx="100" cy="92" r="11" fill="#0F172A"/><circle cx="100" cy="92" r="4" fill="#64748B"/>
+              <circle cx="158" cy="92" r="11" fill="#0F172A"/><circle cx="158" cy="92" r="4" fill="#64748B"/>
+              <rect x="166" y="58" width="6" height="6" rx="1" fill="#FDE68A"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- METRICS — glass card -->
+    <div class="metrics reveal" data-d="2">
+      <div class="metrics-card">
+        <div class="metric">
+          <span class="metric-lbl" data-i18n="m_eta">Tahmini Varış</span>
+          <span class="metric-val blue" id="m-eta">—</span>
+        </div>
+        <div class="div"></div>
+        <div class="metric">
+          <span class="metric-lbl" data-i18n="m_km">Kalan Mesafe</span>
+          <span class="metric-val orange" id="m-km">—</span>
+        </div>
+        <div class="div"></div>
+        <div class="metric">
+          <span class="metric-lbl" data-i18n="m_progress">İlerleme</span>
+          <span class="metric-val green" id="m-ilerleme">—</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE CONTENT -->
+  <div class="page">
+
+    <!-- ACTION BAR -->
+    <div class="action-bar reveal" data-d="3">
+      <button class="act-btn call" id="btn-call" onclick="callDriver()">
+        <span class="act-icon"><i data-icon="phone" aria-hidden="true"></i></span><span data-i18n="btn_call">Şoförü Ara</span>
+      </button>
+      <button class="act-btn whatsapp" id="btn-wa" onclick="whatsappDriver()">
+        <span class="act-icon"><i data-icon="message-circle" aria-hidden="true"></i></span><span data-i18n="btn_wa">WhatsApp</span>
+      </button>
+      <button class="act-btn share" id="btn-share" onclick="openShareSheet()">
+        <span class="act-icon"><i data-icon="link" aria-hidden="true"></i></span><span data-i18n="btn_share">Paylaş</span>
+      </button>
+      <button class="act-btn pod disabled" id="btn-pod" onclick="printPOD()">
+        <span class="act-icon"><i data-icon="file-text" aria-hidden="true"></i></span><span data-i18n="btn_pod">POD İndir</span>
+      </button>
+    </div>
+
+    <!-- 2-COLUMN LAYOUT -->
+    <div class="layout">
+
+      <!-- LEFT: map + info -->
+      <div class="col">
+
+        <!-- MAP -->
+        <div class="map-wrap reveal" data-d="4">
+          <div class="map-head">
+            <span class="map-head-lbl" data-i18n="map_head">Canlı Rota</span>
+            <span class="map-head-time" id="konum-zaman">—</span>
+          </div>
+          <div id="harita-wrap">
+            <div class="no-loc" id="no-location">
+              <div class="no-loc-icon"><i data-icon="globe" aria-hidden="true"></i></div>
+              <div data-i18n="no_loc_1">Konum henüz paylaşılmadı</div>
+              <div style="font-size:11px;opacity:.6" data-i18n="no_loc_2">Şoför yola çıktığında rota burada görünecek</div>
+            </div>
+            <div id="harita" style="display:none"></div>
+          </div>
+        </div>
+
+        <!-- INFO -->
+        <div class="reveal" data-d="5">
+          <div class="sec-title" data-i18n="sec_info">Sevkiyat Bilgileri</div>
+          <div class="info-grid">
+            <div class="info-card full">
+              <div class="info-label" data-i18n="lbl_konteyner">Konteyner No(lar)</div>
+              <div class="info-value mn" id="inf-konteyner" style="font-size:16px;line-height:1.7;letter-spacing:.05em">—</div>
+            </div>
+            <div class="info-card" id="inf-kont-tip-card" style="display:none">
+              <div class="info-label" data-i18n="lbl_tip">Konteyner Tipi</div>
+              <div class="info-value mn" id="inf-kont-tip">—</div>
+            </div>
+            <div class="info-card" id="inf-kont-durum-card" style="display:none">
+              <div class="info-label" data-i18n="lbl_durum">Dolu / Boş</div>
+              <div class="info-value" id="inf-kont-durum">—</div>
+            </div>
+            <div class="info-card" id="inf-referans-card" style="display:none">
+              <div class="info-label" data-i18n="lbl_ref">Referans No</div>
+              <div class="info-value mn" id="inf-referans">—</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label" data-i18n="lbl_yukle">Alım Noktası</div>
+              <div class="info-value" id="inf-yukle">—</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label" data-i18n="lbl_teslim">Teslim Yeri</div>
+              <div class="info-value" id="inf-teslim">—</div>
+            </div>
+            <div class="info-card" id="inf-bos-donus-card" style="display:none">
+              <div class="info-label" data-i18n="lbl_bos">Boş Dönüş</div>
+              <div class="info-value" id="inf-bos-donus" style="color:var(--teal)">—</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label" data-i18n="lbl_plaka">Araç Plakası</div>
+              <div class="info-value mn" id="inf-plaka">—</div>
+            </div>
+            <div class="info-card" id="inf-muhur-card">
+              <div class="info-label" data-i18n="lbl_muhur">Mühür No</div>
+              <div class="info-value mn" id="inf-muhur">—</div>
+            </div>
+            <div class="info-card" id="inf-sofor-card" style="display:none">
+              <div class="info-label" data-i18n="lbl_sofor">Şoför</div>
+              <div class="info-value" id="inf-sofor">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: timeline + POD + extras -->
+      <div class="col">
+
+        <!-- TIMELINE -->
+        <div class="reveal" data-d="4">
+          <div class="sec-title" data-i18n="sec_adim">Operasyon Aşamaları</div>
+          <div class="card progress-card">
+            <div id="steps-list"></div>
+          </div>
+        </div>
+
+        <!-- POD (only when delivered) -->
+        <div id="pod-wrap" style="display:none" class="reveal" data-d="5">
+          <div class="pod-card">
+            <div class="pod-hdr">
+              <span class="pod-hdr-icon"><i data-icon="check" aria-hidden="true"></i></span>
+              <div>
+                <div class="pod-hdr-title" data-i18n="pod_title">Teslimat Tamamlandı</div>
+                <div class="pod-hdr-sub" id="pod-sub">—</div>
+              </div>
+            </div>
+            <div class="pod-row">
+              <div>
+                <div class="pod-row-lbl" data-i18n="pod_teslim_alan">Teslim Alan</div>
+                <div class="pod-row-val" id="pod-teslim-alan">—</div>
+              </div>
+              <div>
+                <div class="pod-row-lbl" data-i18n="pod_teslim_zaman">Teslim Zamanı</div>
+                <div class="pod-row-val" id="pod-teslim-zaman">—</div>
+              </div>
+            </div>
+            <div id="pod-not-wrap" style="display:none;margin-top:12px">
+              <div class="pod-row-lbl" data-i18n="pod_not">Müşteri Notu</div>
+              <div class="pod-row-val" id="pod-not" style="margin-top:4px">—</div>
+            </div>
+            <div id="pod-imza-wrap" style="display:none;margin-top:12px">
+              <div class="pod-row-lbl" data-i18n="pod_imza">İmza</div>
+              <div class="pod-imza"><img id="pod-imza" src="" alt="İmza"></div>
+            </div>
+
+            <!-- POD PDF İndirme -->
+            <div id="pod-pdf-box" style="display:none;margin-top:14px;padding:12px 14px;background:var(--green-50);border:1px solid rgba(16,185,129,.25);border-radius:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#047857"><i data-icon="file-text" aria-hidden="true"></i> Teslim Makbuzu</div>
+                  <div style="font-size:11.5px;color:var(--slate-500);margin-top:2px">PDF olarak indirilebilir</div>
+                </div>
+                <span id="pod-pdf-badge" style="font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px;border:1px solid;background:#FEF3C7;color:#92400E;border-color:#FDE68A">⏳ Taslak</span>
+              </div>
+              <a id="pod-pdf-btn" href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#10B981,#059669);color:#fff;text-decoration:none;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:700;margin-top:10px">
+                <i data-icon="import" aria-hidden="true"></i> Teslim Makbuzunu İndir
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- PHOTOS -->
+        <div id="foto-wrap" style="display:none" class="reveal" data-d="5">
+          <div class="foto-card">
+            <div class="foto-hdr">
+              <div class="sec-title" style="margin:0" data-i18n="sec_foto">Sevkiyat Fotoğrafları</div>
+              <span class="foto-count" id="foto-count">0</span>
+            </div>
+            <div class="foto-grid" id="foto-gallery"></div>
+          </div>
+        </div>
+
+        <!-- NOTLAR -->
+        <div id="notlar-wrap" style="display:none" class="reveal" data-d="5">
+          <div class="notlar-box">
+            <div class="notlar-ttl"><i data-icon="note" aria-hidden="true"></i> <span data-i18n="sec_not">Operasyon Notu</span></div>
+            <p id="notlar-text"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span data-i18n="footer_live">Bu sayfa otomatik güncellenir</span>
+    &nbsp;·&nbsp;
+    <span id="footer-firma">Fleetly</span>
+    &nbsp;·&nbsp;
+    <a href="#" onclick="location.reload();return false" data-i18n="footer_refresh">Yenile</a>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="if(event.target===this)closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()"><i data-icon="x" aria-hidden="true"></i></button>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-lbl" id="lightbox-lbl"></div>
+</div>
+
+<!-- Share Sheet -->
+<div class="share-sheet-bg" id="share-sheet" onclick="if(event.target===this)closeShareSheet()">
+  <div class="share-sheet">
+    <div class="share-title" data-i18n="share_title">Takip Linkini Paylaş</div>
+    <div class="share-list">
+      <button class="share-opt" onclick="shareVia('wa')"><span class="share-opt-icon"><i data-icon="message-circle" aria-hidden="true"></i></span>WhatsApp</button>
+      <button class="share-opt" onclick="shareVia('sms')"><span class="share-opt-icon"><i data-icon="phone-android" aria-hidden="true"></i></span>SMS</button>
+      <button class="share-opt" onclick="shareVia('mail')"><span class="share-opt-icon"><i data-icon="mail" aria-hidden="true"></i>️</span>E-posta</button>
+      <button class="share-opt" onclick="shareVia('tg')"><span class="share-opt-icon"><i data-icon="send" aria-hidden="true"></i>️</span>Telegram</button>
+      <button class="share-opt" onclick="shareVia('native')"><span class="share-opt-icon"><i data-icon="export" aria-hidden="true"></i></span>Diğer</button>
+    </div>
+    <div class="share-link-row">
+      <input type="text" class="share-link-input" id="share-link-input" readonly>
+      <button class="share-copy-btn" onclick="copyShareLink()" data-i18n="share_copy">Kopyala</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CONFIG  (orijinal mantık — değiştirilmedi)
+══════════════════════════════════════════════════════════════ */
+const CFG     = (typeof window.FILO_CONFIG !== 'undefined') ? window.FILO_CONFIG : null;
+const SB_URL  = CFG?.SUPABASE_URL  || '';
+const SB_ANON = CFG?.SUPABASE_ANON || '';
+
+const OSRM_URL = 'https://router.project-osrm.org/route/v1/driving';
+const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
+const REFRESH_MS = 20000;
+const STORAGE_LANG = 'fleetly_takip_lang';
+
+/* ══════════════════════════════════════════════════════════════
+   I18N
+══════════════════════════════════════════════════════════════ */
+const I18N = {
+  tr:{
+    brand_title:'Sevkiyat Takip', live:'CANLI', offline:'ÇEVRİMDIŞI',
+    hero_label:'Mevcut Durum',
+    m_eta:'Tahmini Varış', m_km:'Kalan Mesafe', m_progress:'İlerleme',
+    btn_call:'Şoförü Ara', btn_wa:'WhatsApp', btn_share:'Paylaş', btn_pod:'POD İndir',
+    map_head:'Canlı Rota',
+    no_loc_1:'Konum henüz paylaşılmadı', no_loc_2:'Şoför yola çıktığında rota burada görünecek',
+    sec_info:'Sevkiyat Bilgileri', sec_adim:'Operasyon Aşamaları', sec_foto:'Sevkiyat Fotoğrafları', sec_not:'Operasyon Notu',
+    lbl_konteyner:'Konteyner No(lar)', lbl_tip:'Konteyner Tipi', lbl_durum:'Dolu / Boş', lbl_ref:'Referans No',
+    lbl_yukle:'Alım Noktası', lbl_teslim:'Teslim Yeri', lbl_bos:'Boş Dönüş',
+    lbl_plaka:'Araç Plakası', lbl_muhur:'Mühür No', lbl_sofor:'Şoför',
+    pod_title:'Teslimat Tamamlandı', pod_teslim_alan:'Teslim Alan', pod_teslim_zaman:'Teslim Zamanı',
+    pod_not:'Müşteri Notu', pod_imza:'İmza',
+    share_title:'Takip Linkini Paylaş', share_copy:'Kopyala',
+    footer_live:'Bu sayfa otomatik güncellenir', footer_refresh:'Yenile',
+    durum_Bekliyor:'Bekliyor — Araç Atandı', durum_Yolda:'Yolda — Teslimata Gidiyor',
+    durum_Fabrikada:'Fabrikada — İşlem Sürüyor', durum_Teslim:'Teslim Edildi', durum_Iptal:'İptal Edildi',
+    adim:['Atama Yapıldı','Yola Çıkıldı','Fabrikaya Girildi','Fabrikadan Çıkıldı','Teslim Edildi'],
+    toast_copy:'📋 Link kopyalandı!', toast_err:'Bir sorun oluştu',
+    call_no_phone:'Şoför telefonu tanımlı değil',
+    wa_prefill:'Merhaba, konteyner %s ile ilgili arıyorum.',
+    eta_now:'Şimdi', eta_soon:'Çok yakında',
+    pct_arr:'Varıldı',
+  },
+  en:{
+    brand_title:'Shipment Tracking', live:'LIVE', offline:'OFFLINE',
+    hero_label:'Current Status',
+    m_eta:'Estimated Arrival', m_km:'Distance Remaining', m_progress:'Progress',
+    btn_call:'Call Driver', btn_wa:'WhatsApp', btn_share:'Share', btn_pod:'Download POD',
+    map_head:'Live Route',
+    no_loc_1:'Location not shared yet', no_loc_2:'Route will appear when driver starts',
+    sec_info:'Shipment Details', sec_adim:'Operation Stages', sec_foto:'Shipment Photos', sec_not:'Operation Notes',
+    lbl_konteyner:'Container No(s)', lbl_tip:'Container Type', lbl_durum:'Laden / Empty', lbl_ref:'Reference No',
+    lbl_yukle:'Pickup Location', lbl_teslim:'Delivery Location', lbl_bos:'Empty Return',
+    lbl_plaka:'Vehicle Plate', lbl_muhur:'Seal No', lbl_sofor:'Driver',
+    pod_title:'Delivery Completed', pod_teslim_alan:'Received By', pod_teslim_zaman:'Delivered At',
+    pod_not:'Customer Note', pod_imza:'Signature',
+    share_title:'Share Tracking Link', share_copy:'Copy',
+    footer_live:'This page updates automatically', footer_refresh:'Refresh',
+    durum_Bekliyor:'Waiting — Vehicle Assigned', durum_Yolda:'En route to delivery',
+    durum_Fabrikada:'At Facility — Processing', durum_Teslim:'Delivered', durum_Iptal:'Cancelled',
+    adim:['Assigned','Started','Entered Facility','Left Facility','Delivered'],
+    toast_copy:'📋 Link copied!', toast_err:'Something went wrong',
+    call_no_phone:'Driver phone not available',
+    wa_prefill:'Hello, I am calling about container %s.',
+    eta_now:'Now', eta_soon:'Very soon',
+    pct_arr:'Arrived',
+  }
+};
+let LANG = (localStorage.getItem(STORAGE_LANG) || (navigator.language||'tr').slice(0,2).toLowerCase());
+if(!I18N[LANG]) LANG = 'tr';
+function t(key){ return I18N[LANG][key] ?? I18N.tr[key] ?? key; }
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n');
+    if(I18N[LANG][k]!=null) el.textContent = I18N[LANG][k];
+  });
+  document.getElementById('lang-btn').textContent = LANG==='tr' ? 'EN' : 'TR';
+  document.documentElement.lang = LANG;
+}
+function toggleLang(){ LANG = LANG==='tr'?'en':'tr'; localStorage.setItem(STORAGE_LANG, LANG); applyI18n(); render(); }
+
+/* ══════════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════════ */
+let isEmri = null;
+let isEmriId = null;
+let refreshTimer = null;
+let map = null, truckMarker = null, startMarker = null, endMarker = null, routeLine = null;
+let breadcrumbLine = null;
+let lastRouteKey = null;
+let breadcrumbLoaded = false;
+
+/* ══════════════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════════════ */
+function fmtTime(ts){
+  if(!ts) return null;
+  try{
+    const d = new Date(ts);
+    return d.toLocaleString(LANG==='tr'?'tr-TR':'en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  }catch{ return null; }
+}
+function fmtDuration(minutes){
+  if(minutes==null||!isFinite(minutes)||minutes<0) return '—';
+  if(minutes<1) return t('eta_now');
+  if(minutes<60) return Math.round(minutes)+' <span class="metric-unit">dk</span>';
+  const h = Math.floor(minutes/60), m = Math.round(minutes%60);
+  return h+'<span class="metric-unit">sa</span> '+(m?m+'<span class="metric-unit">dk</span>':'');
+}
+function fmtKm(km){
+  if(km==null||!isFinite(km)) return '—';
+  if(km<1) return Math.round(km*1000)+' <span class="metric-unit">m</span>';
+  if(km<10) return km.toFixed(1)+' <span class="metric-unit">km</span>';
+  return Math.round(km)+' <span class="metric-unit">km</span>';
+}
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371, toRad=x=>x*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+
+function decodePolyline(str){
+  const coords=[]; let index=0, lat=0, lng=0;
+  while(index<str.length){
+    let b, shift=0, result=0;
+    do{ b=str.charCodeAt(index++)-63; result|=(b&0x1f)<<shift; shift+=5; } while(b>=0x20);
+    const dlat = (result&1) ? ~(result>>1) : (result>>1); lat+=dlat;
+    shift=0; result=0;
+    do{ b=str.charCodeAt(index++)-63; result|=(b&0x1f)<<shift; shift+=5; } while(b>=0x20);
+    const dlng = (result&1) ? ~(result>>1) : (result>>1); lng+=dlng;
+    coords.push([lat/1e5, lng/1e5]);
+  }
+  return coords;
+}
+
+function showToast(msg, kind='info'){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show '+kind;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>{ el.className=''; }, 3000);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DURUM META
+══════════════════════════════════════════════════════════════ */
+const DURUM_META = {
+  'Bekliyor':     { icon:'⏳', cls:'bekliyor',   tkey:'durum_Bekliyor' },
+  'Yolda':        { icon:'🚛', cls:'yolda',      tkey:'durum_Yolda' },
+  'Fabrikada':    { icon:'🏭', cls:'fabrikada',  tkey:'durum_Fabrikada' },
+  'Teslim Edildi':{ icon:'✅', cls:'teslim',     tkey:'durum_Teslim' },
+  'İptal':        { icon:'❌', cls:'iptal',      tkey:'durum_Iptal' },
+};
+
+/* ══════════════════════════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════════════════════════ */
+function render(){
+  if(!isEmri) return;
+  applyI18n();
+  const e = isEmri;
+  const durum = e.durum || 'Bekliyor';
+  const meta = DURUM_META[durum] || DURUM_META['Bekliyor'];
+
+  const heroDurum = document.getElementById('hero-durum');
+  heroDurum.className = 'hero-durum '+meta.cls;
+  document.getElementById('hero-icon').textContent = meta.icon;
+  const heroTitle = document.getElementById('hero-title');
+  heroTitle.textContent = t(meta.tkey);
+  heroTitle.className = 'hero-title '+meta.cls;
+
+  const kontNolar = (e.konteyner_no || '').split('\n').map(s=>s.trim()).filter(Boolean);
+  const mainTitle = kontNolar[0] || ('#'+e.id);
+  document.title = mainTitle + (LANG==='tr'?' — Sevkiyat Takip':' — Shipment Tracking');
+  document.getElementById('brand-title').textContent = mainTitle;
+  document.getElementById('brand-sub').textContent = e.musteri_adi || 'Fleetly';
+  document.getElementById('print-sub').textContent = (e.musteri_adi||'') + ' · ' + mainTitle;
+  document.getElementById('print-date').textContent = fmtTime(new Date().toISOString()) || '';
+
+  const kontEl = document.getElementById('inf-konteyner');
+  if(kontNolar.length>1){
+    kontEl.innerHTML = kontNolar.map((k,i)=>`<div style="color:${i===0?'inherit':'var(--text2)'}">${k}</div>`).join('');
+  } else {
+    kontEl.textContent = kontNolar[0] || ('#'+e.id);
+  }
+
+  const setCard = (cardId,valId,val)=>{
+    const card = document.getElementById(cardId), v = document.getElementById(valId);
+    if(val){ card.style.display=''; v.textContent = val; } else { card.style.display='none'; }
+  };
+  setCard('inf-kont-tip-card','inf-kont-tip', e.kont_tip);
+  if(e.kont_durum){
+    document.getElementById('inf-kont-durum-card').style.display='';
+    const dEl = document.getElementById('inf-kont-durum');
+    dEl.innerHTML = e.kont_durum==='Boş' ? '🔲 '+(LANG==='tr'?'Boş Alım':'Empty Pickup') : '📦 '+(LANG==='tr'?'Dolu Alım':'Laden');
+    dEl.style.color = e.kont_durum==='Boş' ? 'var(--text2)' : 'var(--accent)';
+  } else { document.getElementById('inf-kont-durum-card').style.display='none'; }
+  setCard('inf-referans-card','inf-referans', e.referans_no);
+  document.getElementById('inf-yukle').textContent  = e.yukle_yeri  || '—';
+  document.getElementById('inf-teslim').textContent = e.teslim_yeri || '—';
+  if(e.bos_donus){ document.getElementById('inf-bos-donus-card').style.display=''; document.getElementById('inf-bos-donus').textContent = '↩ '+e.bos_donus; } else { document.getElementById('inf-bos-donus-card').style.display='none'; }
+  document.getElementById('inf-plaka').textContent  = e.arac_plaka  || '—';
+  document.getElementById('inf-muhur').textContent  = e.muhur_no    || '—';
+  document.getElementById('inf-muhur-card').style.display = e.muhur_no ? '' : 'none';
+  if(e.sofor){ document.getElementById('inf-sofor-card').style.display=''; document.getElementById('inf-sofor').textContent = e.sofor; } else { document.getElementById('inf-sofor-card').style.display='none'; }
+
+  const hasPhone = !!(e.sofor_tel || e.sofor_whatsapp);
+  document.getElementById('btn-call').classList.toggle('disabled', !hasPhone);
+  document.getElementById('btn-wa').classList.toggle('disabled', !hasPhone);
+  document.getElementById('btn-pod').classList.toggle('disabled', durum!=='Teslim Edildi');
+
+  document.getElementById('footer-firma').textContent = e.musteri_adi || 'Fleetly';
+
+  const pill = document.getElementById('live-pill');
+  if(!navigator.onLine){ pill.className='live-pill off'; pill.querySelector('span:last-child').textContent = t('offline'); }
+  else { pill.className='live-pill'; pill.querySelector('span:last-child').textContent = t('live'); }
+
+  document.getElementById('konum-zaman').textContent = e.konum_zaman ? ((LANG==='tr'?'Güncellendi: ':'Updated: ')+fmtTime(e.konum_zaman)) : (LANG==='tr'?'Konum yok':'No location');
+
+  renderMapAndMetrics(e);
+  renderSteps(e);
+  renderFotos(e);
+
+  if(e.notlar){ document.getElementById('notlar-wrap').style.display=''; document.getElementById('notlar-text').textContent = e.notlar; }
+  else document.getElementById('notlar-wrap').style.display='none';
+
+  renderPOD(e);
+}
+
+function renderSteps(e){
+  const steps = [
+    { time: e.atama_zamani, icon:'📋' },
+    { time: e.yola_zaman,   icon:'🚛' },
+    { time: e.fabrika_giris, icon:'🏭' },
+    { time: e.fabrika_cikis, icon:'🔄' },
+    { time: e.teslim_zamani, icon:'🎯' },
+  ];
+  const labels = I18N[LANG].adim;
+  const el = document.getElementById('steps-list');
+  el.innerHTML = steps.map((s,i)=>{
+    const done  = !!s.time;
+    const next  = !done && steps.slice(0,i).every(p=>!!p.time);
+    const cls   = done ? 'done' : (next ? 'active' : '');
+    return `
+      <div class="step ${cls}">
+        <div class="step-dot ${cls}">${done?'✓':s.icon}</div>
+        <div class="step-info">
+          <div class="step-label ${cls}">${labels[i]}</div>
+          ${done?`<div class="step-time">${fmtTime(s.time)}</div>`:''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderPOD(e){
+  const wrap = document.getElementById('pod-wrap');
+  if(e.durum!=='Teslim Edildi'){ wrap.style.display='none'; return; }
+  wrap.style.display='';
+  document.getElementById('pod-sub').textContent = (e.musteri_adi||'')+' · '+(e.arac_plaka||'');
+  document.getElementById('pod-teslim-alan').textContent = e.teslim_alan_ad || '—';
+  document.getElementById('pod-teslim-zaman').textContent = fmtTime(e.teslim_zamani) || '—';
+  if(e.teslim_not_musteri){ document.getElementById('pod-not-wrap').style.display=''; document.getElementById('pod-not').textContent = e.teslim_not_musteri; }
+  else document.getElementById('pod-not-wrap').style.display='none';
+  if(e.imza_url){ document.getElementById('pod-imza-wrap').style.display=''; document.getElementById('pod-imza').src = e.imza_url; }
+  else document.getElementById('pod-imza-wrap').style.display='none';
+
+  const podBtn   = document.getElementById('pod-pdf-btn');
+  const podBox   = document.getElementById('pod-pdf-box');
+  const podBadge = document.getElementById('pod-pdf-badge');
+  if (podBtn && podBox) {
+    const url = e.pod_final_url || e.pod_taslak_url || null;
+    if (url) {
+      podBox.style.display = '';
+      podBtn.href = url;
+      podBtn.setAttribute('download', `Teslim_Makbuzu_${e.id}.pdf`);
+      const onayli = e.pod_durum === 'onayli' && e.pod_final_url;
+      if (podBadge) {
+        if (onayli) {
+          podBadge.textContent = '✓ Onaylı';
+          podBadge.style.background = 'var(--green-50)';
+          podBadge.style.color = '#047857';
+          podBadge.style.borderColor = 'rgba(16,185,129,.35)';
+        } else {
+          podBadge.textContent = '⏳ Taslak';
+          podBadge.style.background = '#FEF3C7';
+          podBadge.style.color = '#92400E';
+          podBadge.style.borderColor = '#FDE68A';
+        }
+      }
+    } else {
+      podBox.style.display = 'none';
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HARİTA + ROTA + ETA  (orijinal mantık — değiştirilmedi)
+══════════════════════════════════════════════════════════════ */
+function ensureMap(){
+  if(map) return map;
+  map = L.map('harita', {
+    zoomControl: true, attributionControl: true,
+    tap: true, scrollWheelZoom: true,
+  }).setView([41.0082, 28.9784], 10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  return map;
+}
+
+function makeDivIcon(cls, inner){
+  return L.divIcon({
+    className:'',
+    html:`<div class="${cls}">${inner||''}</div>`,
+    iconSize:[30,30], iconAnchor:[15,28],
+  });
+}
+function makeTruckIcon(){
+  return L.divIcon({
+    className:'',
+    html:`<div class="truck-marker">🚛</div>`,
+    iconSize:[44,44], iconAnchor:[22,22],
+  });
+}
+
+function renderMapAndMetrics(e){
+  const curLat = parseFloat(e.konum_lat), curLng = parseFloat(e.konum_lng);
+  const yLat   = parseFloat(e.yukle_lat),  yLng   = parseFloat(e.yukle_lng);
+  const tLat   = parseFloat(e.teslim_lat), tLng   = parseFloat(e.teslim_lng);
+  const hasCur = isFinite(curLat)&&isFinite(curLng);
+  const hasY   = isFinite(yLat)&&isFinite(yLng);
+  const hasT   = isFinite(tLat)&&isFinite(tLng);
+  const durum  = e.durum || 'Bekliyor';
+
+  const noLoc = document.getElementById('no-location');
+  const mapDiv = document.getElementById('harita');
+
+  if(!hasCur && !hasY && !hasT){
+    noLoc.style.display = 'flex'; mapDiv.style.display = 'none';
+    document.getElementById('m-eta').innerHTML = '—';
+    document.getElementById('m-km').innerHTML = '—';
+    document.getElementById('m-ilerleme').innerHTML = '—';
+    return;
+  }
+
+  noLoc.style.display = 'none'; mapDiv.style.display = 'block';
+  ensureMap();
+  setTimeout(()=>map.invalidateSize(), 50);
+
+  if(truckMarker){ map.removeLayer(truckMarker); truckMarker=null; }
+  if(startMarker){ map.removeLayer(startMarker); startMarker=null; }
+  if(endMarker){ map.removeLayer(endMarker); endMarker=null; }
+
+  const bounds = [];
+  if(hasY){
+    startMarker = L.marker([yLat,yLng], { icon: makeDivIcon('pin-marker start', '<span>A</span>') })
+      .addTo(map).bindPopup('<b>'+t('lbl_yukle')+'</b><br>'+(e.yukle_yeri||''));
+    bounds.push([yLat,yLng]);
+  }
+  if(hasT){
+    endMarker = L.marker([tLat,tLng], { icon: makeDivIcon('pin-marker end', '<span>B</span>') })
+      .addTo(map).bindPopup('<b>'+t('lbl_teslim')+'</b><br>'+(e.teslim_yeri||''));
+    bounds.push([tLat,tLng]);
+  }
+  if(hasCur){
+    truckMarker = L.marker([curLat,curLng], { icon: makeTruckIcon(), zIndexOffset: 1000 })
+      .addTo(map).bindPopup('<b>'+(e.arac_plaka||t('lbl_plaka'))+'</b><br>'+fmtTime(e.konum_zaman));
+    bounds.push([curLat,curLng]);
+  }
+
+  if(bounds.length>=2){ map.fitBounds(bounds, { padding:[40,40], maxZoom:14 }); }
+  else if(bounds.length===1){ map.setView(bounds[0], 13); }
+
+  if(!breadcrumbLoaded && isEmri && isEmri.id){
+    breadcrumbLoaded = true;
+    fetchKonumIzleri(isEmri.id).then(rows=>drawBreadcrumb(rows));
+  }
+
+  const activeNav = ['Yolda','Fabrikada'].includes(durum) && hasCur && hasT;
+  const previewNav = durum==='Bekliyor' && hasY && hasT;
+  if(activeNav || previewNav){
+    const [lat1,lng1] = activeNav ? [curLat,curLng] : [yLat,yLng];
+    const [lat2,lng2] = [tLat,tLng];
+    const key = `${lat1.toFixed(4)},${lng1.toFixed(4)}->${lat2.toFixed(4)},${lng2.toFixed(4)}`;
+    if(key !== lastRouteKey){
+      if(activeNav && tryDrawCachedRoute(e, activeNav)){
+        lastRouteKey = key;
+      } else {
+        fetchRoute(lat1,lng1,lat2,lng2).then(route=>{
+          if(!route){ fallbackHaversineMetrics(lat1,lng1,lat2,lng2,e,activeNav); return; }
+          lastRouteKey = key;
+          if(routeLine) map.removeLayer(routeLine);
+          routeLine = L.polyline(route.coords, {
+            color: '#F97316', weight:5, opacity:.75,
+            dashArray: activeNav ? null : '8,8'
+          }).addTo(map);
+          const km = route.distance/1000;
+          const min = route.duration/60;
+          setEtaMetrics(min, km, e, activeNav);
+        }).catch(()=>{ fallbackHaversineMetrics(lat1,lng1,lat2,lng2,e,activeNav); });
+      }
+    }
+  } else if(durum==='Teslim Edildi'){
+    document.getElementById('m-eta').innerHTML = '<span style="color:var(--green);">✓</span>';
+    document.getElementById('m-km').innerHTML = '0 <span class="metric-unit">km</span>';
+    document.getElementById('m-ilerleme').innerHTML = '100<span class="metric-unit">%</span>';
+  } else {
+    if(hasCur && hasT) fallbackHaversineMetrics(curLat,curLng,tLat,tLng,e,true);
+    else { document.getElementById('m-eta').innerHTML='—'; document.getElementById('m-km').innerHTML='—'; document.getElementById('m-ilerleme').innerHTML='—'; }
+  }
+}
+
+async function fetchRoute(lat1,lng1,lat2,lng2){
+  try{
+    const url = `${OSRM_URL}/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=polyline`;
+    const r = await fetch(url,{signal:AbortSignal.timeout(8000)});
+    if(!r.ok) return null;
+    const data = await r.json();
+    const route = data.routes?.[0]; if(!route) return null;
+    return { coords: decodePolyline(route.geometry), distance: route.distance, duration: route.duration };
+  }catch{ return null; }
+}
+
+function tryDrawCachedRoute(e, isActive){
+  if(!e.rota_polyline) return false;
+  const konumTs = e.konum_zaman ? Date.parse(e.konum_zaman) : 0;
+  const ageMs   = Date.now() - konumTs;
+  if(ageMs > 5*60*1000) return false;
+
+  try{
+    const coords = decodePolyline(e.rota_polyline);
+    if(!coords || coords.length < 2) return false;
+    if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+    routeLine = L.polyline(coords,{color:'#F97316',weight:5,opacity:.75}).addTo(map);
+    if(e.eta_iso && e.kalan_km){
+      const etaMs = Date.parse(e.eta_iso) - Date.now();
+      if(etaMs > 0){
+        setEtaMetrics(etaMs/60000, e.kalan_km, e, isActive);
+        return true;
+      }
+    }
+    if(e.kalan_km){
+      const avgKmh=55, min=(e.kalan_km/avgKmh)*60;
+      setEtaMetrics(min, e.kalan_km, e, isActive);
+      return true;
+    }
+  }catch{}
+  return false;
+}
+
+async function fetchKonumIzleri(isEmriDbId){
+  if(!SB_URL||!SB_ANON||!isEmriDbId) return [];
+  try{
+    const r = await fetch(
+      `${SB_URL}/rest/v1/konum_izleri?is_emri_id=eq.${isEmriDbId}&select=lat,lng,ts&order=ts.asc&limit=500`,
+      {headers:{'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON}}
+    );
+    if(!r.ok) return [];
+    return await r.json();
+  }catch{ return []; }
+}
+
+function drawBreadcrumb(rows){
+  if(!map||!rows||rows.length<2) return;
+  if(breadcrumbLine){ map.removeLayer(breadcrumbLine); breadcrumbLine=null; }
+  const coords = rows.map(r=>[parseFloat(r.lat), parseFloat(r.lng)]).filter(c=>isFinite(c[0])&&isFinite(c[1]));
+  if(coords.length<2) return;
+  breadcrumbLine = L.polyline(coords,{ color:'#10B981', weight:3, opacity:.65, dashArray:'4,6' }).addTo(map);
+}
+
+function fallbackHaversineMetrics(lat1,lng1,lat2,lng2,e,isActive){
+  const km = haversine(lat1,lng1,lat2,lng2);
+  const avgKmh = 55;
+  const min = (km/avgKmh)*60;
+  setEtaMetrics(min, km, e, isActive);
+}
+
+function setEtaMetrics(minRemaining, kmRemaining, e, isActive){
+  const etaEl = document.getElementById('m-eta');
+  const kmEl  = document.getElementById('m-km');
+  const pctEl = document.getElementById('m-ilerleme');
+
+  if(isActive){ etaEl.innerHTML = fmtDuration(minRemaining); }
+  else { etaEl.innerHTML = '—'; }
+  kmEl.innerHTML = fmtKm(kmRemaining);
+
+  let pct = 0;
+  if(e.durum==='Teslim Edildi') pct = 100;
+  else if(e.yukle_lat && e.teslim_lat && e.konum_lat){
+    const total = haversine(e.yukle_lat, e.yukle_lng, e.teslim_lat, e.teslim_lng);
+    const done  = Math.max(0, total - kmRemaining);
+    pct = total>0 ? Math.min(99, Math.round((done/total)*100)) : 0;
+  }
+  pctEl.innerHTML = pct+'<span class="metric-unit">%</span>';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FOTOĞRAF GALERİSİ
+══════════════════════════════════════════════════════════════ */
+function parseFotos(e){
+  const f = e.fotograflar;
+  if(Array.isArray(f)) return f;
+  if(typeof f === 'string'){ try{ const p = JSON.parse(f||'[]'); return Array.isArray(p)?p:[]; }catch{ return []; } }
+  return [];
+}
+function renderFotos(e){
+  const fotos = parseFotos(e);
+  const wrap = document.getElementById('foto-wrap');
+  const gal  = document.getElementById('foto-gallery');
+  const cnt  = document.getElementById('foto-count');
+  if(!fotos.length){ wrap.style.display='none'; return; }
+  wrap.style.display = '';
+  cnt.textContent = fotos.length;
+  gal.innerHTML = fotos.map((f,i)=>`
+    <div class="foto-item" onclick='openLightbox(${JSON.stringify(f.url)},${JSON.stringify(f.tip||"")})'>
+      <img src="${f.url}" alt="${f.tip||''}" loading="lazy" onerror="this.style.opacity=.3">
+      ${f.tip?`<div class="foto-item-lbl">${f.tip}</div>`:''}
+    </div>
+  `).join('');
+}
+function openLightbox(url, lbl){
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox-lbl').textContent = lbl||'';
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+
+/* ══════════════════════════════════════════════════════════════
+   AKSİYONLAR
+══════════════════════════════════════════════════════════════ */
+function normalizePhone(p){
+  if(!p) return '';
+  let s = p.replace(/\s|-|\(|\)|\./g,'');
+  if(s.startsWith('+')) return s;
+  if(s.startsWith('00')) return '+'+s.slice(2);
+  if(s.startsWith('0')) return '+90'+s.slice(1);
+  if(/^\d{10}$/.test(s)) return '+90'+s;
+  return s.startsWith('+')?s:'+'+s;
+}
+function callDriver(){
+  const p = isEmri?.sofor_tel || isEmri?.sofor_whatsapp;
+  if(!p){ showToast(t('call_no_phone'),'error'); return; }
+  window.location.href = 'tel:'+normalizePhone(p);
+}
+function whatsappDriver(){
+  const p = isEmri?.sofor_whatsapp || isEmri?.sofor_tel;
+  if(!p){ showToast(t('call_no_phone'),'error'); return; }
+  const kont = (isEmri.konteyner_no||'').split('\n')[0].trim() || ('#'+(isEmri.firma_isemri_no ?? isEmri.id));
+  const msg = t('wa_prefill').replace('%s', kont);
+  const num = normalizePhone(p).replace('+','');
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+function buildShareLink(){ return window.location.href; }
+function openShareSheet(){
+  document.getElementById('share-link-input').value = buildShareLink();
+  document.getElementById('share-sheet').classList.add('open');
+}
+function closeShareSheet(){ document.getElementById('share-sheet').classList.remove('open'); }
+function copyShareLink(){
+  const link = buildShareLink();
+  navigator.clipboard.writeText(link).then(()=>{ showToast(t('toast_copy'),'success'); closeShareSheet(); })
+    .catch(()=>{ prompt(LANG==='tr'?'Linki kopyalayın:':'Copy link:', link); });
+}
+function shareVia(kind){
+  const link = buildShareLink();
+  const kont = (isEmri?.konteyner_no||'').split('\n')[0].trim() || '';
+  const title = (LANG==='tr'?'Sevkiyat Takip':'Shipment Tracking')+(kont?' — '+kont:'');
+  const txt = (LANG==='tr'?'Sevkiyatı canlı takip edin: ':'Track your shipment live: ')+link;
+  if(kind==='native' && navigator.share){ navigator.share({title, text:txt, url:link}).catch(()=>{}); return; }
+  let url = '';
+  if(kind==='wa')   url = 'https://wa.me/?text='+encodeURIComponent(txt);
+  if(kind==='sms')  url = 'sms:?&body='+encodeURIComponent(txt);
+  if(kind==='mail') url = 'mailto:?subject='+encodeURIComponent(title)+'&body='+encodeURIComponent(txt);
+  if(kind==='tg')   url = 'https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(title);
+  if(url){ window.open(url,'_blank'); closeShareSheet(); }
+}
+function printPOD(){
+  if(isEmri?.durum!=='Teslim Edildi'){ return; }
+  window.print();
+}
+
+async function maybeGeocodeMissing(){ /* no-op */ }
+
+/* ══════════════════════════════════════════════════════════════
+   FİRMA BRANDING
+══════════════════════════════════════════════════════════════ */
+async function fetchFirmaBranding(firmaId) {
+  if (!SB_URL || !SB_ANON || !firmaId) return null;
+  try {
+    const r = await fetch(
+      `${SB_URL}/rest/v1/firmalar?id=eq.${firmaId}&select=firma,logo_url,marka_rengi`,
+      { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON } }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d?.[0] || null;
+  } catch { return null; }
+}
+
+function applyBranding(b) {
+  if (!b) return;
+  if (b.marka_rengi) {
+    const c = b.marka_rengi.trim();
+    document.documentElement.style.setProperty('--accent', c);
+    document.documentElement.style.setProperty('--accent-dim', c + '22');
+    document.documentElement.style.setProperty('--accent2', c);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = c;
+  }
+  const markEl = document.getElementById('brand-mark');
+  if (markEl) {
+    if (b.logo_url) {
+      markEl.innerHTML = `<img src="${b.logo_url}" alt="${b.firma||''}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:#fff">`;
+      markEl.style.background = '#fff';
+      markEl.style.boxShadow  = 'none';
+    } else if (b.firma) {
+      markEl.textContent = b.firma.charAt(0).toUpperCase();
+    }
+  }
+  const titleEl = document.getElementById('brand-title');
+  const subEl   = document.getElementById('brand-sub');
+  if (titleEl && b.firma) titleEl.textContent = b.firma;
+  if (subEl) subEl.textContent = LANG === 'tr' ? 'Sevkiyat Takip Portalı' : 'Shipment Tracking Portal';
+  if (b.firma) document.title = b.firma + (LANG==='tr' ? ' — Sevkiyat Takip' : ' — Shipment Tracking');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SUPABASE FETCH
+══════════════════════════════════════════════════════════════ */
+async function fetchIsEmri(id){
+  if(!SB_URL || !SB_ANON) return null;
+  const headers = {'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON};
+  async function tryFetch(url){
+    try{
+      const r = await fetch(url, {headers});
+      if(!r.ok) return null;
+      const data = await r.json();
+      if(!Array.isArray(data) || !data.length) return null;
+      const row = data[0];
+      if(typeof row.fotograflar==='string'){ try{ row.fotograflar=JSON.parse(row.fotograflar||'[]'); }catch{ row.fotograflar=[]; } }
+      return row;
+    }catch{ return null; }
+  }
+  const base = `${SB_URL}/rest/v1`;
+  let row = await tryFetch(`${base}/takip_public?id=eq.${id}&select=*`);
+  if(row) return row;
+  row = await tryFetch(`${base}/is_emirleri?id=eq.${id}&select=*`);
+  if(row) return row;
+  try{
+    const r = await fetch(`${base}/rpc/get_takip_by_id`, {
+      method:'POST',
+      headers:{...headers,'Content-Type':'application/json'},
+      body:JSON.stringify({p_id: parseInt(id, 10)})
+    });
+    if(r.ok){
+      const d = await r.json();
+      const row2 = Array.isArray(d)?d[0]:d;
+      if(row2 && row2.id){
+        if(typeof row2.fotograflar==='string'){ try{ row2.fotograflar=JSON.parse(row2.fotograflar||'[]'); }catch{ row2.fotograflar=[]; } }
+        return row2;
+      }
+    }
+  }catch{}
+  return null;
+}
+
+let refreshCounter = 0;
+async function refresh(){
+  if(!isEmriId) return;
+  const data = await fetchIsEmri(isEmriId);
+  if(data){
+    isEmri = data;
+    if(!(refreshCounter++ % 5)) breadcrumbLoaded = false;
+    render();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════════ */
+function showError(title, msg){
+  document.getElementById('loading-state').style.display='none';
+  document.getElementById('main-content').style.display='none';
+  document.getElementById('error-state').style.display='flex';
+  document.getElementById('error-title').textContent = title;
+  document.getElementById('error-msg').textContent = msg;
+}
+
+function parseIdFromUrl(){
+  const p = new URLSearchParams(window.location.search);
+  const tok = p.get('m') || p.get('t');
+  if(!tok) return null;
+  const sid = localStorage.getItem('mtr_token_'+tok);
+  if(sid) return sid;
+  try{
+    const d = atob(tok);
+    const parts = d.split('_');
+    if(parts[0]==='mtr' && parts[1]) return parts[1];
+    if(parts[0]==='ops' && parts[1]) return parts[1];
+  }catch{}
+  if(/^\d+$/.test(tok)) return tok;
+  return null;
+}
+
+async function init(){
+  applyI18n();
+  isEmriId = parseIdFromUrl();
+  if(!isEmriId){
+    showError(LANG==='tr'?'Geçersiz Link':'Invalid Link',
+      LANG==='tr'?'Link parametresi bulunamadı. Lütfen şoförden tekrar link isteyin.':'Link parameter missing. Please request a new link.');
+    return;
+  }
+
+  const data = await fetchIsEmri(isEmriId);
+  if(!data){
+    showError(LANG==='tr'?'Bulunamadı':'Not Found',
+      LANG==='tr'?'Bu takip linki geçersiz veya süresi dolmuş olabilir.':'This tracking link is invalid or expired.');
+    return;
+  }
+
+  isEmri = data;
+  document.getElementById('loading-state').style.display='none';
+  document.getElementById('main-content').style.display='';
+  render();
+
+  if (data.firma_id) { fetchFirmaBranding(data.firma_id).then(b => applyBranding(b)); }
+  maybeGeocodeMissing();
+  refreshTimer = setInterval(refresh, REFRESH_MS);
+  window.addEventListener('online', ()=>{ render(); refresh(); });
+  window.addEventListener('offline', ()=>{ render(); });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refresh(); });
+}
+
+init();
+</script>
+</body>
+</html>

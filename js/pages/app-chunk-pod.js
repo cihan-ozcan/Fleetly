@@ -12,7 +12,7 @@
      • POD onay modalı + final PDF (QR + onay damgası)
      • notify-driver bildirimi
 
-   Hem chunk-06 (in-app sürücü) hem sofor.html (token paylaşım linki)
+   Hem chunk-06 (in-app sürücü) hem /sofor/ (token paylaşım linki)
    tarafından kullanılabilir. Çağıran taraf isEmri objesini ve
    uploadFn (Storage upload yöntemi — auth/anon farklı) sağlar.
    ============================================================================ */
@@ -24,7 +24,7 @@ window.podState = {
   imzaBosMu     : true,
   imzaPenSize   : 2,
   yukleniyor    : false,
-  /** Upload yöntemi: chunk-06 → SDK, sofor.html → REST fetch */
+  /** Upload yöntemi: chunk-06 → SDK, /sofor/ → REST fetch */
   uploadFn      : null,
   /** Update yöntemi: is_emirleri patch */
   patchFn       : null,
@@ -219,7 +219,7 @@ function podImzaPngBlob() {
 }
 
 /* ──────────────────────────────────────────────────────────────────────
-   4) STORAGE UPLOAD (varsayılan SDK ile, sofor.html REST ile override eder)
+   4) STORAGE UPLOAD (varsayılan SDK ile, /sofor/ REST ile override eder)
    ──────────────────────────────────────────────────────────────────── */
 async function _podUploadDefault({ path, blob, contentType }) {
   const sb = (typeof getSB === 'function') ? getSB() : null;
@@ -887,7 +887,7 @@ function _podTrAscii(s) {
 }
 
 /* ──────────────────────────────────────────────────────────────────────
-   sofor.html için ANON UPLOAD HELPER (REST API)
+   /sofor/ için ANON UPLOAD HELPER (REST API)
    ──────────────────────────────────────────────────────────────────── */
 async function podUploadAnon({ path, blob, contentType }) {
   const url = (typeof SB_URL !== 'undefined') ? SB_URL : (window.FILO_CONFIG?.SUPABASE_URL || '');
@@ -1307,7 +1307,7 @@ async function podOnayla() {
       console.warn('Final PDF upload hatası:', uErr);
     }
 
-    // Eğer taslak PDF de yoksa şimdi üret + yükle (sofor.html senaryosu için)
+    // Eğer taslak PDF de yoksa şimdi üret + yükle (/sofor/ senaryosu için)
     if (!e.pod_taslak_url) {
       try {
         const taslak = await podTaslakPdfUret({
@@ -1424,7 +1424,7 @@ async function podOnayBildirimGonder(e, tip) {
         is_emri_id: e.id,
         title     : baslik,
         body      : govde,
-        url       : '/sofor.html'
+        url       : '/sofor/'
       })
     });
   } catch (err) {

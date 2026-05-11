@@ -14,7 +14,7 @@
  * REQUEST:
  *   POST /functions/v1/admin-password-reset
  *   Authorization: Bearer <user_jwt>
- *   { "target_user_id": "uuid", "redirect_to": "https://fleetly.fit/reset-password.html" }
+ *   { "target_user_id": "uuid", "redirect_to": "https://fleetly.fit/sifre-sifirla/" }
  *
  * RESPONSE:
  *   { "ok": true, "recovery_link": "https://...", "sent_email": true }
@@ -65,7 +65,7 @@ serve(async (req) => {
     // 3) Body
     const body = await req.json().catch(() => ({}));
     const targetUserId = String(body.target_user_id || "");
-    const redirectTo   = String(body.redirect_to || (APP_URL + "/reset-password.html"));
+    const redirectTo   = String(body.redirect_to || (APP_URL + "/sifre-sifirla/"));
     if (!targetUserId) return json({ error: "target_user_id required" }, 400);
 
     // 4) Admin client (service_role)

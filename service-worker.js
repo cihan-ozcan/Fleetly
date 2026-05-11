@@ -6,23 +6,23 @@
    - Fontlar / CDN kaynakları → Cache First
 ═══════════════════════════════════════════════════ */
 
-// NOT: Uygulama kabuğu (app.html vb.) değişince CACHE_NAME sürümünü bump'la.
+// NOT: Uygulama kabuğu (/app/ vb.) değişince CACHE_NAME sürümünü bump'la.
 // Aksi halde tarayıcı/PWA eski sayfayı cache'ten yükler ve yeni davet-link
 // düzeltmesi gibi değişiklikler son kullanıcıya ulaşmaz.
 // Phase 1-5 refactor: CSS / JS dosyaları ayrıldı → cache shell'i güncellendi.
 // Sürüm bump: v3 → v4 (eski cache otomatik temizlenir).
-const CACHE_NAME = 'fleetly-v25';
-const CACHE_NAME_CDN = 'fleetly-cdn-v25';
+const CACHE_NAME = 'fleetly-v26';
+const CACHE_NAME_CDN = 'fleetly-cdn-v26';
 
 /* Uygulama kabuğu — her zaman önbellekle */
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/app.html',
-  '/register.html',
-  '/portal.html',
-  '/musteri_takip.html',
-  '/sofor.html',
+  '/app/',
+  '/kayit/',
+  '/portal/',
+  '/takip/',
+  '/sofor/',
   '/config.js',
   '/manifest.json',
 
@@ -116,7 +116,7 @@ self.addEventListener('fetch', event => {
   }
 
   /* HTML (navigate) istekleri → Network-First (yeni sürüm hemen yansısın) */
-  // Önceden "cache-first" idi; ancak tek bir app.html eskidiğinde kullanıcının
+  // Önceden "cache-first" idi; ancak tek bir /app/ eskidiğinde kullanıcının
   // elle cache temizlemesi gerekiyordu (davet linki gibi değişiklikler yansımıyordu).
   // Artık HTML her zaman önce ağdan alınır, ağ yoksa cache'den dönülür.
   const istekHtmlMi =
@@ -132,7 +132,7 @@ self.addEventListener('fetch', event => {
         }
         return response;
       }).catch(() =>
-        caches.match(event.request).then(c => c || caches.match('/app.html') || caches.match('/index.html'))
+        caches.match(event.request).then(c => c || caches.match('/app/') || caches.match('/index.html'))
       )
     );
     return;

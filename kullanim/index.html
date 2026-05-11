@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kullanım Şartları — Fleetly.fit</title>
+<meta name="description" content="Fleetly.fit filo yönetim hizmetinin kullanıcı sözleşmesi ve hizmet koşulları." />
+<meta name="theme-color" content="#FF6B1F" />
+<meta name="robots" content="index,follow" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --navy-dark: #0B1A2F;
+    --navy-500:  #2C5A9E;
+    --accent:    #FF6B1F;
+    --accent-d:  #E55A0F;
+    --bg:        #F4F6FA;
+    --surface:   #FFFFFF;
+    --border:    #E1E7F0;
+    --text:      #0B1A2F;
+    --text-muted:#5B6B82;
+    --warning-bg:#FFF7DD;
+    --warning-bd:#E5A100;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+    color:var(--text);
+    background:var(--bg);
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .topbar{background:var(--navy-dark);color:#fff;padding:14px 24px}
+  .topbar-inner{
+    max-width:920px;margin:0 auto;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:800;font-size:18px}
+  .brand img{width:30px;height:26px;object-fit:contain}
+  .brand-fit{color:var(--accent)}
+  .topbar a.back{color:#9DB1CC;font-size:14px}
+  .topbar a.back:hover{color:#fff}
+
+  .doc{max-width:920px;margin:0 auto;padding:48px 24px 96px}
+  .doc-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:48px 56px;
+    box-shadow:0 2px 6px rgba(11,26,47,0.05);
+  }
+  .doc h1{font-size:32px;font-weight:800;letter-spacing:-0.01em;margin:0 0 6px;color:var(--navy-dark)}
+  .doc .meta{
+    font-size:13px;color:var(--text-muted);
+    margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--border);
+  }
+  .doc h2{
+    font-size:20px;font-weight:700;color:var(--navy-dark);
+    margin:36px 0 12px;letter-spacing:-0.01em;
+    display:flex;align-items:center;gap:10px;
+  }
+  .doc h2 .num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:28px;height:28px;border-radius:8px;
+    background:var(--accent);color:#fff;font-size:13px;font-weight:700;flex:none;
+  }
+  .doc h3{font-size:16px;font-weight:600;margin:20px 0 8px;color:var(--navy-dark)}
+  .doc p{margin:0 0 12px}
+  .doc ul,.doc ol{margin:0 0 16px;padding-left:24px}
+  .doc ul li,.doc ol li{margin:6px 0}
+  .doc strong{color:var(--navy-dark);font-weight:600}
+
+  .toc{
+    background:#EEF4FB;border:1px solid #C7D7EC;
+    border-radius:10px;padding:18px 22px;margin:24px 0 32px;
+  }
+  .toc h4{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy-500)}
+  .toc ul{margin:0;padding-left:18px;font-size:14px}
+  .toc a{color:var(--navy-500)}
+
+  .warning{
+    background:var(--warning-bg);
+    border-left:3px solid var(--warning-bd);
+    padding:14px 18px;border-radius:6px;
+    margin:20px 0;font-size:14.5px;
+  }
+  .info-box{
+    background:#EEF4FB;border-left:3px solid var(--navy-500);
+    padding:14px 18px;border-radius:6px;
+    margin:20px 0;font-size:14.5px;
+  }
+
+  .footer{
+    text-align:center;font-size:13px;color:var(--text-muted);
+    margin-top:32px;padding-top:24px;border-top:1px solid var(--border);
+  }
+  @media (max-width:640px){
+    .doc-card{padding:28px 22px}
+    .doc h1{font-size:26px}
+    .doc h2{font-size:18px}
+  }
+  @media print{
+    body{background:#fff}
+    .topbar{display:none}
+    .doc-card{border:none;box-shadow:none;padding:0}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="index.html" class="brand">
+      <img src="/assets/img/logo2.png" alt="" />
+      <span>FLEETLY<span class="brand-fit">.fit</span></span>
+    </a>
+    <a href="index.html" class="back">← Anasayfa</a>
+  </div>
+</header>
+
+<main class="doc">
+  <article class="doc-card" data-cms-kod="sartlar">
+
+    <h1>Kullanım Şartları ve Hizmet Sözleşmesi</h1>
+    <div class="meta">
+      Yürürlük tarihi: 9 Mayıs 2026 · Son güncelleme: 9 Mayıs 2026
+    </div>
+
+    <p>
+      Bu kullanım şartları ("<strong>Sözleşme</strong>"), <strong>Fleetly.fit</strong>
+      ("Hizmet", "Platform", "biz") ile hizmeti kullanan gerçek ya da tüzel kişi
+      ("<strong>Kullanıcı</strong>", "siz") arasında yapılan elektronik ortamdaki
+      sözleşmedir. Hizmete üye olarak veya hizmeti kullanarak bu Sözleşme'nin
+      tüm hükümlerini kabul etmiş sayılırsınız.
+    </p>
+
+    <div class="toc">
+      <h4>İçindekiler</h4>
+      <ul>
+        <li><a href="#m1">1. Hizmetin Tanımı</a></li>
+        <li><a href="#m2">2. Üyelik ve Hesap</a></li>
+        <li><a href="#m3">3. Abonelik, Ödeme ve İade</a></li>
+        <li><a href="#m4">4. Deneme Süresi</a></li>
+        <li><a href="#m5">5. Kullanıcı Yükümlülükleri</a></li>
+        <li><a href="#m6">6. Yasak Kullanımlar</a></li>
+        <li><a href="#m7">7. Fikri Mülkiyet</a></li>
+        <li><a href="#m8">8. Hizmet Seviyesi (SLA)</a></li>
+        <li><a href="#m9">9. Sorumluluk Sınırlandırması</a></li>
+        <li><a href="#m10">10. Hesap Askıya Alma ve Fesih</a></li>
+        <li><a href="#m11">11. Veri Sahipliği ve Yedekleme</a></li>
+        <li><a href="#m12">12. Değişiklikler</a></li>
+        <li><a href="#m13">13. Uygulanacak Hukuk ve Yargı</a></li>
+        <li><a href="#m14">14. İletişim</a></li>
+      </ul>
+    </div>
+
+    <h2 id="m1"><span class="num">1</span> Hizmetin Tanımı</h2>
+    <p>
+      Fleetly.fit, konteyner ve yük taşımacılığı yapan filolar için bulut tabanlı
+      operasyon yönetim platformudur. Hizmet aşağıdaki özellikleri içerir:
+    </p>
+    <ul>
+      <li>Konteyner iş emri yönetimi (Bekliyor → Yolda → Fabrikada → Teslim akışı)</li>
+      <li>Sürücü mobil uygulaması (Android), canlı GPS takip, dijital teslim makbuzu (POD)</li>
+      <li>Filo (araç/dorse), sürücü, müşteri ve yakıt yönetimi</li>
+      <li>Otomatik harcırah, sefer ve mesafe (OSRM) hesaplaması</li>
+      <li>Push bildirimler, raporlama ve müşteri portalı</li>
+      <li>Çok kullanıcılı ekip yönetimi ve rol bazlı yetkilendirme</li>
+    </ul>
+
+    <h2 id="m2"><span class="num">2</span> Üyelik ve Hesap</h2>
+    <ol>
+      <li>
+        Üyelik için <strong>18 yaşından büyük</strong> olmanız ve hukuken bağlayıcı
+        sözleşme yapma ehliyetine sahip olmanız gerekir.
+      </li>
+      <li>
+        Kayıt sırasında verdiğiniz bilgilerin <strong>doğru ve güncel</strong>
+        olduğunu, eksik veya yanıltıcı bilgi vermediğinizi taahhüt edersiniz.
+      </li>
+      <li>
+        Hesap güvenliği (şifre, oturum tokenı) tamamen sizin sorumluluğunuzdadır.
+        Şifrenizi paylaşmamanızı, güvenli olmayan ağlardan erişmemenizi öneririz.
+      </li>
+      <li>
+        Hesabınızda yetkisiz bir erişim tespit ederseniz <strong>derhal</strong>
+        destek@fleetly.fit adresine bildirmelisiniz.
+      </li>
+      <li>
+        Bir e-posta adresi bir hesap ile eşleşir. Aynı kişiye birden fazla hesap
+        açılması yalnızca farklı tüzel kişilikler için kabul edilir.
+      </li>
+    </ol>
+
+    <h2 id="m3"><span class="num">3</span> Abonelik, Ödeme ve İade</h2>
+    <h3>3.1. Planlar</h3>
+    <ul>
+      <li><strong>Aylık plan:</strong> ₺990/ay (KDV dahil), aylık otomatik yenilenir</li>
+      <li><strong>Yıllık plan:</strong> ₺8.900/yıl (KDV dahil), yıllık otomatik yenilenir</li>
+    </ul>
+    <p>
+      Fiyatlar kayıt tarihinizdeki tarifeye göre belirlenir. Tarife değişikliği
+      mevcut abonelik dönemini etkilemez; yeni dönemde geçerli olur.
+    </p>
+
+    <h3>3.2. Ödeme</h3>
+    <p>
+      Tahsilatlar BDDK lisanslı <strong>iyzico/iyzipay</strong> ödeme altyapısı
+      üzerinden 3D Secure ile gerçekleştirilir. Kart bilgileriniz Fleetly.fit
+      sunucularına iletilmez/saklanmaz.
+    </p>
+
+    <h3>3.3. İade Hakkı (Mesafeli Sözleşmeler Yönetmeliği)</h3>
+    <div class="info-box">
+      <strong>Cayma hakkı:</strong> Tüketici niteliğindeki kullanıcılar (gerçek kişi
+      kullanıcılar), 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli
+      Sözleşmeler Yönetmeliği uyarınca <strong>14 gün içinde</strong> cayma hakkını
+      kullanabilirler.
+    </div>
+    <ul>
+      <li>
+        Cayma talebini destek@fleetly.fit adresine bildirmek yeterlidir; gerekçe
+        belirtmenize gerek yoktur.
+      </li>
+      <li>
+        Cayma halinde ödediğiniz tutar 14 gün içinde aynı ödeme yöntemiyle iade edilir.
+      </li>
+      <li>
+        14 günlük süre dolduktan sonra başlayan dönem ücretleri iade edilmez,
+        ancak <strong>istediğiniz an iptal edebilirsiniz</strong> — abonelik dönem
+        sonuna kadar aktif kalır.
+      </li>
+      <li>
+        Ticari kullanıcılar (tüzel kişiler) için cayma hakkı yasal olarak
+        uygulanmaz; ancak iyi niyet kuralı çerçevesinde 7 gün içindeki iade
+        talepleri değerlendirilir.
+      </li>
+    </ul>
+
+    <h2 id="m4"><span class="num">4</span> Deneme Süresi</h2>
+    <p>
+      Yeni hesaplara <strong>7 gün ücretsiz deneme</strong> sunulur. Deneme süresinde:
+    </p>
+    <ul>
+      <li>Ödeme bilgisi alınmaz, kredi kartı istenmez</li>
+      <li>Tüm özellikler sınırsız kullanılabilir</li>
+      <li>Süre sonunda otomatik tahsilat <strong>YAPILMAZ</strong>; abone olmaya devam etmek için manuel plan seçimi yapılır</li>
+      <li>Süre dolduğunda hesap salt-okunur moda alınır; verileriniz 90 gün boyunca korunur</li>
+    </ul>
+
+    <h2 id="m5"><span class="num">5</span> Kullanıcı Yükümlülükleri</h2>
+    <ol>
+      <li>Türkiye Cumhuriyeti yasalarına uygun şekilde hizmeti kullanmak</li>
+      <li>Sürücülerin ve çalışanların aydınlatılmış rızasını almak (KVKK kapsamı)</li>
+      <li>Telif hakkı, ticari sır veya kişisel veri ihlaline yol açmamak</li>
+      <li>Hizmetin teknik altyapısına saldırı düzenlememek (DDoS, port-scan, vb.)</li>
+      <li>API rate-limit kurallarına uymak (60 istek/dk hesap başına)</li>
+      <li>Verdiğiniz konum ve operasyon verilerinin doğruluğunu sağlamak</li>
+      <li>Faturalandırma için doğru vergi/iletişim bilgilerini güncel tutmak</li>
+    </ol>
+
+    <h2 id="m6"><span class="num">6</span> Yasak Kullanımlar</h2>
+    <p>Aşağıdaki davranışlar kesinlikle yasaktır:</p>
+    <ul>
+      <li>Hizmeti yeniden satmak, alt-lisanslamak veya rakip servis sağlamak</li>
+      <li>Otomatik araçlarla (bot, scraper) toplu veri çekmek</li>
+      <li>Başka kullanıcıların verilerine yetkisiz erişim girişimi (RLS bypass denemesi dahil)</li>
+      <li>Kötü amaçlı yazılım yükleme (XSS, SQL injection, vb. testleri sözleşmesiz şekilde)</li>
+      <li>Sahte/yanıltıcı veri ile sistem dolandırıcılığı (yapay iş emri, sahte yakıt fişi)</li>
+      <li>Hizmet üzerinden spam, taciz, tehdit içerikli iletişim</li>
+      <li>Yasal olmayan yükler için (uyuşturucu, silah, kaçakçılık vb.) hizmetin kullanılması</li>
+    </ul>
+    <div class="warning">
+      <strong><i data-icon="alert-triangle" aria-hidden="true"></i> Önemli:</strong> Yasak kullanım tespit edilirse hesabınız uyarısız
+      askıya alınır, ödenen abonelik ücreti iade edilmez ve gerekli görülürse
+      yetkili mercilere bildirim yapılır.
+    </div>
+
+    <h2 id="m7"><span class="num">7</span> Fikri Mülkiyet</h2>
+    <ul>
+      <li>
+        Fleetly.fit yazılımının, logo, marka, kaynak kodu ve veri tabanı şemasının
+        tüm fikri mülkiyet hakları Fleetly.fit'e aittir.
+      </li>
+      <li>
+        Hizmeti kullanma hakkı; sınırlı, münhasır olmayan ve devredilemeyen bir
+        lisans olarak tanımlanır. Aboneliğiniz aktif olduğu sürece geçerlidir.
+      </li>
+      <li>
+        Sizin tarafınızdan girilen veriler (firma, müşteri, sürücü, iş emri verileri)
+        size aittir; biz yalnızca hizmeti sunmak için gerekli olan haklara sahibiz.
+      </li>
+      <li>
+        Fleetly.fit'in görsel/yazılı içeriklerini izinsiz kopyalamak, ters
+        mühendisliğe tabi tutmak yasaktır.
+      </li>
+    </ul>
+
+    <h2 id="m8"><span class="num">8</span> Hizmet Seviyesi (SLA)</h2>
+    <ul>
+      <li>
+        <strong>Hedef erişilebilirlik:</strong> %99,5 aylık çalışma süresi
+        (planlı bakım pencereleri hariç).
+      </li>
+      <li>
+        Planlı bakımlar en az 24 saat önceden uygulama içi bildirim ile duyurulur.
+      </li>
+      <li>
+        Aylık erişilebilirlik %99'un altına düşerse, etkilenen abonelik
+        gününün <strong>%10 oranında kredi</strong> bir sonraki faturaya yansıtılır.
+      </li>
+      <li>
+        Mücbir sebepler (force majeure), 3. taraf altyapı arızaları
+        (Supabase, FCM, iyzico) SLA dışıdır.
+      </li>
+    </ul>
+
+    <h2 id="m9"><span class="num">9</span> Sorumluluk Sınırlandırması</h2>
+    <p>
+      Yasaların izin verdiği azami ölçüde:
+    </p>
+    <ul>
+      <li>
+        Hizmet "olduğu gibi" sunulur; kesintisiz veya hatasız olacağı garanti
+        edilmez.
+      </li>
+      <li>
+        Dolaylı, arızi, sonuçsal zararlardan (kar kaybı, veri kaybı, iş kaybı,
+        itibar zedelenmesi) Fleetly.fit sorumlu tutulamaz.
+      </li>
+      <li>
+        Toplam sorumluluk tutarı, herhangi bir 12 aylık dönemde, kullanıcının
+        o dönem için ödediği toplam abonelik ücretini aşmaz.
+      </li>
+      <li>
+        Sürücü konum verileri, mesafe hesapları ve harcırah önerileri
+        <strong>tahmini</strong> bilgilerdir; nihai mali kararların sorumluluğu
+        kullanıcıya aittir.
+      </li>
+    </ul>
+
+    <h2 id="m10"><span class="num">10</span> Hesap Askıya Alma ve Fesih</h2>
+    <h3>10.1. Kullanıcının Fesih Hakkı</h3>
+    <p>
+      Hesabınızı dilediğiniz an <em>Ayarlar → Tehlikeli Alan → Hesabımı Sil</em>
+      yolundan kapatabilirsiniz. Hesap kapatma talebi 30 gün boyunca soft-delete
+      olarak tutulur (geri alma süresi); sonra kalıcı olarak silinir.
+    </p>
+
+    <h3>10.2. Fleetly.fit'in Fesih Hakkı</h3>
+    <p>Aşağıdaki hallerde hesabınız uyarısız askıya alınabilir/feshedilebilir:</p>
+    <ul>
+      <li>30 günden uzun ödeme gecikmesi</li>
+      <li>Madde 6'daki yasak kullanımlardan birinin tespiti</li>
+      <li>Mahkeme kararı veya yetkili kurum talebi</li>
+      <li>6 aydan uzun süre hareketsiz kalan deneme/ücretsiz hesaplar</li>
+    </ul>
+
+    <h2 id="m11"><span class="num">11</span> Veri Sahipliği ve Yedekleme</h2>
+    <ul>
+      <li>
+        Kayıt, oluşturma ve düzenleme yoluyla sisteme girdiğiniz tüm operasyonel
+        veriler size aittir.
+      </li>
+      <li>
+        Hesap kapatma anında <em>Ayarlar → Tehlikeli Alan → Verimi İndir</em>
+        butonuyla tüm verinizi JSON formatında indirebilirsiniz (KVKK m. 11
+        veri taşınabilirlik hakkı).
+      </li>
+      <li>
+        Fleetly.fit, veri tabanı yedeklemesini günlük olarak alır; ancak
+        verilerinizin yerel kopyasını da düzenli olarak indirmenizi öneririz.
+      </li>
+      <li>
+        Kazara silinen veriler için 7 günlük "geri al" penceresi mevcuttur
+        (mümkün olan kapsamda).
+      </li>
+    </ul>
+
+    <h2 id="m12"><span class="num">12</span> Değişiklikler</h2>
+    <p>
+      Bu Sözleşme, Fleetly.fit tarafından gerekli görüldüğünde güncellenebilir.
+      <strong>Önemli değişiklikler</strong> en az 30 gün önceden e-posta ile
+      bildirilir. Değişikliği kabul etmeyen kullanıcılar bildirim süresi
+      içinde hesaplarını iptal edebilirler; bildirim sonrası kullanıma devam
+      etmek değişiklikleri kabul anlamına gelir.
+    </p>
+
+    <h2 id="m13"><span class="num">13</span> Uygulanacak Hukuk ve Yargı</h2>
+    <p>
+      Bu Sözleşme Türkiye Cumhuriyeti hukukuna tabidir. Doğacak uyuşmazlıkların
+      çözümünde <strong>İstanbul (Anadolu) mahkemeleri ve icra daireleri</strong>
+      yetkilidir. Tüketici niteliğindeki kullanıcılar, 6502 sayılı Kanun
+      kapsamındaki tüketici hakem heyetlerine de başvurabilirler.
+    </p>
+
+    <h2 id="m14"><span class="num">14</span> İletişim</h2>
+    <ul>
+      <li><strong>Destek:</strong> destek@fleetly.fit</li>
+      <li><strong>Web:</strong> https://fleetly.fit</li>
+      <li>
+        <strong>Aydınlatma metni:</strong>
+        <a href="/kvkk/">/kvkk/</a>
+      </li>
+    </ul>
+
+    <div class="footer">
+      © 2026 Fleetly.fit · Tüm hakları saklıdır ·
+      <a href="/kvkk/">KVKK Aydınlatma Metni</a>
+    </div>
+  </article>
+</main>
+
+<!-- Runtime CMS — admin panelinden güncelleme yapıldığında DB içeriği gösterilir -->
+<script src="/config.js"></script>
+<script src="/js/integrations/cms-loader.js"></script>
+</body>
+</html>

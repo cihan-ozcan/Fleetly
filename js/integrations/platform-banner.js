@@ -1,7 +1,7 @@
 /* =============================================================================
  * platform-banner.js — Platform admin duyuru + bakım modu banner sistemi
  *
- * Ana app (app.html), sofor.html, portal.html üzerinde çalışır.
+ * Ana app (/app/), /sofor/, /portal/ üzerinde çalışır.
  * Login sonrası ve periyodik olarak (5 dk) RPC'leri çağırır.
  * ===========================================================================*/
 

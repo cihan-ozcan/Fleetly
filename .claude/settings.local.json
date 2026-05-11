@@ -3,8 +3,8 @@
     "allow": [
       "Bash(dir \"C:\\\\Users\\\\cihan\\\\Desktop\\\\Fleetly-main\\\\supabase\")",
       "Bash(dir \"C:\\\\Users\\\\cihan\\\\Desktop\")",
-      "Bash(awk '/<div id=\"operasyon-page\">/{f=1; s=NR} f && /^<div id=\"crm-page\">/ {print \"operasyon-page ENDS at line\", NR-1; exit} END{if\\(s\\)print \"started at\", s}' \"C:/Users/cihan/Desktop/Fleetly-main/app.html\")",
-      "Bash(awk '/<div id=\"ops-drawer\"/{f=1} f' \"C:/Users/cihan/Desktop/Fleetly-main/app.html\")",
+      "Bash(awk '/<div id=\"operasyon-page\">/{f=1; s=NR} f && /^<div id=\"crm-page\">/ {print \"operasyon-page ENDS at line\", NR-1; exit} END{if\\(s\\)print \"started at\", s}' \"C:/Users/cihan/Desktop/Fleetly-main/app/\")",
+      "Bash(awk '/<div id=\"ops-drawer\"/{f=1} f' \"C:/Users/cihan/Desktop/Fleetly-main/app/\")",
       "Bash(awk 'NR<=200{print NR\": \"$0}')",
       "Read(//c/Users/cihan/Desktop/**)",
       "Bash(xargs grep *)",

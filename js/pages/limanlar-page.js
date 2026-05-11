@@ -35,7 +35,7 @@
   let _limanEditHandler = null;
 
   // Global limanlar (firma_id IS NULL) artık SADECE platform admin tarafından
-  // düzenlenebilir (admin.html → Sistem Limanları). Firma kullanıcılarına
+  // düzenlenebilir (/admin/ → Sistem Limanları). Firma kullanıcılarına
   // düzenle/sil butonları gösterilmez. Bu kilit hem frontend hem DB seviyesindedir
   // (RPC: liman_guncelle / liman_sil — 2026_05_11b ile sıkılaştırıldı).
   // Manuel test için config.js'te `LIMAN_GLOBAL_EDIT: true` yaparak geçici açabilirsiniz.
@@ -428,7 +428,7 @@
       } else {
         // ── YENİ LİMAN — liman_olustur ──
         // Firma kullanıcıları sadece firma özel liman oluşturabilir (p_global=false).
-        // Global limanlar admin.html → Sistem Limanları üzerinden eklenir.
+        // Global limanlar /admin/ → Sistem Limanları üzerinden eklenir.
         const { error } = await sb.rpc('liman_olustur', {
           p_ad: ad,
           p_tip: tip,

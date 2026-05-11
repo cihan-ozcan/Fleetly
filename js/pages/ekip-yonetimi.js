@@ -5,7 +5,7 @@
  *
  * RPC'ler:
  *   - firma_kullanici_davet_olustur(p_email, p_rol, p_ad, p_notlar)
- *   - firma_kullanici_davet_kabul_et(p_kod)   ← accept-invite.html çağırır
+ *   - firma_kullanici_davet_kabul_et(p_kod)   ← /davet/ çağırır
  *   - firma_kullanici_davet_iptal(p_davet_id)
  *   - firma_kullanici_listele()
  *   - firma_kullanici_rol_degistir(p_user_id, p_yeni_rol)
@@ -114,7 +114,7 @@
       const error = null;
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      const link = row?.davet_link || ('https://fleetly.fit/accept-invite.html?kod=' + row?.davet_kodu);
+      const link = row?.davet_link || ('https://fleetly.fit/davet/?kod=' + row?.davet_kodu);
       _setDavetSuccess(`
         ✓ <strong>${email}</strong> için davet oluşturuldu (${ROL_LABEL[rol]}).
         <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">

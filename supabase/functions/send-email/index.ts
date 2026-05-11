@@ -74,8 +74,8 @@ function shell(opts: { title: string; preview: string; bodyHtml: string }): stri
         <tr><td style="padding:18px 36px 26px;background:#F8FAFD;border-top:1px solid #E1E7F0;font-size:12px;color:#5B6B82;line-height:1.6;">
           Bu e-posta Fleetly.fit operasyon paneli tarafından otomatik gönderilmiştir.<br>
           Sorularınız için: <a href="mailto:${escapeHtml(RESEND_REPLY_TO)}" style="color:#FF6B1F;text-decoration:none;">${escapeHtml(RESEND_REPLY_TO)}</a> ·
-          <a href="${escapeHtml(APP_URL)}/kvkk-aydinlatma.html" style="color:#5B6B82;text-decoration:underline;">KVKK</a> ·
-          <a href="${escapeHtml(APP_URL)}/kullanim-sartlari.html" style="color:#5B6B82;text-decoration:underline;">Kullanım Şartları</a>
+          <a href="${escapeHtml(APP_URL)}/kvkk/" style="color:#5B6B82;text-decoration:underline;">KVKK</a> ·
+          <a href="${escapeHtml(APP_URL)}/kullanim/" style="color:#5B6B82;text-decoration:underline;">Kullanım Şartları</a>
         </td></tr>
       </table>
       <div style="margin-top:14px;font-size:11px;color:#5B6B82;">
@@ -118,7 +118,7 @@ const TEMPLATES: Record<string, TemplateBuilder> = {
   davet: {
     subject: (d) => `${d.firma_ad ?? "Fleetly"} sizi ekibe davet etti`,
     build: (d) => {
-      const link = d.davet_link ?? `${APP_URL}/accept-invite.html?kod=${encodeURIComponent(d.davet_kodu ?? "")}`;
+      const link = d.davet_link ?? `${APP_URL}/davet/?kod=${encodeURIComponent(d.davet_kodu ?? "")}`;
       const rolLabel: Record<string, string> = {
         yonetici: "Yönetici", operasyoncu: "Operasyoncu", muhasebeci: "Muhasebeci"
       };
@@ -173,7 +173,7 @@ Bu davet ${expires} geçerlidir. Bu daveti beklemiyorsanız e-postayı yok sayab
       return `${tip} ${d.kalan_gun ?? ""} gün sonra sona eriyor`;
     },
     build: (d) => {
-      const link = `${APP_URL}/app.html`;
+      const link = `${APP_URL}/app/`;
       const tipBaslik = d.tip === 'deneme' ? 'Deneme süreniz' : 'Aboneliğiniz';
       const kalan = Number(d.kalan_gun ?? 0);
       const renk = kalan <= 1 ? '#DC3838' : '#E5A100';
@@ -220,7 +220,7 @@ Kesintiyi önlemek için planınızı seçin: ${link}
   abonelik_aktif: {
     subject: (d) => `Aboneliğiniz aktif — ${d.firma_ad ?? "Fleetly"}`,
     build: (d) => {
-      const link = `${APP_URL}/app.html`;
+      const link = `${APP_URL}/app/`;
       const html = shell({
         title: `Aboneliğiniz aktif`,
         preview: `Ödemeniz alındı; aboneliğiniz ${d.bitis_pretty ?? ""} tarihine kadar aktif.`,

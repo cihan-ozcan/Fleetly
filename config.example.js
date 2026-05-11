@@ -48,7 +48,7 @@ window.FILO_CONFIG = {
   // ─────────────────────────────────────────────────────────────
   // ONBOARDING VIDEOSU — opsiyonel
   // ─────────────────────────────────────────────────────────────
-  // register.html sol panelinde "3 Dakikada Fleetly" tanıtım videosu.
+  // /kayit/ sol panelinde "3 Dakikada Fleetly" tanıtım videosu.
   // YouTube video ID (örn. 'dQw4w9WgXcQ'). Boş bırakırsanız card gizli.
   // Click-to-load — kullanıcı butona tıklayana kadar YouTube'a istek
   // gitmez (KVKK + sayfa hızı için).

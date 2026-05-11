@@ -13,7 +13,7 @@
  * REQUEST:
  *   POST /functions/v1/admin-impersonate
  *   Authorization: Bearer <admin_jwt>
- *   { "target_user_id": "uuid", "redirect_to": "https://fleetly.fit/app.html?impersonate=1" }
+ *   { "target_user_id": "uuid", "redirect_to": "https://fleetly.fit/app/?impersonate=1" }
  *
  * RESPONSE:
  *   { "ok": true, "magic_link": "https://...", "expires_in": 60 }
@@ -58,7 +58,7 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const targetUserId = String(body.target_user_id || "");
-    const baseRedirect = String(body.redirect_to || (APP_URL + "/app.html"));
+    const baseRedirect = String(body.redirect_to || (APP_URL + "/app/"));
     const neden        = String(body.neden || "");
     if (!targetUserId) return json({ error: "target_user_id required" }, 400);
 

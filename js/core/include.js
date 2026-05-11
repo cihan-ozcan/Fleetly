@@ -24,10 +24,10 @@
 
    Not
    ----
-   app.html'in kendi iç <header>/modal blokları şu an bu mekanizma ile
+   /app/'in kendi iç <header>/modal blokları şu an bu mekanizma ile
    DEĞİŞTİRİLMEDİ. Oradaki inline script timing'ini korumak için,
-   app.html içeriği yerinde bırakıldı. components/app-header.html gibi
-   dosyalar canonical kaynak görevi görür; gelecekte app.html de bu
+   /app/ içeriği yerinde bırakıldı. components/app-header.html gibi
+   dosyalar canonical kaynak görevi görür; gelecekte /app/ de bu
    include mekaniğine bağlanabilir.
    =================================================================== */
 

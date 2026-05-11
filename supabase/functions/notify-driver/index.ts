@@ -1,7 +1,7 @@
 /**
  * Fleetly — notify-driver Edge Function
  *
- * Çağrı örneği (Supabase DB Webhook veya app.html'den):
+ * Çağrı örneği (Supabase DB Webhook veya /app/'den):
  *   POST /functions/v1/notify-driver
  *   Authorization: Bearer <SERVICE_ROLE_KEY>
  *   {
@@ -9,7 +9,7 @@
  *     "is_emri_id": 123,
  *     "title": "🚛 Yeni İş Emri",
  *     "body": "34 ABC 123 — Ambarlı Liman teslimi atandı.",
- *     "url": "/sofor.html?t=...",
+ *     "url": "/sofor/?t=...",
  *     "type": "is_emri"   // (opsiyonel — mobile data payload için: 'is_emri'|'pod'|'mesaj')
  *   }
  *
@@ -380,7 +380,7 @@ serve(async (req: Request) => {
 
   const finalTitle = title ?? "🚛 Yeni İş Emri";
   const finalBody  = msgBody ?? `${row.ad ?? "Şoför"}, yeni bir operasyon atandı.`;
-  const finalUrl   = url ?? "/sofor.html";
+  const finalUrl   = url ?? "/sofor/";
   const finalType  = type ?? "is_emri";
 
   // İki kanalı paralel dene — sonuçları topla

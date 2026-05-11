@@ -1,6 +1,6 @@
 /* ===================================================================
-   app-chunk-05.js — app.html içinden otomatik taşındı (Phase 4, mekanik)
-   Orijinal konum: 12. <script> tag'i (app.html).
+   app-chunk-05.js — /app/ içinden otomatik taşındı (Phase 4, mekanik)
+   Orijinal konum: 12. <script> tag'i (/app/).
    İçerik AYNEN korunur; global değişkenler, fonksiyon isimleri,
    yükleme sırası değiştirilmedi. İleride modülerleştirilecek.
    ================================================================= */
@@ -671,7 +671,7 @@ function _crmPortalUrl(musteriId) {
   if (!currentFirmaId) return null;
   const tok  = btoa('mtp_' + musteriId + '_' + currentFirmaId);
   const base = window.location.href.replace(/[^/]*$/, '');
-  return base + 'portal.html?c=' + tok;
+  return base + '/portal/?c=' + tok;
 }
 function crmPortalLink() {
   if (!_crmDrawerActiveMusteriId) return;
@@ -1776,7 +1776,7 @@ async function opsPushNeredesin(opsId) {
         is_emri_id: e._dbId || e.id,
         title     : '📡 Operasyon: Neredesin?',
         body      : (plaka ? `${plaka} — ` : '') + 'Operasyon ekibi konumunuzu sordu. Lütfen uygulamayı açın.',
-        url       : '/sofor.html'
+        url       : '/sofor/'
       }
     });
     if (error) throw error;
@@ -5442,7 +5442,7 @@ async function opsZorunluFotoHatirlat(opsId) {
         is_emri_id: e._dbId || e.id,
         title     : '📸 Eksik fotoğraf hatırlatması',
         body      : (plaka ? `${plaka} — ` : '') + 'Lütfen şu fotoğrafları çekin: ' + eksikler.join(', '),
-        url       : '/sofor.html'
+        url       : '/sofor/'
       }
     });
     if (error) throw error;
@@ -5531,7 +5531,7 @@ function opsKopyalaLink() {
     showToast('İş emri henüz Supabase\'e kaydedilmedi. Bekleyip tekrar deneyin.', 'error'); return;
   }
   const token = btoa('ops_' + useId + '_' + Date.now());
-  const url   = window.location.origin + '/sofor.html?t=' + token;
+  const url   = window.location.origin + '/sofor/?t=' + token;
   localStorage.setItem('ops_token_' + token, String(useId));
   navigator.clipboard.writeText(url).then(() => showToast('🔗 Şoför linki kopyalandı ✓')).catch(() => {
     prompt('Linki kopyalayın:', url);
@@ -5546,13 +5546,13 @@ function opsPortalLink() {
   if (!currentFirmaId) { showToast('Firma bilgisi yüklenemedi. Sayfayı yenileyin.', 'error'); return; }
   const tok = btoa('mtp_' + e.musteri_id + '_' + currentFirmaId);
   const base = window.location.href.replace(/[^/]*$/, '');
-  const url  = base + 'portal.html?c=' + tok;
+  const url  = base + '/portal/?c=' + tok;
   navigator.clipboard.writeText(url)
     .then(() => showToast('📋 Müşteri portal linki kopyalandı!', 'success'))
     .catch(() => { prompt('Müşteri portal linki:', url); });
 }
 
-/* Tek sevkiyat için canlı takip linki (musteri_takip.html) */
+/* Tek sevkiyat için canlı takip linki (/takip/) */
 function opsTekliTakipLink() {
   if (!opsDrawerActiveId) return;
   const e = opsById(opsDrawerActiveId);
@@ -5563,7 +5563,7 @@ function opsTekliTakipLink() {
   }
   const tok = btoa('mtr_' + dbId + '_' + Date.now());
   const base = window.location.href.replace(/[^/]*$/, '');
-  const url  = base + 'musteri_takip.html?m=' + tok;
+  const url  = base + '/takip/?m=' + tok;
   navigator.clipboard.writeText(url)
     .then(() => showToast('📍 Tekil takip linki kopyalandı!', 'success'))
     .catch(() => { prompt('Müşteri takip linki:', url); });
