@@ -11,8 +11,8 @@
 // düzeltmesi gibi değişiklikler son kullanıcıya ulaşmaz.
 // Phase 1-5 refactor: CSS / JS dosyaları ayrıldı → cache shell'i güncellendi.
 // Sürüm bump: v3 → v4 (eski cache otomatik temizlenir).
-const CACHE_NAME = 'fleetly-v24';
-const CACHE_NAME_CDN = 'fleetly-cdn-v24';
+const CACHE_NAME = 'fleetly-v25';
+const CACHE_NAME_CDN = 'fleetly-cdn-v25';
 
 /* Uygulama kabuğu — her zaman önbellekle */
 const APP_SHELL = [

@@ -77,6 +77,7 @@
   <link rel="stylesheet" href="css/pages/kpi-rapor.css" />
   <link rel="stylesheet" href="css/pages/pod.css" />
   <link rel="stylesheet" href="css/pages/operasyon.css" />
+  <link rel="stylesheet" href="css/pages/guzergahlar.css" />
   <!-- jsPDF (Harcırah bordro PDF — defer ile lazy yüklenir) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js" defer></script>
@@ -655,6 +656,10 @@
       <button class="sidebar__item" onclick="openLimanlarPage();closeSidebar&&closeSidebar()" title="Liman / Fabrika polygonları — sıra tahmini için">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 9v12M15 9v12"/></svg>
         <span class="sidebar__item-label">Limanlar</span>
+      </button>
+      <button class="sidebar__item" onclick="openGuzergahlarPage();closeSidebar&&closeSidebar()" title="Şoför Güzergah Paylaşımları — TIR için doğru bilinen yollar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M6 16V7a4 4 0 0 1 4-4h4M18 8v9a4 4 0 0 1-4 4h-4"/></svg>
+        <span class="sidebar__item-label">Güzergahlar</span>
       </button>
       <button class="sidebar__item" onclick="openFiloPage();closeSidebar&&closeSidebar()" title="Filo Yönetimi (Çekici / Dorse)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17h2l1-3h8l1 3h2"/><path d="M14 17V7H3v10"/><path d="M14 10h5l3 3v4h-3"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
@@ -6775,6 +6780,9 @@ Net                 4.515,00 ₺ net
 <script src="js/pages/surucu-paylasim-page.js"></script>
 <!-- Limanlar / Fabrikalar (Phase 2) — css/db/migrations/2026_05_06l__limanlar_ve_ziyaretler.sql -->
 <script src="js/pages/limanlar-page.js"></script>
+
+<script src="js/integrations/guzergah-api.js"></script>
+<script src="js/pages/guzergahlar-page.js"></script>
 
 <!-- ─────────────────────────────────────────────────────────────────────
      SÜRÜCÜ TAKİBİ — FOTOĞRAF LIGHTBOX MODALI
