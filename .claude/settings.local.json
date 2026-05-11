@@ -39,7 +39,17 @@
       "Bash(node scripts/migrate-emojis.js)",
       "Bash(node scripts/migrate-emojis.js --apply)",
       "Bash(node scripts/migrate-android-icons.js)",
-      "Bash(node scripts/migrate-android-icons.js --apply)"
+      "Bash(node scripts/migrate-android-icons.js --apply)",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/scripts/migrate-emojis.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/scripts/migrate-android-icons.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/admin-shell.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/dashboard.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/firmalar.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/kullanicilar.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/limanlar.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/audit.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/ayarlar.js\")",
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/limanlar-page.js\")"
     ]
   }
 }

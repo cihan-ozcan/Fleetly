@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+  <title>Fleetly — Platform Yönetimi</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
+
+  <!-- CDN libs -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+  <!-- Leaflet (limanlar haritası) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <!-- Gizli config -->
+  <script src="config.js"></script>
+
+  <!-- Fleetly editorial icon set -->
+  <script src="js/integrations/fleetly-icons.js"></script>
+
+  <!-- Stiller -->
+  <link rel="stylesheet" href="css/pages/admin.css">
+</head>
+<body class="adm-body">
+
+  <!-- AUTH BEKLEME EKRANI -->
+  <div id="adm-loading" class="adm-loading">
+    <div class="adm-loading-inner">
+      <div class="adm-brand-mark"></div>
+      <div class="adm-loading-title">Fleetly · Platform</div>
+      <div class="adm-loading-sub">Yetki doğrulanıyor…</div>
+    </div>
+  </div>
+
+  <!-- YETKİSİZ EKRAN -->
+  <div id="adm-unauthorized" class="adm-loading hidden">
+    <div class="adm-loading-inner">
+      <i data-icon="lock" data-icon-size="48" style="color:#a8392c"></i>
+      <div class="adm-loading-title">Erişim Reddedildi</div>
+      <div class="adm-loading-sub">Bu sayfa için platform admin yetkisi gerekiyor.</div>
+      <button class="adm-btn adm-btn-primary" onclick="window.location.href='/'">Ana Sayfa</button>
+    </div>
+  </div>
+
+  <!-- ANA YAPI -->
+  <div id="adm-shell" class="adm-shell hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="adm-sidebar">
+      <div class="adm-sidebar-head">
+        <div class="adm-brand">
+          <span class="adm-brand-mark"></span>
+          <div class="adm-brand-text">
+            <div class="adm-brand-name">Fleetly</div>
+            <div class="adm-brand-sub">Platform Yönetimi</div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="adm-nav">
+        <a class="adm-nav-item active" data-section="dashboard">
+          <i data-icon="chart-bar"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="adm-nav-item" data-section="firmalar">
+          <i data-icon="building"></i>
+          <span>Firmalar</span>
+        </a>
+        <a class="adm-nav-item" data-section="kullanicilar">
+          <i data-icon="users"></i>
+          <span>Kullanıcılar</span>
+        </a>
+        <a class="adm-nav-item" data-section="limanlar">
+          <i data-icon="anchor"></i>
+          <span>Sistem Limanları</span>
+        </a>
+        <a class="adm-nav-item" data-section="abonelikler">
+          <i data-icon="credit-card"></i>
+          <span>Abonelikler</span>
+        </a>
+        <a class="adm-nav-item" data-section="duyurular">
+          <i data-icon="megaphone"></i>
+          <span>Duyurular</span>
+        </a>
+        <a class="adm-nav-item" data-section="sistem">
+          <i data-icon="server"></i>
+          <span>Sistem Sağlık</span>
+        </a>
+        <a class="adm-nav-item" data-section="audit">
+          <i data-icon="history"></i>
+          <span>Denetim Log</span>
+        </a>
+        <a class="adm-nav-item" data-section="ayarlar">
+          <i data-icon="settings"></i>
+          <span>Ayarlar</span>
+        </a>
+      </nav>
+
+      <div class="adm-sidebar-foot">
+        <div class="adm-user-card">
+          <div class="adm-user-info">
+            <div class="adm-user-name" id="adm-user-name">—</div>
+            <div class="adm-user-email" id="adm-user-email">—</div>
+          </div>
+          <button class="adm-icon-btn" onclick="admLogout()" title="Çıkış">
+            <i data-icon="log-out"></i>
+          </button>
+        </div>
+        <a class="adm-sidebar-link" href="/" target="_blank">
+          <i data-icon="external-link"></i> Ana uygulamayı aç
+        </a>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="adm-main">
+      <!-- DASHBOARD -->
+      <section class="adm-section" data-section="dashboard">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Dashboard</h1>
+            <p class="adm-deck">Platform geneli özet ve son 12 ay trendi.</p>
+          </div>
+          <button class="adm-btn adm-btn-ghost" onclick="admDashboardYenile()">
+            <i data-icon="refresh"></i> Yenile
+          </button>
+        </header>
+        <div id="adm-dashboard-content">
+          <div class="adm-empty">Yükleniyor…</div>
+        </div>
+      </section>
+
+      <!-- FIRMALAR -->
+      <section class="adm-section hidden" data-section="firmalar">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Firmalar</h1>
+            <p class="adm-deck">Tüm tenant'ların listesi, abonelik durumu ve aksiyon menüsü.</p>
+          </div>
+          <div class="adm-section-actions">
+            <input id="adm-firma-search" class="adm-input" placeholder="Firma ara…" type="search">
+            <select id="adm-firma-durum" class="adm-input">
+              <option value="">Tümü</option>
+              <option value="aktif">Aktif</option>
+              <option value="suspended">Askıya Alınmış</option>
+              <option value="demo">Demo</option>
+            </select>
+            <button class="adm-btn adm-btn-ghost" onclick="admFirmalarYenile()">
+              <i data-icon="refresh"></i> Yenile
+            </button>
+          </div>
+        </header>
+        <div id="adm-firmalar-content">
+          <div class="adm-empty">Yükleniyor…</div>
+        </div>
+      </section>
+
+      <!-- KULLANICILAR -->
+      <section class="adm-section hidden" data-section="kullanicilar">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Kullanıcılar</h1>
+            <p class="adm-deck">Tüm auth kullanıcıları (ofis + şoför).</p>
+          </div>
+          <div class="adm-section-actions">
+            <input id="adm-user-search" class="adm-input" placeholder="E-posta ile ara…" type="search">
+            <select id="adm-user-tip" class="adm-input">
+              <option value="">Tümü</option>
+              <option value="ofis">Ofis</option>
+              <option value="surucu">Şoför</option>
+            </select>
+            <button class="adm-btn adm-btn-ghost" onclick="admKullanicilarYenile()">
+              <i data-icon="refresh"></i> Yenile
+            </button>
+          </div>
+        </header>
+        <div id="adm-kullanicilar-content">
+          <div class="adm-empty">Yükleniyor…</div>
+        </div>
+      </section>
+
+      <!-- LIMANLAR -->
+      <section class="adm-section hidden" data-section="limanlar">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Sistem Limanları</h1>
+            <p class="adm-deck">Tüm firmalara yansıyan global liman/fabrika polygon'ları.</p>
+          </div>
+          <div class="adm-section-actions">
+            <button id="adm-liman-yeni" class="adm-btn adm-btn-primary">
+              <i data-icon="plus"></i> Yeni Liman
+            </button>
+            <button class="adm-btn adm-btn-ghost" onclick="admLimanlarYenile()">
+              <i data-icon="refresh"></i> Yenile
+            </button>
+          </div>
+        </header>
+        <div id="adm-limanlar-content" class="adm-limanlar-layout">
+          <div class="adm-limanlar-side">
+            <div id="adm-liman-list">
+              <div class="adm-empty">Yükleniyor…</div>
+            </div>
+          </div>
+          <div class="adm-limanlar-map">
+            <div id="adm-liman-map"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABONELİKLER -->
+      <section class="adm-section hidden" data-section="abonelikler">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Abonelikler</h1>
+            <p class="adm-deck">Tüm aktif iyzipay abonelikleri, manuel düzeltme ve iade.</p>
+          </div>
+        </header>
+        <div id="adm-abonelikler-content">
+          <div class="adm-empty adm-empty-soon">
+            <i data-icon="credit-card" data-icon-size="32"></i>
+            <div>Bu bölüm yakında. Aşama 2'de geliştirilecek.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DUYURULAR -->
+      <section class="adm-section hidden" data-section="duyurular">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Duyurular & İletişim</h1>
+            <p class="adm-deck">Tüm firmalara in-app banner, push veya email gönder.</p>
+          </div>
+        </header>
+        <div id="adm-duyurular-content">
+          <div class="adm-empty adm-empty-soon">
+            <i data-icon="megaphone" data-icon-size="32"></i>
+            <div>Bu bölüm yakında. Aşama 3'te geliştirilecek.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SISTEM SAĞLIK -->
+      <section class="adm-section hidden" data-section="sistem">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Sistem Sağlık</h1>
+            <p class="adm-deck">Cron job durumu, app errors, DB istatistikleri.</p>
+          </div>
+        </header>
+        <div id="adm-sistem-content">
+          <div class="adm-empty adm-empty-soon">
+            <i data-icon="server" data-icon-size="32"></i>
+            <div>Bu bölüm yakında. Aşama 4'te geliştirilecek.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- AUDIT LOG -->
+      <section class="adm-section hidden" data-section="audit">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Denetim Log</h1>
+            <p class="adm-deck">Tüm platform admin işlemleri.</p>
+          </div>
+          <div class="adm-section-actions">
+            <input id="adm-audit-search" class="adm-input" placeholder="Özet ara…" type="search">
+            <select id="adm-audit-tip" class="adm-input">
+              <option value="">Tüm tipler</option>
+              <option value="liman_olustur">Liman oluştur</option>
+              <option value="liman_guncelle">Liman güncelle</option>
+              <option value="liman_sil">Liman sil</option>
+              <option value="firma_suspend">Firma suspend</option>
+              <option value="firma_reaktive">Firma reaktive</option>
+              <option value="abonelik_uzat">Abonelik uzat</option>
+              <option value="platform_admin_ekle">Admin ekle</option>
+              <option value="platform_admin_kaldir">Admin kaldır</option>
+            </select>
+            <button class="adm-btn adm-btn-ghost" onclick="admAuditYenile()">
+              <i data-icon="refresh"></i> Yenile
+            </button>
+          </div>
+        </header>
+        <div id="adm-audit-content">
+          <div class="adm-empty">Yükleniyor…</div>
+        </div>
+      </section>
+
+      <!-- AYARLAR -->
+      <section class="adm-section hidden" data-section="ayarlar">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Ayarlar</h1>
+            <p class="adm-deck">Platform admin listesi ve sistem ayarları.</p>
+          </div>
+        </header>
+        <div id="adm-ayarlar-content">
+          <div class="adm-empty">Yükleniyor…</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- TOAST -->
+  <div id="adm-toast" class="adm-toast"></div>
+
+  <!-- MODAL -->
+  <div id="adm-modal" class="adm-modal-bg hidden" onclick="if(event.target===this)admModalKapat()">
+    <div class="adm-modal">
+      <header class="adm-modal-head">
+        <h2 id="adm-modal-title">Başlık</h2>
+        <button class="adm-icon-btn" onclick="admModalKapat()">
+          <i data-icon="x"></i>
+        </button>
+      </header>
+      <div id="adm-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Admin modülleri -->
+  <script src="js/pages/admin/admin-shell.js"></script>
+  <script src="js/pages/admin/dashboard.js"></script>
+  <script src="js/pages/admin/firmalar.js"></script>
+  <script src="js/pages/admin/kullanicilar.js"></script>
+  <script src="js/pages/admin/limanlar.js"></script>
+  <script src="js/pages/admin/audit.js"></script>
+  <script src="js/pages/admin/ayarlar.js"></script>
+</body>
+</html>

@@ -15,6 +15,7 @@ Disallow: /portal.html
 Disallow: /sofor.html
 Disallow: /sofor-profil.html
 Disallow: /musteri_takip.html
+Disallow: /admin.html
 
 # Backup ve geliştirme klasörleri
 Disallow: /_backup_pre_refactor/

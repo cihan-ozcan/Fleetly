@@ -3783,11 +3783,13 @@ Net                 4.515,00 ₺ net
           <option value="depo">📦 Depo</option>
           <option value="servis">🔧 Servis</option>
         </select>
-        <label>Görünürlük</label>
-        <select id="liman-form-firma-ozel">
-          <option value="false">🌐 Genel (tüm firmalar görür)</option>
-          <option value="true">🔒 Sadece firmamız</option>
-        </select>
+        <!-- Görünürlük artık seçilemez — firma özel sabit.
+             Global limanlar admin paneli üzerinden yönetilir. -->
+        <input type="hidden" id="liman-form-firma-ozel" value="true">
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.04);border-radius:4px;font-size:11px;color:var(--text-2);margin-bottom:4px;">
+          <i data-icon="lock" aria-hidden="true"></i>
+          Sadece firmanız için. Sistem limanları (Marport, Kumport, vb.) tüm firmalar tarafından otomatik görülür.
+        </div>
         <label>Notlar (opsiyonel)</label>
         <textarea id="liman-form-notlar" rows="2" placeholder="Çalışma saatleri, kapı no..."></textarea>
         <div class="row">

@@ -34,13 +34,13 @@
   // Mevcut polygon'un Leaflet.Edit handler'ı (düzenleme aktifken)
   let _limanEditHandler = null;
 
-  // Global liman düzenleme/silme butonlarını gizlemek için config flag.
-  // Manuel ayar tamamlandıktan sonra config.js'te `LIMAN_GLOBAL_EDIT: false` yaparak
-  // pre-seed limanlarda düzenle/sil butonları gizlenir.
-  // Yine de RPC seviyesinde yetkili kullanıcı sql ile düzenleyebilir.
-  // Default: true (manuel ayar fazı). config.js'te explicit `false` verilmezse açık.
+  // Global limanlar (firma_id IS NULL) artık SADECE platform admin tarafından
+  // düzenlenebilir (admin.html → Sistem Limanları). Firma kullanıcılarına
+  // düzenle/sil butonları gösterilmez. Bu kilit hem frontend hem DB seviyesindedir
+  // (RPC: liman_guncelle / liman_sil — 2026_05_11b ile sıkılaştırıldı).
+  // Manuel test için config.js'te `LIMAN_GLOBAL_EDIT: true` yaparak geçici açabilirsiniz.
   const _LIMAN_GLOBAL_EDIT_AKTIF =
-    !window.FILO_CONFIG || window.FILO_CONFIG.LIMAN_GLOBAL_EDIT !== false;
+    !!(window.FILO_CONFIG && window.FILO_CONFIG.LIMAN_GLOBAL_EDIT === true);
 
   const _LIMAN_RENK = {
     'liman':    '#1a73e8',
@@ -423,11 +423,13 @@
         if (typeof showToast === 'function') showToast(`✓ "${ad}" güncellendi`, 'success');
       } else {
         // ── YENİ LİMAN — liman_olustur ──
+        // Firma kullanıcıları sadece firma özel liman oluşturabilir (p_global=false).
+        // Global limanlar admin.html → Sistem Limanları üzerinden eklenir.
         const { error } = await sb.rpc('liman_olustur', {
           p_ad: ad,
           p_tip: tip,
           p_poligon_geojson: geoStr,
-          p_firma_ozel: ozel,
+          p_global: false,
           p_notlar: notlar
         });
         if (error) throw error;
