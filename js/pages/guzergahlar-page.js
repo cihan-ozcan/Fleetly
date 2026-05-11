@@ -4,11 +4,13 @@
  * Backend: 2026_05_11j/k migration'ları.
  * Bağımlılık: GuzergahAPI (js/integrations/guzergah-api.js), Leaflet (mevcut).
  *
- * Akış:
- *   • openGuzergahlarPage() — DOM dinamik kurulur (ilk açılışta)
- *   • Sol: durum filter + liste
- *   • Sağ: seçili güzergahın haritası + aksiyon butonları
- *   • Alt: top kullanılanlar + top paylaşanlar widget
+ * Sayfa pattern'i limanlar-page ile aynı:
+ *   • <div id="guzergahlar-page" class="page-fullscreen hidden">  (fullscreen overlay)
+ *   • openGuzergahlarPage() → classList.remove('hidden')
+ *   • closeGuzergahlarPage() → classList.add('hidden')
+ *
+ * DOM JS tarafında dinamik üretilir (ilk açılışta tek sefer); CSS şu dosyada:
+ *   css/pages/guzergahlar.css
  * =========================================================================== */
 
 (function () {
@@ -23,32 +25,25 @@
   let _filter = 'aktif';
 
   // ────────── POLYLINE DECODER (Google encoded) ──────────
-  // Spec: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
   function decodePolyline(encoded) {
     if (!encoded) return [];
     const points = [];
-    let index = 0;
-    const len = encoded.length;
-    let lat = 0, lng = 0;
+    let index = 0, len = encoded.length, lat = 0, lng = 0;
     while (index < len) {
       let b, shift = 0, result = 0;
       do {
         if (index >= len) return points;
         b = encoded.charCodeAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
+        result |= (b & 0x1f) << shift; shift += 5;
       } while (b >= 0x20);
-      const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
-      lat += dlat;
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
       shift = 0; result = 0;
       do {
         if (index >= len) return points;
         b = encoded.charCodeAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
+        result |= (b & 0x1f) << shift; shift += 5;
       } while (b >= 0x20);
-      const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
-      lng += dlng;
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
       points.push([lat / 1e5, lng / 1e5]);
     }
     return points;
@@ -59,67 +54,72 @@
   function ensureDom() {
     let page = document.getElementById(PAGE_ID);
     if (page) return page;
-    page = document.createElement('section');
+    page = document.createElement('div');
     page.id = PAGE_ID;
-    page.className = 'app-page';
-    page.style.display = 'none';
+    page.className = 'page-fullscreen hidden';
     page.innerHTML = `
-      <header class="page-header">
-        <h1>📍 Paylaşılan Güzergahlar</h1>
-        <p class="page-subtitle">Şoförlerin paylaştığı güzergahları yönet — TIR için doğru bilinen yollar.</p>
+      <header id="guzergahlar-topbar">
+        <button id="guzergahlar-close" class="icon-btn" title="Kapat" aria-label="Kapat">✕</button>
+        <div>
+          <h1>📍 Paylaşılan Güzergahlar</h1>
+          <div class="sub">Şoförlerin paylaştığı yollar — onay/red ve istatistik.</div>
+        </div>
+        <span class="grow"></span>
+        <button id="guzergahlar-refresh" class="btn-secondary">Yenile</button>
       </header>
 
-      <div class="guzergah-stats" id="guzergah-stats">
-        <div class="guzergah-stat"><span class="num" data-stat="paylasim">—</span><span>Aktif paylaşım</span></div>
-        <div class="guzergah-stat"><span class="num" data-stat="kullanim">—</span><span>Toplam kullanım</span></div>
-        <div class="guzergah-stat"><span class="num" data-stat="begeni">—</span><span>Toplam beğeni</span></div>
-      </div>
-
-      <div class="guzergah-layout">
-        <aside class="guzergah-side">
-          <div class="guzergah-filters">
-            <select id="guzergah-durum-filter">
-              <option value="aktif">Aktif</option>
-              <option value="reddedildi">Reddedilmiş</option>
-            </select>
-            <input id="guzergah-hedef-arama" type="search" placeholder="Hedef ara…" />
-            <button id="guzergah-refresh" class="btn-secondary">Yenile</button>
-          </div>
-          <div class="guzergah-list" id="guzergah-list">
-            <div class="muted">Yükleniyor…</div>
-          </div>
-        </aside>
-        <main class="guzergah-main">
-          <div id="guzergah-map" class="guzergah-map"></div>
-          <div class="guzergah-detail" id="guzergah-detail">
-            <div class="muted">Sol listeden bir güzergah seç.</div>
-          </div>
-        </main>
-      </div>
-
-      <section class="guzergah-toplistler">
-        <div class="card">
-          <h3>🏆 En çok kullanılan</h3>
-          <ol id="guzergah-top-kullanilan" class="topliste"><li class="muted">—</li></ol>
+      <div id="guzergahlar-body">
+        <div class="guzergah-stats">
+          <div class="guzergah-stat"><span class="num" data-stat="paylasim">—</span><span>Aktif paylaşım</span></div>
+          <div class="guzergah-stat"><span class="num" data-stat="kullanim">—</span><span>Toplam kullanım</span></div>
+          <div class="guzergah-stat"><span class="num" data-stat="begeni">—</span><span>Toplam beğeni</span></div>
         </div>
-        <div class="card">
-          <h3>👤 En çok paylaşan</h3>
-          <ol id="guzergah-top-paylasan" class="topliste"><li class="muted">—</li></ol>
+
+        <div class="guzergah-layout">
+          <aside class="guzergah-side">
+            <div class="guzergah-filters">
+              <select id="guzergah-durum-filter">
+                <option value="aktif">Aktif</option>
+                <option value="reddedildi">Reddedilmiş</option>
+              </select>
+              <input id="guzergah-hedef-arama" type="search" placeholder="Hedef ara…" />
+            </div>
+            <div class="guzergah-list" id="guzergah-list">
+              <div class="muted">Yükleniyor…</div>
+            </div>
+          </aside>
+          <main class="guzergah-main">
+            <div id="guzergah-map" class="guzergah-map"></div>
+            <div class="guzergah-detail" id="guzergah-detail">
+              <div class="muted">Sol listeden bir güzergah seç.</div>
+            </div>
+          </main>
         </div>
-      </section>
+
+        <section class="guzergah-toplistler">
+          <div class="card">
+            <h3>🏆 En çok kullanılan</h3>
+            <ol id="guzergah-top-kullanilan" class="topliste"><li class="muted">—</li></ol>
+          </div>
+          <div class="card">
+            <h3>👤 En çok paylaşan</h3>
+            <ol id="guzergah-top-paylasan" class="topliste"><li class="muted">—</li></ol>
+          </div>
+        </section>
+      </div>
     `;
-    const main = document.querySelector('main') || document.body;
-    main.appendChild(page);
+    document.body.appendChild(page);
     bindEvents(page);
     return page;
   }
 
   function bindEvents(page) {
+    page.querySelector('#guzergahlar-close').addEventListener('click', closeGuzergahlarPage);
+    page.querySelector('#guzergahlar-refresh').addEventListener('click', refresh);
     page.querySelector('#guzergah-durum-filter').addEventListener('change', (e) => {
       _filter = e.target.value;
       refresh();
     });
-    page.querySelector('#guzergah-refresh').addEventListener('click', refresh);
     page.querySelector('#guzergah-hedef-arama').addEventListener('input', renderList);
     page.querySelector('#guzergah-list').addEventListener('click', (e) => {
       const row = e.target.closest('[data-id]');
@@ -153,6 +153,9 @@
     } catch (err) {
       console.error('[guzergah] list:', err);
       _items = [];
+      page.querySelector('#guzergah-list').innerHTML =
+        '<div class="muted">Liste yüklenemedi. Migration uygulandı mı? (' +
+        (err.message || err) + ')</div>';
     }
     renderList();
     refreshStats();
@@ -200,7 +203,7 @@
       return;
     }
     const g = _selected;
-    const km = g.mesafe_km != null ? g.mesafe_km.toFixed(0) + ' km' : '—';
+    const km = g.mesafe_km != null ? Number(g.mesafe_km).toFixed(0) + ' km' : '—';
     const dk = g.tahmini_sure_dk
       ? (g.tahmini_sure_dk >= 60
         ? Math.floor(g.tahmini_sure_dk / 60) + ' sa ' + (g.tahmini_sure_dk % 60) + ' dk'
@@ -231,7 +234,7 @@
 
   function ensureMap() {
     if (_map) return _map;
-    if (typeof L === 'undefined') return null;  // Leaflet henüz yüklenmemiş
+    if (typeof L === 'undefined') return null;
     _map = L.map('guzergah-map').setView([41.0082, 28.9784], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
@@ -327,18 +330,22 @@
   // ────────── PUBLIC ──────────
 
   function openGuzergahlarPage() {
-    ensureDom();
-    // Diğer page'leri gizle, bu sayfayı göster
-    document.querySelectorAll('.app-page').forEach(p => p.style.display = 'none');
-    const page = document.getElementById(PAGE_ID);
-    page.style.display = 'block';
+    const page = ensureDom();
+    page.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
     refresh();
-    // Map'i pencere açıldıktan sonra init et (containerin boyutu olsun)
     setTimeout(() => {
       const map = ensureMap();
       if (map) map.invalidateSize();
     }, 100);
   }
 
+  function closeGuzergahlarPage() {
+    const page = document.getElementById(PAGE_ID);
+    if (page) page.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
   window.openGuzergahlarPage = openGuzergahlarPage;
+  window.closeGuzergahlarPage = closeGuzergahlarPage;
 })();
