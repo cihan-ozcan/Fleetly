@@ -65,7 +65,10 @@
     const page = document.getElementById('limanlar-page');
     if (!page) return;
     page.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    // NOT: body.style.overflow='hidden' kaldırıldı — kullanıcı X'siz başka
+    // sayfaya geçince body scroll kilitli kalıp diğer sayfaları (operasyon
+    // kanban gibi) etkiliyordu. Page zaten position:fixed overlay olduğu
+    // için body kilidi görsel olarak gereksiz.
     _limanInitMap();
     await limanlarYukle();
   }
@@ -73,6 +76,7 @@
   function closeLimanlarPage() {
     const page = document.getElementById('limanlar-page');
     if (page) page.classList.add('hidden');
+    // Yedek: eski sürümlerden kilitli kalmış olabilir, her durumda boşalt
     document.body.style.overflow = '';
     if (_limanCizimAktif) _limanCizimIptal();
     document.getElementById('limanlar-form-panel')?.classList.add('hidden');

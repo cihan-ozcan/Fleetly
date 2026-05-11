@@ -1089,7 +1089,21 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Kolon içinde scroll — kart sayısı arttığında "Teslim Edildi" gibi
+     yoğun kolonlar viewport'tan taşıyordu, sayfa scroll'u çalışmıyordu.
+     Her kolon kendi içinde kaydırılır; ince scrollbar ile minimum görsel. */
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  padding-right: 4px;
 }
+#operasyon-page .ops-kanban__list::-webkit-scrollbar { width: 6px; }
+#operasyon-page .ops-kanban__list::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 99px;
+}
+#operasyon-page .ops-kanban__list::-webkit-scrollbar-track { background: transparent; }
 #operasyon-page .ops-kanban__add {
   margin-top: 8px;
   display: flex;
