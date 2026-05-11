@@ -94,9 +94,13 @@
           <i data-icon="megaphone"></i>
           <span>Duyurular</span>
         </a>
+        <a class="adm-nav-item" data-section="eposta">
+          <i data-icon="mail"></i>
+          <span>Toplu E-posta</span>
+        </a>
         <a class="adm-nav-item" data-section="sistem">
           <i data-icon="server"></i>
-          <span>Sistem Sağlık</span>
+          <span>Sistem & CMS</span>
         </a>
         <a class="adm-nav-item" data-section="audit">
           <i data-icon="history"></i>
@@ -275,31 +279,49 @@
       <section class="adm-section hidden" data-section="duyurular">
         <header class="adm-section-head">
           <div>
-            <h1 class="adm-title">Duyurular & İletişim</h1>
-            <p class="adm-deck">Tüm firmalara in-app banner, push veya email gönder.</p>
+            <h1 class="adm-title">Duyurular</h1>
+            <p class="adm-deck">Tüm firmalara veya seçili hedefe in-app banner yayınla.</p>
+          </div>
+          <div class="adm-section-actions">
+            <button id="adm-duyuru-yeni" class="adm-btn adm-btn-primary">
+              <i data-icon="plus"></i> Yeni Duyuru
+            </button>
+            <button class="adm-btn adm-btn-ghost" onclick="admDuyurularYenile()">
+              <i data-icon="refresh"></i> Yenile
+            </button>
           </div>
         </header>
         <div id="adm-duyurular-content">
-          <div class="adm-empty adm-empty-soon">
-            <i data-icon="megaphone" data-icon-size="32"></i>
-            <div>Bu bölüm yakında. Aşama 3'te geliştirilecek.</div>
-          </div>
+          <div class="adm-empty">Yükleniyor…</div>
         </div>
       </section>
 
-      <!-- SISTEM SAĞLIK -->
+      <!-- TOPLU E-POSTA -->
+      <section class="adm-section hidden" data-section="eposta">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Toplu E-posta</h1>
+            <p class="adm-deck">Filtreli alıcı listesine HTML kampanyası gönder.</p>
+          </div>
+        </header>
+        <div id="adm-eposta-content">
+          <div class="adm-empty">Yükleniyor…</div>
+        </div>
+      </section>
+
+      <!-- SİSTEM & CMS -->
       <section class="adm-section hidden" data-section="sistem">
         <header class="adm-section-head">
           <div>
-            <h1 class="adm-title">Sistem Sağlık</h1>
-            <p class="adm-deck">Cron job durumu, app errors, DB istatistikleri.</p>
+            <h1 class="adm-title">Sistem & CMS</h1>
+            <p class="adm-deck">Bakım modu, CMS içerikleri (KVKK / Şartlar / SSS) ve genel sistem ayarları.</p>
           </div>
+          <button class="adm-btn adm-btn-ghost" onclick="AdmModule_sistem.init()">
+            <i data-icon="refresh"></i> Yenile
+          </button>
         </header>
         <div id="adm-sistem-content">
-          <div class="adm-empty adm-empty-soon">
-            <i data-icon="server" data-icon-size="32"></i>
-            <div>Bu bölüm yakında. Aşama 4'te geliştirilecek.</div>
-          </div>
+          <div class="adm-empty">Yükleniyor…</div>
         </div>
       </section>
 
@@ -373,6 +395,9 @@
   <script src="js/pages/admin/suruculer.js"></script>
   <script src="js/pages/admin/limanlar.js"></script>
   <script src="js/pages/admin/abonelikler.js"></script>
+  <script src="js/pages/admin/duyurular.js"></script>
+  <script src="js/pages/admin/eposta.js"></script>
+  <script src="js/pages/admin/sistem.js"></script>
   <script src="js/pages/admin/audit.js"></script>
   <script src="js/pages/admin/ayarlar.js"></script>
 </body>
