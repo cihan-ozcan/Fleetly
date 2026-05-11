@@ -11,6 +11,9 @@
     storageBuckets: [],
     tabloBoyutlari: [],
     emailGonderim: [],
+    edgeFnOzet: [],
+    edgeFnLog: [],
+    edgeFnFiltre: null,
   };
 
   function fmtBytes(n) {
@@ -28,18 +31,22 @@
     if (!el) return;
     el.innerHTML = '<div class="adm-empty">Yükleniyor…</div>';
     try {
-      const [stats, jobs, buckets, tablolar, emails] = await Promise.all([
+      const [stats, jobs, buckets, tablolar, emails, fnOzet, fnLog] = await Promise.all([
         T.rpc('admin_db_stats').catch(() => null),
         T.rpc('admin_cron_joblari').catch(() => []),
         T.rpc('admin_storage_bucket_kullanim').catch(() => []),
         T.rpc('admin_db_tablo_boyutlari', { p_limit: 15 }).catch(() => []),
         T.rpc('admin_email_gonderim_son', { p_limit: 30 }).catch(() => []),
+        T.rpc('admin_edge_function_ozet', { p_son_gun: 7 }).catch(() => []),
+        T.rpc('admin_edge_function_log', { p_fn_name: _state.edgeFnFiltre, p_limit: 30 }).catch(() => []),
       ]);
       _state.dbStats = stats;
       _state.cronJobs = jobs || [];
       _state.storageBuckets = buckets || [];
       _state.tabloBoyutlari = tablolar || [];
       _state.emailGonderim = emails || [];
+      _state.edgeFnOzet = fnOzet || [];
+      _state.edgeFnLog = fnLog || [];
       render();
     } catch (err) {
       el.innerHTML = '<div class="adm-empty">Yüklenemedi: ' + T.esc(err.message) + '</div>';
@@ -82,7 +89,106 @@
 
       <!-- EMAIL GÖNDERIM -->
       ${renderEmailGonderim()}
+
+      <!-- EDGE FUNCTION ÖZET -->
+      ${renderEdgeFnOzet()}
+
+      <!-- EDGE FUNCTION LOG -->
+      ${renderEdgeFnLog()}
     `;
+  }
+
+  function renderEdgeFnOzet() {
+    const T = window.AdmAPI;
+    if (_state.edgeFnOzet.length === 0) {
+      return `
+        <div class="adm-subhead">
+          <h2><span class="adm-num-prefix">§ 05</span>Edge Function Çağrıları (7g)</h2>
+        </div>
+        <div class="adm-empty">Çağrı kaydı yok.</div>
+      `;
+    }
+    return `
+      <div class="adm-subhead">
+        <h2><span class="adm-num-prefix">§ 05</span>Edge Function Çağrıları (7g)</h2>
+        <span class="meta">${_state.edgeFnOzet.length} fonksiyon</span>
+      </div>
+      <table class="adm-table" style="margin-bottom:30px;">
+        <thead><tr>
+          <th>Fonksiyon</th>
+          <th class="r">Toplam</th>
+          <th class="r">Başarılı</th>
+          <th class="r">Hata</th>
+          <th class="r">Ort. Süre</th>
+          <th>Son Çağrı</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+          ${_state.edgeFnOzet.map(f => {
+            const successRate = f.toplam > 0 ? (Number(f.basarili) / Number(f.toplam) * 100).toFixed(0) : 0;
+            return `
+              <tr>
+                <td><strong style="font-family:'Geist Mono',monospace;font-size:12px;">${T.esc(f.fn_name)}</strong></td>
+                <td class="r">${T.fmt.num(f.toplam)}</td>
+                <td class="r pos">${T.fmt.num(f.basarili)} <span class="muted">(${successRate}%)</span></td>
+                <td class="r ${f.basarisiz > 0 ? 'neg' : 'muted'}">${T.fmt.num(f.basarisiz)}</td>
+                <td class="r">${f.ortalama_ms ? Number(f.ortalama_ms).toFixed(0) + ' ms' : '—'}</td>
+                <td><span style="font-family:'Geist Mono',monospace;font-size:11px;">${T.esc(T.fmt.relative(f.son_cagri))}</span></td>
+                <td>
+                  <button class="adm-btn adm-btn-ghost adm-btn-small" onclick="AdmModule_saglik.fnFiltrele('${T.esc(f.fn_name)}')">
+                    <i data-icon="filter"></i> Filtrele
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function renderEdgeFnLog() {
+    const T = window.AdmAPI;
+    if (_state.edgeFnLog.length === 0) {
+      return '';
+    }
+    const baslik = _state.edgeFnFiltre
+      ? `Son 30 Çağrı — <code>${T.esc(_state.edgeFnFiltre)}</code>`
+      : 'Son 30 Edge Function Çağrısı (tümü)';
+    return `
+      <div class="adm-subhead">
+        <h2><span class="adm-num-prefix">§ 06</span>${baslik}</h2>
+        ${_state.edgeFnFiltre
+          ? `<button class="adm-btn adm-btn-ghost adm-btn-small" onclick="AdmModule_saglik.fnFiltrele(null)"><i data-icon="x"></i> Filtreyi Kaldır</button>`
+          : '<span class="meta">Hepsi</span>'}
+      </div>
+      <table class="adm-table">
+        <thead><tr>
+          <th>Tarih</th>
+          <th>Fonksiyon</th>
+          <th class="r">HTTP</th>
+          <th>Yanıt</th>
+        </tr></thead>
+        <tbody>
+          ${_state.edgeFnLog.map(e => {
+            const ok = e.status_code && e.status_code >= 200 && e.status_code < 300;
+            return `
+              <tr>
+                <td><span style="font-family:'Geist Mono',monospace;font-size:11px;">${T.esc(T.fmt.dateTime(e.created_at))}</span></td>
+                <td><span style="font-family:'Geist Mono',monospace;font-size:11.5px;">${T.esc(e.fn_name)}</span></td>
+                <td class="r"><span class="${ok ? 'pos' : e.status_code ? 'neg' : 'muted'}">${e.status_code || '—'}</span></td>
+                <td><span style="font-size:10.5px;font-family:'Geist Mono',monospace;color:var(--adm-ink-3);">${T.esc((e.response_preview || e.body_preview || '').slice(0, 100))}</span></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function fnFiltrele(name) {
+    _state.edgeFnFiltre = name || null;
+    fetch();
   }
 
   function renderCron() {
@@ -302,7 +408,7 @@
   window.AdmModule_saglik = {
     init: fetch,
     onShow: fetch,
-    cronDetay,
+    cronDetay, fnFiltrele,
   };
   window.admSaglikYenile = fetch;
 })();

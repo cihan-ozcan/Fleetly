@@ -110,6 +110,10 @@
           <i data-icon="activity"></i>
           <span>Sistem Sağlık</span>
         </a>
+        <a class="adm-nav-item" data-section="istatistik">
+          <i data-icon="chart-pie"></i>
+          <span>İstatistik</span>
+        </a>
         <a class="adm-nav-item" data-section="audit">
           <i data-icon="history"></i>
           <span>Denetim Log</span>
@@ -390,6 +394,30 @@
         </div>
       </section>
 
+      <!-- İSTATİSTİK / ANALYTICS -->
+      <section class="adm-section hidden" data-section="istatistik">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">İstatistik</h1>
+            <p class="adm-deck">Platform admin aktivitesi, işlem dağılımı ve impersonation kayıtları.</p>
+          </div>
+          <div class="adm-section-actions">
+            <select id="adm-ist-songun" class="adm-input">
+              <option value="7">Son 7 gün</option>
+              <option value="30" selected>Son 30 gün</option>
+              <option value="90">Son 90 gün</option>
+              <option value="365">Son 365 gün</option>
+            </select>
+            <button class="adm-btn adm-btn-ghost" onclick="admIstatistikYenile()">
+              <i data-icon="refresh"></i> Yenile
+            </button>
+          </div>
+        </header>
+        <div id="adm-istatistik-content">
+          <div class="adm-empty">Yükleniyor…</div>
+        </div>
+      </section>
+
       <!-- AUDIT LOG -->
       <section class="adm-section hidden" data-section="audit">
         <header class="adm-section-head">
@@ -465,6 +493,7 @@
   <script src="js/pages/admin/sistem.js"></script>
   <script src="js/pages/admin/hatalar.js"></script>
   <script src="js/pages/admin/saglik.js"></script>
+  <script src="js/pages/admin/istatistik.js"></script>
   <script src="js/pages/admin/audit.js"></script>
   <script src="js/pages/admin/ayarlar.js"></script>
 </body>

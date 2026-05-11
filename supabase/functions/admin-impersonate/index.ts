@@ -58,9 +58,16 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const targetUserId = String(body.target_user_id || "");
-    const redirectTo   = String(body.redirect_to || (APP_URL + "/app.html?impersonate=1"));
+    const baseRedirect = String(body.redirect_to || (APP_URL + "/app.html"));
     const neden        = String(body.neden || "");
     if (!targetUserId) return json({ error: "target_user_id required" }, 400);
+
+    // redirect_to'ya impersonate=1 + admin_email parametrelerini ekle.
+    // Frontend (impersonate-banner.js) bu parametreyi görünce banner gösterir.
+    const redirectUrl = new URL(baseRedirect);
+    redirectUrl.searchParams.set("impersonate", "1");
+    if (adminUser.email) redirectUrl.searchParams.set("admin_email", adminUser.email);
+    const redirectTo = redirectUrl.toString();
 
     if (targetUserId === adminUser.id) {
       return json({ error: "Kendi hesabınıza impersonate olamaz" }, 400);
