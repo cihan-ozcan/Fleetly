@@ -50,6 +50,25 @@
     };
   }
 
+  // Edge Function çağrısı
+  async function edgeFn(name, body) {
+    const url = CFG.SUPABASE_URL + '/functions/v1/' + name;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type'  : 'application/json',
+        'apikey'        : CFG.SUPABASE_ANON,
+        'Authorization' : 'Bearer ' + (_accessToken || CFG.SUPABASE_ANON),
+      },
+      body: JSON.stringify(body || {}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || ('Edge fn ' + name + ' HTTP ' + res.status));
+    }
+    return data;
+  }
+
   // ── Toast ──
   let _toastTimer = null;
   function toast(msg, tip) {
@@ -203,7 +222,7 @@
 
   // ── Public API (modüllerin kullanacağı) ──
   window.AdmAPI = {
-    sb, rpc, sbUrl, sbHeaders,
+    sb, rpc, sbUrl, sbHeaders, edgeFn,
     user: () => _user,
     toast,
     modalAc, modalKapat,

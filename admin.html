@@ -78,6 +78,10 @@
           <i data-icon="users"></i>
           <span>Kullanıcılar</span>
         </a>
+        <a class="adm-nav-item" data-section="suruculer">
+          <i data-icon="driver"></i>
+          <span>Şoförler</span>
+        </a>
         <a class="adm-nav-item" data-section="limanlar">
           <i data-icon="anchor"></i>
           <span>Sistem Limanları</span>
@@ -187,6 +191,31 @@
         </div>
       </section>
 
+      <!-- SÜRÜCÜLER -->
+      <section class="adm-section hidden" data-section="suruculer">
+        <header class="adm-section-head">
+          <div>
+            <h1 class="adm-title">Şoförler</h1>
+            <p class="adm-deck">Tüm firmaların şoförleri, belge durumu ve hesap bilgileri.</p>
+          </div>
+          <div class="adm-section-actions">
+            <input id="adm-surucu-search" class="adm-input" placeholder="Ad / Telefon / Firma ara…" type="search">
+            <select id="adm-surucu-durum" class="adm-input">
+              <option value="">Tümü</option>
+              <option value="aktif">Aktif</option>
+              <option value="pasif">Pasif</option>
+              <option value="davet_bekliyor">Davet Bekliyor</option>
+            </select>
+            <button class="adm-btn adm-btn-ghost" onclick="admSuruculerYenile()">
+              <i data-icon="refresh"></i> Yenile
+            </button>
+          </div>
+        </header>
+        <div id="adm-suruculer-content">
+          <div class="adm-empty">Yükleniyor…</div>
+        </div>
+      </section>
+
       <!-- LIMANLAR -->
       <section class="adm-section hidden" data-section="limanlar">
         <header class="adm-section-head">
@@ -220,14 +249,25 @@
         <header class="adm-section-head">
           <div>
             <h1 class="adm-title">Abonelikler</h1>
-            <p class="adm-deck">Tüm aktif iyzipay abonelikleri, manuel düzeltme ve iade.</p>
+            <p class="adm-deck">Tüm firma abonelikleri — manuel uzat, iptal, iade kaydı.</p>
+          </div>
+          <div class="adm-section-actions">
+            <input id="adm-ab-search" class="adm-input" placeholder="Firma / e-posta ara…" type="search">
+            <select id="adm-ab-durum" class="adm-input">
+              <option value="">Tüm Durumlar</option>
+              <option value="aktif">Aktif</option>
+              <option value="deneme">Deneme</option>
+              <option value="odeme_bekliyor">Ödeme Bekliyor</option>
+              <option value="suresi_dolmus">Süresi Dolmuş</option>
+              <option value="iptal">İptal</option>
+            </select>
+            <button class="adm-btn adm-btn-ghost" onclick="admAboneliklerYenile()">
+              <i data-icon="refresh"></i> Yenile
+            </button>
           </div>
         </header>
         <div id="adm-abonelikler-content">
-          <div class="adm-empty adm-empty-soon">
-            <i data-icon="credit-card" data-icon-size="32"></i>
-            <div>Bu bölüm yakında. Aşama 2'de geliştirilecek.</div>
-          </div>
+          <div class="adm-empty">Yükleniyor…</div>
         </div>
       </section>
 
@@ -330,7 +370,9 @@
   <script src="js/pages/admin/dashboard.js"></script>
   <script src="js/pages/admin/firmalar.js"></script>
   <script src="js/pages/admin/kullanicilar.js"></script>
+  <script src="js/pages/admin/suruculer.js"></script>
   <script src="js/pages/admin/limanlar.js"></script>
+  <script src="js/pages/admin/abonelikler.js"></script>
   <script src="js/pages/admin/audit.js"></script>
   <script src="js/pages/admin/ayarlar.js"></script>
 </body>
