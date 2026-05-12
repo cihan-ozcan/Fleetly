@@ -2228,25 +2228,45 @@ function opsRenderTable() {
    geçişinde DB trigger şoföre yüksek öncelikli push atar.
    ============================================================================ */
 async function opsEvrakHazirIsaretle(id) {
+  console.info('[evrak-hazir] RPC çağırılıyor — isaretle id=' + id);
   const sb = (typeof getSB === 'function') ? getSB() : null;
   if (!sb) { alert('Supabase istemcisi yok'); return; }
   const { data, error } = await sb.rpc('is_emri_evrak_hazir_isaretle', { p_id: id });
-  if (error) { alert('İşaretleme başarısız: ' + (error.message || error)); return; }
+  console.info('[evrak-hazir] RPC sonuç:', { data, error });
+  if (error) {
+    console.error('[evrak-hazir] HATA:', error);
+    alert('İşaretleme başarısız:\n\n' +
+      'Kod: ' + (error.code || '-') + '\n' +
+      'Mesaj: ' + (error.message || error) + '\n' +
+      'Detay: ' + (error.details || error.hint || '-'));
+    return;
+  }
   // Local state güncelle — UI hemen yansır (realtime de ayrıca yansıtır)
   const e = (typeof opsById === 'function') ? opsById(id) : null;
   if (e) {
     e.evrak_hazir_at = data || new Date().toISOString();
-    try { _opsDrawerRender(e); } catch (_) {}
-    try { opsRenderKanban(); } catch (_) {}
+    console.info('[evrak-hazir] local state güncellendi:', e.evrak_hazir_at);
+    try { _opsDrawerRender(e); } catch (err) { console.warn('[evrak-hazir] drawer render:', err); }
+    try { opsRenderKanban(); } catch (err) { console.warn('[evrak-hazir] kanban render:', err); }
+  } else {
+    console.warn('[evrak-hazir] opsById ile e bulunamadı, id=' + id);
   }
 }
 
 async function opsEvrakHazirGeriAl(id) {
   if (!window.confirm('Evrak hazır durumunu geri almak istiyor musunuz? Şoför "Yola Çıktım" diyemez hâle gelir.')) return;
+  console.info('[evrak-hazir] RPC çağırılıyor — geri al id=' + id);
   const sb = (typeof getSB === 'function') ? getSB() : null;
   if (!sb) { alert('Supabase istemcisi yok'); return; }
   const { error } = await sb.rpc('is_emri_evrak_hazir_geri_al', { p_id: id });
-  if (error) { alert('Geri alma başarısız: ' + (error.message || error)); return; }
+  console.info('[evrak-hazir] RPC sonuç:', { error });
+  if (error) {
+    console.error('[evrak-hazir] HATA:', error);
+    alert('Geri alma başarısız:\n\n' +
+      'Kod: ' + (error.code || '-') + '\n' +
+      'Mesaj: ' + (error.message || error));
+    return;
+  }
   const e = (typeof opsById === 'function') ? opsById(id) : null;
   if (e) {
     e.evrak_hazir_at = null;
@@ -4210,10 +4230,20 @@ function openOpsDrawer(id) {
   // çağrılarda biri sync hata atarsa diğerleri atlanıyor, "Yükleniyor..."
   // kalıyor (F5'siz tekrar açılışta gözlenen sorun). Widget'ları drawer
   // dışından da garanti tetikliyoruz; her biri kendi içinde idempotent.
+  //
+  // NOT: async fonksiyonlar için try/catch yetmez — Promise reject'i .catch
+  // ile yakalamak gerek. Promise.resolve(...) sarmasi sync hatayi da yakalar.
   setTimeout(() => {
-    try { opsBenzerSeferleriYukle();   } catch (err) { console.warn('[ops-drawer] benzer seferleri:', err); }
-    try { opsDrawerMasrafYukle();      } catch (err) { console.warn('[ops-drawer] masraflar:', err); }
-    try { _opsDrawerHarcirahRender(e); } catch (err) { console.warn('[ops-drawer] harcirah:', err); }
+    console.info('[ops-drawer] defansif tetik — iş #' + (e._dbId || e.id));
+    Promise.resolve().then(() => opsBenzerSeferleriYukle())
+      .then(() => console.info('[ops-drawer] ✓ benzer seferleri'))
+      .catch(err => console.warn('[ops-drawer] ✗ benzer seferleri:', err?.message || err));
+    Promise.resolve().then(() => opsDrawerMasrafYukle())
+      .then(() => console.info('[ops-drawer] ✓ masraflar'))
+      .catch(err => console.warn('[ops-drawer] ✗ masraflar:', err?.message || err));
+    Promise.resolve().then(() => _opsDrawerHarcirahRender(e))
+      .then(() => console.info('[ops-drawer] ✓ harcirah'))
+      .catch(err => console.warn('[ops-drawer] ✗ harcirah:', err?.message || err));
   }, 120);
 }
 
