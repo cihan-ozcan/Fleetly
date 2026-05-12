@@ -91,14 +91,28 @@ begin
     raise exception 'URL eşleştirme array uzunlukları uyuşmuyor';
   end if;
 
+  -- Sadece "normal function" (prokind = 'f') tara — aggregate ('a'), window ('w'),
+  -- procedure ('p') üzerinde pg_get_functiondef çağrısı "is an aggregate function"
+  -- benzeri hatalarla patlıyor. Her def çağrısını ayrıca exception ile sarıyoruz
+  -- ki SECURITY DEFINER veya özel bir fonksiyon dump edilemese bile loop devam etsin.
   for r in
     select n.nspname, p.proname, p.oid as poid
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and pg_get_functiondef(p.oid) ~ '\.html'
+      and p.prokind = 'f'
   loop
-    v_def := pg_get_functiondef(r.poid);
+    begin
+      v_def := pg_get_functiondef(r.poid);
+    exception when others then
+      raise notice 'Skip (def alınamadı): %.% — %', r.nspname, r.proname, sqlerrm;
+      continue;
+    end;
+
+    if position('.html' in v_def) = 0 then
+      continue;
+    end if;
+
     v_changed := false;
     for i in 1..array_length(v_olds, 1) loop
       if position(v_olds[i] in v_def) > 0 then
@@ -106,10 +120,15 @@ begin
         v_changed := true;
       end if;
     end loop;
+
     if v_changed then
-      execute v_def;
-      v_count := v_count + 1;
-      raise notice 'URL güncellendi: %.%', r.nspname, r.proname;
+      begin
+        execute v_def;
+        v_count := v_count + 1;
+        raise notice 'URL güncellendi: %.%', r.nspname, r.proname;
+      exception when others then
+        raise notice 'Skip (execute hata): %.% — %', r.nspname, r.proname, sqlerrm;
+      end;
     end if;
   end loop;
 

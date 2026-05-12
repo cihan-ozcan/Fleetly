@@ -2221,6 +2221,44 @@ function opsRenderTable() {
 }
 
 /* ── KANBAN ──────────────────────────────────────────────── */
+/* ── Evrak Hazır işaretle / geri al (2026_05_12a) ────────────────────────────
+   Operasyon evrak hazırlığını tamamlayınca "Hazır İşaretle" butonuna basar.
+   RPC is_emri_evrak_hazir_isaretle/geri_al → DB tarafında yetki kontrolü
+   _user_firma_yetkili_ids (sahip/yonetici/operasyoncu/muhasebeci). NULL→dolu
+   geçişinde DB trigger şoföre yüksek öncelikli push atar.
+   ============================================================================ */
+async function opsEvrakHazirIsaretle(id) {
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb) { alert('Supabase istemcisi yok'); return; }
+  const { data, error } = await sb.rpc('is_emri_evrak_hazir_isaretle', { p_id: id });
+  if (error) { alert('İşaretleme başarısız: ' + (error.message || error)); return; }
+  // Local state güncelle — UI hemen yansır (realtime de ayrıca yansıtır)
+  const e = (typeof opsById === 'function') ? opsById(id) : null;
+  if (e) {
+    e.evrak_hazir_at = data || new Date().toISOString();
+    try { _opsDrawerRender(e); } catch (_) {}
+    try { opsRenderKanban(); } catch (_) {}
+  }
+}
+
+async function opsEvrakHazirGeriAl(id) {
+  if (!window.confirm('Evrak hazır durumunu geri almak istiyor musunuz? Şoför "Yola Çıktım" diyemez hâle gelir.')) return;
+  const sb = (typeof getSB === 'function') ? getSB() : null;
+  if (!sb) { alert('Supabase istemcisi yok'); return; }
+  const { error } = await sb.rpc('is_emri_evrak_hazir_geri_al', { p_id: id });
+  if (error) { alert('Geri alma başarısız: ' + (error.message || error)); return; }
+  const e = (typeof opsById === 'function') ? opsById(id) : null;
+  if (e) {
+    e.evrak_hazir_at = null;
+    try { _opsDrawerRender(e); } catch (_) {}
+    try { opsRenderKanban(); } catch (_) {}
+  }
+}
+
+// onclick="opsEvrakHazirIsaretle(...)" → global erişim gerek
+window.opsEvrakHazirIsaretle = opsEvrakHazirIsaretle;
+window.opsEvrakHazirGeriAl   = opsEvrakHazirGeriAl;
+
 function opsRenderKanban() {
   const kolonlar = [
     { key: 'Bekliyor',     label: 'Bekliyor',  status: 'bekliyor',  hint: 'sürücü/araç ata',     emptyMsg: 'Yeni iş emri açıldığında burada belirir.', emptyCta: '+ İş emri ekle' },
@@ -2334,6 +2372,19 @@ function opsBuildContainerCard(e, status) {
     hizPill = `<span class="ops-pill ops-pill--mono" title="${fresh?'Anlık':'Son ölçülen'} hız" style="background:${color};color:#fff;border-color:transparent;">🚗 ${v}</span>`;
   }
 
+  // Evrak hazır pill (Kanban — 2026_05_12a). Sadece Bekliyor durumunda anlamlı,
+  // diğer fazlarda zaten yola çıkılmış demektir.
+  let evrakPill = '';
+  if (status === 'bekliyor') {
+    if (e.evrak_hazir_at) {
+      const _at = new Date(e.evrak_hazir_at).toLocaleString('tr-TR',
+        { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      evrakPill = `<span class="ops-pill ops-pill--success" title="Evrak hazır · ${escAttr(_at)}">✅ Hazır</span>`;
+    } else {
+      evrakPill = `<span class="ops-pill ops-pill--warning" title="Operasyon evrak hazırlığını tamamlamalı (şoför yola çıkamaz)">⏳ Hazırlanıyor</span>`;
+    }
+  }
+
   // Gümrük tel mühür pill (Kanban kartında — 2026_05_06b)
   let gumrukPill = '';
   if (e.gumruk_muhur_gerekli) {
@@ -2419,6 +2470,7 @@ function opsBuildContainerCard(e, status) {
         ${dorsePill}
         ${tipPill}
         ${dbPill}
+        ${evrakPill}
         ${gumrukPill}
         ${hizPill}
         ${podBadge}
@@ -4278,11 +4330,35 @@ function _opsDrawerRender(e) {
   const planAlimHtml   = _planFmt(e.planlanan_zaman)         || '<span style="color:var(--muted)">— belirtilmemiş —</span>';
   const planTeslimHtml = _planFmt(e.planlanan_teslim_zamani) || '<span style="color:var(--muted)">— belirtilmemiş —</span>';
 
+  // Evrak Durumu (2026_05_12a) — yalnızca aktif iş emirlerinde anlamlı
+  // (Teslim Edildi / İptal'de göstermeye gerek yok).
+  let evrakDurumHtml = '';
+  if (e.durum && e.durum !== 'Teslim Edildi' && e.durum !== 'İptal') {
+    const _eId = e._dbId ?? e.id;
+    if (e.evrak_hazir_at) {
+      const _at = new Date(e.evrak_hazir_at).toLocaleString('tr-TR',
+        { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      const _geriAlBtn = (e.durum === 'Bekliyor')
+        ? `<button onclick="opsEvrakHazirGeriAl(${_eId})" title="Hazır durumunu geri al"
+             style="background:transparent;border:1px solid rgba(148,163,184,.4);color:var(--muted);border-radius:5px;padding:2px 8px;font-size:10.5px;font-weight:600;cursor:pointer;margin-left:8px;">↩ Geri Al</button>`
+        : '';
+      evrakDurumHtml = `<span style="color:#22c55e;font-weight:600;">✅ Hazır</span>
+        <small style="color:var(--muted);margin-left:6px;">${_at}</small>${_geriAlBtn}`;
+    } else {
+      evrakDurumHtml = `<span style="color:#f59e0b;font-weight:600;">⏳ Hazırlanıyor</span>
+        <button onclick="opsEvrakHazirIsaretle(${_eId})" title="Evraklar tamamlandı, şoför yola çıkabilir"
+          style="background:#22c55e;color:#fff;border:none;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;margin-left:8px;">✓ Hazır İşaretle</button>`;
+    }
+  } else {
+    evrakDurumHtml = `<span style="color:var(--muted);">—</span>`;
+  }
+
   document.getElementById('ops-drawer-detaylar').innerHTML = [
     ['Müşteri',           e.musteri_adi || '—'],
     ['Araç',              e.arac_plaka  || '—'],
     ['Sürücü',            (e.sofor || '—') + soforBagliHtml],
     ['Sürücü Tel',        e.sofor_tel   || '—'],
+    ['📋 Evrak Durumu',   evrakDurumHtml],
     ['📥 Planlanan Alım',  planAlimHtml],
     ['🏭 Müşteri Randevusu', planTeslimHtml],
     ['Konteyner No(lar)', kontNoDisplay + kontNoEditBtn],
