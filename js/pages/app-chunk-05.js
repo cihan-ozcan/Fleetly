@@ -737,7 +737,40 @@ function opsLoadLocal() {
   if (typeof updateOpsStatCard === 'function') updateOpsStatCard();
 }
 function opsSaveLocal() {
-  localStorage.setItem('fleetly_is_emirleri', JSON.stringify(isEmirleri));
+  try {
+    localStorage.setItem('fleetly_is_emirleri', JSON.stringify(isEmirleri));
+    return;
+  } catch (err) {
+    const isQuota = err && (err.name === 'QuotaExceededError'
+                            || err.code === 22
+                            || /quota/i.test(err.message || ''));
+    if (!isQuota) throw err;
+    console.warn('[ops] localStorage kota dolu — eski tamamlanmış işler kırpılıyor');
+    // 1. deneme: aktif işler + son 50 tamamlanmış/iptal kayıt
+    const aktif    = isEmirleri.filter(e => e.durum !== 'Teslim Edildi' && e.durum !== 'İptal');
+    const kapali   = isEmirleri
+      .filter(e => e.durum === 'Teslim Edildi' || e.durum === 'İptal')
+      .sort((a,b) => (b._dbId || b.id || 0) - (a._dbId || a.id || 0))
+      .slice(0, 50);
+    const kirpilmis = aktif.concat(kapali);
+    try {
+      localStorage.setItem('fleetly_is_emirleri', JSON.stringify(kirpilmis));
+      isEmirleri = kirpilmis;
+      console.info('[ops] kırpıldı: ' + kirpilmis.length + ' kayıt tutuldu');
+      return;
+    } catch (err2) {
+      console.warn('[ops] kırpma sonrası da kota dolu, sadece aktif işler');
+      try {
+        localStorage.setItem('fleetly_is_emirleri', JSON.stringify(aktif));
+        isEmirleri = aktif;
+        return;
+      } catch (err3) {
+        console.error('[ops] localStorage tamamen kullanılamaz — cache atlanıyor', err3);
+        // Son çare: cache'i sil, bu seferki kayıt bellekte kalsın
+        try { localStorage.removeItem('fleetly_is_emirleri'); } catch (_) {}
+      }
+    }
+  }
 }
 // Geriye dönük uyumluluk
 function opsLoad()  { opsLoadLocal(); }
