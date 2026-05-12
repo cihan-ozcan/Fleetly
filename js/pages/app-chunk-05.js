@@ -842,6 +842,8 @@ function opsRowToObj(r) {
     gumruk_muhur_no     : r.gumruk_muhur_no     || null,
     gumruk_muhur_zaman  : r.gumruk_muhur_zaman  || null,
     gumruk_muhur_foto   : r.gumruk_muhur_foto   || null,
+    /* ── Evrak hazır (2026_05_12a) — NULL = Hazırlanıyor, dolu = Hazır ── */
+    evrak_hazir_at      : r.evrak_hazir_at      || null,
   };
 }
 
