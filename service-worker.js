@@ -11,8 +11,10 @@
 // düzeltmesi gibi değişiklikler son kullanıcıya ulaşmaz.
 // Phase 1-5 refactor: CSS / JS dosyaları ayrıldı → cache shell'i güncellendi.
 // Sürüm bump: v3 → v4 (eski cache otomatik temizlenir).
-const CACHE_NAME = 'fleetly-v28';
-const CACHE_NAME_CDN = 'fleetly-cdn-v28';
+// 2026_05_13: Web GPS güzergah revizyonu — Douglas-Peucker + time chunking
+// (app-chunk-05.js + app-chunk-surucu-takip.js). SW cache bump zorunlu.
+const CACHE_NAME = 'fleetly-v29';
+const CACHE_NAME_CDN = 'fleetly-cdn-v29';
 
 /* Uygulama kabuğu — her zaman önbellekle */
 const APP_SHELL = [

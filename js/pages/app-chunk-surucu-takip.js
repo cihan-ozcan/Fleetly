@@ -278,9 +278,16 @@ function surucuTakipRenderHarita() {
 
   // 24 saat iz — Google Maps stili (beyaz halo + canlı mavi)
   // Önce ham GPS izi (dashed, "yükleniyor" sinyali), sonra OSRM snap ile değiştirilir.
+  //
+  // 2026_05_13: TIME CHUNKING — şoför bir noktada uzun süre bekledikten (örn.
+  // limanda 3-4 saat) sonra yola devam ederse, ham polyline tek bir uzun düz
+  // çizgi gibi görünüyordu. Şimdi 5dk+ boşluk varsa iz parçalara bölünür,
+  // her parça ayrı OSRM match'e gönderilir; aralar SEPARATE polyline olarak
+  // gösterilmez (yapay "düz çizgi" elenir).
   if (_ST.konumIzleri.length) {
     const rawLatlngs = _ST.konumIzleri.map(p => [p.lat, p.lng]);
     const drawTrail = (pts, dashed) => {
+      if (!pts || pts.length < 2) return null;
       const halo = L.polyline(pts, {
         color: '#ffffff', weight: 9, opacity: 0.95,
         lineCap: 'round', lineJoin: 'round'
@@ -293,13 +300,29 @@ function surucuTakipRenderHarita() {
       _ST.layers.push(halo, main);
       return main;
     };
-    drawTrail(rawLatlngs, true);
+
+    // 1) Ham izi parça parça çiz (dashed) — kullanıcı "yükleniyor" sinyali görsün.
+    let chunks = [_ST.konumIzleri];
+    if (typeof _opsTimeChunks === 'function') {
+      chunks = _opsTimeChunks(_ST.konumIzleri, 5 * 60 * 1000);
+      console.info('[surucu-takip] iz chunk sayısı:', chunks.length, '/ toplam:', _ST.konumIzleri.length, 'nokta');
+    }
+    chunks.forEach(chunk => {
+      const pts = chunk.map(p => [p.lat, p.lng]);
+      drawTrail(pts, true);
+    });
     bounds.push(...rawLatlngs);
 
-    // OSRM snap (chunk-05.js'te tanımlı _opsOsrmMatch global olarak erişilebilir)
+    // 2) Her chunk için ayrı OSRM snap — başarılı olanları snapped (solid),
+    //    başarısızları dashed (zaten yukarıda çizildi) bırak.
     if (typeof _opsOsrmMatch === 'function') {
-      _opsOsrmMatch(rawLatlngs).then(snapped => {
-        if (!snapped) return;
+      const snapPromises = chunks
+        .filter(c => c.length >= 2)
+        .map(chunk => {
+          const pts = chunk.map(p => [p.lat, p.lng]);
+          return _opsOsrmMatch(pts).then(snapped => ({ original: pts, snapped }));
+        });
+      Promise.all(snapPromises).then(results => {
         // Önceki polyline'ları çıkar (marker'lar kalsın)
         _ST.layers = _ST.layers.filter(layer => {
           if (layer instanceof L.Polyline) {
@@ -308,7 +331,12 @@ function surucuTakipRenderHarita() {
           }
           return true;
         });
-        drawTrail(snapped, false);
+        // Her chunk için snapped varsa onu, yoksa ham noktalarını çiz
+        results.forEach(({ original, snapped }) => {
+          drawTrail(snapped || original, !snapped);
+        });
+      }).catch(err => {
+        console.warn('[surucu-takip] OSRM snap zinciri hata:', err);
       });
     }
   }

@@ -57,7 +57,8 @@
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/saglik.js\")",
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/pages/admin/istatistik.js\")",
       "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/integrations/impersonate-banner.js\")",
-      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/integrations/cms-loader.js\")"
+      "Bash(node --check \"C:/Users/cihan/Desktop/Fleetly-main/js/integrations/cms-loader.js\")",
+      "Bash(grep -E \"\\\\.js$|\\\\.html$\")"
     ]
   }
 }

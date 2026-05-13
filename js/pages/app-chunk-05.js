@@ -1439,12 +1439,21 @@ async function _opsOsrmMatch(latlngs) {
     console.info('[OSRM] çok az nokta, snap atlandı:', latlngs?.length);
     return null;
   }
+  // 2026_05_13: Step decimation → Douglas-Peucker (köşeleri/dönüşleri korur).
+  // Saha şikayeti: 5 saatlik yolculuk × 5sn interval = 3600 sample → eski step
+  // decimation 40. noktayı alıyordu, liman içi yan asfalt dolaşmaları siliniyordu.
+  // DP tolerance=10m: ana yol detayını korurken gürültüyü temizler.
   const max = 90;
   let pts = latlngs;
   if (pts.length > max) {
-    const step = Math.ceil(pts.length / max);
-    pts = latlngs.filter((_, i) => i % step === 0 || i === latlngs.length - 1);
+    pts = _opsDouglasPeucker(pts, 10);  // 10m tolerance
   }
+  // Hâlâ fazlaysa yedek step decimation (OSRM 100 limit garantisi)
+  if (pts.length > max) {
+    const step = Math.ceil(pts.length / max);
+    pts = pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
+  }
+  console.info('[OSRM] decimation: ' + latlngs.length + ' → ' + pts.length + ' nokta');
 
   // MATCH dene — radius=50m (kentsel GPS hatası 30-50m arası)
   const matched = await _opsOsrmTryMatch(pts, 50);
@@ -1502,6 +1511,80 @@ function _opsHaversineM(la1, ln1, la2, ln2) {
   const a = Math.sin(dLa / 2) ** 2 +
             Math.cos(r(la1)) * Math.cos(r(la2)) * Math.sin(dLn / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * 2026_05_13: Douglas-Peucker polyline sadeleştirme — JS port.
+ * Step decimation (her N. noktayı al) yerine bu kullanılır — köşeleri/dönüşleri
+ * korurken doğrusal kısımdaki noktaları siler. Saha şikayeti: liman içi yan
+ * asfalt dolaşmaları step decimation ile siliniyordu.
+ *
+ * Tolerance metre cinsinden — küçük tolerance = az nokta silinir (detaylı),
+ * büyük tolerance = çok nokta silinir (sade). 10m tipik kentsel kullanım.
+ *
+ * Algoritma: nokta-doğru perpendicular mesafe Heron formülü ile.
+ * O(N log N) ortalama, O(N²) en kötü.
+ */
+function _opsDouglasPeucker(points, tolerance) {
+  if (!points || points.length <= 2) return points ? points.slice() : [];
+  if (tolerance <= 0) return points.slice();
+
+  // Nokta p'nin a-b segment'ine perpendicular mesafesi (metre)
+  const distToSegment = (p, a, b) => {
+    const A = _opsHaversineM(p[0], p[1], a[0], a[1]);
+    const B = _opsHaversineM(p[0], p[1], b[0], b[1]);
+    const C = _opsHaversineM(a[0], a[1], b[0], b[1]);
+    if (C < 1e-6) return A;  // a == b edge case
+    // Heron formula → üçgen alanı → yükseklik
+    const s = (A + B + C) / 2;
+    const area = Math.sqrt(Math.max(0, s * (s - A) * (s - B) * (s - C)));
+    return (2 * area) / C;
+  };
+
+  const keep = new Array(points.length).fill(false);
+  keep[0] = true;
+  keep[points.length - 1] = true;
+  const stack = [[0, points.length - 1]];
+  while (stack.length) {
+    const [first, last] = stack.pop();
+    if (last - first < 2) continue;
+    let maxD = 0, maxI = -1;
+    for (let i = first + 1; i < last; i++) {
+      const d = distToSegment(points[i], points[first], points[last]);
+      if (d > maxD) { maxD = d; maxI = i; }
+    }
+    if (maxD > tolerance && maxI > 0) {
+      keep[maxI] = true;
+      stack.push([first, maxI]);
+      stack.push([maxI, last]);
+    }
+  }
+  return points.filter((_, i) => keep[i]);
+}
+
+/**
+ * 2026_05_13: GPS sample'larını zamansal gruplara böl. İki ardışık sample
+ * arasında gapMs'den uzun boşluk varsa "ara verme" sayılır (örn: liman
+ * içinde uzun bekleme + offline mod), polyline orada bölünür. Her grup ayrı
+ * OSRM match'e gönderilebilir — birleşik polyline yanlış "düz çizgi" çıkmaz.
+ *
+ * Girdi: [{lat, lng, ts}, ...] (ts ISO string veya Date)
+ * Çıktı: [[sample,...], [sample,...], ...]
+ */
+function _opsTimeChunks(samples, gapMs) {
+  if (!samples || !samples.length) return [];
+  const gap = gapMs || (5 * 60 * 1000);  // varsayılan 5 dakika
+  const chunks = [[samples[0]]];
+  for (let i = 1; i < samples.length; i++) {
+    const prevTs = new Date(samples[i - 1].ts).getTime();
+    const curTs  = new Date(samples[i].ts).getTime();
+    if (curTs - prevTs > gap) {
+      chunks.push([samples[i]]);
+    } else {
+      chunks[chunks.length - 1].push(samples[i]);
+    }
+  }
+  return chunks;
 }
 
 /**
